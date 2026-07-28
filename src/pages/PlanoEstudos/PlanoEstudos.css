@@ -1,0 +1,284 @@
+.plano-container {
+  width: 100%;
+}
+
+.plano-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.plano-cabecalho h1 {
+  margin-bottom: 7px;
+  font-size: 34px;
+}
+
+.plano-cabecalho p {
+  color: #94a3b8;
+}
+
+.plano-progresso-geral {
+  min-width: 150px;
+  padding: 15px 20px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 15px;
+  text-align: right;
+}
+
+.plano-progresso-geral span {
+  display: block;
+  margin-bottom: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.plano-progresso-geral strong {
+  color: #22c55e;
+  font-size: 25px;
+}
+
+.plano-semanas {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(105px, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.plano-semana-botao,
+.plano-dia-botao {
+  color: #ffffff;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.plano-semana-botao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 13px;
+}
+
+.plano-semana-botao strong {
+  color: #94a3b8;
+}
+
+.plano-semana-ativa {
+  background: #2563eb;
+  border-color: #60a5fa;
+}
+
+.plano-semana-ativa strong {
+  color: #ffffff;
+}
+
+.plano-resumo-semana {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.plano-resumo-semana p {
+  margin-top: 5px;
+  color: #94a3b8;
+}
+
+.plano-resumo-semana > strong {
+  color: #60a5fa;
+  font-size: 25px;
+}
+
+.plano-dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.plano-dia-botao {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 15px;
+}
+
+.plano-dia-botao small {
+  color: #94a3b8;
+}
+
+.plano-dia-ativo {
+  border-color: #3b82f6;
+  background: rgba(37, 99, 235, 0.2);
+}
+
+.plano-conteudo-dia {
+  padding: 22px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+}
+
+.plano-titulo-dia {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.plano-titulo-dia span {
+  color: #94a3b8;
+}
+
+.plano-missoes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 17px;
+}
+
+.plano-missao-card {
+  padding: 20px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-left: 5px solid #3b82f6;
+  border-radius: 15px;
+}
+
+.plano-missao-concluida {
+  opacity: 0.7;
+  border-left-color: #22c55e;
+}
+
+.plano-missao-concluida h3,
+.plano-missao-concluida p {
+  text-decoration: line-through;
+}
+
+.plano-missao-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 15px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.plano-tipo {
+  padding: 4px 8px;
+  background: #1e293b;
+  border-radius: 999px;
+}
+
+.plano-missao-card h3 {
+  margin-bottom: 8px;
+  color: #60a5fa;
+}
+
+.plano-missao-card p {
+  min-height: 48px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.plano-missao-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.plano-missao-acoes button {
+  padding: 9px 12px;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plano-aula {
+  background: #7c3aed;
+}
+
+.plano-questoes {
+  background: #d97706;
+}
+
+.plano-estudar {
+  background: #2563eb;
+}
+
+.plano-concluir {
+  background: #16a34a;
+}
+
+.plano-desmarcar {
+  background: #475569;
+}
+
+.plano-extras {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.plano-extras div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 15px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+}
+
+.plano-extras span {
+  color: #94a3b8;
+}
+
+@media (max-width: 1200px) {
+  .plano-semanas {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .plano-missoes-grid,
+  .plano-extras {
+    grid-template-columns: 1fr;
+  }
+
+  .plano-dias {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .plano-cabecalho {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .plano-progresso-geral {
+    width: 100%;
+    text-align: left;
+  }
+
+  .plano-semanas,
+  .plano-dias {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .plano-titulo-dia {
+    flex-direction: column;
+  }
+}

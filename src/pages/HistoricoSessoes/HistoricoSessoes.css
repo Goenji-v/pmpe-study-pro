@@ -1,0 +1,239 @@
+.historico-sessoes-container {
+  width: 100%;
+}
+
+.historico-sessoes-cabecalho {
+  margin-bottom: 26px;
+}
+
+.historico-sessoes-cabecalho h1 {
+  margin-bottom: 7px;
+  font-size: 34px;
+}
+
+.historico-sessoes-cabecalho p {
+  color: #94a3b8;
+}
+
+.historico-sessoes-resumo {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.historico-sessoes-resumo-card {
+  padding: 20px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.historico-sessoes-resumo-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.historico-sessoes-resumo-card strong {
+  font-size: 27px;
+}
+
+.historico-sessoes-filtros {
+  display: grid;
+  grid-template-columns:
+    minmax(250px, 1fr)
+    220px
+    220px;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.historico-sessoes-filtros input,
+.historico-sessoes-filtros select,
+.historico-sessao-form-group input,
+.historico-sessao-form-group select,
+.historico-sessao-form-group textarea {
+  width: 100%;
+  padding: 12px;
+  color: #ffffff;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+
+.historico-sessoes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.historico-sessao-card {
+  padding: 20px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.historico-sessao-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.historico-sessao-tipo {
+  display: inline-block;
+  padding: 5px 9px;
+  margin-bottom: 10px;
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.18);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.historico-sessao-topo h2 {
+  margin-bottom: 5px;
+}
+
+.historico-sessao-topo p {
+  color: #cbd5e1;
+}
+
+.historico-sessao-tempo {
+  color: #22c55e;
+  font-size: 24px;
+  white-space: nowrap;
+}
+
+.historico-sessao-detalhes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.historico-sessao-texto {
+  margin-top: 14px;
+  padding: 13px;
+  background: #0f172a;
+  border-radius: 10px;
+}
+
+.historico-sessao-texto strong {
+  color: #cbd5e1;
+}
+
+.historico-sessao-texto p {
+  margin-top: 6px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.historico-sessao-acoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 17px;
+}
+
+.historico-sessao-acoes button {
+  padding: 9px 13px;
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.historico-sessao-editar {
+  background: #d97706;
+}
+
+.historico-sessao-duplicar {
+  background: #2563eb;
+}
+
+.historico-sessao-excluir {
+  background: #dc2626;
+}
+
+.historico-sessao-salvar {
+  background: #16a34a;
+}
+
+.historico-sessao-cancelar {
+  background: #475569;
+}
+
+.historico-sessao-edicao h2 {
+  margin-bottom: 20px;
+}
+
+.historico-sessao-form-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.historico-sessao-form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.historico-sessao-form-group label {
+  margin-bottom: 7px;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.historico-sessao-form-group textarea {
+  min-height: 85px;
+  resize: vertical;
+}
+
+.historico-sessoes-vazio {
+  padding: 40px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.historico-sessoes-vazio p {
+  margin-top: 8px;
+  color: #94a3b8;
+}
+
+@media (max-width: 1050px) {
+  .historico-sessoes-resumo {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .historico-sessoes-filtros {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .historico-sessoes-resumo,
+  .historico-sessao-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .historico-sessao-topo {
+    flex-direction: column;
+  }
+
+  .historico-sessao-acoes button {
+    flex: 1;
+  }
+}

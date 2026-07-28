@@ -1,0 +1,317 @@
+.estatisticas-sessoes-container {
+  width: 100%;
+}
+
+.estatisticas-sessoes-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 23px;
+}
+
+.estatisticas-sessoes-cabecalho h1 {
+  margin-bottom: 7px;
+  font-size: 34px;
+}
+
+.estatisticas-sessoes-cabecalho p {
+  color: #94a3b8;
+}
+
+.estatisticas-sessoes-total {
+  min-width: 165px;
+  padding: 15px 18px;
+  text-align: right;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+}
+
+.estatisticas-sessoes-total span {
+  display: block;
+  margin-bottom: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.estatisticas-sessoes-total strong {
+  color: #60a5fa;
+  font-size: 25px;
+}
+
+.estatisticas-sessoes-resumo {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.estatisticas-sessoes-card {
+  padding: 18px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+}
+
+.estatisticas-sessoes-card span,
+.estatisticas-sessoes-card strong,
+.estatisticas-sessoes-card small {
+  display: block;
+}
+
+.estatisticas-sessoes-card span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.estatisticas-sessoes-card strong {
+  margin: 7px 0;
+  color: #f8fafc;
+  font-size: 24px;
+}
+
+.estatisticas-sessoes-card small {
+  color: #64748b;
+}
+
+.estatisticas-sessoes-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.estatisticas-sessoes-painel {
+  padding: 20px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.estatisticas-sessoes-painel-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.estatisticas-sessoes-painel-topo p {
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.estatisticas-sessoes-painel-topo > strong {
+  color: #60a5fa;
+}
+
+.estatisticas-sessoes-grafico {
+  display: grid;
+  grid-template-columns:
+    repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 9px;
+  min-height: 245px;
+}
+
+.estatisticas-sessoes-coluna {
+  display: grid;
+  grid-template-rows:
+    25px 180px 23px;
+  align-items: end;
+  text-align: center;
+}
+
+.estatisticas-sessoes-coluna > span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.estatisticas-sessoes-coluna > strong {
+  color: #cbd5e1;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.estatisticas-sessoes-barra-area {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 170px;
+  padding: 0 5px;
+}
+
+.estatisticas-sessoes-barra-area div {
+  width: 100%;
+  min-height: 4px;
+  background: linear-gradient(
+    180deg,
+    #60a5fa,
+    #2563eb
+  );
+  border-radius: 8px 8px 3px 3px;
+}
+
+.estatisticas-sessoes-materias,
+.estatisticas-sessoes-ranking,
+.estatisticas-sessoes-recentes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.estatisticas-sessoes-materia,
+.estatisticas-sessoes-ranking article,
+.estatisticas-sessoes-recentes article {
+  padding: 13px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+
+.estatisticas-sessoes-materia-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  margin-bottom: 9px;
+}
+
+.estatisticas-sessoes-materia-topo span {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.estatisticas-sessoes-materia-topo > strong {
+  color: #60a5fa;
+}
+
+.estatisticas-sessoes-progresso {
+  height: 7px;
+  overflow: hidden;
+  background: #334155;
+  border-radius: 999px;
+}
+
+.estatisticas-sessoes-progresso div {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #2563eb,
+    #60a5fa
+  );
+  border-radius: 999px;
+}
+
+.estatisticas-sessoes-ranking article {
+  display: grid;
+  grid-template-columns:
+    34px minmax(0, 1fr)
+    auto;
+  align-items: center;
+  gap: 11px;
+}
+
+.estatisticas-sessoes-ranking article > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  color: #93c5fd;
+  background: #1e293b;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.estatisticas-sessoes-ranking p,
+.estatisticas-sessoes-recentes p,
+.estatisticas-sessoes-recentes span {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.estatisticas-sessoes-ranking article > strong,
+.estatisticas-sessoes-recentes article > strong {
+  color: #22c55e;
+}
+
+.estatisticas-sessoes-recentes article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+}
+
+.estatisticas-sessoes-vazio {
+  padding: 45px;
+  text-align: center;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.estatisticas-sessoes-vazio p {
+  margin-top: 9px;
+  color: #94a3b8;
+}
+
+@media (max-width: 1000px) {
+  .estatisticas-sessoes-resumo {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .estatisticas-sessoes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .estatisticas-sessoes-cabecalho {
+    flex-direction: column;
+  }
+
+  .estatisticas-sessoes-total {
+    width: 100%;
+    text-align: left;
+  }
+
+  .estatisticas-sessoes-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .estatisticas-sessoes-painel {
+    padding: 15px;
+  }
+
+  .estatisticas-sessoes-grafico {
+    gap: 4px;
+  }
+
+  .estatisticas-sessoes-coluna {
+    grid-template-rows:
+      22px 145px 22px;
+  }
+
+  .estatisticas-sessoes-barra-area {
+    height: 138px;
+    padding: 0 2px;
+  }
+
+  .estatisticas-sessoes-ranking article {
+    grid-template-columns:
+      31px minmax(0, 1fr);
+  }
+
+  .estatisticas-sessoes-ranking article > strong {
+    grid-column: 2;
+  }
+}

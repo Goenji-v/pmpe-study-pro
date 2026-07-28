@@ -1,0 +1,177 @@
+.revisoes-container {
+  width: 100%;
+}
+
+.revisoes-title {
+  font-size: 34px;
+  margin-bottom: 8px;
+}
+
+.revisoes-subtitle {
+  color: #94a3b8;
+  margin-bottom: 28px;
+}
+
+.revisoes-resumo {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.revisao-resumo-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-left: 5px solid #64748b;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.revisao-resumo-card span {
+  display: block;
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.revisao-resumo-card strong {
+  font-size: 30px;
+}
+
+.resumo-atrasado {
+  border-left-color: #ef4444;
+}
+
+.resumo-hoje {
+  border-left-color: #f59e0b;
+}
+
+.resumo-futuro {
+  border-left-color: #3b82f6;
+}
+
+.resumo-concluido {
+  border-left-color: #22c55e;
+}
+
+.revisoes-grupo {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 24px;
+}
+
+.revisoes-grupo h2 {
+  margin-bottom: 18px;
+}
+
+.revisoes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.revisao-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.revisao-conteudo strong {
+  color: #60a5fa;
+}
+
+.revisao-conteudo p {
+  margin: 6px 0;
+}
+
+.revisao-conteudo span,
+.revisao-conteudo small {
+  display: block;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.revisao-conteudo small {
+  margin-top: 5px;
+}
+
+.revisao-acoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.revisao-acoes button {
+  border: none;
+  border-radius: 9px;
+  padding: 9px 13px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.revisao-concluir {
+  background: #16a34a;
+}
+
+.revisao-concluir:hover {
+  background: #15803d;
+}
+
+.revisao-excluir {
+  background: #dc2626;
+}
+
+.revisao-excluir:hover {
+  background: #b91c1c;
+}
+
+.revisao-concluida {
+  opacity: 0.72;
+  border-left: 4px solid #22c55e;
+}
+
+.revisoes-vazio {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 40px;
+  text-align: center;
+}
+
+.revisoes-vazio p {
+  color: #94a3b8;
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .revisoes-resumo {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .revisao-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 550px) {
+  .revisoes-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .revisao-acoes {
+    width: 100%;
+  }
+
+  .revisao-acoes button {
+    flex: 1;
+  }
+}

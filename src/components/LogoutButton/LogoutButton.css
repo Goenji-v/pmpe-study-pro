@@ -1,0 +1,50 @@
+.logout-conta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logout-conta > div {
+  min-width: 0;
+  text-align: right;
+}
+
+.logout-conta strong,
+.logout-conta span {
+  display: block;
+}
+
+.logout-conta strong {
+  overflow: hidden;
+  max-width: 190px;
+  color: #f8fafc;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-conta span {
+  overflow: hidden;
+  max-width: 190px;
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-conta button {
+  padding: 7px 10px;
+  color: #ffffff;
+  background: #b91c1c;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.logout-conta button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}

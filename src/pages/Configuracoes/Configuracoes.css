@@ -1,0 +1,141 @@
+.configuracoes-container {
+  width: 100%;
+}
+
+.configuracoes-title {
+  font-size: 34px;
+  margin-bottom: 8px;
+}
+
+.configuracoes-subtitle {
+  color: #94a3b8;
+  margin-bottom: 28px;
+}
+
+.configuracoes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+}
+
+.configuracoes-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 22px;
+}
+
+.configuracoes-card h2 {
+  margin-bottom: 20px;
+}
+
+.configuracoes-form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.configuracoes-form-group label {
+  color: #cbd5e1;
+  font-size: 14px;
+  margin-bottom: 7px;
+}
+
+.configuracoes-form-group input,
+.configuracoes-form-group select {
+  padding: 12px;
+  color: #ffffff;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+
+.configuracoes-preview {
+  margin-top: 20px;
+}
+
+.configuracoes-preview > span {
+  display: block;
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.configuracoes-tema-preview {
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #334155;
+}
+
+.configuracoes-tema-preview p {
+  margin-top: 6px;
+}
+
+.tema-escuro {
+  color: #ffffff;
+  background: #0f172a;
+}
+
+.tema-claro {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.configuracoes-resumo-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid #334155;
+}
+
+.configuracoes-resumo-item:last-child {
+  border-bottom: none;
+}
+
+.configuracoes-resumo-item span {
+  color: #94a3b8;
+}
+
+.configuracoes-acoes {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.configuracoes-acoes button {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.configuracoes-salvar {
+  background: #2563eb;
+}
+
+.configuracoes-salvar:hover {
+  background: #1d4ed8;
+}
+
+.configuracoes-restaurar {
+  background: #475569;
+}
+
+.configuracoes-restaurar:hover {
+  background: #334155;
+}
+
+@media (max-width: 900px) {
+  .configuracoes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 550px) {
+  .configuracoes-acoes {
+    flex-direction: column;
+  }
+}

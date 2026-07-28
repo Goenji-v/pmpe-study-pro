@@ -1,0 +1,610 @@
+.resolver-ia-container {
+  width: 100%;
+}
+
+.resolver-ia-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.resolver-ia-cabecalho h1 {
+  margin-bottom: 7px;
+  font-size: 34px;
+}
+
+.resolver-ia-cabecalho p {
+  color: #94a3b8;
+}
+
+.resolver-ia-status {
+  min-width: 145px;
+  padding: 14px 18px;
+  text-align: right;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+}
+
+.resolver-ia-status span {
+  display: block;
+  margin-bottom: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.resolver-ia-status strong {
+  color: #60a5fa;
+  font-size: 23px;
+}
+
+.resolver-ia-mensagem {
+  padding: 13px 16px;
+  margin-bottom: 16px;
+  color: #dbeafe;
+  background:
+    rgba(37, 99, 235, 0.14);
+  border: 1px solid
+    rgba(59, 130, 246, 0.42);
+  border-radius: 10px;
+}
+
+.resolver-ia-progresso {
+  height: 9px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  background: #334155;
+  border-radius: 999px;
+}
+
+.resolver-ia-progresso div {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #2563eb,
+    #60a5fa
+  );
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.resolver-ia-resultado {
+  display: grid;
+  grid-template-columns:
+    repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 22px;
+}
+
+.resolver-ia-resultado-cinco {
+  grid-template-columns:
+    repeat(5, minmax(0, 1fr));
+}
+
+.resolver-ia-resultado div {
+  padding: 17px;
+  text-align: center;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+}
+
+.resolver-ia-resultado span {
+  display: block;
+  margin-bottom: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.resolver-ia-resultado strong {
+  font-size: 25px;
+}
+
+.resolver-ia-certas {
+  color: #22c55e;
+}
+
+.resolver-ia-erradas {
+  color: #ef4444;
+}
+
+.resolver-ia-branco {
+  color: #f59e0b;
+}
+
+.resolver-ia-diagnostico {
+  padding: 20px;
+  margin-bottom: 22px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.resolver-ia-diagnostico-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.resolver-ia-diagnostico-topo > div:first-child > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+}
+
+.resolver-ia-diagnostico-topo p {
+  margin-top: 6px;
+  color: #94a3b8;
+}
+
+.resolver-ia-diagnostico-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.resolver-ia-diagnostico-acoes button {
+  padding: 10px 13px;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.resolver-ia-revisar {
+  background: #7c3aed;
+}
+
+.resolver-ia-treinar {
+  background: #2563eb;
+}
+
+.resolver-ia-materiais {
+  background: #0f766e;
+}
+
+.resolver-ia-diagnostico-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.resolver-ia-diagnostico-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-left-width: 5px;
+  border-radius: 11px;
+}
+
+.resolver-ia-diagnostico-card.bom {
+  border-left-color: #22c55e;
+}
+
+.resolver-ia-diagnostico-card.medio {
+  border-left-color: #f59e0b;
+}
+
+.resolver-ia-diagnostico-card.fraco {
+  border-left-color: #ef4444;
+}
+
+.resolver-ia-diagnostico-conteudo {
+  min-width: 0;
+  flex: 1;
+}
+
+.resolver-ia-diagnostico-card strong,
+.resolver-ia-diagnostico-card span {
+  display: block;
+}
+
+.resolver-ia-diagnostico-conteudo > span {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.resolver-ia-diagnostico-barra {
+  height: 7px;
+  margin-top: 11px;
+  overflow: hidden;
+  background: #334155;
+  border-radius: 999px;
+}
+
+.resolver-ia-diagnostico-barra div {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #2563eb,
+    #60a5fa
+  );
+  border-radius: 999px;
+}
+
+.resolver-ia-diagnostico-numeros {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.resolver-ia-diagnostico-numeros > strong {
+  color: #e2e8f0;
+  font-size: 20px;
+}
+
+.resolver-ia-diagnostico-numeros > span {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.resolver-ia-diagnostico-numeros button {
+  padding: 7px 9px;
+  margin-top: 9px;
+  color: #ffffff;
+  background: #0f766e;
+  border: none;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.resolver-ia-layout {
+  display: grid;
+  grid-template-columns:
+    245px minmax(0, 1fr);
+  gap: 20px;
+}
+
+.resolver-ia-navegacao,
+.resolver-ia-questao-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 17px;
+}
+
+.resolver-ia-navegacao {
+  padding: 18px;
+}
+
+.resolver-ia-navegacao h2 {
+  margin-bottom: 15px;
+}
+
+.resolver-ia-numeros {
+  display: grid;
+  grid-template-columns:
+    repeat(5, 1fr);
+  gap: 8px;
+}
+
+.resolver-ia-numeros button {
+  aspect-ratio: 1;
+  color: #cbd5e1;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.resolver-ia-numeros button.ativa {
+  color: white;
+  background: #2563eb;
+  border-color: #60a5fa;
+}
+
+.resolver-ia-numeros button.respondida {
+  color: white;
+  background: #7c3aed;
+}
+
+.resolver-ia-numeros button.correta {
+  color: white;
+  background: #16a34a;
+}
+
+.resolver-ia-numeros button.errada {
+  color: white;
+  background: #dc2626;
+}
+
+.resolver-ia-numeros button.em-branco {
+  color: white;
+  background: #d97706;
+}
+
+.resolver-ia-legenda {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.resolver-ia-legenda span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.resolver-ia-legenda i {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
+
+.legenda-atual {
+  background: #2563eb;
+}
+
+.legenda-respondida {
+  background: #7c3aed;
+}
+
+.legenda-correta {
+  background: #16a34a;
+}
+
+.legenda-errada {
+  background: #dc2626;
+}
+
+.legenda-branco {
+  background: #d97706;
+}
+
+.resolver-ia-questao-card {
+  padding: 25px;
+}
+
+.resolver-ia-questao-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+
+.resolver-ia-questao-topo > span {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+.resolver-ia-questao-topo div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.resolver-ia-questao-topo div span {
+  padding: 5px 9px;
+  color: #cbd5e1;
+  background: #0f172a;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.resolver-ia-assunto {
+  margin-bottom: 15px;
+  color: #94a3b8;
+}
+
+.resolver-ia-enunciado {
+  margin-bottom: 23px;
+  color: #f8fafc;
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+.resolver-ia-alternativas {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.resolver-ia-alternativa {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  width: 100%;
+  padding: 15px;
+  color: #cbd5e1;
+  text-align: left;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.resolver-ia-alternativa:hover {
+  border-color: #3b82f6;
+}
+
+.resolver-ia-alternativa strong {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  flex-shrink: 0;
+  color: #93c5fd;
+  background: #1e293b;
+  border-radius: 8px;
+}
+
+.resolver-ia-alternativa span {
+  line-height: 1.55;
+}
+
+.resolver-ia-alternativa.selecionada {
+  color: white;
+  background:
+    rgba(37, 99, 235, 0.2);
+  border-color: #3b82f6;
+}
+
+.resolver-ia-alternativa.alternativa-correta {
+  color: white;
+  background:
+    rgba(22, 163, 74, 0.18);
+  border-color: #22c55e;
+}
+
+.resolver-ia-alternativa.alternativa-errada {
+  color: white;
+  background:
+    rgba(220, 38, 38, 0.18);
+  border-color: #ef4444;
+}
+
+.resolver-ia-explicacao {
+  padding: 18px;
+  margin-top: 22px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-left: 5px solid #7c3aed;
+  border-radius: 12px;
+}
+
+.resolver-ia-explicacao h3 {
+  margin-bottom: 9px;
+}
+
+.resolver-ia-explicacao p {
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.resolver-ia-explicacao strong {
+  display: block;
+  margin-top: 12px;
+  color: #86efac;
+}
+
+.resolver-ia-acoes,
+.resolver-ia-rodape {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.resolver-ia-acoes button,
+.resolver-ia-rodape button,
+.resolver-ia-vazio button {
+  padding: 11px 17px;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.resolver-ia-acoes button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.resolver-ia-primario {
+  background: #2563eb;
+}
+
+.resolver-ia-secundario {
+  background: #475569;
+}
+
+.resolver-ia-finalizar {
+  background: #16a34a;
+}
+
+.resolver-ia-excluir {
+  background: #b91c1c;
+}
+
+.resolver-ia-vazio {
+  padding: 45px;
+  text-align: center;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 17px;
+}
+
+.resolver-ia-vazio p {
+  margin: 10px 0 20px;
+  color: #94a3b8;
+}
+
+.resolver-ia-vazio button {
+  background: #2563eb;
+}
+
+@media (max-width: 900px) {
+  .resolver-ia-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .resolver-ia-navegacao {
+    order: 2;
+  }
+
+  .resolver-ia-resultado,
+  .resolver-ia-resultado-cinco {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+  .resolver-ia-diagnostico-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .resolver-ia-cabecalho,
+  .resolver-ia-questao-topo,
+  .resolver-ia-acoes,
+  .resolver-ia-rodape,
+  .resolver-ia-diagnostico-topo,
+  .resolver-ia-diagnostico-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .resolver-ia-status {
+    width: 100%;
+    text-align: left;
+  }
+
+  .resolver-ia-resultado,
+  .resolver-ia-resultado-cinco {
+    grid-template-columns: 1fr;
+  }
+
+  .resolver-ia-acoes button,
+  .resolver-ia-rodape button,
+  .resolver-ia-diagnostico-acoes button {
+    width: 100%;
+  }
+
+  .resolver-ia-diagnostico-acoes {
+    flex-direction: column;
+  }
+
+  .resolver-ia-diagnostico-numeros {
+    text-align: left;
+  }
+}

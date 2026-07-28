@@ -1,0 +1,153 @@
+.missao-dia-card {
+  padding: 22px;
+  margin-bottom: 22px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(37, 99, 235, 0.18),
+      rgba(30, 41, 59, 0.96)
+    );
+  border: 1px solid
+    rgba(59, 130, 246, 0.45);
+  border-radius: 17px;
+}
+
+.missao-dia-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.missao-dia-etiqueta {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.missao-dia-card h2 {
+  margin-bottom: 6px;
+  font-size: 25px;
+}
+
+.missao-dia-card p {
+  color: #cbd5e1;
+}
+
+.missao-dia-local {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.missao-dia-local span {
+  padding: 6px 9px;
+  color: #bfdbfe;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.missao-dia-detalhes {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 11px;
+  margin-top: 20px;
+}
+
+.missao-dia-detalhes article {
+  padding: 13px;
+  background: rgba(
+    15,
+    23,
+    42,
+    0.75
+  );
+  border: 1px solid #334155;
+  border-radius: 11px;
+}
+
+.missao-dia-detalhes span,
+.missao-dia-detalhes strong {
+  display: block;
+}
+
+.missao-dia-detalhes span {
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.missao-dia-detalhes strong {
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.missao-dia-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.missao-dia-acoes button,
+.missao-dia-concluida button {
+  padding: 11px 16px;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.missao-dia-primario {
+  background: #2563eb;
+}
+
+.missao-dia-secundario {
+  background: #475569;
+}
+
+.missao-dia-concluida {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-color:
+    rgba(34, 197, 94, 0.45);
+}
+
+.missao-dia-concluida button {
+  background: #16a34a;
+}
+
+@media (max-width: 700px) {
+  .missao-dia-topo,
+  .missao-dia-concluida {
+    flex-direction: column;
+  }
+
+  .missao-dia-local {
+    justify-content: flex-start;
+  }
+
+  .missao-dia-detalhes {
+    grid-template-columns: 1fr;
+  }
+
+  .missao-dia-acoes {
+    flex-direction: column;
+  }
+
+  .missao-dia-acoes button,
+  .missao-dia-concluida button {
+    width: 100%;
+  }
+}

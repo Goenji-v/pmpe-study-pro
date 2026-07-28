@@ -1,0 +1,419 @@
+.cronograma-container {
+  width: 100%;
+}
+
+.cronograma-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 20px;
+}
+
+.cronograma-etiqueta {
+  display: block;
+  margin-bottom: 6px;
+  color: #a78bfa;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.cronograma-cabecalho h1 {
+  margin-bottom: 7px;
+  font-size: 34px;
+}
+
+.cronograma-cabecalho p {
+  color: #94a3b8;
+}
+
+.cronograma-configuracao {
+  display: grid;
+  grid-template-columns:
+    130px 140px;
+  gap: 7px 10px;
+  min-width: 330px;
+  padding: 16px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+}
+
+.cronograma-configuracao label {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.cronograma-configuracao input,
+.cronograma-configuracao select {
+  width: 100%;
+  padding: 9px;
+  color: #ffffff;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
+.cronograma-configuracao button {
+  grid-column: 1 / -1;
+  padding: 11px;
+  color: #ffffff;
+  background: #7c3aed;
+  border: none;
+  border-radius: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cronograma-configuracao button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.cronograma-erro {
+  padding: 13px 15px;
+  margin-bottom: 17px;
+  color: #fecaca;
+  background: rgba(220, 38, 38, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 10px;
+}
+
+.cronograma-resumo {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 13px;
+  margin-bottom: 20px;
+}
+
+.cronograma-resumo-card {
+  padding: 15px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+}
+
+.cronograma-resumo-card span,
+.cronograma-resumo-card strong {
+  display: block;
+}
+
+.cronograma-resumo-card span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.cronograma-resumo-card strong {
+  margin-top: 7px;
+  font-size: 22px;
+}
+
+.cronograma-layout {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.cronograma-principal,
+.cronograma-historico {
+  padding: 19px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 15px;
+}
+
+.cronograma-historico {
+  position: sticky;
+  top: 20px;
+}
+
+.cronograma-plano-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.cronograma-plano-topo span,
+.cronograma-objetivo span {
+  display: block;
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+}
+
+.cronograma-plano-topo h2 {
+  margin: 5px 0;
+}
+
+.cronograma-plano-topo p {
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+.cronograma-plano-topo > strong {
+  color: #a78bfa;
+  font-size: 21px;
+  white-space: nowrap;
+}
+
+.cronograma-objetivo {
+  padding: 13px;
+  margin-bottom: 18px;
+  background: rgba(124, 58, 237, 0.13);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 10px;
+}
+
+.cronograma-objetivo strong {
+  display: block;
+  margin-top: 5px;
+  color: #ddd6fe;
+}
+
+.cronograma-dias {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cronograma-dia-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cronograma-dia-titulo span {
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cronograma-tarefas {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.cronograma-tarefa {
+  display: grid;
+  grid-template-columns:
+    38px minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-left-width: 5px;
+  border-radius: 10px;
+}
+
+.cronograma-teoria {
+  border-left-color: #2563eb;
+}
+
+.cronograma-questoes {
+  border-left-color: #7c3aed;
+}
+
+.cronograma-revisao {
+  border-left-color: #16a34a;
+}
+
+.cronograma-simulado {
+  border-left-color: #d97706;
+}
+
+.cronograma-redacao {
+  border-left-color: #db2777;
+}
+
+.cronograma-misto {
+  border-left-color: #64748b;
+}
+
+.cronograma-numero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: #ffffff;
+  background: #334155;
+  border-radius: 9px;
+  font-weight: 900;
+}
+
+.cronograma-tarefa-topo,
+.cronograma-tarefa-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+}
+
+.cronograma-tarefa-topo span {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.cronograma-tarefa-topo small {
+  color: #a78bfa;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.cronograma-tarefa p {
+  margin: 8px 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cronograma-tarefa-rodape span {
+  color: #60a5fa;
+  font-size: 11px;
+}
+
+.cronograma-tarefa-rodape button {
+  padding: 7px 11px;
+  color: #ffffff;
+  background: #0f766e;
+  border: none;
+  border-radius: 7px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cronograma-historico h2 {
+  margin-bottom: 13px;
+}
+
+.cronograma-historico > p {
+  color: #94a3b8;
+}
+
+.cronograma-historico-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cronograma-historico-lista article {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    30px;
+  gap: 5px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 9px;
+}
+
+.cronograma-historico-lista article.ativo {
+  border-color: #7c3aed;
+}
+
+.cronograma-abrir {
+  padding: 10px;
+  color: #ffffff;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.cronograma-abrir strong,
+.cronograma-abrir span {
+  display: block;
+}
+
+.cronograma-abrir span {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.cronograma-excluir {
+  color: #fca5a5;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.cronograma-vazio {
+  padding: 40px;
+  color: #94a3b8;
+  text-align: center;
+  background: #0f172a;
+  border: 1px dashed #475569;
+  border-radius: 11px;
+}
+
+.cronograma-vazio h2 {
+  margin-bottom: 8px;
+  color: #e2e8f0;
+}
+
+@media (max-width: 1050px) {
+  .cronograma-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cronograma-historico {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .cronograma-cabecalho {
+    flex-direction: column;
+  }
+
+  .cronograma-configuracao {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cronograma-resumo {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .cronograma-configuracao {
+    grid-template-columns: 1fr;
+  }
+
+  .cronograma-configuracao button {
+    grid-column: auto;
+  }
+
+  .cronograma-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .cronograma-plano-topo,
+  .cronograma-tarefa-topo,
+  .cronograma-tarefa-rodape {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cronograma-tarefa-rodape button {
+    width: 100%;
+  }
+}

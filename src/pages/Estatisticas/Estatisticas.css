@@ -1,0 +1,167 @@
+.estatisticas-container {
+  width: 100%;
+}
+
+.estatisticas-title {
+  font-size: 34px;
+  margin-bottom: 8px;
+}
+
+.estatisticas-subtitle {
+  color: #94a3b8;
+  margin-bottom: 28px;
+}
+
+.estatisticas-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.estatistica-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.estatistica-card span {
+  display: block;
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.estatistica-card strong {
+  font-size: 28px;
+}
+
+.texto-verde {
+  color: #22c55e;
+}
+
+.texto-vermelho {
+  color: #ef4444;
+}
+
+.graficos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.grafico-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 22px;
+  min-width: 0;
+}
+
+.grafico-card h2 {
+  margin-bottom: 6px;
+}
+
+.grafico-descricao {
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.grafico-area {
+  width: 100%;
+  height: 330px;
+}
+
+.estatisticas-tabelas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.estatisticas-painel {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 22px;
+}
+
+.estatisticas-painel h2 {
+  margin-bottom: 18px;
+}
+
+.ranking-estatisticas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ranking-estatistica-item {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+.ranking-estatistica-item p {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.ranking-estatistica-item span {
+  font-weight: bold;
+  font-size: 17px;
+}
+
+.desempenho-bom {
+  color: #22c55e;
+}
+
+.desempenho-atencao {
+  color: #f59e0b;
+}
+
+.desempenho-critico {
+  color: #ef4444;
+}
+
+.estatisticas-vazio {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 40px;
+  text-align: center;
+}
+
+.estatisticas-vazio p {
+  color: #94a3b8;
+  margin-top: 10px;
+}
+
+@media (max-width: 1100px) {
+  .estatisticas-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .graficos-grid,
+  .estatisticas-tabelas {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .estatisticas-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .grafico-area {
+    height: 280px;
+  }
+}
