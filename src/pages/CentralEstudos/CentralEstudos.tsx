@@ -10,6 +10,10 @@ import MateriaisDoAssunto from "../../components/MateriaisDoAssunto/MateriaisDoA
 
 import { useApp } from "../../context/AppContext";
 
+import {
+  criarPrimeiraRevisao,
+} from "../../utils/revisoes";
+
 import type {
   SessaoEstudo,
   TipoSessao,
@@ -43,9 +47,6 @@ type EstadoCronometro = {
 const CHAVE_CRONOMETRO =
   "pmpe_cronometro_estudo";
 
-const CHAVE_MISSOES_CONCLUIDAS =
-  "pmpe_plano_missoes_concluidas";
-
 const estadoInicial: EstadoCronometro = {
   ativo: false,
   pausado: false,
@@ -74,8 +75,14 @@ const estadoInicial: EstadoCronometro = {
 export default function CentralEstudos() {
   const {
     materias,
+    setMaterias,
+
     sessoes,
     setSessoes,
+
+    setRevisoes,
+
+    setMissoesConcluidas,
   } = useApp();
 
   const [estado, setEstado] =
@@ -466,18 +473,106 @@ export default function CentralEstudos() {
     };
 
     setSessoes(
-    (
-    anteriores:
-    SessaoEstudo[]
-    ) => [
-    novaSessao,
-    ...anteriores,
-    ]
+      (
+        anteriores:
+          SessaoEstudo[]
+      ) => [
+        novaSessao,
+        ...anteriores,
+      ]
     );
 
+    /*
+     * Uma sessão de conteúdo ou questões representa
+     * estudo efetivo do assunto. Ao finalizar:
+     * 1. marca o assunto em Conteúdos;
+     * 2. conclui a missão do plano, quando houver;
+     * 3. cria a primeira revisão sem duplicar.
+     */
+    const deveConcluirAssunto =
+      tipoGeraRevisao(
+        estado.tipo
+      ) &&
+      Boolean(
+        estado.materia.trim()
+      ) &&
+      Boolean(
+        estado.assunto.trim()
+      );
+
+    if (deveConcluirAssunto) {
+      const referencia =
+        localizarMateriaEAssunto(
+          materias,
+          estado.materia,
+          estado.assunto
+        );
+
+      setMaterias(
+        (
+          materiasAnteriores
+        ) =>
+          marcarAssuntoComoConcluido(
+            materiasAnteriores,
+            estado.materia,
+            estado.assunto
+          )
+      );
+
+      setRevisoes(
+        (
+          revisoesAnteriores
+        ) => {
+          const revisaoPendente =
+            revisoesAnteriores.some(
+              (revisao) =>
+                !revisao.concluida &&
+                mesmoTexto(
+                  revisao.materia,
+                  estado.materia
+                ) &&
+                mesmoTexto(
+                  revisao.assunto,
+                  estado.assunto
+                )
+            );
+
+          if (revisaoPendente) {
+            return revisoesAnteriores;
+          }
+
+          const primeiraRevisao =
+            criarPrimeiraRevisao({
+              materiaId:
+                referencia.materiaId,
+
+              assuntoId:
+                referencia.assuntoId,
+
+              materia:
+                estado.materia.trim(),
+
+              assunto:
+                estado.assunto.trim(),
+            });
+
+          return [
+            primeiraRevisao,
+            ...revisoesAnteriores,
+          ];
+        }
+      );
+    }
+
     if (estado.missaoId) {
-      concluirMissao(
-      estado.missaoId
+      setMissoesConcluidas(
+        (idsAnteriores) =>
+          Array.from(
+            new Set([
+              ...idsAnteriores,
+              estado.missaoId as string,
+            ])
+          )
       );
     }
 
@@ -498,10 +593,24 @@ export default function CentralEstudos() {
     );
 
     window.dispatchEvent(
-    new Event(
-    "pmpe-dashboard-atualizado"
-    )
+      new Event(
+        "pmpe-dashboard-atualizado"
+      )
     );
+
+    if (deveConcluirAssunto) {
+      window.dispatchEvent(
+        new Event(
+          "pmpe-materias-atualizadas"
+        )
+      );
+
+      window.dispatchEvent(
+        new Event(
+          "pmpe-revisoes-atualizadas"
+        )
+      );
+    }
 
     setEstado({
       ...estadoInicial,
@@ -1104,42 +1213,146 @@ function calcularSegundosDecorridos(
   );
 }
 
-function concluirMissao(
-  missaoId: string
+function tipoGeraRevisao(
+  tipo: TipoSessao
 ) {
-  const salvo =
-    localStorage.getItem(
-      CHAVE_MISSOES_CONCLUIDAS
+  return (
+    tipo === "aula" ||
+    tipo === "videoaula" ||
+    tipo === "estudo" ||
+    tipo === "leitura" ||
+    tipo === "questoes"
+  );
+}
+
+function localizarMateriaEAssunto(
+  materias: ReturnType<
+    typeof useApp
+  >["materias"],
+  nomeMateria: string,
+  nomeAssunto: string
+) {
+  const materia =
+    materias.find(
+      (item) =>
+        mesmoTexto(
+          item.nome,
+          nomeMateria
+        )
     );
 
-  let ids: string[] = [];
+  const assunto =
+    materia?.assuntos.find(
+      (item) =>
+        mesmoTexto(
+          item.nome,
+          nomeAssunto
+        )
+    );
 
-  if (salvo) {
-    try {
-      const valor: unknown =
-        JSON.parse(salvo);
+  return {
+    materiaId:
+      materia?.id ||
+      criarIdLocal(
+        nomeMateria
+      ),
 
-      if (Array.isArray(valor)) {
-        ids = valor.filter(
-          (item): item is string =>
-            typeof item ===
-            "string"
-        );
+    assuntoId:
+      assunto?.id ||
+      criarIdLocal(
+        `${nomeMateria}-${nomeAssunto}`
+      ),
+  };
+}
+
+function marcarAssuntoComoConcluido(
+  materias: ReturnType<
+    typeof useApp
+  >["materias"],
+  nomeMateria: string,
+  nomeAssunto: string
+) {
+  return materias.map(
+    (materia) => {
+      if (
+        !mesmoTexto(
+          materia.nome,
+          nomeMateria
+        )
+      ) {
+        return materia;
       }
-    } catch {
-      ids = [];
-    }
-  }
 
-  if (!ids.includes(missaoId)) {
-    localStorage.setItem(
-      CHAVE_MISSOES_CONCLUIDAS,
-      JSON.stringify([
-        ...ids,
-        missaoId,
-      ])
+      return {
+        ...materia,
+
+        assuntos:
+          materia.assuntos.map(
+            (assunto) =>
+              mesmoTexto(
+                assunto.nome,
+                nomeAssunto
+              )
+                ? {
+                    ...assunto,
+                    concluido: true,
+                  }
+                : assunto
+          ),
+      };
+    }
+  );
+}
+
+function mesmoTexto(
+  primeiro: string,
+  segundo: string
+) {
+  return (
+    normalizarTextoLocal(
+      primeiro
+    ) ===
+    normalizarTextoLocal(
+      segundo
+    )
+  );
+}
+
+function normalizarTextoLocal(
+  texto: string
+) {
+  return texto
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .trim()
+    .toLowerCase()
+    .replace(
+      /\s+/g,
+      " "
     );
-  }
+}
+
+function criarIdLocal(
+  texto: string
+) {
+  return texto
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-|-$/g,
+      ""
+    );
 }
 
 function normalizarTipo(
