@@ -25,9 +25,6 @@ import {
 
 import {
   carregarEstadoDaNuvem,
-  confirmarDonoDosDadosLocais,
-  marcarMigracaoConcluida,
-  migracaoJaConcluida,
   montarEstadoNuvem,
   salvarEstadoNaNuvem,
   type EstadoAppNuvem,
@@ -52,193 +49,167 @@ export type StatusNuvem =
 
 type AppContextType = {
   materias: Materia[];
-  setMaterias: Dispatch<
-    SetStateAction<Materia[]>
-  >;
+  setMaterias: Dispatch<SetStateAction<Materia[]>>;
 
   questoes: RegistroQuestao[];
-  setQuestoes: Dispatch<
-    SetStateAction<RegistroQuestao[]>
-  >;
+  setQuestoes: Dispatch<SetStateAction<RegistroQuestao[]>>;
 
   sessoes: SessaoEstudo[];
-  setSessoes: Dispatch<
-    SetStateAction<SessaoEstudo[]>
-  >;
+  setSessoes: Dispatch<SetStateAction<SessaoEstudo[]>>;
 
   revisoes: Revisao[];
-  setRevisoes: Dispatch<
-    SetStateAction<Revisao[]>
-  >;
+  setRevisoes: Dispatch<SetStateAction<Revisao[]>>;
 
   simulados: Simulado[];
-  setSimulados: Dispatch<
-    SetStateAction<Simulado[]>
-  >;
+  setSimulados: Dispatch<SetStateAction<Simulado[]>>;
 
   bancoQuestoes: QuestaoBanco[];
-  setBancoQuestoes: Dispatch<
-    SetStateAction<QuestaoBanco[]>
-  >;
+  setBancoQuestoes: Dispatch<SetStateAction<QuestaoBanco[]>>;
 
   simuladosGerados: SimuladoGerado[];
-  setSimuladosGerados: Dispatch<
-    SetStateAction<SimuladoGerado[]>
-  >;
+  setSimuladosGerados: Dispatch<SetStateAction<SimuladoGerado[]>>;
 
   configuracoes: ConfiguracoesApp;
-  setConfiguracoes: Dispatch<
-    SetStateAction<ConfiguracoesApp>
-  >;
+  setConfiguracoes: Dispatch<SetStateAction<ConfiguracoesApp>>;
 
   missoesConcluidas: string[];
-  setMissoesConcluidas: Dispatch<
-    SetStateAction<string[]>
-  >;
+  setMissoesConcluidas: Dispatch<SetStateAction<string[]>>;
 
   statusNuvem: StatusNuvem;
   erroNuvem: string;
-
   sincronizarAgora: () => Promise<void>;
 };
 
 const AppContext =
-  createContext<
-    AppContextType | undefined
-  >(undefined);
+  createContext<AppContextType | undefined>(
+    undefined
+  );
 
 type AppProviderProps = {
   children: ReactNode;
 };
 
-const configuracoesPadrao:
-  ConfiguracoesApp = {
-    nomeUsuario: "Leandro",
-    concurso: "PMPE",
-    bancaPadrao: "AOCP",
-    metaQuestoesDiaria: 100,
-    metaMinutosDiaria: 120,
-    metaRevisoesDiaria: 5,
-    tema: "escuro",
-  };
+const configuracoesPadrao: ConfiguracoesApp = {
+  nomeUsuario: "Leandro",
+  concurso: "PMPE",
+  bancaPadrao: "AOCP",
+  metaQuestoesDiaria: 100,
+  metaMinutosDiaria: 120,
+  metaRevisoesDiaria: 5,
+  tema: "escuro",
+};
 
-const materiasGeradasDoPlano =
-  gerarMateriasDoPlano();
+function clonar<T>(valor: T): T {
+  if (typeof structuredClone === "function") {
+    return structuredClone(valor);
+  }
+
+  return JSON.parse(JSON.stringify(valor)) as T;
+}
+
+function criarEstadoInicialDaConta():
+  EstadoAppNuvem {
+  return montarEstadoNuvem({
+    materias: clonar(
+      gerarMateriasDoPlano()
+    ),
+    questoes: [],
+    sessoes: [],
+    revisoes: [],
+    simulados: [],
+    bancoQuestoes: [],
+    simuladosGerados: [],
+    configuracoes: clonar(
+      configuracoesPadrao
+    ),
+    missoesConcluidas: [],
+  });
+}
+
+function chaveDaConta(
+  userId: string,
+  nome: string
+) {
+  return `pmpe:${userId}:${nome}`;
+}
 
 export function AppProvider({
   children,
 }: AppProviderProps) {
-  const { usuario } =
-    useAuth();
+  const { usuario } = useAuth();
 
-  const [
-    materias,
-    setMaterias,
-  ] = useLocalStorage<Materia[]>(
-    "pmpe_materias",
-    materiasGeradasDoPlano
-  );
+  const userId =
+    usuario?.id ?? "sem-usuario";
 
-  const [
-    questoes,
-    setQuestoes,
-  ] =
-    useLocalStorage<
-      RegistroQuestao[]
-    >(
-      "pmpe_questoes",
+  const [materias, setMaterias] =
+    useLocalStorage<Materia[]>(
+      chaveDaConta(userId, "materias"),
+      gerarMateriasDoPlano()
+    );
+
+  const [questoes, setQuestoes] =
+    useLocalStorage<RegistroQuestao[]>(
+      chaveDaConta(userId, "questoes"),
       []
     );
 
-  const [
-    sessoes,
-    setSessoes,
-  ] =
-    useLocalStorage<
-      SessaoEstudo[]
-    >(
-      "pmpe_sessoes",
+  const [sessoes, setSessoes] =
+    useLocalStorage<SessaoEstudo[]>(
+      chaveDaConta(userId, "sessoes"),
       []
     );
 
-  const [
-    revisoes,
-    setRevisoes,
-  ] =
-    useLocalStorage<
-      Revisao[]
-    >(
-      "pmpe_revisoes",
+  const [revisoes, setRevisoes] =
+    useLocalStorage<Revisao[]>(
+      chaveDaConta(userId, "revisoes"),
       []
     );
 
-  const [
-    simulados,
-    setSimulados,
-  ] =
-    useLocalStorage<
-      Simulado[]
-    >(
-      "pmpe_simulados",
+  const [simulados, setSimulados] =
+    useLocalStorage<Simulado[]>(
+      chaveDaConta(userId, "simulados"),
       []
     );
 
-  const [
-    bancoQuestoes,
-    setBancoQuestoes,
-  ] =
-    useLocalStorage<
-      QuestaoBanco[]
-    >(
-      "pmpe_banco_questoes",
+  const [bancoQuestoes, setBancoQuestoes] =
+    useLocalStorage<QuestaoBanco[]>(
+      chaveDaConta(userId, "banco-questoes"),
       []
     );
 
   const [
     simuladosGerados,
     setSimuladosGerados,
-  ] =
-    useLocalStorage<
-      SimuladoGerado[]
-    >(
-      "pmpe_simulados_gerados",
-      []
-    );
+  ] = useLocalStorage<SimuladoGerado[]>(
+    chaveDaConta(userId, "simulados-gerados"),
+    []
+  );
 
   const [
     configuracoes,
     setConfiguracoes,
-  ] =
-    useLocalStorage<
-      ConfiguracoesApp
-    >(
-      "pmpe_configuracoes",
-      configuracoesPadrao
-    );
+  ] = useLocalStorage<ConfiguracoesApp>(
+    chaveDaConta(userId, "configuracoes"),
+    configuracoesPadrao
+  );
 
   const [
     missoesConcluidas,
     setMissoesConcluidas,
-  ] =
-    useLocalStorage<string[]>(
-      "pmpe_plano_missoes_concluidas",
-      []
-    );
+  ] = useLocalStorage<string[]>(
+    chaveDaConta(userId, "missoes-concluidas"),
+    []
+  );
 
   const [
     statusNuvem,
     setStatusNuvem,
-  ] =
-    useState<StatusNuvem>(
-      usuario
-        ? "carregando"
-        : "sincronizado"
-    );
+  ] = useState<StatusNuvem>(
+    usuario ? "carregando" : "sincronizado"
+  );
 
-  const [
-    erroNuvem,
-    setErroNuvem,
-  ] = useState("");
+  const [erroNuvem, setErroNuvem] =
+    useState("");
 
   const nuvemInicializadaRef =
     useRef(false);
@@ -247,27 +218,24 @@ export function AppProvider({
     useRef(false);
 
   const timerSalvarRef =
-    useRef<
-      ReturnType<
-        typeof setTimeout
-      > | null
-    >(null);
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
 
   const ultimoEstadoSalvoRef =
     useRef("");
 
-  const dadosAtuaisRef =
-    useRef({
-      materias,
-      questoes,
-      sessoes,
-      revisoes,
-      simulados,
-      bancoQuestoes,
-      simuladosGerados,
-      configuracoes,
-      missoesConcluidas,
-    });
+  const dadosAtuaisRef = useRef({
+    materias,
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    bancoQuestoes,
+    simuladosGerados,
+    configuracoes,
+    missoesConcluidas,
+  });
 
   useEffect(() => {
     dadosAtuaisRef.current = {
@@ -296,60 +264,34 @@ export function AppProvider({
   const aplicarEstadoDaNuvem =
     useCallback(
       (
-        estado:
-          EstadoAppNuvem
+        estado: EstadoAppNuvem
       ) => {
-        hidratandoRef.current =
-          true;
+        hidratandoRef.current = true;
 
-        setMaterias(
-          estado.materias
-        );
-
-        setQuestoes(
-          estado.questoes
-        );
-
-        setSessoes(
-          estado.sessoes
-        );
-
-        setRevisoes(
-          estado.revisoes
-        );
-
-        setSimulados(
-          estado.simulados
-        );
-
+        setMaterias(estado.materias);
+        setQuestoes(estado.questoes);
+        setSessoes(estado.sessoes);
+        setRevisoes(estado.revisoes);
+        setSimulados(estado.simulados);
         setBancoQuestoes(
           estado.bancoQuestoes
         );
-
         setSimuladosGerados(
           estado.simuladosGerados
         );
-
         setConfiguracoes(
           estado.configuracoes
         );
-
         setMissoesConcluidas(
           estado.missoesConcluidas
         );
 
         ultimoEstadoSalvoRef.current =
-          assinaturaEstado(
-            estado
-          );
+          assinaturaEstado(estado);
 
-        window.setTimeout(
-          () => {
-            hidratandoRef.current =
-              false;
-          },
-          0
-        );
+        window.setTimeout(() => {
+          hidratandoRef.current = false;
+        }, 0);
       },
       [
         setMaterias,
@@ -366,44 +308,26 @@ export function AppProvider({
 
   useEffect(() => {
     if (!usuario) {
-      nuvemInicializadaRef.current =
-        false;
-
-      hidratandoRef.current =
-        false;
-
-      ultimoEstadoSalvoRef.current =
-        "";
-
+      nuvemInicializadaRef.current = false;
+      hidratandoRef.current = false;
+      ultimoEstadoSalvoRef.current = "";
       setErroNuvem("");
-
-      setStatusNuvem(
-        "sincronizado"
-      );
-
+      setStatusNuvem("sincronizado");
       return;
     }
 
-   const userId =
-  usuario.id;
-
+    const idDaConta = usuario.id;
     let ativo = true;
 
     async function iniciarNuvem() {
       try {
-        setStatusNuvem(
-          "carregando"
-        );
-
+        nuvemInicializadaRef.current = false;
+        setStatusNuvem("carregando");
         setErroNuvem("");
-
-        confirmarDonoDosDadosLocais(
-          userId
-        );
 
         const estadoNuvem =
           await carregarEstadoDaNuvem(
-            userId
+            idDaConta
           );
 
         if (!ativo) {
@@ -415,34 +339,21 @@ export function AppProvider({
             estadoNuvem
           );
         } else {
-          const migrada =
-            await migracaoJaConcluida(
-              userId
-            );
+          const estadoInicial =
+            criarEstadoInicialDaConta();
 
-          if (!ativo) {
-            return;
-          }
-
-          const estadoLocal =
-            montarEstadoNuvem(
-              dadosAtuaisRef.current
-            );
-
-          await salvarEstadoNaNuvem(
-            userId,
-            estadoLocal
+          aplicarEstadoDaNuvem(
+            estadoInicial
           );
 
-          if (!migrada) {
-            await marcarMigracaoConcluida(
-              userId
-            );
-          }
+          await salvarEstadoNaNuvem(
+            idDaConta,
+            estadoInicial
+          );
 
           ultimoEstadoSalvoRef.current =
             assinaturaEstado(
-              estadoLocal
+              estadoInicial
             );
         }
 
@@ -450,12 +361,8 @@ export function AppProvider({
           return;
         }
 
-        nuvemInicializadaRef.current =
-          true;
-
-        setStatusNuvem(
-          "sincronizado"
-        );
+        nuvemInicializadaRef.current = true;
+        setStatusNuvem("sincronizado");
 
         window.dispatchEvent(
           new Event(
@@ -478,13 +385,8 @@ export function AppProvider({
           erro
         );
 
-        setErroNuvem(
-          mensagem
-        );
-
-        setStatusNuvem(
-          "erro"
-        );
+        setErroNuvem(mensagem);
+        setStatusNuvem("erro");
       }
     }
 
@@ -493,15 +395,11 @@ export function AppProvider({
     return () => {
       ativo = false;
 
-      if (
-        timerSalvarRef.current
-      ) {
+      if (timerSalvarRef.current) {
         clearTimeout(
           timerSalvarRef.current
         );
-
-        timerSalvarRef.current =
-          null;
+        timerSalvarRef.current = null;
       }
     };
   }, [
@@ -557,43 +455,31 @@ export function AppProvider({
       return;
     }
 
-    if (
-      timerSalvarRef.current
-    ) {
+    if (timerSalvarRef.current) {
       clearTimeout(
         timerSalvarRef.current
       );
     }
 
-    setStatusNuvem(
-      "salvando"
-    );
+    setStatusNuvem("salvando");
 
-    const userId =
-      usuario.id;
+    const idDaConta = usuario.id;
 
     timerSalvarRef.current =
-      setTimeout(
-        () => {
-          void salvarAlteracao(
-            userId,
-            estadoAtual,
-            assinatura
-          );
-        },
-        1200
-      );
+      setTimeout(() => {
+        void salvarAlteracao(
+          idDaConta,
+          estadoAtual,
+          assinatura
+        );
+      }, 1200);
 
     return () => {
-      if (
-        timerSalvarRef.current
-      ) {
+      if (timerSalvarRef.current) {
         clearTimeout(
           timerSalvarRef.current
         );
-
-        timerSalvarRef.current =
-          null;
+        timerSalvarRef.current = null;
       }
     };
   }, [
@@ -602,13 +488,13 @@ export function AppProvider({
   ]);
 
   async function salvarAlteracao(
-    userId: string,
+    idDaConta: string,
     estado: EstadoAppNuvem,
     assinatura: string
   ) {
     try {
       await salvarEstadoNaNuvem(
-        userId,
+        idDaConta,
         estado
       );
 
@@ -616,10 +502,7 @@ export function AppProvider({
         assinatura;
 
       setErroNuvem("");
-
-      setStatusNuvem(
-        "sincronizado"
-      );
+      setStatusNuvem("sincronizado");
 
       window.dispatchEvent(
         new Event(
@@ -638,13 +521,8 @@ export function AppProvider({
         erro
       );
 
-      setErroNuvem(
-        mensagem
-      );
-
-      setStatusNuvem(
-        "erro"
-      );
+      setErroNuvem(mensagem);
+      setStatusNuvem("erro");
     }
   }
 
@@ -656,9 +534,7 @@ export function AppProvider({
     }
 
     try {
-      setStatusNuvem(
-        "salvando"
-      );
+      setStatusNuvem("salvando");
 
       const estado =
         montarEstadoNuvem(
@@ -671,15 +547,10 @@ export function AppProvider({
       );
 
       ultimoEstadoSalvoRef.current =
-        assinaturaEstado(
-          estado
-        );
+        assinaturaEstado(estado);
 
       setErroNuvem("");
-
-      setStatusNuvem(
-        "sincronizado"
-      );
+      setStatusNuvem("sincronizado");
 
       window.dispatchEvent(
         new Event(
@@ -693,14 +564,8 @@ export function AppProvider({
           "Erro ao sincronizar."
         );
 
-      setErroNuvem(
-        mensagem
-      );
-
-      setStatusNuvem(
-        "erro"
-      );
-
+      setErroNuvem(mensagem);
+      setStatusNuvem("erro");
       throw erro;
     }
   }
@@ -710,31 +575,22 @@ export function AppProvider({
       value={{
         materias,
         setMaterias,
-
         questoes,
         setQuestoes,
-
         sessoes,
         setSessoes,
-
         revisoes,
         setRevisoes,
-
         simulados,
         setSimulados,
-
         bancoQuestoes,
         setBancoQuestoes,
-
         simuladosGerados,
         setSimuladosGerados,
-
         configuracoes,
         setConfiguracoes,
-
         missoesConcluidas,
         setMissoesConcluidas,
-
         statusNuvem,
         erroNuvem,
         sincronizarAgora,
@@ -747,9 +603,7 @@ export function AppProvider({
 
 export function useApp() {
   const context =
-    useContext(
-      AppContext
-    );
+    useContext(AppContext);
 
   if (!context) {
     throw new Error(
@@ -764,14 +618,11 @@ function assinaturaEstado(
   estado: EstadoAppNuvem
 ) {
   const {
-    salvoEm:
-      _salvoEm,
+    salvoEm: _salvoEm,
     ...dados
   } = estado;
 
-  return JSON.stringify(
-    dados
-  );
+  return JSON.stringify(dados);
 }
 
 function obterMensagemErro(
