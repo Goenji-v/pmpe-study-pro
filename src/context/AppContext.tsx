@@ -126,6 +126,92 @@ function criarEstadoInicialDaConta():
   });
 }
 
+function reconciliarMateriasComPlano(
+  materiasSalvas: Materia[]
+): Materia[] {
+  const materiasDoPlano =
+    gerarMateriasDoPlano();
+
+  if (
+    !Array.isArray(
+      materiasSalvas
+    ) ||
+    materiasSalvas.length === 0
+  ) {
+    return clonar(
+      materiasDoPlano
+    );
+  }
+
+  return materiasDoPlano.map(
+    (materiaPlano) => {
+      const materiaSalva =
+        materiasSalvas.find(
+          (materia) =>
+            materia.id ===
+              materiaPlano.id ||
+            normalizarTexto(
+              materia.nome
+            ) ===
+              normalizarTexto(
+                materiaPlano.nome
+              )
+        );
+
+      if (!materiaSalva) {
+        return materiaPlano;
+      }
+
+      return {
+        ...materiaPlano,
+        ...materiaSalva,
+
+        assuntos:
+          materiaPlano.assuntos.map(
+            (assuntoPlano) => {
+              const assuntoSalvo =
+                materiaSalva.assuntos.find(
+                  (assunto) =>
+                    assunto.id ===
+                      assuntoPlano.id ||
+                    normalizarTexto(
+                      assunto.nome
+                    ) ===
+                      normalizarTexto(
+                        assuntoPlano.nome
+                      )
+                );
+
+              return assuntoSalvo
+                ? {
+                    ...assuntoPlano,
+                    ...assuntoSalvo,
+                  }
+                : assuntoPlano;
+            }
+          ),
+      };
+    }
+  );
+}
+
+function normalizarTexto(
+  texto: string
+) {
+  return texto
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .trim()
+    .toLowerCase()
+    .replace(
+      /\s+/g,
+      " "
+    );
+}
+
 function chaveDaConta(
   userId: string,
   nome: string
@@ -268,7 +354,15 @@ export function AppProvider({
       ) => {
         hidratandoRef.current = true;
 
-        setMaterias(estado.materias);
+        const materiasReconciliadas =
+          reconciliarMateriasComPlano(
+            estado.materias
+          );
+
+        setMaterias(
+          materiasReconciliadas
+        );
+
         setQuestoes(estado.questoes);
         setSessoes(estado.sessoes);
         setRevisoes(estado.revisoes);
@@ -286,8 +380,16 @@ export function AppProvider({
           estado.missoesConcluidas
         );
 
+        const estadoReconciliado = {
+          ...estado,
+          materias:
+            materiasReconciliadas,
+        };
+
         ultimoEstadoSalvoRef.current =
-          assinaturaEstado(estado);
+          assinaturaEstado(
+            estadoReconciliado
+          );
 
         window.setTimeout(() => {
           hidratandoRef.current = false;
@@ -335,9 +437,38 @@ export function AppProvider({
         }
 
         if (estadoNuvem) {
+          const materiasReconciliadas =
+            reconciliarMateriasComPlano(
+              estadoNuvem.materias
+            );
+
+          const estadoCorrigido:
+            EstadoAppNuvem = {
+            ...estadoNuvem,
+            materias:
+              materiasReconciliadas,
+            salvoEm:
+              new Date()
+                .toISOString(),
+          };
+
           aplicarEstadoDaNuvem(
-            estadoNuvem
+            estadoCorrigido
           );
+
+          if (
+            assinaturaEstado(
+              estadoCorrigido
+            ) !==
+            assinaturaEstado(
+              estadoNuvem
+            )
+          ) {
+            await salvarEstadoNaNuvem(
+              idDaConta,
+              estadoCorrigido
+            );
+          }
         } else {
           const estadoInicial =
             criarEstadoInicialDaConta();

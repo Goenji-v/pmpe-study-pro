@@ -7,15 +7,14 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  useApp,
-} from "./AppContext";
-
-import {
-  useToast,
-} from "./ToastContext";
+import { useApp } from "./AppContext";
+import { useAuth } from "./AuthContext";
+import { useToast } from "./ToastContext";
+import { criarPrimeiraRevisao } from "../utils/revisoes";
 
 import type {
+  Dificuldade,
+  SessaoEstudo,
   TipoSessao,
 } from "../types/index";
 
@@ -24,51 +23,91 @@ type StatusCronometro =
   | "rodando"
   | "pausado";
 
-type SessaoAtiva = {
+export type SessaoAtiva = {
   materia: string;
   assunto: string;
   tipo: TipoSessao;
   objetivo: string;
-
+  observacao: string;
   status: StatusCronometro;
-
   iniciadoEm: string | null;
-  segundosAcumulados: number;
+  pausadoEm: string | null;
+  segundosPausados: number;
+  missaoId?: string;
+  semana?: number;
+  dia?: number;
+  urlAula?: string;
+  urlQuestoes?: string;
 };
 
-type DadosIniciarSessao = {
+export type DadosIniciarSessao = {
   materia: string;
   assunto: string;
   tipo: TipoSessao;
-  objetivo: string;
+  objetivo?: string;
+  observacao?: string;
+  missaoId?: string;
+  semana?: number;
+  dia?: number;
+  urlAula?: string;
+  urlQuestoes?: string;
+};
+
+export type DadosFinalizacaoSessao = {
+  minutosReais: number;
+  observacao?: string;
+
+  quantidadeQuestoes?: number;
+  quantidadeAcertos?: number;
+  quantidadeErros?: number;
+  banca?: string;
+  dificuldade?: Dificuldade;
+
+  avaliacaoRevisao?:
+    | "facil"
+    | "media"
+    | "dificil";
+};
+
+type ResultadoFinalizacao = {
+  sessao: SessaoEstudo;
+  revisaoCriada: boolean;
 };
 
 type CronometroContextType = {
   sessaoAtiva: SessaoAtiva;
   segundosDecorridos: number;
   cronometroAtivo: boolean;
-
-  iniciar: (
-    dados: DadosIniciarSessao
+  iniciar: (dados: DadosIniciarSessao) => boolean;
+  atualizarDados: (
+    dados: Partial<
+      Pick<
+        SessaoAtiva,
+        "materia" | "assunto" | "tipo" |
+        "objetivo" | "observacao"
+      >
+    >
   ) => void;
-
   pausar: () => void;
   continuar: () => void;
-  finalizar: () => void;
-  cancelar: () => void;
+  finalizar: (
+    dados: DadosFinalizacaoSessao
+  ) => ResultadoFinalizacao | null;
+  cancelar: (
+    pedirConfirmacao?: boolean
+  ) => void;
 };
-
-const CHAVE_SESSAO_ATIVA =
-  "pmpe_cronometro_sessao_ativa";
 
 const sessaoInicial: SessaoAtiva = {
   materia: "",
   assunto: "",
-  tipo: "estudo",
+  tipo: "aula",
   objetivo: "",
+  observacao: "",
   status: "parado",
   iniciadoEm: null,
-  segundosAcumulados: 0,
+  pausadoEm: null,
+  segundosPausados: 0,
 };
 
 const CronometroContext =
@@ -76,359 +115,468 @@ const CronometroContext =
     null
   );
 
+function chaveSessao(
+  userId: string
+) {
+  return `pmpe:${userId}:cronometro-sessao-ativa`;
+}
+
 export function CronometroProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const {
-    setSessoes,
-  } = useApp();
+  const { usuario } = useAuth();
 
   const {
-    showToast,
-  } = useToast();
+    materias,
+    setMaterias,
+    setSessoes,
+    setQuestoes,
+    setRevisoes,
+    setMissoesConcluidas,
+  } = useApp();
+
+  const { showToast } = useToast();
+
+  const chaveStorage =
+    chaveSessao(
+      usuario?.id ?? "sem-usuario"
+    );
 
   const [
     sessaoAtiva,
     setSessaoAtiva,
   ] = useState<SessaoAtiva>(
-    () => {
-      try {
-        const salvo =
-          localStorage.getItem(
-            CHAVE_SESSAO_ATIVA
-          );
-
-        if (!salvo) {
-          return sessaoInicial;
-        }
-
-        const dados =
-          JSON.parse(
-            salvo
-          ) as Partial<SessaoAtiva>;
-
-        return {
-          ...sessaoInicial,
-          ...dados,
-          tipo:
-            normalizarTipoSessao(
-              dados.tipo
-            ),
-        };
-      } catch {
-        return sessaoInicial;
-      }
-    }
+    () => carregarSessao(chaveStorage)
   );
 
-  const [
-    agora,
-    setAgora,
-  ] = useState(
-    Date.now()
-  );
+  const [agora, setAgora] =
+    useState(Date.now());
 
   useEffect(() => {
-    localStorage.setItem(
-      CHAVE_SESSAO_ATIVA,
-      JSON.stringify(
-        sessaoAtiva
-      )
+    setSessaoAtiva(
+      carregarSessao(chaveStorage)
     );
-  }, [sessaoAtiva]);
+  }, [chaveStorage]);
 
   useEffect(() => {
-    if (
-      sessaoAtiva.status !==
-      "rodando"
-    ) {
+    if (sessaoAtiva.status === "parado") {
+      localStorage.removeItem(chaveStorage);
+      return;
+    }
+
+    localStorage.setItem(
+      chaveStorage,
+      JSON.stringify(sessaoAtiva)
+    );
+  }, [chaveStorage, sessaoAtiva]);
+
+  useEffect(() => {
+    if (sessaoAtiva.status !== "rodando") {
       return;
     }
 
     const intervalo =
       window.setInterval(
-        () => {
-          setAgora(
-            Date.now()
-          );
-        },
+        () => setAgora(Date.now()),
         1000
       );
 
-    return () => {
-      window.clearInterval(
-        intervalo
-      );
-    };
+    return () =>
+      window.clearInterval(intervalo);
   }, [sessaoAtiva.status]);
 
   const segundosDecorridos =
     useMemo(
       () =>
-        calcularSegundosDecorridos(
+        calcularSegundos(
           sessaoAtiva,
           agora
         ),
-      [
-        sessaoAtiva,
-        agora,
-      ]
+      [sessaoAtiva, agora]
     );
 
   const cronometroAtivo =
-    sessaoAtiva.status !==
-    "parado";
+    sessaoAtiva.status !== "parado";
 
   function iniciar(
     dados: DadosIniciarSessao
   ) {
     if (cronometroAtivo) {
-      showToast(
-        "Já existe uma sessão em andamento.",
-        "warning"
-      );
+      const substituir =
+        window.confirm(
+          "Já existe uma sessão em andamento. Deseja substituí-la?"
+        );
 
-      return;
+      if (!substituir) {
+        return false;
+      }
     }
 
-    if (!dados.materia) {
+    if (!dados.materia.trim()) {
       showToast(
         "Selecione uma matéria.",
         "warning"
       );
-
-      return;
+      return false;
     }
 
-    if (!dados.assunto) {
+    if (!dados.assunto.trim()) {
       showToast(
-        "Selecione um assunto.",
+        "Selecione ou informe um assunto.",
         "warning"
       );
-
-      return;
+      return false;
     }
 
-    const novaSessao:
-      SessaoAtiva = {
-      materia:
-        dados.materia,
-      assunto:
-        dados.assunto,
-      tipo:
-        dados.tipo,
-      objetivo:
-        dados.objetivo.trim(),
+    setSessaoAtiva({
+      materia: dados.materia.trim(),
+      assunto: dados.assunto.trim(),
+      tipo: dados.tipo,
+      objetivo: dados.objetivo?.trim() ?? "",
+      observacao: dados.observacao?.trim() ?? "",
+      status: "rodando",
+      iniciadoEm: new Date().toISOString(),
+      pausadoEm: null,
+      segundosPausados: 0,
+      missaoId: dados.missaoId,
+      semana: dados.semana,
+      dia: dados.dia,
+      urlAula: dados.urlAula,
+      urlQuestoes: dados.urlQuestoes,
+    });
 
-      status:
-        "rodando",
-
-      iniciadoEm:
-        new Date()
-          .toISOString(),
-
-      segundosAcumulados:
-        0,
-    };
-
-    setSessaoAtiva(
-      novaSessao
-    );
-
-    setAgora(
-      Date.now()
-    );
+    setAgora(Date.now());
 
     showToast(
       "Sessão de estudo iniciada.",
       "success"
     );
+
+    return true;
   }
 
-  function pausar() {
-    if (
-      sessaoAtiva.status !==
-      "rodando"
-    ) {
+  function atualizarDados(
+    dados: Partial<
+      Pick<
+        SessaoAtiva,
+        "materia" | "assunto" | "tipo" |
+        "objetivo" | "observacao"
+      >
+    >
+  ) {
+    if (cronometroAtivo) {
       return;
     }
-
-    const totalAtual =
-      calcularSegundosDecorridos(
-        sessaoAtiva,
-        Date.now()
-      );
 
     setSessaoAtiva(
       (anterior) => ({
         ...anterior,
-        status:
-          "pausado",
-        iniciadoEm:
-          null,
-        segundosAcumulados:
-          totalAtual,
+        ...dados,
       })
     );
+  }
 
-    showToast(
-      "Cronômetro pausado.",
-      "info"
+  function pausar() {
+    if (sessaoAtiva.status !== "rodando") {
+      return;
+    }
+
+    setSessaoAtiva(
+      (anterior) => ({
+        ...anterior,
+        status: "pausado",
+        pausadoEm:
+          new Date().toISOString(),
+      })
     );
   }
 
   function continuar() {
     if (
-      sessaoAtiva.status !==
-      "pausado"
+      sessaoAtiva.status !== "pausado" ||
+      !sessaoAtiva.pausadoEm
     ) {
       return;
     }
+
+    const segundosDaPausa =
+      Math.max(
+        0,
+        Math.floor(
+          (
+            Date.now() -
+            new Date(
+              sessaoAtiva.pausadoEm
+            ).getTime()
+          ) / 1000
+        )
+      );
 
     setSessaoAtiva(
       (anterior) => ({
         ...anterior,
-        status:
-          "rodando",
-        iniciadoEm:
-          new Date()
-            .toISOString(),
+        status: "rodando",
+        pausadoEm: null,
+        segundosPausados:
+          anterior.segundosPausados +
+          segundosDaPausa,
       })
     );
 
-    setAgora(
-      Date.now()
-    );
-
-    showToast(
-      "Sessão retomada.",
-      "success"
-    );
+    setAgora(Date.now());
   }
 
-  function finalizar() {
+  function finalizar(
+    dados: DadosFinalizacaoSessao
+  ): ResultadoFinalizacao | null {
     if (!cronometroAtivo) {
-      return;
-    }
-
-    const totalSegundos =
-      calcularSegundosDecorridos(
-        sessaoAtiva,
-        Date.now()
-      );
-
-    if (
-      totalSegundos < 60
-    ) {
-      showToast(
-        "A sessão precisa ter pelo menos 1 minuto para ser salva.",
-        "warning"
-      );
-
-      return;
+      return null;
     }
 
     const minutos =
-      Math.max(
-        1,
-        Math.round(
-          totalSegundos / 60
-        )
+      dados.minutosReais;
+
+    if (
+      !Number.isFinite(minutos) ||
+      minutos < 1 ||
+      minutos > 1440
+    ) {
+      showToast(
+        "Informe um tempo válido entre 1 e 1440 minutos.",
+        "warning"
       );
+      return null;
+    }
 
     const finalizadaEm =
-      new Date()
-        .toISOString();
+      new Date().toISOString();
 
-    const iniciadaEm =
-      sessaoAtiva.iniciadoEm ??
-      new Date(
-        Date.now() -
-        totalSegundos * 1000
-      ).toISOString();
+    const novaSessao:
+      SessaoEstudo = {
+      id: crypto.randomUUID(),
+      tipo: sessaoAtiva.tipo,
+      materia: sessaoAtiva.materia,
+      assunto: sessaoAtiva.assunto,
+      objetivo:
+        sessaoAtiva.objetivo ||
+        undefined,
+      observacao:
+        dados.observacao?.trim() ||
+        sessaoAtiva.observacao ||
+        undefined,
+
+      minutos:
+        Math.round(minutos),
+
+      quantidadeQuestoes:
+        dados.quantidadeQuestoes,
+
+      quantidadeAcertos:
+        dados.quantidadeAcertos,
+
+      quantidadeErros:
+        dados.quantidadeErros,
+
+      banca:
+        dados.banca?.trim() ||
+        undefined,
+
+      dificuldade:
+        dados.dificuldade,
+
+      avaliacaoRevisao:
+        dados.avaliacaoRevisao,
+      data: finalizadaEm,
+      iniciadaEm:
+        sessaoAtiva.iniciadoEm ??
+        finalizadaEm,
+      finalizadaEm,
+      missaoId: sessaoAtiva.missaoId,
+      semana: sessaoAtiva.semana,
+      dia: sessaoAtiva.dia,
+    };
 
     setSessoes(
       (anteriores) => [
-        {
-          id:
-            crypto.randomUUID(),
-
-          tipo:
-            sessaoAtiva.tipo,
-
-          materia:
-            sessaoAtiva.materia,
-
-          assunto:
-            sessaoAtiva.assunto,
-
-          objetivo:
-            sessaoAtiva.objetivo ||
-            undefined,
-
-          observacao:
-            criarObservacaoSessao(
-              sessaoAtiva.tipo,
-              sessaoAtiva.objetivo
-            ),
-
-          minutos,
-
-          data:
-            finalizadaEm,
-
-          iniciadaEm,
-          finalizadaEm,
-        },
-
+        novaSessao,
         ...anteriores,
       ]
     );
 
-    setSessaoAtiva(
-      sessaoInicial
-    );
+    const quantidadeAcertos =
+  dados.quantidadeAcertos;
 
-    localStorage.removeItem(
-      CHAVE_SESSAO_ATIVA
-    );
+const quantidadeErros =
+  dados.quantidadeErros;
 
-    showToast(
-      `Sessão finalizada: ${formatarTempo(
-        totalSegundos
-      )}.`,
-      "success"
-    );
-  }
+if (
+  sessaoAtiva.tipo ===
+    "questoes" &&
+  typeof quantidadeAcertos ===
+    "number" &&
+  typeof quantidadeErros ===
+    "number"
+) {
+  
+      setQuestoes(
+        (anteriores) => [
+          {
+            id:
+              crypto.randomUUID(),
 
-  function cancelar() {
-    if (!cronometroAtivo) {
-      return;
+            materia:
+              sessaoAtiva.materia,
+
+            assunto:
+              sessaoAtiva.assunto,
+
+            banca:
+              dados.banca?.trim() ||
+              "Não informada",
+
+            certas:
+              quantidadeAcertos,
+
+            erradas:
+              quantidadeErros,
+
+            minutos:
+              Math.round(
+                minutos
+              ),
+
+            data:
+              finalizadaEm,
+
+            observacao:
+              dados.observacao?.trim() ||
+              undefined,
+          },
+          ...anteriores,
+        ]
+      );
     }
 
-    const confirmar =
-      window.confirm(
-        "Deseja cancelar esta sessão? O tempo não será salvo."
+    if (sessaoAtiva.missaoId) {
+      setMissoesConcluidas(
+        (anteriores) =>
+          Array.from(
+            new Set([
+              ...anteriores,
+              sessaoAtiva.missaoId as string,
+            ])
+          )
+      );
+    }
+
+    let revisaoCriada = false;
+
+    if (tipoGeraRevisao(sessaoAtiva.tipo)) {
+      const referencia =
+        localizarMateriaEAssunto(
+          materias,
+          sessaoAtiva.materia,
+          sessaoAtiva.assunto
+        );
+
+      setMaterias(
+        (anteriores) =>
+          marcarAssuntoConcluido(
+            anteriores,
+            sessaoAtiva.materia,
+            sessaoAtiva.assunto
+          )
       );
 
-    if (!confirmar) {
-      return;
+      setRevisoes(
+        (anteriores) => {
+          const jaExiste =
+            anteriores.some(
+              (revisao) =>
+                !revisao.concluida &&
+                mesmoTexto(
+                  revisao.materia,
+                  sessaoAtiva.materia
+                ) &&
+                mesmoTexto(
+                  revisao.assunto,
+                  sessaoAtiva.assunto
+                )
+            );
+
+          if (jaExiste) {
+            return anteriores;
+          }
+
+          revisaoCriada = true;
+
+          return [
+            criarPrimeiraRevisao({
+              materiaId:
+                referencia.materiaId,
+              assuntoId:
+                referencia.assuntoId,
+              materia:
+                sessaoAtiva.materia,
+              assunto:
+                sessaoAtiva.assunto,
+            }),
+            ...anteriores,
+          ];
+        }
+      );
     }
 
-    setSessaoAtiva(
-      sessaoInicial
-    );
+    setSessaoAtiva({
+      ...sessaoInicial,
+    });
 
-    localStorage.removeItem(
-      CHAVE_SESSAO_ATIVA
+    localStorage.removeItem(chaveStorage);
+
+    [
+      "pmpe-sessoes-atualizadas",
+      "pmpe-plano-atualizado",
+      "pmpe-materias-atualizadas",
+      "pmpe-revisoes-atualizadas",
+      "pmpe-dashboard-atualizado",
+    ].forEach(
+      (nome) =>
+        window.dispatchEvent(
+          new Event(nome)
+        )
     );
 
     showToast(
-      "Sessão cancelada.",
-      "info"
+      "Sessão finalizada e salva.",
+      "success"
     );
+
+    return {
+      sessao: novaSessao,
+      revisaoCriada,
+    };
+  }
+
+  function cancelar(
+    pedirConfirmacao = true
+  ) {
+    if (
+      cronometroAtivo &&
+      pedirConfirmacao &&
+      !window.confirm(
+        "Deseja cancelar esta sessão? O tempo não será salvo."
+      )
+    ) {
+      return;
+    }
+
+    setSessaoAtiva({
+      ...sessaoInicial,
+    });
+
+    localStorage.removeItem(chaveStorage);
   }
 
   return (
@@ -438,6 +586,7 @@ export function CronometroProvider({
         segundosDecorridos,
         cronometroAtivo,
         iniciar,
+        atualizarDados,
         pausar,
         continuar,
         finalizar,
@@ -451,9 +600,7 @@ export function CronometroProvider({
 
 export function useCronometro() {
   const contexto =
-    useContext(
-      CronometroContext
-    );
+    useContext(CronometroContext);
 
   if (!contexto) {
     throw new Error(
@@ -464,147 +611,208 @@ export function useCronometro() {
   return contexto;
 }
 
-function calcularSegundosDecorridos(
+function carregarSessao(
+  chave: string
+): SessaoAtiva {
+  const salvo =
+    localStorage.getItem(chave);
+
+  if (!salvo) {
+    return {
+      ...sessaoInicial,
+    };
+  }
+
+  try {
+    return {
+      ...sessaoInicial,
+      ...JSON.parse(salvo),
+    } as SessaoAtiva;
+  } catch {
+    return {
+      ...sessaoInicial,
+    };
+  }
+}
+
+function calcularSegundos(
   sessao: SessaoAtiva,
   momentoAtual: number
 ) {
   if (
-    sessao.status !==
-      "rodando" ||
+    sessao.status === "parado" ||
     !sessao.iniciadoEm
   ) {
-    return sessao.segundosAcumulados;
+    return 0;
   }
 
-  const inicioAtual =
+  const fim =
+    sessao.status === "pausado" &&
+    sessao.pausadoEm
+      ? new Date(
+          sessao.pausadoEm
+        ).getTime()
+      : momentoAtual;
+
+  const inicio =
     new Date(
       sessao.iniciadoEm
     ).getTime();
 
-  const segundosRodando =
-    Math.max(
-      0,
-      Math.floor(
-        (
-          momentoAtual -
-          inicioAtual
-        ) / 1000
-      )
-    );
-
-  return (
-    sessao.segundosAcumulados +
-    segundosRodando
+  return Math.max(
+    0,
+    Math.floor(
+      (fim - inicio) / 1000
+    ) -
+      sessao.segundosPausados
   );
 }
 
-function criarObservacaoSessao(
-  tipo: TipoSessao,
-  objetivo: string
-) {
-  const partes = [
-    `Tipo: ${formatarTipoSessao(
-      tipo
-    )}`,
-  ];
-
-  if (objetivo) {
-    partes.push(
-      `Objetivo: ${objetivo}`
-    );
-  }
-
-  return partes.join(
-    " | "
-  );
-}
-
-function normalizarTipoSessao(
-  valor: unknown
-): TipoSessao {
-  const tipos:
-    TipoSessao[] = [
-      "aula",
-      "revisao",
-      "questoes",
-      "simulado",
-      "estudo",
-      "leitura",
-      "videoaula",
-    ];
-
-  if (
-    typeof valor ===
-      "string" &&
-    tipos.includes(
-      valor as TipoSessao
-    )
-  ) {
-    return valor as TipoSessao;
-  }
-
-  return "estudo";
-}
-
-function formatarTipoSessao(
+function tipoGeraRevisao(
   tipo: TipoSessao
 ) {
-  const tipos:
-    Record<
-      TipoSessao,
-      string
-    > = {
-    aula: "Aula",
-    revisao: "Revisão",
-    questoes: "Questões",
-    simulado: "Simulado",
-    estudo: "Estudo",
-    leitura: "Leitura",
-    videoaula: "Videoaula",
-  };
+  return [
+    "aula",
+    "videoaula",
+    "estudo",
+    "leitura",
+    "questoes",
+  ].includes(tipo);
+}
 
-  return tipos[tipo];
+function localizarMateriaEAssunto(
+  materias: ReturnType<
+    typeof useApp
+  >["materias"],
+  nomeMateria: string,
+  nomeAssunto: string
+) {
+  const materia =
+    materias.find(
+      (item) =>
+        mesmoTexto(
+          item.nome,
+          nomeMateria
+        )
+    );
+
+  const assunto =
+    materia?.assuntos.find(
+      (item) =>
+        mesmoTexto(
+          item.nome,
+          nomeAssunto
+        )
+    );
+
+  return {
+    materiaId:
+      materia?.id ||
+      criarId(nomeMateria),
+    assuntoId:
+      assunto?.id ||
+      criarId(
+        `${nomeMateria}-${nomeAssunto}`
+      ),
+  };
+}
+
+function marcarAssuntoConcluido(
+  materias: ReturnType<
+    typeof useApp
+  >["materias"],
+  nomeMateria: string,
+  nomeAssunto: string
+) {
+  return materias.map(
+    (materia) =>
+      mesmoTexto(
+        materia.nome,
+        nomeMateria
+      )
+        ? {
+            ...materia,
+            assuntos:
+              materia.assuntos.map(
+                (assunto) =>
+                  mesmoTexto(
+                    assunto.nome,
+                    nomeAssunto
+                  )
+                    ? {
+                        ...assunto,
+                        concluido: true,
+                      }
+                    : assunto
+              ),
+          }
+        : materia
+  );
+}
+
+function mesmoTexto(
+  a: string,
+  b: string
+) {
+  return normalizar(a) === normalizar(b);
+}
+
+function normalizar(
+  texto: string
+) {
+  return texto
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function criarId(
+  texto: string
+) {
+  return texto
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(/^-|-$/g, "");
 }
 
 export function formatarTempo(
   segundos: number
 ) {
   const horas =
-    Math.floor(
-      segundos / 3600
-    );
+    Math.floor(segundos / 3600);
 
   const minutos =
     Math.floor(
-      (
-        segundos %
-        3600
-      ) / 60
+      (segundos % 3600) / 60
     );
 
   const segundosRestantes =
     segundos % 60;
 
   return [
-    String(
-      horas
-    ).padStart(
-      2,
-      "0"
-    ),
-
-    String(
-      minutos
-    ).padStart(
-      2,
-      "0"
-    ),
-
-    String(
-      segundosRestantes
-    ).padStart(
-      2,
-      "0"
-    ),
-  ].join(":");
+    horas,
+    minutos,
+    segundosRestantes,
+  ]
+    .map(
+      (valor) =>
+        String(valor).padStart(
+          2,
+          "0"
+        )
+    )
+    .join(":");
 }

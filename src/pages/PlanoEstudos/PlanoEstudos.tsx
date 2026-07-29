@@ -3,6 +3,10 @@ import {
   useState,
 } from "react";
 
+import {
+  useNavigate,
+} from "react-router-dom";
+
 import "./PlanoEstudos.css";
 
 import {
@@ -15,10 +19,14 @@ import {
   useApp,
 } from "../../context/AppContext";
 
-const CHAVE_CRONOMETRO =
-  "pmpe_cronometro_estudo";
+import {
+  useCronometro,
+} from "../../context/CronometroContext";
 
 export default function PlanoEstudos() {
+  const navigate =
+    useNavigate();
+
   const {
     materias,
     setMaterias,
@@ -27,6 +35,10 @@ export default function PlanoEstudos() {
     setMissoesConcluidas:
       setConcluidas,
   } = useApp();
+
+  const {
+    iniciar,
+  } = useCronometro();
 
   const [
     semanaSelecionada,
@@ -213,93 +225,52 @@ export default function PlanoEstudos() {
   function iniciarEstudo(
     missao: MissaoPlano
   ) {
-    const cronometroExistente =
-      localStorage.getItem(
-        CHAVE_CRONOMETRO
-      );
-
-    if (cronometroExistente) {
-      try {
-        const estadoAtual =
-          JSON.parse(
-            cronometroExistente
-          ) as {
-            ativo?: boolean;
-            materia?: string;
-          };
-
-        if (estadoAtual.ativo) {
-          const confirmar =
-            window.confirm(
-              `Já existe uma sessão ativa de ${
-                estadoAtual.materia ||
-                "estudo"
-              }. Deseja substituí-la?`
-            );
-
-          if (!confirmar) {
-            return;
-          }
-        }
-      } catch {
-        localStorage.removeItem(
-          CHAVE_CRONOMETRO
-        );
-      }
-    }
-
     const tipoSessao =
-      missao.tipo === "revisao"
+      missao.tipo ===
+      "revisao"
         ? "revisao"
         : missao.tipo ===
             "questoes"
           ? "questoes"
-          : "estudo";
+          : "aula";
 
-    const cronometro = {
-      ativo: true,
-      pausado: false,
-      materia:
-        missao.materia,
-      assunto:
-        missao.assunto,
-      tipo:
-        tipoSessao,
-      objetivo:
-        `Semana ${semanaSelecionada} — ` +
-        `Dia ${diaSelecionado} — ` +
-        `Missão ${missao.numero}`,
-      iniciadaEm:
-        new Date().toISOString(),
-      pausadaEm: null,
-      segundosPausados: 0,
-      missaoId:
-        missao.id,
-      semana:
-        semanaSelecionada,
-      dia:
-        diaSelecionado,
-      urlAula:
-        missao.urlAula,
-      urlQuestoes:
-        missao.urlQuestoes,
-    };
+    const iniciada =
+      iniciar({
+        materia:
+          missao.materia,
 
-    localStorage.setItem(
-      CHAVE_CRONOMETRO,
-      JSON.stringify(
-        cronometro
-      )
-    );
+        assunto:
+          missao.assunto,
 
-    window.dispatchEvent(
-      new Event(
-        "pmpe-cronometro-atualizado"
-      )
-    );
+        tipo:
+          tipoSessao,
 
-    window.location.href =
-      "/central-estudos";
+        objetivo:
+          `Semana ${semanaSelecionada} — ` +
+          `Dia ${diaSelecionado} — ` +
+          `Missão ${missao.numero}`,
+
+        missaoId:
+          missao.id,
+
+        semana:
+          semanaSelecionada,
+
+        dia:
+          diaSelecionado,
+
+        urlAula:
+          missao.urlAula,
+
+        urlQuestoes:
+          missao.urlQuestoes,
+      });
+
+    if (iniciada) {
+      navigate(
+        "/central-estudos"
+      );
+    }
   }
 
   return (

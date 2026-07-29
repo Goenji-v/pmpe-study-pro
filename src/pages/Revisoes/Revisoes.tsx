@@ -6,6 +6,7 @@ import {
 import "./Revisoes.css";
 
 import { useApp } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
 import {
@@ -26,8 +27,14 @@ type RevisaoIA = {
   concluida: boolean;
 };
 
-const CHAVE_REVISOES_IA =
+const CHAVE_REVISOES_IA_LEGADA =
   "pmpe_revisoes_ia";
+
+function chaveRevisoesIA(
+  userId: string
+) {
+  return `pmpe:${userId}:revisoes-ia`;
+}
 
 export default function Revisoes() {
   const {
@@ -35,10 +42,17 @@ export default function Revisoes() {
     setRevisoes,
   } = useApp();
 
+  const { usuario } =
+    useAuth();
+
   const { showToast } =
     useToast();
 
   useEffect(() => {
+    if (!usuario) {
+      return;
+    }
+
     importarRevisoesIA();
 
     function atualizarRevisoesIA() {
@@ -66,11 +80,17 @@ export default function Revisoes() {
         atualizarRevisoesIA
       );
     };
-  }, []);
+  }, [usuario?.id]);
 
   function importarRevisoesIA() {
+    if (!usuario) {
+      return;
+    }
+
     const revisoesIA =
-      carregarRevisoesIA();
+      carregarRevisoesIA(
+        usuario.id
+      );
 
     if (
       revisoesIA.length === 0
@@ -78,22 +98,19 @@ export default function Revisoes() {
       return;
     }
 
-    setRevisoes(
-      (revisoesAnteriores) => {
-        const chavesExistentes =
-          new Set(
-            revisoesAnteriores.map(
-              (revisao) =>
-                normalizar(
-                  `${revisao.materia}::${revisao.assunto}`
-                )
+    const chavesExistentes =
+      new Set(
+        revisoes.map(
+          (revisao) =>
+            normalizar(
+              `${revisao.materia}::${revisao.assunto}`
             )
-          );
+        )
+      );
 
-        const novasRevisoes:
-          Revisao[] = [];
-
-        revisoesIA.forEach(
+    const novasRevisoes =
+      revisoesIA
+        .filter(
           (revisaoIA) => {
             const chave =
               normalizar(
@@ -105,53 +122,53 @@ export default function Revisoes() {
                 chave
               )
             ) {
-              return;
+              return false;
             }
-
-            novasRevisoes.push(
-              criarRevisaoInicialIA(
-                revisaoIA
-              )
-            );
 
             chavesExistentes.add(
               chave
             );
+
+            return true;
           }
+        )
+        .map(
+          criarRevisaoInicialIA
         );
 
-        if (
-          novasRevisoes.length ===
-          0
-        ) {
-          return revisoesAnteriores;
-        }
+    /*
+     * A fila do Simulado IA é consumida após a importação.
+     * Sem isso, uma revisão excluída era recriada toda vez
+     * que a página Revisões era aberta novamente.
+     */
+    limparFilaRevisoesIA(
+      usuario.id
+    );
 
-        window.setTimeout(
-          () => {
-            showToast(
-              `${novasRevisoes.length} revisão${
-                novasRevisoes.length ===
-                1
-                  ? ""
-                  : "ões"
-              } do Simulado IA adicionada${
-                novasRevisoes.length ===
-                1
-                  ? ""
-                  : "s"
-              }.`,
-              "success"
-            );
-          },
-          0
-        );
+    if (
+      novasRevisoes.length === 0
+    ) {
+      return;
+    }
 
-        return [
-          ...novasRevisoes,
-          ...revisoesAnteriores,
-        ];
-      }
+    setRevisoes(
+      (revisoesAnteriores) => [
+        ...novasRevisoes,
+        ...revisoesAnteriores,
+      ]
+    );
+
+    showToast(
+      `${novasRevisoes.length} revisão${
+        novasRevisoes.length === 1
+          ? ""
+          : "ões"
+      } do Simulado IA adicionada${
+        novasRevisoes.length === 1
+          ? ""
+          : "s"
+      }.`,
+      "success"
     );
   }
 
@@ -293,7 +310,7 @@ export default function Revisoes() {
   }
 
   function excluirRevisao(
-    id: string
+    revisaoExcluida: Revisao
   ) {
     const confirmar =
       window.confirm(
@@ -310,9 +327,17 @@ export default function Revisoes() {
       ) =>
         revisoesAnteriores.filter(
           (revisao) =>
-            revisao.id !== id
+            revisao.id !==
+            revisaoExcluida.id
         )
     );
+
+    if (usuario) {
+      removerDaFilaRevisoesIA(
+        usuario.id,
+        revisaoExcluida
+      );
+    }
 
     showToast(
       "Revisão excluída.",
@@ -503,7 +528,7 @@ type GrupoRevisoesProps = {
   ) => void;
 
   excluirRevisao: (
-    id: string
+    revisao: Revisao
   ) => void;
 };
 
@@ -584,7 +609,7 @@ function GrupoRevisoes({
                     className="revisao-excluir"
                     onClick={() =>
                       excluirRevisao(
-                        revisao.id
+                        revisao
                       )
                     }
                   >
@@ -600,27 +625,168 @@ function GrupoRevisoes({
   );
 }
 
-function carregarRevisoesIA():
-  RevisaoIA[] {
-  const salvo =
-    localStorage.getItem(
-      CHAVE_REVISOES_IA
+function carregarRevisoesIA(
+  userId: string
+): RevisaoIA[] {
+  const chaves = [
+    chaveRevisoesIA(
+      userId
+    ),
+    CHAVE_REVISOES_IA_LEGADA,
+  ];
+
+  const todas:
+    RevisaoIA[] = [];
+
+  chaves.forEach(
+    (chave) => {
+      const salvo =
+        localStorage.getItem(
+          chave
+        );
+
+      if (!salvo) {
+        return;
+      }
+
+      try {
+        const valor: unknown =
+          JSON.parse(salvo);
+
+        if (
+          Array.isArray(valor)
+        ) {
+          todas.push(
+            ...(
+              valor as
+                RevisaoIA[]
+            )
+          );
+        }
+      } catch {
+        localStorage.removeItem(
+          chave
+        );
+      }
+    }
+  );
+
+  const unicas =
+    new Map<
+      string,
+      RevisaoIA
+    >();
+
+  todas.forEach(
+    (revisao) => {
+      const chave =
+        normalizar(
+          `${revisao.materia}::${revisao.assunto}`
+        );
+
+      if (
+        !unicas.has(chave)
+      ) {
+        unicas.set(
+          chave,
+          revisao
+        );
+      }
+    }
+  );
+
+  return Array.from(
+    unicas.values()
+  );
+}
+
+function limparFilaRevisoesIA(
+  userId: string
+) {
+  localStorage.removeItem(
+    chaveRevisoesIA(
+      userId
+    )
+  );
+
+  localStorage.removeItem(
+    CHAVE_REVISOES_IA_LEGADA
+  );
+}
+
+function removerDaFilaRevisoesIA(
+  userId: string,
+  revisaoExcluida: Revisao
+) {
+  const chaveExcluida =
+    normalizar(
+      `${revisaoExcluida.materia}::${revisaoExcluida.assunto}`
     );
 
-  if (!salvo) {
-    return [];
-  }
+  [
+    chaveRevisoesIA(
+      userId
+    ),
+    CHAVE_REVISOES_IA_LEGADA,
+  ].forEach(
+    (chaveStorage) => {
+      const salvo =
+        localStorage.getItem(
+          chaveStorage
+        );
 
-  try {
-    const valor: unknown =
-      JSON.parse(salvo);
+      if (!salvo) {
+        return;
+      }
 
-    return Array.isArray(valor)
-      ? (valor as RevisaoIA[])
-      : [];
-  } catch {
-    return [];
-  }
+      try {
+        const valor: unknown =
+          JSON.parse(salvo);
+
+        if (
+          !Array.isArray(valor)
+        ) {
+          localStorage.removeItem(
+            chaveStorage
+          );
+
+          return;
+        }
+
+        const listaFiltrada =
+          (
+            valor as
+              RevisaoIA[]
+          ).filter(
+            (item) =>
+              normalizar(
+                `${item.materia}::${item.assunto}`
+              ) !==
+              chaveExcluida
+          );
+
+        if (
+          listaFiltrada.length ===
+          0
+        ) {
+          localStorage.removeItem(
+            chaveStorage
+          );
+        } else {
+          localStorage.setItem(
+            chaveStorage,
+            JSON.stringify(
+              listaFiltrada
+            )
+          );
+        }
+      } catch {
+        localStorage.removeItem(
+          chaveStorage
+        );
+      }
+    }
+  );
 }
 
 function criarRevisaoInicialIA(

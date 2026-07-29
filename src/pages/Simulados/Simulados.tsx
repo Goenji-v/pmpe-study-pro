@@ -4,6 +4,10 @@ import {
   useState,
 } from "react";
 
+import {
+  useNavigate,
+} from "react-router-dom";
+
 import "./Simulados.css";
 
 import { useApp } from "../../context/AppContext";
@@ -15,6 +19,9 @@ const CHAVE_RASCUNHO =
   "pmpe_rascunho_simulado";
 
 export default function Simulados() {
+  const navigate =
+    useNavigate();
+
   const { simulados, setSimulados } = useApp();
   const { showToast } = useToast();
 
@@ -312,6 +319,83 @@ export default function Simulados() {
         Registre seus simulados e acompanhe sua
         evolução geral.
       </p>
+
+      <div className="simulados-central-acoes">
+        <button
+          type="button"
+          className="simulados-central-acao"
+          onClick={() =>
+            navigate(
+              "/gerar-simulado-ia"
+            )
+          }
+        >
+          <span className="simulados-central-icone">
+            ✨
+          </span>
+
+          <div>
+            <strong>
+              Gerar com IA
+            </strong>
+
+            <small>
+              Crie um novo simulado por matéria,
+              assunto, banca e dificuldade.
+            </small>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="simulados-central-acao"
+          onClick={() =>
+            navigate(
+              "/resolver-simulado-ia"
+            )
+          }
+        >
+          <span className="simulados-central-icone">
+            🤖
+          </span>
+
+          <div>
+            <strong>
+              Resolver Simulado IA
+            </strong>
+
+            <small>
+              Continue ou inicie uma prova gerada
+              pelo sistema.
+            </small>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="simulados-central-acao"
+          onClick={() =>
+            navigate(
+              "/estatisticas-simulado-ia"
+            )
+          }
+        >
+          <span className="simulados-central-icone">
+            📊
+          </span>
+
+          <div>
+            <strong>
+              Estatísticas IA
+            </strong>
+
+            <small>
+              Analise acertos, erros e evolução dos
+              simulados inteligentes.
+            </small>
+          </div>
+        </button>
+      </div>
 
       <div className="simulados-resumo">
         <ResumoCard

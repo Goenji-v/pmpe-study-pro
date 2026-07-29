@@ -1,102 +1,97 @@
 import {
-  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import "./CentralEstudos.css";
+import "./CentralEstudosModal.css";
 
 import MateriaisDoAssunto from "../../components/MateriaisDoAssunto/MateriaisDoAssunto";
 
 import { useApp } from "../../context/AppContext";
 
 import {
-  criarPrimeiraRevisao,
-} from "../../utils/revisoes";
+  useCronometro,
+} from "../../context/CronometroContext";
 
 import type {
-  SessaoEstudo,
+  Dificuldade,
   TipoSessao,
 } from "../../types/index";
-
-type EstadoCronometro = {
-  ativo: boolean;
-  pausado: boolean;
-
-  tipo: TipoSessao;
-
-  materia: string;
-  assunto: string;
-
-  objetivo: string;
-  observacao: string;
-
-  iniciadaEm: string | null;
-  pausadaEm: string | null;
-
-  segundosPausados: number;
-
-  missaoId?: string;
-  semana?: number;
-  dia?: number;
-
-  urlAula?: string;
-  urlQuestoes?: string;
-};
-
-const CHAVE_CRONOMETRO =
-  "pmpe_cronometro_estudo";
-
-const estadoInicial: EstadoCronometro = {
-  ativo: false,
-  pausado: false,
-
-  tipo: "aula",
-
-  materia: "",
-  assunto: "",
-
-  objetivo: "",
-  observacao: "",
-
-  iniciadaEm: null,
-  pausadaEm: null,
-
-  segundosPausados: 0,
-
-  missaoId: undefined,
-  semana: undefined,
-  dia: undefined,
-
-  urlAula: undefined,
-  urlQuestoes: undefined,
-};
 
 export default function CentralEstudos() {
   const {
     materias,
-    setMaterias,
-
     sessoes,
-    setSessoes,
-
-    setRevisoes,
-
-    setMissoesConcluidas,
   } = useApp();
 
-  const [estado, setEstado] =
-    useState<EstadoCronometro>(
-      carregarCronometro
-    );
-
-  const [
+  const {
+    sessaoAtiva,
     segundosDecorridos,
-    setSegundosDecorridos,
-  ] = useState(0);
+    cronometroAtivo,
+    iniciar,
+    atualizarDados,
+    pausar,
+    continuar,
+    finalizar,
+    cancelar,
+  } = useCronometro();
+
+  const estado = {
+    ...sessaoAtiva,
+    ativo:
+      cronometroAtivo,
+    pausado:
+      sessaoAtiva.status ===
+      "pausado",
+  };
 
   const [mensagem, setMensagem] =
     useState("");
+
+const [
+  modalFinalizacaoAberto,
+  setModalFinalizacaoAberto,
+] = useState(false);
+
+const [
+  minutosFinalizacao,
+  setMinutosFinalizacao,
+] = useState("");
+
+const [
+  quantidadeQuestoes,
+  setQuantidadeQuestoes,
+] = useState("");
+
+const [
+  quantidadeAcertos,
+  setQuantidadeAcertos,
+] = useState("");
+
+const [
+  banca,
+  setBanca,
+] = useState("");
+
+const [
+  dificuldade,
+  setDificuldade,
+] = useState<Dificuldade>(
+  "media"
+);
+
+const [
+  avaliacaoRevisao,
+  setAvaliacaoRevisao,
+] = useState<
+  "facil" | "media" | "dificil"
+>("media");
+
+const [
+  observacaoFinalizacao,
+  setObservacaoFinalizacao,
+] = useState("");
 
   const materiaSelecionada =
     useMemo(
@@ -120,521 +115,280 @@ export default function CentralEstudos() {
     estado.tipo === "revisao" ||
     estado.tipo === "simulado";
 
-  useEffect(() => {
-    salvarCronometro(estado);
-  }, [estado]);
-
-  useEffect(() => {
-    function atualizarCronometro() {
-      setEstado(
-        carregarCronometro()
-      );
-    }
-
-    window.addEventListener(
-      "pmpe-cronometro-atualizado",
-      atualizarCronometro
-    );
-
-    window.addEventListener(
-      "storage",
-      atualizarCronometro
-    );
-
-    window.addEventListener(
-      "focus",
-      atualizarCronometro
-    );
-
-    return () => {
-      window.removeEventListener(
-        "pmpe-cronometro-atualizado",
-        atualizarCronometro
-      );
-
-      window.removeEventListener(
-        "storage",
-        atualizarCronometro
-      );
-
-      window.removeEventListener(
-        "focus",
-        atualizarCronometro
-      );
-    };
-  }, []);
-
-  useEffect(() => {
-    function recalcularTempo() {
-      setSegundosDecorridos(
-        calcularSegundosDecorridos(
-          estado
-        )
-      );
-    }
-
-    recalcularTempo();
-
-    if (
-      !estado.ativo ||
-      estado.pausado
-    ) {
-      return;
-    }
-
-    const intervalo =
-      window.setInterval(
-        recalcularTempo,
-        1000
-      );
-
-    return () => {
-      window.clearInterval(
-        intervalo
-      );
-    };
-  }, [estado]);
-
-  function alterarCampo<
-    K extends keyof EstadoCronometro,
-  >(
-    campo: K,
-    valor: EstadoCronometro[K]
+  function alterarCampo(
+    campo:
+      | "assunto"
+      | "objetivo"
+      | "observacao",
+    valor: string
   ) {
-    setEstado((anterior) => ({
-      ...anterior,
-      [campo]: valor,
-    }));
+    atualizarDados({
+      [campo]:
+        valor,
+    });
   }
 
   function alterarTipo(
     tipo: TipoSessao
   ) {
-    if (estado.ativo) {
+    if (cronometroAtivo) {
       return;
     }
 
     setMensagem("");
 
-    setEstado((anterior) => ({
-      ...anterior,
-
+    atualizarDados({
       tipo,
 
       materia:
         tipo === "revisao" ||
         tipo === "simulado"
           ? ""
-          : anterior.materia,
+          : estado.materia,
 
       assunto: "",
-
-      urlAula:
-        tipo === "aula"
-          ? anterior.urlAula
-          : undefined,
-
-      urlQuestoes:
-        tipo === "questoes"
-          ? anterior.urlQuestoes
-          : undefined,
-    }));
+    });
   }
 
   function selecionarMateria(
     materia: string
   ) {
-    if (estado.ativo) {
+    if (cronometroAtivo) {
       return;
     }
 
-    setEstado((anterior) => ({
-      ...anterior,
+    atualizarDados({
       materia,
       assunto: "",
-    }));
+    });
   }
 
   function iniciarSessao() {
     setMensagem("");
 
-    if (
-      materiaObrigatoria &&
-      !estado.materia.trim()
-    ) {
+    const iniciada =
+      iniciar({
+        materia:
+          estado.materia,
+
+        assunto:
+          estado.assunto,
+
+        tipo:
+          estado.tipo,
+
+        objetivo:
+          estado.objetivo,
+
+        observacao:
+          estado.observacao,
+
+        missaoId:
+          estado.missaoId,
+
+        semana:
+          estado.semana,
+
+        dia:
+          estado.dia,
+
+        urlAula:
+          estado.urlAula,
+
+        urlQuestoes:
+          estado.urlQuestoes,
+      });
+
+    if (iniciada) {
       setMensagem(
-        "Selecione uma matéria."
+        "Sessão iniciada."
       );
-
-      return;
     }
-
-    if (!estado.assunto.trim()) {
-      setMensagem(
-        assuntoLivre
-          ? "Informe o nome da atividade."
-          : "Selecione ou informe o assunto."
-      );
-
-      return;
-    }
-
-    const agora =
-      new Date().toISOString();
-
-    setEstado((anterior) => ({
-      ...anterior,
-
-      ativo: true,
-      pausado: false,
-
-      iniciadaEm: agora,
-      pausadaEm: null,
-
-      segundosPausados: 0,
-    }));
   }
 
   function pausarSessao() {
-    if (
-      !estado.ativo ||
-      estado.pausado
-    ) {
-      return;
-    }
-
-    setEstado((anterior) => ({
-      ...anterior,
-
-      pausado: true,
-
-      pausadaEm:
-        new Date().toISOString(),
-    }));
+    pausar();
   }
 
   function continuarSessao() {
-    if (
-      !estado.ativo ||
-      !estado.pausado ||
-      !estado.pausadaEm
-    ) {
-      return;
-    }
-
-    const segundosDaPausa =
-      Math.max(
-        0,
-        Math.floor(
-          (Date.now() -
-            new Date(
-              estado.pausadaEm
-            ).getTime()) /
-            1000
-        )
-      );
-
-    setEstado((anterior) => ({
-      ...anterior,
-
-      pausado: false,
-      pausadaEm: null,
-
-      segundosPausados:
-        anterior.segundosPausados +
-        segundosDaPausa,
-    }));
+    continuar();
   }
 
   function cancelarSessao() {
-    if (
-      estado.ativo &&
-      !window.confirm(
-        "Deseja cancelar esta sessão? O tempo não será salvo."
-      )
-    ) {
-      return;
-    }
+    cancelar(
+      cronometroAtivo
+    );
 
-    limparCronometro();
+    setMensagem("");
   }
 
-  function finalizarSessao() {
-    if (
-    !estado.ativo ||
-    !estado.iniciadaEm
-    ) {
+  function abrirModalFinalizacao() {
+    if (!cronometroAtivo) {
       return;
     }
-
-    const segundosTotais =
-    calcularSegundosDecorridos(
-    estado
-    );
 
     const minutosCronometro =
-    Math.max(
-    1,
-    Math.round(
-    segundosTotais / 60
-    )
-    );
-
-    const resposta =
-    window.prompt(
-    [
-    "Confirme o tempo real estudado.",
-    "",
-    `Cronômetro: ${formatarMinutos(
-      minutosCronometro
-      )}`,
-    "",
-    "Digite o tempo real em minutos:",
-    ].join("\n"),
-    String(
-    minutosCronometro
-    )
-    );
-
-    if (resposta === null) {
-      return;
-    }
-
-    const minutosReais =
-    Number(
-    resposta
-    .trim()
-    .replace(",", ".")
-    );
-
-    if (
-    !Number.isFinite(
-    minutosReais
-    ) ||
-    minutosReais < 1 ||
-    minutosReais > 1440
-    ) {
-      window.alert(
-      "Informe um tempo válido entre 1 e 1440 minutos."
+      Math.max(
+        1,
+        Math.round(
+          segundosDecorridos /
+          60
+        )
       );
 
-      return;
-    }
-
-    const minutosSalvos =
-    Math.round(
-    minutosReais
-    );
-
-    const agora =
-    new Date().toISOString();
-
-    const novaSessao:
-    SessaoEstudo = {
-      id: crypto.randomUUID(),
-
-      data: agora,
-
-      tipo: estado.tipo,
-
-      materia:
-      estado.materia.trim() ||
-      materiaPadraoPorTipo(
-      estado.tipo
-      ),
-
-      assunto:
-      estado.assunto.trim(),
-
-      objetivo:
-      estado.objetivo.trim() ||
-      undefined,
-
-      observacao:
-      estado.observacao.trim() ||
-      undefined,
-
-      minutos:
-      minutosSalvos,
-
-      iniciadaEm:
-      estado.iniciadaEm,
-
-      finalizadaEm: agora,
-
-      missaoId:
-      estado.missaoId,
-
-      semana:
-      estado.semana,
-
-      dia:
-      estado.dia,
-    };
-
-    setSessoes(
-      (
-        anteriores:
-          SessaoEstudo[]
-      ) => [
-        novaSessao,
-        ...anteriores,
-      ]
-    );
-
-    /*
-     * Uma sessão de conteúdo ou questões representa
-     * estudo efetivo do assunto. Ao finalizar:
-     * 1. marca o assunto em Conteúdos;
-     * 2. conclui a missão do plano, quando houver;
-     * 3. cria a primeira revisão sem duplicar.
-     */
-    const deveConcluirAssunto =
-      tipoGeraRevisao(
-        estado.tipo
-      ) &&
-      Boolean(
-        estado.materia.trim()
-      ) &&
-      Boolean(
-        estado.assunto.trim()
-      );
-
-    if (deveConcluirAssunto) {
-      const referencia =
-        localizarMateriaEAssunto(
-          materias,
-          estado.materia,
-          estado.assunto
-        );
-
-      setMaterias(
-        (
-          materiasAnteriores
-        ) =>
-          marcarAssuntoComoConcluido(
-            materiasAnteriores,
-            estado.materia,
-            estado.assunto
-          )
-      );
-
-      setRevisoes(
-        (
-          revisoesAnteriores
-        ) => {
-          const revisaoPendente =
-            revisoesAnteriores.some(
-              (revisao) =>
-                !revisao.concluida &&
-                mesmoTexto(
-                  revisao.materia,
-                  estado.materia
-                ) &&
-                mesmoTexto(
-                  revisao.assunto,
-                  estado.assunto
-                )
-            );
-
-          if (revisaoPendente) {
-            return revisoesAnteriores;
-          }
-
-          const primeiraRevisao =
-            criarPrimeiraRevisao({
-              materiaId:
-                referencia.materiaId,
-
-              assuntoId:
-                referencia.assuntoId,
-
-              materia:
-                estado.materia.trim(),
-
-              assunto:
-                estado.assunto.trim(),
-            });
-
-          return [
-            primeiraRevisao,
-            ...revisoesAnteriores,
-          ];
-        }
-      );
-    }
-
-    if (estado.missaoId) {
-      setMissoesConcluidas(
-        (idsAnteriores) =>
-          Array.from(
-            new Set([
-              ...idsAnteriores,
-              estado.missaoId as string,
-            ])
-          )
-      );
-    }
-
-    localStorage.removeItem(
-    CHAVE_CRONOMETRO
-    );
-
-    window.dispatchEvent(
-    new Event(
-    "pmpe-sessoes-atualizadas"
-    )
-    );
-
-    window.dispatchEvent(
-    new Event(
-    "pmpe-plano-atualizado"
-    )
-    );
-
-    window.dispatchEvent(
-      new Event(
-        "pmpe-dashboard-atualizado"
+    setMinutosFinalizacao(
+      String(
+        minutosCronometro
       )
     );
 
-    if (deveConcluirAssunto) {
-      window.dispatchEvent(
-        new Event(
-          "pmpe-materias-atualizadas"
-        )
-      );
+    setQuantidadeQuestoes("");
+    setQuantidadeAcertos("");
+    setBanca("");
+    setDificuldade("media");
+    setAvaliacaoRevisao("media");
 
-      window.dispatchEvent(
-        new Event(
-          "pmpe-revisoes-atualizadas"
-        )
-      );
-    }
+    setObservacaoFinalizacao(
+      estado.observacao || ""
+    );
 
-    setEstado({
-      ...estadoInicial,
-    });
-
-    setSegundosDecorridos(0);
-
-    setMensagem(
-    `Sessão salva: ${formatarMinutos(
-      minutosSalvos
-      )}.`
+    setModalFinalizacaoAberto(
+      true
     );
   }
-  function limparCronometro() {
-    localStorage.removeItem(
-      CHAVE_CRONOMETRO
+
+  function confirmarFinalizacao() {
+    const minutos =
+      Number(
+        minutosFinalizacao
+          .trim()
+          .replace(
+            ",",
+            "."
+          )
+      );
+
+    if (
+      !Number.isFinite(
+        minutos
+      ) ||
+      minutos < 1 ||
+      minutos > 1440
+    ) {
+      window.alert(
+        "Informe um tempo válido entre 1 e 1440 minutos."
+      );
+
+      return;
+    }
+
+    let totalQuestoes:
+      number | undefined;
+
+    let acertos:
+      number | undefined;
+
+    let erros:
+      number | undefined;
+
+    const exigeQuestoes =
+      estado.tipo ===
+        "questoes" ||
+      estado.tipo ===
+        "simulado";
+
+    if (exigeQuestoes) {
+      totalQuestoes =
+        Number(
+          quantidadeQuestoes
+        );
+
+      acertos =
+        Number(
+          quantidadeAcertos
+        );
+
+      if (
+        !Number.isInteger(
+          totalQuestoes
+        ) ||
+        totalQuestoes < 1
+      ) {
+        window.alert(
+          "Informe a quantidade de questões realizadas."
+        );
+
+        return;
+      }
+
+      if (
+        !Number.isInteger(
+          acertos
+        ) ||
+        acertos < 0 ||
+        acertos >
+          totalQuestoes
+      ) {
+        window.alert(
+          "Informe uma quantidade válida de acertos."
+        );
+
+        return;
+      }
+
+      erros =
+        totalQuestoes -
+        acertos;
+    }
+
+    const resultado =
+      finalizar({
+        minutosReais:
+          Math.round(
+            minutos
+          ),
+
+        observacao:
+          observacaoFinalizacao,
+
+        quantidadeQuestoes:
+          totalQuestoes,
+
+        quantidadeAcertos:
+          acertos,
+
+        quantidadeErros:
+          erros,
+
+        banca:
+          banca.trim() ||
+          undefined,
+
+        dificuldade:
+          exigeQuestoes
+            ? dificuldade
+            : undefined,
+
+        avaliacaoRevisao:
+          estado.tipo ===
+            "revisao"
+              ? avaliacaoRevisao
+              : undefined,
+      });
+
+    if (!resultado) {
+      return;
+    }
+
+    setModalFinalizacaoAberto(
+      false
     );
 
-    setEstado({
-      ...estadoInicial,
-    });
-
-    setSegundosDecorridos(0);
-    setMensagem("");
+    setMensagem(
+      resultado.revisaoCriada
+        ? "Sessão salva e primeira revisão criada automaticamente."
+        : "Sessão salva."
+    );
   }
 
   return (
@@ -1083,7 +837,7 @@ export default function CentralEstudos() {
                 type="button"
                 className="central-botao-finalizar"
                 onClick={
-                  finalizarSessao
+                  abrirModalFinalizacao
                 }
               >
                 ✓ Finalizar e salvar
@@ -1102,7 +856,261 @@ export default function CentralEstudos() {
           </div>
         </div>
       </div>
-    </section>
+    
+      {modalFinalizacaoAberto && (
+        <div
+          className="finalizacao-overlay"
+          role="presentation"
+          onMouseDown={(evento) => {
+            if (
+              evento.target ===
+              evento.currentTarget
+            ) {
+              setModalFinalizacaoAberto(
+                false
+              );
+            }
+          }}
+        >
+          <div
+            className="finalizacao-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-finalizacao"
+          >
+            <div className="finalizacao-cabecalho">
+              <div>
+                <h2 id="titulo-finalizacao">
+                  Finalizar sessão
+                </h2>
+
+                <p>
+                  {estado.materia} —{" "}
+                  {estado.assunto}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="finalizacao-fechar"
+                onClick={() =>
+                  setModalFinalizacaoAberto(
+                    false
+                  )
+                }
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="finalizacao-grid">
+              <label>
+                Tempo real em minutos
+
+                <input
+                  type="number"
+                  min="1"
+                  max="1440"
+                  value={
+                    minutosFinalizacao
+                  }
+                  onChange={(evento) =>
+                    setMinutosFinalizacao(
+                      evento.target.value
+                    )
+                  }
+                />
+              </label>
+
+              {(estado.tipo ===
+                "questoes" ||
+                estado.tipo ===
+                  "simulado") && (
+                <>
+                  <label>
+                    Questões realizadas
+
+                    <input
+                      type="number"
+                      min="1"
+                      value={
+                        quantidadeQuestoes
+                      }
+                      onChange={(evento) =>
+                        setQuantidadeQuestoes(
+                          evento.target.value
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Acertos
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={
+                        quantidadeAcertos
+                      }
+                      onChange={(evento) =>
+                        setQuantidadeAcertos(
+                          evento.target.value
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Erros calculados
+
+                    <input
+                      value={
+                        quantidadeQuestoes &&
+                        quantidadeAcertos
+                          ? Math.max(
+                              0,
+                              Number(
+                                quantidadeQuestoes
+                              ) -
+                                Number(
+                                  quantidadeAcertos
+                                )
+                            )
+                          : ""
+                      }
+                      readOnly
+                    />
+                  </label>
+
+                  <label>
+                    Banca
+
+                    <input
+                      value={banca}
+                      onChange={(evento) =>
+                        setBanca(
+                          evento.target.value
+                        )
+                      }
+                      placeholder="AOCP, Cebraspe..."
+                    />
+                  </label>
+
+                  <label>
+                    Dificuldade
+
+                    <select
+                      value={dificuldade}
+                      onChange={(evento) =>
+                        setDificuldade(
+                          evento.target
+                            .value as
+                            Dificuldade
+                        )
+                      }
+                    >
+                      <option value="facil">
+                        Fácil
+                      </option>
+
+                      <option value="media">
+                        Média
+                      </option>
+
+                      <option value="dificil">
+                        Difícil
+                      </option>
+                    </select>
+                  </label>
+                </>
+              )}
+
+              {estado.tipo ===
+                "revisao" && (
+                <label>
+                  Como foi a revisão?
+
+                  <select
+                    value={
+                      avaliacaoRevisao
+                    }
+                    onChange={(evento) =>
+                      setAvaliacaoRevisao(
+                        evento.target
+                          .value as
+                          | "facil"
+                          | "media"
+                          | "dificil"
+                      )
+                    }
+                  >
+                    <option value="facil">
+                      Fácil
+                    </option>
+
+                    <option value="media">
+                      Média
+                    </option>
+
+                    <option value="dificil">
+                      Difícil
+                    </option>
+                  </select>
+                </label>
+              )}
+
+              <label className="finalizacao-campo-largo">
+                Observações
+
+                <textarea
+                  value={
+                    observacaoFinalizacao
+                  }
+                  onChange={(evento) =>
+                    setObservacaoFinalizacao(
+                      evento.target.value
+                    )
+                  }
+                  placeholder="O que foi estudado, dificuldades e pontos importantes..."
+                />
+              </label>
+            </div>
+
+            <div className="finalizacao-aviso">
+              O envio de PDF, imagem e texto será
+              integrado na próxima etapa pelo Centro
+              de Materiais.
+            </div>
+
+            <div className="finalizacao-acoes">
+              <button
+                type="button"
+                className="finalizacao-cancelar"
+                onClick={() =>
+                  setModalFinalizacaoAberto(
+                    false
+                  )
+                }
+              >
+                Voltar
+              </button>
+
+              <button
+                type="button"
+                className="finalizacao-confirmar"
+                onClick={
+                  confirmarFinalizacao
+                }
+              >
+                Salvar sessão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+</section>
   );
 }
 
@@ -1131,242 +1139,6 @@ function BotaoTipo({
       <strong>{texto}</strong>
     </button>
   );
-}
-
-function carregarCronometro():
-  EstadoCronometro {
-  const salvo =
-    localStorage.getItem(
-      CHAVE_CRONOMETRO
-    );
-
-  if (!salvo) {
-    return {
-      ...estadoInicial,
-    };
-  }
-
-  try {
-    const valor =
-      JSON.parse(
-        salvo
-      ) as Partial<EstadoCronometro>;
-
-    return {
-      ...estadoInicial,
-      ...valor,
-
-      tipo:
-        normalizarTipo(
-          valor.tipo
-        ),
-    };
-  } catch {
-    return {
-      ...estadoInicial,
-    };
-  }
-}
-
-function salvarCronometro(
-  estado: EstadoCronometro
-) {
-  if (!estado.ativo) {
-    return;
-  }
-
-  localStorage.setItem(
-    CHAVE_CRONOMETRO,
-    JSON.stringify(estado)
-  );
-}
-
-function calcularSegundosDecorridos(
-  estado: EstadoCronometro
-) {
-  if (
-    !estado.ativo ||
-    !estado.iniciadaEm
-  ) {
-    return 0;
-  }
-
-  const fim =
-    estado.pausado &&
-    estado.pausadaEm
-      ? new Date(
-          estado.pausadaEm
-        ).getTime()
-      : Date.now();
-
-  const inicio =
-    new Date(
-      estado.iniciadaEm
-    ).getTime();
-
-  return Math.max(
-    0,
-    Math.floor(
-      (fim - inicio) / 1000
-    ) -
-      estado.segundosPausados
-  );
-}
-
-function tipoGeraRevisao(
-  tipo: TipoSessao
-) {
-  return (
-    tipo === "aula" ||
-    tipo === "videoaula" ||
-    tipo === "estudo" ||
-    tipo === "leitura" ||
-    tipo === "questoes"
-  );
-}
-
-function localizarMateriaEAssunto(
-  materias: ReturnType<
-    typeof useApp
-  >["materias"],
-  nomeMateria: string,
-  nomeAssunto: string
-) {
-  const materia =
-    materias.find(
-      (item) =>
-        mesmoTexto(
-          item.nome,
-          nomeMateria
-        )
-    );
-
-  const assunto =
-    materia?.assuntos.find(
-      (item) =>
-        mesmoTexto(
-          item.nome,
-          nomeAssunto
-        )
-    );
-
-  return {
-    materiaId:
-      materia?.id ||
-      criarIdLocal(
-        nomeMateria
-      ),
-
-    assuntoId:
-      assunto?.id ||
-      criarIdLocal(
-        `${nomeMateria}-${nomeAssunto}`
-      ),
-  };
-}
-
-function marcarAssuntoComoConcluido(
-  materias: ReturnType<
-    typeof useApp
-  >["materias"],
-  nomeMateria: string,
-  nomeAssunto: string
-) {
-  return materias.map(
-    (materia) => {
-      if (
-        !mesmoTexto(
-          materia.nome,
-          nomeMateria
-        )
-      ) {
-        return materia;
-      }
-
-      return {
-        ...materia,
-
-        assuntos:
-          materia.assuntos.map(
-            (assunto) =>
-              mesmoTexto(
-                assunto.nome,
-                nomeAssunto
-              )
-                ? {
-                    ...assunto,
-                    concluido: true,
-                  }
-                : assunto
-          ),
-      };
-    }
-  );
-}
-
-function mesmoTexto(
-  primeiro: string,
-  segundo: string
-) {
-  return (
-    normalizarTextoLocal(
-      primeiro
-    ) ===
-    normalizarTextoLocal(
-      segundo
-    )
-  );
-}
-
-function normalizarTextoLocal(
-  texto: string
-) {
-  return texto
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      ""
-    )
-    .trim()
-    .toLowerCase()
-    .replace(
-      /\s+/g,
-      " "
-    );
-}
-
-function criarIdLocal(
-  texto: string
-) {
-  return texto
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      ""
-    )
-    .toLowerCase()
-    .replace(
-      /[^a-z0-9]+/g,
-      "-"
-    )
-    .replace(
-      /^-|-$/g,
-      ""
-    );
-}
-
-function normalizarTipo(
-  tipo?: TipoSessao
-): TipoSessao {
-  if (
-    tipo === "videoaula" ||
-    tipo === "leitura" ||
-    tipo === "estudo"
-  ) {
-    return "aula";
-  }
-
-  return tipo || "aula";
 }
 
 function nomePorTipo(
@@ -1450,20 +1222,3 @@ function formatarSegundos(
     .join(":");
 }
 
-function formatarMinutos(
-  minutosTotais: number
-) {
-  const horas =
-    Math.floor(
-      minutosTotais / 60
-    );
-
-  const minutos =
-    minutosTotais % 60;
-
-  if (horas === 0) {
-    return `${minutos}min`;
-  }
-
-  return `${horas}h ${minutos}min`;
-}

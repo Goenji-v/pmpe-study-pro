@@ -75,6 +75,17 @@ export type SessaoEstudo = {
   missaoId?: string;
   semana?: number;
   dia?: number;
+
+  quantidadeQuestoes?: number;
+  quantidadeAcertos?: number;
+  quantidadeErros?: number;
+  banca?: string;
+  dificuldade?: Dificuldade;
+
+  avaliacaoRevisao?:
+    | "facil"
+    | "media"
+    | "dificil";
 };
 
 export type Simulado = {

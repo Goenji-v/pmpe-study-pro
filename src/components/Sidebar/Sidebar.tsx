@@ -40,11 +40,11 @@ export default function Sidebar() {
             final
           />
 
-<ItemMenu
-  to="/cronograma-ia"
-  icone="🧠"
-  texto="Cronograma IA"
-/>
+          <ItemMenu
+            to="/cronograma-ia"
+            icone="🧠"
+            texto="Cronograma IA"
+          />
 
           <ItemMenu
             to="/plano"
@@ -158,33 +158,13 @@ export default function Sidebar() {
           />
         </GrupoMenu>
 
-        <GrupoMenu
-          titulo="Simulados"
-          icone="🎯"
-          rotas={[
-            "/simulados",
-            "/gerar-simulado-ia",
-            "/resolver-simulado-ia",
-          ]}
-        >
+        <div className="sidebar-principal">
           <ItemMenu
             to="/simulados"
-            icone="📄"
-            texto="Simulados"
+            icone="🎯"
+            texto="Central de Simulados"
           />
-
-          <ItemMenu
-            to="/gerar-simulado-ia"
-            icone="✨"
-            texto="Gerar Simulado IA"
-          />
-
-          <ItemMenu
-            to="/resolver-simulado-ia"
-            icone="🤖"
-            texto="Resolver Simulado IA"
-          />
-        </GrupoMenu>
+        </div>
 
         <GrupoMenu
           titulo="Sistema"
@@ -237,8 +217,7 @@ function GrupoMenu({
   const possuiRotaAtiva =
     rotas.some(
       (rota) =>
-        location.pathname ===
-          rota ||
+        location.pathname === rota ||
         location.pathname.startsWith(
           `${rota}/`
         )
@@ -279,9 +258,7 @@ function GrupoMenu({
             {icone}
           </span>
 
-          <span>
-            {titulo}
-          </span>
+          <span>{titulo}</span>
         </span>
 
         <span
@@ -321,9 +298,7 @@ function ItemMenu({
     <NavLink
       to={to}
       end={final}
-      className={({
-        isActive,
-      }) =>
+      className={({ isActive }) =>
         `sidebar-link ${
           isActive
             ? "sidebar-link-ativo"
