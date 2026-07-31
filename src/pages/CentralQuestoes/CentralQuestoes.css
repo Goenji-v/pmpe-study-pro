@@ -1,0 +1,608 @@
+.central-questoes {
+  width: 100%;
+  min-width: 0;
+}
+
+.central-questoes-topo {
+  margin-bottom: 24px;
+}
+
+.central-questoes-topo h1 {
+  margin: 0 0 8px;
+  font-size: 34px;
+}
+
+.central-questoes-topo p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.central-questoes-abas {
+  display: grid;
+  grid-template-columns: repeat(
+    5,
+    minmax(0, 1fr)
+  );
+  gap: 10px;
+  margin-bottom: 26px;
+  padding: 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.central-questoes-aba {
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.central-questoes-aba:hover {
+  color: #ffffff;
+  background: #1e293b;
+}
+
+.central-questoes-aba-ativa {
+  color: #ffffff;
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
+.central-questoes-aba-ativa:hover {
+  background: #1d4ed8;
+}
+
+.central-questoes-conteudo,
+.cq-painel {
+  width: 100%;
+  min-width: 0;
+}
+
+.cq-painel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cq-resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    4,
+    minmax(0, 1fr)
+  );
+  gap: 16px;
+}
+
+.cq-resumo-card {
+  min-width: 0;
+  padding: 20px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+}
+
+.cq-resumo-card-destaque {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(37, 99, 235, 0.28),
+      #1e293b
+    );
+  border-color: #2563eb;
+}
+
+.cq-resumo-card-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cq-resumo-card-topo > span {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.cq-resumo-icone {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  background: #0f172a;
+  border-radius: 11px;
+}
+
+.cq-resumo-card strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #f8fafc;
+  font-size: 28px;
+}
+
+.cq-resumo-card small {
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.cq-secao {
+  padding: 22px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+}
+
+.cq-secao-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.cq-secao-topo h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.cq-secao-topo p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.cq-botao-secundario {
+  flex-shrink: 0;
+  padding: 9px 13px;
+  color: #bfdbfe;
+  background: #1d4ed8;
+  border: none;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cq-botao-secundario:hover {
+  background: #2563eb;
+}
+
+.cq-semana {
+  display: grid;
+  grid-template-columns: repeat(
+    7,
+    minmax(0, 1fr)
+  );
+  gap: 12px;
+  min-height: 220px;
+}
+
+.cq-dia {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.cq-dia-valor {
+  margin-bottom: 7px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cq-barra-area {
+  display: flex;
+  width: 100%;
+  max-width: 54px;
+  height: 135px;
+  align-items: flex-end;
+  overflow: hidden;
+  background: #0f172a;
+  border-radius: 10px 10px 5px 5px;
+}
+
+.cq-barra-dia {
+  width: 100%;
+  min-height: 4px;
+  background:
+    linear-gradient(
+      180deg,
+      #60a5fa,
+      #2563eb
+    );
+  border-radius: 10px 10px 4px 4px;
+  transition: height 0.25s;
+}
+
+.cq-dia strong {
+  margin-top: 9px;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.cq-dia small {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.cq-duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(
+    2,
+    minmax(0, 1fr)
+  );
+  gap: 24px;
+}
+
+.cq-desempenho-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.cq-desempenho-item {
+  min-width: 0;
+}
+
+.cq-desempenho-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 9px;
+}
+
+.cq-desempenho-topo > div {
+  min-width: 0;
+}
+
+.cq-desempenho-topo strong {
+  display: block;
+  overflow: hidden;
+  color: #e2e8f0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cq-desempenho-topo small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.cq-percentual {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cq-percentual-bom {
+  color: #86efac;
+  background: rgba(
+    34,
+    197,
+    94,
+    0.16
+  );
+}
+
+.cq-percentual-medio {
+  color: #fcd34d;
+  background: rgba(
+    245,
+    158,
+    11,
+    0.16
+  );
+}
+
+.cq-percentual-ruim {
+  color: #fca5a5;
+  background: rgba(
+    239,
+    68,
+    68,
+    0.16
+  );
+}
+
+.cq-progresso {
+  height: 8px;
+  overflow: hidden;
+  background: #0f172a;
+  border-radius: 999px;
+}
+
+.cq-progresso-barra {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.3s;
+}
+
+.cq-barra-bom {
+  background: #22c55e;
+}
+
+.cq-barra-medio {
+  background: #f59e0b;
+}
+
+.cq-barra-ruim {
+  background: #ef4444;
+}
+
+.cq-alertas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.cq-assunto-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px;
+  border-radius: 13px;
+}
+
+.cq-assunto-card > div {
+  min-width: 0;
+}
+
+.cq-assunto-card strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #f8fafc;
+}
+
+.cq-assunto-card p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.cq-assunto-card > span {
+  flex-shrink: 0;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.cq-assunto-fraco {
+  background: rgba(
+    239,
+    68,
+    68,
+    0.1
+  );
+  border: 1px solid rgba(
+    239,
+    68,
+    68,
+    0.3
+  );
+}
+
+.cq-assunto-fraco > span {
+  color: #f87171;
+}
+
+.cq-assunto-forte {
+  background: rgba(
+    34,
+    197,
+    94,
+    0.1
+  );
+  border: 1px solid rgba(
+    34,
+    197,
+    94,
+    0.3
+  );
+}
+
+.cq-assunto-forte > span {
+  color: #4ade80;
+}
+
+.cq-mensagem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 15px;
+  color: #cbd5e1;
+  background: #0f172a;
+  border-radius: 12px;
+}
+
+.cq-mensagem p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cq-recomendacao {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(37, 99, 235, 0.18),
+      #1e293b
+    );
+  border-color: rgba(
+    59,
+    130,
+    246,
+    0.5
+  );
+}
+
+.cq-recomendacao-icone {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  place-items: center;
+  background: #0f172a;
+  border-radius: 12px;
+  font-size: 21px;
+}
+
+.cq-recomendacao h2 {
+  margin: 0 0 7px;
+  font-size: 19px;
+}
+
+.cq-recomendacao p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.cq-texto-vazio {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.cq-vazio {
+  display: flex;
+  min-height: 330px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 35px;
+  text-align: center;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+}
+
+.cq-vazio-icone {
+  margin-bottom: 15px;
+  font-size: 46px;
+}
+
+.cq-vazio h2 {
+  margin: 0 0 9px;
+}
+
+.cq-vazio p {
+  max-width: 430px;
+  margin: 0 0 21px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.cq-vazio button {
+  padding: 12px 17px;
+  color: white;
+  background: #2563eb;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cq-vazio button:hover {
+  background: #1d4ed8;
+}
+
+@media (max-width: 1100px) {
+  .cq-resumo-grid {
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  }
+
+  .cq-duas-colunas {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .central-questoes-abas {
+    grid-template-columns: repeat(
+      3,
+      minmax(0, 1fr)
+    );
+  }
+}
+
+@media (max-width: 700px) {
+  .cq-semana {
+    gap: 7px;
+  }
+
+  .cq-barra-area {
+    height: 105px;
+  }
+
+  .cq-dia small {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .central-questoes-topo h1 {
+    font-size: 28px;
+  }
+
+  .central-questoes-abas {
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  }
+
+  .cq-resumo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cq-secao {
+    padding: 17px;
+  }
+
+  .cq-secao-topo {
+    flex-direction: column;
+  }
+
+  .cq-botao-secundario {
+    width: 100%;
+  }
+
+  .cq-assunto-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 430px) {
+  .central-questoes-abas {
+    grid-template-columns: 1fr;
+  }
+
+  .cq-semana {
+    overflow-x: auto;
+    grid-template-columns:
+      repeat(7, 48px);
+    justify-content: flex-start;
+    padding-bottom: 7px;
+  }
+}
