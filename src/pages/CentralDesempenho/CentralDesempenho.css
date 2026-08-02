@@ -1,0 +1,152 @@
+.central-desempenho-container {
+  width: 100%;
+}
+
+.central-desempenho-cabecalho {
+  margin-bottom: 22px;
+}
+
+.central-desempenho-cabecalho h1 {
+  margin-bottom: 7px;
+  font-size: 34px;
+}
+
+.central-desempenho-cabecalho p {
+  color: #94a3b8;
+}
+
+.central-desempenho-abas {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+  gap: 12px;
+
+  padding: 10px;
+  margin-bottom: 24px;
+
+  background:
+    rgba(
+      15,
+      23,
+      42,
+      0.72
+    );
+
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.central-desempenho-aba {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 48px;
+  padding: 11px 14px;
+
+  color: #94a3b8;
+  background: transparent;
+
+  border: 1px solid transparent;
+  border-radius: 11px;
+
+  cursor: pointer;
+
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.central-desempenho-aba:hover {
+  color: #f8fafc;
+  background:
+    rgba(
+      51,
+      65,
+      85,
+      0.45
+    );
+
+  transform:
+    translateY(
+      -1px
+    );
+}
+
+.central-desempenho-aba-ativa {
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(
+        37,
+        99,
+        235,
+        0.38
+      ),
+      rgba(
+        37,
+        99,
+        235,
+        0.15
+      )
+    );
+
+  border-color:
+    rgba(
+      59,
+      130,
+      246,
+      0.55
+    );
+
+  box-shadow:
+    inset 0 -2px 0 #3b82f6;
+}
+
+.central-desempenho-aba span {
+  font-size: 17px;
+}
+
+.central-desempenho-conteudo {
+  min-width: 0;
+}
+
+/*
+ * As páginas internas já possuem títulos próprios.
+ * Dentro da central, os títulos continuam visíveis
+ * para identificar claramente cada aba.
+ */
+
+@media (max-width: 850px) {
+  .central-desempenho-abas {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+}
+
+@media (max-width: 520px) {
+  .central-desempenho-cabecalho h1 {
+    font-size: 27px;
+  }
+
+  .central-desempenho-abas {
+    grid-template-columns:
+      1fr;
+  }
+
+  .central-desempenho-aba {
+    justify-content:
+      flex-start;
+  }
+}

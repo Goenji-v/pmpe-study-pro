@@ -1,0 +1,54 @@
+.error-boundary {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f5f7fb;
+}
+
+.error-boundary-card {
+  width: min(620px, 100%);
+  padding: 32px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+}
+
+.error-boundary-card > span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.error-boundary-card h1 {
+  margin: 10px 0 12px;
+}
+
+.error-boundary-card details {
+  margin-top: 18px;
+}
+
+.error-boundary-card code {
+  display: block;
+  margin-top: 10px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+  border-radius: 10px;
+  background: #eef2f7;
+}
+
+.error-boundary-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.error-boundary-acoes button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}

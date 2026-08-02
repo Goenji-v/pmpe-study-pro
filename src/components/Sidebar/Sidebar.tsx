@@ -9,6 +9,10 @@ import {
 
 import "./Sidebar.css";
 
+import {
+  useAdminStatus,
+} from "../../hooks/useAdminStatus";
+
 type GrupoMenuProps = {
   titulo: string;
   icone: string;
@@ -18,6 +22,9 @@ type GrupoMenuProps = {
 };
 
 export default function Sidebar() {
+  const { administrador } =
+    useAdminStatus();
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -32,6 +39,9 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-menu">
+
+        {/* ================= PRINCIPAL ================= */}
+
         <div className="sidebar-principal">
           <ItemMenu
             to="/"
@@ -59,16 +69,18 @@ export default function Sidebar() {
           />
         </div>
 
+        {/* ================= ESTUDOS ================= */}
+
         <GrupoMenu
           titulo="Estudos"
           icone="📚"
+          abertoInicialmente
           rotas={[
             "/central-estudos",
-            "/estudos",
             "/materiais",
+            "/estudos",
             "/revisoes",
           ]}
-          abertoInicialmente
         >
           <ItemMenu
             to="/central-estudos"
@@ -78,7 +90,7 @@ export default function Sidebar() {
 
           <ItemMenu
             to="/materiais"
-            icone="📚"
+            icone="📂"
             texto="Centro de Materiais"
           />
 
@@ -95,68 +107,17 @@ export default function Sidebar() {
           />
         </GrupoMenu>
 
-        <GrupoMenu
-          titulo="Questões"
-          icone="📝"
-          rotas={[
-            "/questoes",
-            "/historico",
-            "/banco-questoes",
-          ]}
-        >
+        {/* ================= QUESTÕES ================= */}
+
+        <div className="sidebar-principal">
           <ItemMenu
             to="/questoes"
-            icone="✍️"
-            texto="Registrar Questões"
+            icone="📝"
+            texto="Central de Questões"
           />
+        </div>
 
-          <ItemMenu
-            to="/historico"
-            icone="🕘"
-            texto="Histórico"
-          />
-
-          <ItemMenu
-            to="/banco-questoes"
-            icone="🧠"
-            texto="Banco de Questões"
-          />
-        </GrupoMenu>
-
-        <GrupoMenu
-          titulo="Desempenho"
-          icone="📊"
-          rotas={[
-            "/estatisticas",
-            "/historico-sessoes",
-            "/estatisticas-sessoes",
-            "/estatisticas-simulado-ia",
-          ]}
-        >
-          <ItemMenu
-            to="/estatisticas"
-            icone="📈"
-            texto="Estatísticas"
-          />
-
-          <ItemMenu
-            to="/historico-sessoes"
-            icone="📅"
-            texto="Histórico de Sessões"
-          />
-
-          <ItemMenu
-            to="/estatisticas-sessoes"
-            icone="⏱"
-            texto="Estatísticas de Sessões"
-          />
-
-          <ItemMenu
-            to="/estatisticas-simulado-ia"
-            icone="🤖"
-            texto="Estatísticas IA"
-          />
-        </GrupoMenu>
+        {/* ================= SIMULADOS ================= */}
 
         <div className="sidebar-principal">
           <ItemMenu
@@ -164,23 +125,62 @@ export default function Sidebar() {
             icone="🎯"
             texto="Central de Simulados"
           />
+
+          <ItemMenu
+            to="/desempenho"
+            icone="📊"
+            texto="Central de Desempenho"
+          />
+
+          <ItemMenu
+            to="/ranking"
+            icone="🏆"
+            texto="Ranking"
+          />
         </div>
 
+        {/* ================= NOVA CENTRAL ================= */}
+
         <GrupoMenu
-          titulo="Sistema"
-          icone="⚙️"
+          titulo="Inteligência"
+          icone="🧠"
+          abertoInicialmente
           rotas={[
+            "/inteligencia",
+            "/relatorio-inteligente",
             "/ia-coach",
-            "/backup",
-            "/configuracoes",
           ]}
         >
+          <ItemMenu
+            to="/inteligencia"
+            icone="🧠"
+            texto="Central de Inteligência"
+          />
+
+          <ItemMenu
+            to="/relatorio-inteligente"
+            icone="📈"
+            texto="Relatório Inteligente"
+          />
+
           <ItemMenu
             to="/ia-coach"
             icone="🤖"
             texto="IA Coach"
           />
+        </GrupoMenu>
 
+        {/* ================= SISTEMA ================= */}
+
+        <GrupoMenu
+          titulo="Sistema"
+          icone="⚙️"
+          rotas={[
+            "/backup",
+            "/configuracoes",
+            "/admin",
+          ]}
+        >
           <ItemMenu
             to="/backup"
             icone="💾"
@@ -192,7 +192,16 @@ export default function Sidebar() {
             icone="⚙"
             texto="Configurações"
           />
+
+          {administrador && (
+            <ItemMenu
+              to="/admin"
+              icone="🛡️"
+              texto="Administração"
+            />
+          )}
         </GrupoMenu>
+
       </nav>
 
       <div className="sidebar-rodape">
@@ -211,29 +220,20 @@ function GrupoMenu({
   abertoInicialmente = false,
   children,
 }: GrupoMenuProps) {
-  const location =
-    useLocation();
+  const location = useLocation();
 
-  const possuiRotaAtiva =
-    rotas.some(
-      (rota) =>
-        location.pathname === rota ||
-        location.pathname.startsWith(
-          `${rota}/`
-        )
-    );
+  const possuiRotaAtiva = rotas.some(
+    (rota) =>
+      location.pathname === rota ||
+      location.pathname.startsWith(`${rota}/`)
+  );
 
-  const [
-    aberto,
-    setAberto,
-  ] = useState(
-    abertoInicialmente ||
-    possuiRotaAtiva
+  const [aberto, setAberto] = useState(
+    abertoInicialmente || possuiRotaAtiva
   );
 
   const grupoAberto =
-    aberto ||
-    possuiRotaAtiva;
+    aberto || possuiRotaAtiva;
 
   return (
     <div
@@ -247,10 +247,7 @@ function GrupoMenu({
         type="button"
         className="sidebar-grupo-botao"
         onClick={() =>
-          setAberto(
-            (valor) =>
-              !valor
-          )
+          setAberto((valor) => !valor)
         }
       >
         <span className="sidebar-grupo-identidade">

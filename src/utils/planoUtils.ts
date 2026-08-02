@@ -49,25 +49,27 @@ export function getTotalMissoes(): number {
   return getTodosIdsMissoes().length;
 }
 
-export function getTotalConcluidas(): number {
+export function getTotalConcluidas(concluidasInformadas?: string[]): number {
   const idsValidos = new Set(
     getTodosIdsMissoes()
   );
 
-  return getMissoesConcluidas().filter((id) =>
+  const concluidas = concluidasInformadas ?? getMissoesConcluidas();
+
+  return concluidas.filter((id) =>
     idsValidos.has(id)
   ).length;
 }
 
-export function getTotalPendentes(): number {
+export function getTotalPendentes(concluidasInformadas?: string[]): number {
   return Math.max(
     0,
     getTotalMissoes() -
-      getTotalConcluidas()
+      getTotalConcluidas(concluidasInformadas)
   );
 }
 
-export function getProgressoPlano(): number {
+export function getProgressoPlano(concluidasInformadas?: string[]): number {
   const total = getTotalMissoes();
 
   if (total === 0) {
@@ -75,15 +77,15 @@ export function getProgressoPlano(): number {
   }
 
   return Math.round(
-    (getTotalConcluidas() / total) * 100
+    (getTotalConcluidas(concluidasInformadas) / total) * 100
   );
 }
 
-export function getProximaMissao():
-  | ProximaMissaoPlano
-  | null {
+export function getProximaMissao(
+  concluidasInformadas?: string[]
+): ProximaMissaoPlano | null {
   const concluidas = new Set(
-    getMissoesConcluidas()
+    concluidasInformadas ?? getMissoesConcluidas()
   );
 
   for (const semana of planoPMPE) {
@@ -104,7 +106,8 @@ export function getProximaMissao():
 }
 
 export function getProgressoSemana(
-  numeroSemana: number
+  numeroSemana: number,
+  concluidasInformadas?: string[]
 ): number {
   const semana = planoPMPE.find(
     (item) => item.numero === numeroSemana
@@ -126,7 +129,7 @@ export function getProgressoSemana(
   }
 
   const concluidas = new Set(
-    getMissoesConcluidas()
+    concluidasInformadas ?? getMissoesConcluidas()
   );
 
   const realizadas = idsSemana.filter(
@@ -138,8 +141,8 @@ export function getProgressoSemana(
   );
 }
 
-export function getSemanaAtual(): number {
-  const proxima = getProximaMissao();
+export function getSemanaAtual(concluidasInformadas?: string[]): number {
+  const proxima = getProximaMissao(concluidasInformadas);
 
   if (!proxima) {
     return planoPMPE.length;

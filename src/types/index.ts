@@ -18,6 +18,14 @@ export type EtapaRevisao =
   | 3
   | 4;
 
+export type MaterialAssunto = {
+  id: string;
+  tipo: "pdf" | "imagem" | "link";
+  nome: string;
+  url: string;
+  criadoEm: string;
+};
+
 export type Assunto = {
   id: string;
   nome: string;
@@ -26,6 +34,10 @@ export type Assunto = {
   aula?: string;
   questoes?: string;
   pdf?: string;
+  resumo?: string;
+  anotacoes?: string;
+  materiais?: MaterialAssunto[];
+  atualizadoEm?: string;
 };
 
 export type Materia = {

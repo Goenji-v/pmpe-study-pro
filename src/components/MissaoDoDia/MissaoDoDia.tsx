@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
 
 import "./MissaoDoDia.css";
@@ -19,10 +20,11 @@ export default function MissaoDoDia({
   atualizacao = 0,
 }: MissaoDoDiaProps) {
   const navigate = useNavigate();
+  const { missoesConcluidas } = useApp();
 
   const proxima = useMemo(
-    () => getProximaMissao(),
-    [atualizacao]
+    () => getProximaMissao(missoesConcluidas),
+    [atualizacao, missoesConcluidas]
   );
 
   function iniciarMissao(

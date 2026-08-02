@@ -29,11 +29,11 @@ export default function PlanoEstudos() {
 
   const {
     materias,
-    setMaterias,
     missoesConcluidas:
       concluidas,
     setMissoesConcluidas:
       setConcluidas,
+    definirConclusaoAssunto,
   } = useApp();
 
   const {
@@ -168,28 +168,31 @@ export default function PlanoEstudos() {
     const concluindo =
       !concluidas.includes(id);
 
-    setConcluidas(
-      (anteriores) =>
-        concluindo
-          ? Array.from(
-              new Set([
-                ...anteriores,
-                id,
-              ])
-            )
-          : anteriores.filter(
-              (item) =>
-                item !== id
-            )
+    const materiaRelacionada = materias.find(
+      (materia) =>
+        normalizarTexto(materia.nome) ===
+        normalizarTexto(missao.materia)
     );
 
-    setMaterias(
-      sincronizarAssuntoComConteudos(
-        materias,
-        missao,
-        concluindo
-      )
+    const assuntoRelacionado = materiaRelacionada?.assuntos.find(
+      (assunto) =>
+        normalizarTexto(assunto.nome) ===
+        normalizarTexto(missao.assunto)
     );
+
+    if (materiaRelacionada && assuntoRelacionado) {
+      definirConclusaoAssunto(
+        materiaRelacionada.id,
+        assuntoRelacionado.id,
+        concluindo
+      );
+    } else {
+      setConcluidas((anteriores) =>
+        concluindo
+          ? Array.from(new Set([...anteriores, id]))
+          : anteriores.filter((item) => item !== id)
+      );
+    }
 
     window.dispatchEvent(
       new Event(
@@ -588,86 +591,6 @@ export default function PlanoEstudos() {
       )}
     </section>
   );
-}
-
-function sincronizarAssuntoComConteudos(
-  materias: ReturnType<
-    typeof useApp
-  >["materias"],
-  missao: MissaoPlano,
-  concluido: boolean
-) {
-  const materiaId =
-    criarId(
-      missao.materia
-    );
-
-  const assuntoId =
-    criarId(
-      `${missao.materia}-${missao.assunto}`
-    );
-
-  return materias.map(
-    (materia) => {
-      const mesmaMateria =
-        materia.id === materiaId ||
-        normalizarTexto(
-          materia.nome
-        ) ===
-          normalizarTexto(
-            missao.materia
-          );
-
-      if (!mesmaMateria) {
-        return materia;
-      }
-
-      return {
-        ...materia,
-
-        assuntos:
-          materia.assuntos.map(
-            (assunto) => {
-              const mesmoAssunto =
-                assunto.id ===
-                  assuntoId ||
-                normalizarTexto(
-                  assunto.nome
-                ) ===
-                  normalizarTexto(
-                    missao.assunto
-                  );
-
-              if (!mesmoAssunto) {
-                return assunto;
-              }
-
-              return {
-                ...assunto,
-                concluido,
-              };
-            }
-          ),
-      };
-    }
-  );
-}
-
-function criarId(
-  texto: string
-) {
-  return texto
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      ""
-    )
-    .toLowerCase()
-    .replace(
-      /[^a-z0-9]+/g,
-      "-"
-    )
-    .replace(/^-|-$/g, "");
 }
 
 function normalizarTexto(

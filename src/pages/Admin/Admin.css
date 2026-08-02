@@ -1,0 +1,33 @@
+.admin-container { width: 100%; }
+.admin-cabecalho { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 24px; }
+.admin-cabecalho h1 { margin: 8px 0; font-size: 34px; }
+.admin-cabecalho p, .admin-painel-topo p { color: #94a3b8; margin: 0; }
+.admin-etiqueta { display: inline-flex; padding: 6px 10px; border-radius: 999px; background: rgba(239,68,68,.12); color: #fca5a5; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.admin-seguranca { max-width: 310px; padding: 16px 18px; background: rgba(30,41,59,.75); border: 1px solid #334155; border-radius: 16px; }
+.admin-seguranca strong, .admin-seguranca span { display: block; }
+.admin-seguranca span { color: #94a3b8; margin-top: 5px; font-size: 13px; }
+.admin-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-bottom: 22px; }
+.admin-card, .admin-painel { background: #1e293b; border: 1px solid #334155; border-radius: 18px; }
+.admin-card { padding: 20px; }
+.admin-card span, .admin-card small { display: block; color: #94a3b8; }
+.admin-card strong { display: block; margin: 10px 0 6px; font-size: 27px; }
+.admin-painel { padding: 22px; }
+.admin-painel-topo { display: flex; justify-content: space-between; gap: 18px; align-items: center; margin-bottom: 20px; }
+.admin-painel-topo h2 { margin: 0 0 6px; }
+.admin-painel-topo input { width: min(360px,100%); padding: 12px; color: white; background: #0f172a; border: 1px solid #334155; border-radius: 10px; }
+.admin-tabela-area { overflow-x: auto; }
+.admin-tabela { min-width: 1060px; display: grid; grid-template-columns: 2fr 1.1fr 1.1fr .7fr .7fr .7fr .6fr .9fr; gap: 12px; align-items: center; }
+.admin-tabela-cabecalho { padding: 0 14px 11px; color: #94a3b8; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.admin-linha { padding: 14px; margin-bottom: 9px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; }
+.admin-identidade strong, .admin-identidade span { display: block; }
+.admin-identidade span { color: #94a3b8; margin-top: 4px; font-size: 12px; }
+.admin-linha > b { color: #a5b4fc; }
+.admin-status { width: fit-content; padding: 5px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.admin-status-ativo { color: #86efac; background: rgba(34,197,94,.15); }
+.admin-status-pendente { color: #fcd34d; background: rgba(245,158,11,.15); }
+.admin-status-bloqueado { color: #fca5a5; background: rgba(239,68,68,.15); }
+.admin-erro { display: flex; flex-direction: column; gap: 5px; padding: 16px; margin-bottom: 20px; color: #fecaca; background: rgba(127,29,29,.35); border: 1px solid rgba(239,68,68,.45); border-radius: 14px; }
+.admin-erro small { color: #fca5a5; }
+.admin-estado { padding: 32px; color: #94a3b8; text-align: center; background: #1e293b; border: 1px solid #334155; border-radius: 16px; }
+@media (max-width: 1000px) { .admin-cards { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 700px) { .admin-cabecalho, .admin-painel-topo { flex-direction: column; } .admin-seguranca, .admin-painel-topo input { width: 100%; max-width: none; } .admin-cards { grid-template-columns: 1fr; } }

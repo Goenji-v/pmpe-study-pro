@@ -19,6 +19,9 @@ import {
   gerarMateriasDoPlano,
 } from "../utils/materiasDoPlano";
 
+import { planoPMPE } from "../data/planoPMPE";
+import { criarPrimeiraRevisao } from "../utils/revisoes";
+
 import {
   useAuth,
 } from "./AuthContext";
@@ -78,6 +81,12 @@ type AppContextType = {
   statusNuvem: StatusNuvem;
   erroNuvem: string;
   sincronizarAgora: () => Promise<void>;
+
+  definirConclusaoAssunto: (
+    materiaId: string,
+    assuntoId: string,
+    concluido: boolean
+  ) => void;
 };
 
 const AppContext =
@@ -129,70 +138,37 @@ function criarEstadoInicialDaConta():
 function reconciliarMateriasComPlano(
   materiasSalvas: Materia[]
 ): Materia[] {
-  const materiasDoPlano =
-    gerarMateriasDoPlano();
+  const materiasDoPlano = gerarMateriasDoPlano();
 
-  if (
-    !Array.isArray(
-      materiasSalvas
-    ) ||
-    materiasSalvas.length === 0
-  ) {
-    return clonar(
-      materiasDoPlano
-    );
+  if (!Array.isArray(materiasSalvas) || materiasSalvas.length === 0) {
+    return clonar(materiasDoPlano);
   }
 
-  return materiasDoPlano.map(
-    (materiaPlano) => {
-      const materiaSalva =
-        materiasSalvas.find(
-          (materia) =>
-            materia.id ===
-              materiaPlano.id ||
-            normalizarTexto(
-              materia.nome
-            ) ===
-              normalizarTexto(
-                materiaPlano.nome
-              )
+  return materiasSalvas.map((materiaSalva) => {
+    const materiaPlano = materiasDoPlano.find(
+      (materia) =>
+        materia.id === materiaSalva.id ||
+        normalizarTexto(materia.nome) === normalizarTexto(materiaSalva.nome)
+    );
+
+    if (!materiaPlano) return materiaSalva;
+
+    return {
+      ...materiaPlano,
+      ...materiaSalva,
+      assuntos: materiaSalva.assuntos.map((assuntoSalvo) => {
+        const assuntoPlano = materiaPlano.assuntos.find(
+          (assunto) =>
+            assunto.id === assuntoSalvo.id ||
+            normalizarTexto(assunto.nome) === normalizarTexto(assuntoSalvo.nome)
         );
 
-      if (!materiaSalva) {
-        return materiaPlano;
-      }
-
-      return {
-        ...materiaPlano,
-        ...materiaSalva,
-
-        assuntos:
-          materiaPlano.assuntos.map(
-            (assuntoPlano) => {
-              const assuntoSalvo =
-                materiaSalva.assuntos.find(
-                  (assunto) =>
-                    assunto.id ===
-                      assuntoPlano.id ||
-                    normalizarTexto(
-                      assunto.nome
-                    ) ===
-                      normalizarTexto(
-                        assuntoPlano.nome
-                      )
-                );
-
-              return assuntoSalvo
-                ? {
-                    ...assuntoPlano,
-                    ...assuntoSalvo,
-                  }
-                : assuntoPlano;
-            }
-          ),
-      };
-    }
-  );
+        return assuntoPlano
+          ? { ...assuntoPlano, ...assuntoSalvo }
+          : assuntoSalvo;
+      }),
+    };
+  });
 }
 
 function normalizarTexto(
@@ -286,6 +262,15 @@ export function AppProvider({
     chaveDaConta(userId, "missoes-concluidas"),
     []
   );
+
+  useEffect(() => {
+    localStorage.setItem(
+      "pmpe_plano_missoes_concluidas",
+      JSON.stringify(missoesConcluidas)
+    );
+
+    window.dispatchEvent(new Event("pmpe-plano-atualizado"));
+  }, [missoesConcluidas]);
 
   const [
     statusNuvem,
@@ -701,6 +686,91 @@ export function AppProvider({
     }
   }
 
+  function definirConclusaoAssunto(
+    materiaId: string,
+    assuntoId: string,
+    concluido: boolean
+  ) {
+    const materia = materias.find((item) => item.id === materiaId);
+    const assunto = materia?.assuntos.find((item) => item.id === assuntoId);
+
+    if (!materia || !assunto) return;
+
+    setMaterias((anteriores) =>
+      anteriores.map((itemMateria) =>
+        itemMateria.id !== materiaId
+          ? itemMateria
+          : {
+              ...itemMateria,
+              assuntos: itemMateria.assuntos.map((itemAssunto) =>
+                itemAssunto.id !== assuntoId
+                  ? itemAssunto
+                  : {
+                      ...itemAssunto,
+                      concluido,
+                      atualizadoEm: new Date().toISOString(),
+                    }
+              ),
+            }
+      )
+    );
+
+    const idsRelacionados = planoPMPE.flatMap((semana) =>
+      semana.dias.flatMap((dia) =>
+        dia.missoes
+          .filter(
+            (missao) =>
+              normalizarTexto(missao.materia) === normalizarTexto(materia.nome) &&
+              normalizarTexto(missao.assunto) === normalizarTexto(assunto.nome)
+          )
+          .map((missao) => missao.id)
+      )
+    );
+
+    setMissoesConcluidas((anteriores) =>
+      concluido
+        ? Array.from(new Set([...anteriores, ...idsRelacionados]))
+        : anteriores.filter((id) => !idsRelacionados.includes(id))
+    );
+
+    if (concluido) {
+      setRevisoes((anteriores) => {
+        const jaExiste = anteriores.some(
+          (revisao) =>
+            !revisao.concluida &&
+            normalizarTexto(revisao.materia) === normalizarTexto(materia.nome) &&
+            normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome)
+        );
+
+        if (jaExiste) return anteriores;
+
+        return [
+          criarPrimeiraRevisao({
+            materiaId: materia.id,
+            assuntoId: assunto.id,
+            materia: materia.nome,
+            assunto: assunto.nome,
+          }),
+          ...anteriores,
+        ];
+      });
+    } else {
+      setRevisoes((anteriores) =>
+        anteriores.filter(
+          (revisao) =>
+            !(
+              !revisao.concluida &&
+              normalizarTexto(revisao.materia) === normalizarTexto(materia.nome) &&
+              normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome)
+            )
+        )
+      );
+    }
+
+    window.dispatchEvent(new Event("pmpe-materias-atualizadas"));
+    window.dispatchEvent(new Event("pmpe-dashboard-atualizado"));
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -725,6 +795,7 @@ export function AppProvider({
         statusNuvem,
         erroNuvem,
         sincronizarAgora,
+        definirConclusaoAssunto,
       }}
     >
       {children}

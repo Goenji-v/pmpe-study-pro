@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import MissaoDoDia from "../../components/MissaoDoDia/MissaoDoDia";
+import RankingResumo from "../../components/RankingResumo/RankingResumo";
 
 import { useNavigate } from "react-router-dom";
 
@@ -55,6 +56,7 @@ export default function Dashboard() {
     revisoes,
     simulados,
     configuracoes,
+    missoesConcluidas,
   } = useApp();
 
   const [
@@ -144,32 +146,33 @@ export default function Dashboard() {
 
   const dadosPlano = useMemo(() => {
     const semanaAtual =
-      getSemanaAtual();
+      getSemanaAtual(missoesConcluidas);
 
     return {
       progresso:
-        getProgressoPlano(),
+        getProgressoPlano(missoesConcluidas),
 
       concluidas:
-        getTotalConcluidas(),
+        getTotalConcluidas(missoesConcluidas),
 
       total:
         getTotalMissoes(),
 
       pendentes:
-        getTotalPendentes(),
+        getTotalPendentes(missoesConcluidas),
 
       proxima:
-        getProximaMissao(),
+        getProximaMissao(missoesConcluidas),
 
       semanaAtual,
 
       progressoSemana:
         getProgressoSemana(
-          semanaAtual
+          semanaAtual,
+          missoesConcluidas
         ),
     };
-  }, [atualizacaoPlano]);
+  }, [atualizacaoPlano, missoesConcluidas]);
 
   const hoje = obterDataLocal();
 
@@ -482,6 +485,7 @@ export default function Dashboard() {
 
   return (
     <section className="dashboard-container">
+      <RankingResumo />
       <div className="dashboard-cabecalho">
         <div>
         <MissaoDoDia
