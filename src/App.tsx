@@ -103,6 +103,21 @@ function LayoutProtegido() {
   element={<CentralInteligencia />}
 />
 
+<Route
+  path="/ranking"
+  element={<Ranking />}
+/>
+
+<Route
+  path="/relatorio-inteligente"
+  element={<RelatorioInteligente />}
+/>
+
+<Route
+  path="/admin"
+  element={<Admin />}
+/>
+
                     <Route
                       path="/estudos"
                       element={<Estudos />}
