@@ -137,6 +137,7 @@ export default function Sidebar() {
             icone="🏆"
             texto="Ranking"
           />
+
         </div>
 
         {/* ================= NOVA CENTRAL ================= */}

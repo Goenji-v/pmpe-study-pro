@@ -33,7 +33,6 @@ import NotFound from "./pages/NotFound/NotFound";
 import Ranking from "./pages/Ranking/Ranking";
 import RelatorioInteligente from "./pages/RelatorioInteligente/RelatorioInteligente";
 import Admin from "./pages/Admin/Admin";
-
 import Sidebar from "./components/Sidebar/Sidebar";
 import Header from "./components/Header/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
