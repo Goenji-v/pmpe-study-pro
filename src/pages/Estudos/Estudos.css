@@ -45,3 +45,19 @@
 .conteudos-modal .secundario { background:#475569; }
 @media (max-width:1000px){ .conteudos-cadastros{grid-template-columns:1fr}.conteudos-grid-form{grid-template-columns:1fr 1fr}.conteudos-assunto-item{grid-template-columns:auto 1fr auto}.conteudos-assunto-item button{grid-column:auto}.conteudos-cabecalho{flex-direction:column}.conteudos-cabecalho input{width:100%;min-width:0} }
 @media (max-width:650px){ .conteudos-grid-form,.conteudos-material-form{grid-template-columns:1fr}.conteudos-linha-form{flex-direction:column}.conteudos-assunto-item{grid-template-columns:auto 1fr}.prioridade{grid-column:2}.conteudos-assunto-item button{grid-column:1/-1}.conteudos-materia-topo{align-items:flex-start;flex-direction:column}.conteudos-materia-acoes{width:100%;justify-content:space-between} }
+
+.conteudos-cadastros-3 { grid-template-columns:1fr 1.25fr 1.75fr; }
+.conteudos-grid-form-modulo { grid-template-columns:1fr 1fr auto; }
+.conteudos-grid-form-assunto { grid-template-columns:.9fr .9fr 1.1fr .65fr auto; }
+.conteudos-modulos { display:flex; flex-direction:column; gap:16px; }
+.conteudos-modulo-card { background:#111827; border:1px solid #334155; border-radius:14px; padding:15px; }
+.conteudos-modulo-topo { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+.conteudos-modulo-topo h3 { margin:0 0 4px; }
+.conteudos-modulo-topo small { color:#94a3b8; }
+.conteudos-modulo-acoes { display:flex; gap:8px; }
+.conteudos-modulo-acoes button { border:0; border-radius:9px; padding:8px 11px; background:#334155; color:#fff; font-weight:700; cursor:pointer; }
+.conteudos-progresso-modulo { margin:10px 0 14px; height:6px; }
+.conteudos-mover { background:#0f172a; color:#cbd5e1; border:1px solid #334155; border-radius:9px; padding:9px; max-width:190px; }
+@media (max-width:1250px){ .conteudos-cadastros-3{grid-template-columns:1fr 1fr}.conteudos-cadastros-3 article:last-child{grid-column:1/-1} }
+@media (max-width:900px){ .conteudos-cadastros-3{grid-template-columns:1fr}.conteudos-cadastros-3 article:last-child{grid-column:auto}.conteudos-grid-form-assunto,.conteudos-grid-form-modulo{grid-template-columns:1fr 1fr}.conteudos-assunto-item{grid-template-columns:auto 1fr auto}.conteudos-mover{grid-column:2/-1;max-width:none}.conteudos-modulo-topo{align-items:flex-start;flex-direction:column} }
+@media (max-width:650px){ .conteudos-grid-form-assunto,.conteudos-grid-form-modulo{grid-template-columns:1fr}.conteudos-mover{grid-column:1/-1} }

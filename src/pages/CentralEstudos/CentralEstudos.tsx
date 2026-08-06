@@ -1,7 +1,14 @@
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
@@ -19,7 +26,23 @@ import type {
   TipoSessao,
 } from "../../types/index";
 
+import type {
+  DadosIniciarSessao,
+} from "../../context/CronometroContext";
+
+import {
+  listarModulosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
+
+type EstadoNavegacaoCentral = {
+  origem?: "dashboard" | "plano";
+  prefillSessao?: DadosIniciarSessao;
+};
+
 export default function CentralEstudos() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const {
     materias,
     sessoes,
@@ -31,6 +54,7 @@ export default function CentralEstudos() {
     cronometroAtivo,
     iniciar,
     atualizarDados,
+    prepararSessao,
     pausar,
     continuar,
     finalizar,
@@ -93,19 +117,130 @@ const [
   setObservacaoFinalizacao,
 ] = useState("");
 
+  const prefillAplicadoRef = useRef(false);
+
+  useEffect(() => {
+    if (prefillAplicadoRef.current || materias.length === 0) {
+      return;
+    }
+
+    const estadoNavegacao =
+      location.state as EstadoNavegacaoCentral | null;
+
+    let prefill = estadoNavegacao?.prefillSessao;
+
+    if (!prefill) {
+      const prefillSalvo = sessionStorage.getItem(
+        "pmpe:central-estudos:prefill"
+      );
+
+      if (prefillSalvo) {
+        try {
+          prefill = JSON.parse(prefillSalvo) as DadosIniciarSessao;
+        } catch {
+          sessionStorage.removeItem(
+            "pmpe:central-estudos:prefill"
+          );
+        }
+      }
+    }
+
+    if (!prefill) {
+      return;
+    }
+
+    const materia =
+      materias.find((item) => item.id === prefill.materiaId) ??
+      materias.find((item) => item.nome === prefill.materia);
+
+    const modulos = materia
+      ? listarModulosDaMateria(materia)
+      : [];
+
+    const modulo =
+      modulos.find((item) => item.id === prefill.moduloId) ??
+      modulos.find((item) => item.nome === prefill.modulo) ??
+      modulos.find((item) =>
+        item.assuntos.some((assunto) =>
+          assunto.id === prefill.assuntoId ||
+          assunto.nome === prefill.assunto
+        )
+      ) ??
+      modulos[0];
+
+    const assunto =
+      modulo?.assuntos.find((item) => item.id === prefill.assuntoId) ??
+      modulo?.assuntos.find((item) => item.nome === prefill.assunto);
+
+    prefillAplicadoRef.current = true;
+
+    prepararSessao({
+      materia: materia?.nome ?? prefill.materia,
+      materiaId: materia?.id ?? prefill.materiaId,
+      modulo: modulo?.nome ?? prefill.modulo,
+      moduloId: modulo?.id ?? prefill.moduloId,
+      assunto: assunto?.nome ?? prefill.assunto,
+      assuntoId: assunto?.id ?? prefill.assuntoId,
+      tipo:
+        prefill.tipo === "estudo"
+          ? "aula"
+          : prefill.tipo,
+      objetivo: prefill.objetivo ?? "",
+      observacao: prefill.observacao ?? "",
+      missaoId: prefill.missaoId,
+      semana: prefill.semana,
+      dia: prefill.dia,
+      urlAula: prefill.urlAula,
+      urlQuestoes: prefill.urlQuestoes,
+    });
+
+    sessionStorage.removeItem(
+      "pmpe:central-estudos:prefill"
+    );
+
+    if (location.state) {
+      navigate(location.pathname, {
+        replace: true,
+        state: null,
+      });
+    }
+  }, [
+    location.pathname,
+    location.state,
+    materias,
+    navigate,
+    prepararSessao,
+  ]);
+
   const materiaSelecionada =
     useMemo(
       () =>
         materias.find(
           (materia) =>
-            materia.nome ===
-            estado.materia
+            materia.id === estado.materiaId ||
+            materia.nome === estado.materia
         ),
-      [materias, estado.materia]
+      [materias, estado.materia, estado.materiaId]
     );
 
+  const modulosDisponiveis = useMemo(
+    () =>
+      materiaSelecionada
+        ? listarModulosDaMateria(materiaSelecionada)
+        : [],
+    [materiaSelecionada]
+  );
+
+  const moduloSelecionado = useMemo(
+    () =>
+      modulosDisponiveis.find(
+        (modulo) => modulo.id === estado.moduloId
+      ) ?? modulosDisponiveis[0],
+    [modulosDisponiveis, estado.moduloId]
+  );
+
   const assuntosDisponiveis =
-    materiaSelecionada?.assuntos ?? [];
+    moduloSelecionado?.assuntos ?? [];
 
   const materiaObrigatoria =
     estado.tipo === "aula" ||
@@ -117,7 +252,11 @@ const [
 
   function alterarCampo(
     campo:
+      | "materiaId"
+      | "modulo"
+      | "moduloId"
       | "assunto"
+      | "assuntoId"
       | "objetivo"
       | "observacao",
     valor: string
@@ -146,20 +285,71 @@ const [
           ? ""
           : estado.materia,
 
+      materiaId:
+        tipo === "revisao" || tipo === "simulado"
+          ? undefined
+          : estado.materiaId,
+      modulo: undefined,
+      moduloId: undefined,
       assunto: "",
+      assuntoId: undefined,
     });
   }
 
   function selecionarMateria(
-    materia: string
+    materiaId: string
   ) {
     if (cronometroAtivo) {
       return;
     }
 
+    const materia = materias.find(
+      (item) => item.id === materiaId
+    );
+
+    const primeiroModulo = materia
+      ? listarModulosDaMateria(materia)[0]
+      : undefined;
+
     atualizarDados({
-      materia,
+      materia: materia?.nome ?? "",
+      materiaId: materia?.id,
+      modulo: primeiroModulo?.nome,
+      moduloId: primeiroModulo?.id,
       assunto: "",
+      assuntoId: undefined,
+    });
+  }
+
+  function selecionarModulo(
+    moduloId: string
+  ) {
+    if (cronometroAtivo) {
+      return;
+    }
+
+    const modulo = modulosDisponiveis.find(
+      (item) => item.id === moduloId
+    );
+
+    atualizarDados({
+      modulo: modulo?.nome,
+      moduloId: modulo?.id,
+      assunto: "",
+      assuntoId: undefined,
+    });
+  }
+
+  function selecionarAssunto(
+    assuntoId: string
+  ) {
+    const assunto = assuntosDisponiveis.find(
+      (item) => item.id === assuntoId
+    );
+
+    atualizarDados({
+      assunto: assunto?.nome ?? "",
+      assuntoId: assunto?.id,
     });
   }
 
@@ -171,8 +361,20 @@ const [
         materia:
           estado.materia,
 
+        materiaId:
+          estado.materiaId,
+
+        modulo:
+          estado.modulo,
+
+        moduloId:
+          estado.moduloId,
+
         assunto:
           estado.assunto,
+
+        assuntoId:
+          estado.assuntoId,
 
         tipo:
           estado.tipo,
@@ -499,7 +701,7 @@ const [
 
               <select
                 value={
-                  estado.materia
+                  materiaSelecionada?.id ?? ""
                 }
                 onChange={(evento) =>
                   selecionarMateria(
@@ -524,7 +726,7 @@ const [
                         materia.id
                       }
                       value={
-                        materia.nome
+                        materia.id
                       }
                     >
                       {
@@ -535,6 +737,32 @@ const [
                 )}
               </select>
             </div>
+
+            {!assuntoLivre && (
+              <div className="central-estudos-campo">
+                <label>Módulo</label>
+
+                <select
+                  value={moduloSelecionado?.id ?? ""}
+                  onChange={(evento) =>
+                    selecionarModulo(evento.target.value)
+                  }
+                  disabled={estado.ativo || !materiaSelecionada}
+                >
+                  <option value="">
+                    {materiaSelecionada
+                      ? "Selecione o módulo"
+                      : "Selecione primeiro a matéria"}
+                  </option>
+
+                  {modulosDisponiveis.map((modulo) => (
+                    <option key={modulo.id} value={modulo.id}>
+                      {modulo.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="central-estudos-campo">
               <label>
@@ -555,11 +783,10 @@ const [
                   onChange={(
                     evento
                   ) =>
-                    alterarCampo(
-                      "assunto",
-                      evento.target
-                        .value
-                    )
+                    atualizarDados({
+                      assunto: evento.target.value,
+                      assuntoId: undefined,
+                    })
                   }
                   disabled={
                     estado.ativo
@@ -575,21 +802,13 @@ const [
                 <>
                   <select
                     value={
-                      assuntosDisponiveis.some(
-                        (assunto) =>
-                          assunto.nome ===
-                          estado.assunto
-                      )
-                        ? estado.assunto
-                        : ""
+                      estado.assuntoId ?? ""
                     }
                     onChange={(
                       evento
                     ) =>
-                      alterarCampo(
-                        "assunto",
-                        evento.target
-                          .value
+                      selecionarAssunto(
+                        evento.target.value
                       )
                     }
                     disabled={
@@ -610,7 +829,7 @@ const [
                             assunto.id
                           }
                           value={
-                            assunto.nome
+                            assunto.id
                           }
                         >
                           {
@@ -739,6 +958,10 @@ const [
                   estado.tipo
                 )}
             </strong>
+
+            {estado.modulo && (
+              <small>Módulo: {estado.modulo}</small>
+            )}
 
             <p>
               {estado.assunto ||

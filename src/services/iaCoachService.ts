@@ -21,6 +21,7 @@ export type AcaoCoachIA = {
   tipo:
     TipoAcaoCoachIA;
   materia?: string;
+  modulo?: string;
   assunto?: string;
 };
 
@@ -57,6 +58,7 @@ export type DadosCoachIA = {
 
   assuntosCriticos: Array<{
     materia: string;
+    modulo?: string;
     assunto: string;
     percentual: number;
     erros: number;

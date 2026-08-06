@@ -23,6 +23,10 @@ import {
   useCronometro,
 } from "../../context/CronometroContext";
 
+import {
+  listarModulosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
+
 export default function PlanoEstudos() {
   const navigate =
     useNavigate();
@@ -174,17 +178,16 @@ export default function PlanoEstudos() {
         normalizarTexto(missao.materia)
     );
 
-    const assuntoRelacionado = materiaRelacionada?.assuntos.find(
-      (assunto) =>
-        normalizarTexto(assunto.nome) ===
-        normalizarTexto(missao.assunto)
-    );
+    const localizacao = materiaRelacionada
+      ? localizarAssuntoDaMissao(materiaRelacionada, missao)
+      : null;
 
-    if (materiaRelacionada && assuntoRelacionado) {
+    if (materiaRelacionada && localizacao) {
       definirConclusaoAssunto(
         materiaRelacionada.id,
-        assuntoRelacionado.id,
-        concluindo
+        localizacao.assunto.id,
+        concluindo,
+        localizacao.modulo.id
       );
     } else {
       setConcluidas((anteriores) =>
@@ -237,13 +240,35 @@ export default function PlanoEstudos() {
           ? "questoes"
           : "aula";
 
+    const materiaRelacionada = materias.find(
+      (materia) =>
+        normalizarTexto(materia.nome) ===
+        normalizarTexto(missao.materia)
+    );
+
+    const localizacao = materiaRelacionada
+      ? localizarAssuntoDaMissao(materiaRelacionada, missao)
+      : null;
+
     const iniciada =
       iniciar({
         materia:
           missao.materia,
 
+        materiaId:
+          materiaRelacionada?.id,
+
+        modulo:
+          localizacao?.modulo.nome,
+
+        moduloId:
+          localizacao?.modulo.id,
+
         assunto:
           missao.assunto,
+
+        assuntoId:
+          localizacao?.assunto.id,
 
         tipo:
           tipoSessao,
@@ -488,6 +513,21 @@ export default function PlanoEstudos() {
                       {missao.materia}
                     </h3>
 
+                    {(() => {
+                      const materia = materias.find(
+                        (item) => normalizarTexto(item.nome) === normalizarTexto(missao.materia)
+                      );
+                      const localizacao = materia
+                        ? localizarAssuntoDaMissao(materia, missao)
+                        : null;
+
+                      return localizacao ? (
+                        <small className="plano-modulo">
+                          Módulo: {localizacao.modulo.nome}
+                        </small>
+                      ) : null;
+                    })()}
+
                     <p>
                       {missao.assunto}
                     </p>
@@ -608,6 +648,25 @@ function normalizarTexto(
       /\s+/g,
       " "
     );
+}
+
+function localizarAssuntoDaMissao(
+  materia: ReturnType<typeof useApp>["materias"][number],
+  missao: MissaoPlano
+) {
+  for (const modulo of listarModulosDaMateria(materia)) {
+    const assunto = modulo.assuntos.find(
+      (item) =>
+        normalizarTexto(item.nome) ===
+        normalizarTexto(missao.assunto)
+    );
+
+    if (assunto) {
+      return { modulo, assunto };
+    }
+  }
+
+  return null;
 }
 
 function formatarTipo(

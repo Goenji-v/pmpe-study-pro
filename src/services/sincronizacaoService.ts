@@ -2,6 +2,10 @@ import {
   supabase,
 } from "../lib/supabase";
 
+import {
+  migrarMateriasParaModulos,
+} from "./conteudos/migrarEstruturaConteudos";
+
 import type {
   ConfiguracoesApp,
   Materia,
@@ -13,8 +17,10 @@ import type {
   SimuladoGerado,
 } from "../types/index";
 
+export const VERSAO_ESTADO_APP = 2 as const;
+
 export type EstadoAppNuvem = {
-  versao: 1;
+  versao: typeof VERSAO_ESTADO_APP;
   materias: Materia[];
   questoes: RegistroQuestao[];
   sessoes: SessaoEstudo[];
@@ -25,6 +31,14 @@ export type EstadoAppNuvem = {
   configuracoes: ConfiguracoesApp;
   missoesConcluidas: string[];
   salvoEm: string;
+};
+
+type EstadoAppNuvemLegado = Omit<
+  EstadoAppNuvem,
+  "versao" | "materias"
+> & {
+  versao?: 1;
+  materias: unknown;
 };
 
 type LinhaConfiguracoes = {
@@ -56,20 +70,24 @@ export async function carregarEstadoDaNuvem(
     return null;
   }
 
-  return validarEstado(estado);
+  return validarEMigrarEstado(estado);
 }
 
 export async function salvarEstadoNaNuvem(
   userId: string,
   estado: EstadoAppNuvem
 ): Promise<void> {
+  const estadoNormalizado = normalizarEstadoParaSalvar(
+    estado
+  );
+
   const { error } = await supabase
     .from("configuracoes")
     .upsert(
       {
         user_id: userId,
         dados: {
-          appState: estado,
+          appState: estadoNormalizado,
         },
       },
       {
@@ -90,24 +108,25 @@ export function montarEstadoNuvem(
     "versao" | "salvoEm"
   >
 ): EstadoAppNuvem {
-  return {
-    versao: 1,
+  return normalizarEstadoParaSalvar({
+    versao: VERSAO_ESTADO_APP,
     ...dados,
     salvoEm: new Date().toISOString(),
-  };
+  });
 }
 
-function validarEstado(
+export function validarEMigrarEstado(
   valor: unknown
 ): EstadoAppNuvem | null {
   if (!valor || typeof valor !== "object") {
     return null;
   }
 
-  const estado = valor as Partial<EstadoAppNuvem>;
+  const estado = valor as Partial<
+    EstadoAppNuvem | EstadoAppNuvemLegado
+  >;
 
   if (
-    !Array.isArray(estado.materias) ||
     !Array.isArray(estado.questoes) ||
     !Array.isArray(estado.sessoes) ||
     !Array.isArray(estado.revisoes) ||
@@ -119,6 +138,10 @@ function validarEstado(
     return null;
   }
 
+  const materias = migrarMateriasParaModulos(
+    estado.materias
+  );
+
   const missoesConcluidas =
     Array.isArray(estado.missoesConcluidas)
       ? estado.missoesConcluidas.filter(
@@ -128,8 +151,8 @@ function validarEstado(
       : [];
 
   return {
-    versao: 1,
-    materias: estado.materias,
+    versao: VERSAO_ESTADO_APP,
+    materias,
     questoes: estado.questoes,
     sessoes: estado.sessoes,
     revisoes: estado.revisoes,
@@ -138,6 +161,22 @@ function validarEstado(
     simuladosGerados: estado.simuladosGerados,
     configuracoes: estado.configuracoes,
     missoesConcluidas,
+    salvoEm:
+      typeof estado.salvoEm === "string"
+        ? estado.salvoEm
+        : new Date().toISOString(),
+  };
+}
+
+function normalizarEstadoParaSalvar(
+  estado: EstadoAppNuvem
+): EstadoAppNuvem {
+  return {
+    ...estado,
+    versao: VERSAO_ESTADO_APP,
+    materias: migrarMateriasParaModulos(
+      estado.materias
+    ),
     salvoEm:
       typeof estado.salvoEm === "string"
         ? estado.salvoEm

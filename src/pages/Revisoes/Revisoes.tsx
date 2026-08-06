@@ -38,6 +38,7 @@ function chaveRevisoesIA(
 
 export default function Revisoes() {
   const {
+    materias,
     revisoes,
     setRevisoes,
   } = useApp();
@@ -172,10 +173,46 @@ export default function Revisoes() {
     );
   }
 
+  const revisoesComModulo = useMemo(
+    () =>
+      revisoes.map((revisao) => {
+        if (revisao.modulo || revisao.moduloId) {
+          return revisao;
+        }
+
+        const materia = materias.find(
+          (item) =>
+            item.id === revisao.materiaId ||
+            item.nome === revisao.materia
+        );
+
+        const modulo = materia?.modulos?.find(
+          (item) =>
+            item.assuntos.some(
+              (assunto) =>
+                assunto.id === revisao.assuntoId ||
+                assunto.nome === revisao.assunto
+            )
+        );
+
+        return modulo
+          ? {
+              ...revisao,
+              modulo: modulo.nome,
+              moduloId: modulo.id,
+            }
+          : {
+              ...revisao,
+              modulo: "Geral",
+            };
+      }),
+    [materias, revisoes]
+  );
+
   const revisoesPendentes =
     useMemo(
       () =>
-        revisoes
+        revisoesComModulo
           .filter(
             (revisao) =>
               !revisao.concluida
@@ -189,13 +226,13 @@ export default function Revisoes() {
                 b.dataPrevista
               ).getTime()
           ),
-      [revisoes]
+      [revisoesComModulo]
     );
 
   const revisoesConcluidas =
     useMemo(
       () =>
-        revisoes
+        revisoesComModulo
           .filter(
             (revisao) =>
               revisao.concluida
@@ -211,7 +248,7 @@ export default function Revisoes() {
                   a.dataPrevista
               ).getTime()
           ),
-      [revisoes]
+      [revisoesComModulo]
     );
 
   const atrasadas =
@@ -470,6 +507,12 @@ export default function Revisoes() {
                         }
                       </strong>
 
+                      {revisao.modulo && (
+                        <small className="revisao-caminho">
+                          {revisao.modulo}
+                        </small>
+                      )}
+
                       <p>
                         {
                           revisao.assunto
@@ -561,6 +604,12 @@ function GrupoRevisoes({
                       revisao.materia
                     }
                   </strong>
+
+                  {revisao.modulo && (
+                    <small className="revisao-caminho">
+                      {revisao.modulo}
+                    </small>
+                  )}
 
                   <p>
                     {

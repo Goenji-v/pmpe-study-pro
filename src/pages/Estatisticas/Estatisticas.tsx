@@ -326,7 +326,7 @@ export default function Estatisticas() {
                   <strong>{assunto.assunto}</strong>
 
                   <p>
-                    {assunto.materia} · {assunto.total} questões
+                    {assunto.materia} · {assunto.modulo} · {assunto.total} questões
                   </p>
                 </div>
 

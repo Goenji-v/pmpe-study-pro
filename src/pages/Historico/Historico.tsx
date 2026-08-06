@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
 import type { RegistroQuestao } from "../../types";
 
 export default function Historico() {
@@ -99,6 +100,16 @@ export default function Historico() {
     (materia) => materia.nome === registroEditado?.materia
   );
 
+  const modulosDisponiveis = materiaSelecionada
+    ? listarModulosDaMateria(materiaSelecionada)
+    : [];
+
+  const moduloSelecionado = modulosDisponiveis.find(
+    (modulo) =>
+      modulo.id === registroEditado?.moduloId ||
+      modulo.nome === registroEditado?.modulo
+  );
+
   return (
     <section>
       <h1 style={{ marginBottom: 8 }}>📋 Histórico</h1>
@@ -159,7 +170,13 @@ export default function Historico() {
                           setRegistroEditado({
                             ...registroEditado,
                             materia: evento.target.value,
+                            materiaId: materias.find(
+                              (item) => item.nome === evento.target.value
+                            )?.id,
+                            modulo: "",
+                            moduloId: undefined,
                             assunto: "",
+                            assuntoId: undefined,
                           })
                         }
                         style={inputStyle}
@@ -178,6 +195,37 @@ export default function Historico() {
                     </div>
 
                     <div style={formGroupStyle}>
+                      <label style={labelStyle}>Módulo</label>
+
+                      <select
+                        value={registroEditado.modulo || ""}
+                        onChange={(evento) => {
+                          const selecionado = modulosDisponiveis.find(
+                            (item) => item.nome === evento.target.value
+                          );
+
+                          setRegistroEditado({
+                            ...registroEditado,
+                            modulo: evento.target.value,
+                            moduloId: selecionado?.id,
+                            assunto: "",
+                            assuntoId: undefined,
+                          });
+                        }}
+                        style={inputStyle}
+                        disabled={!registroEditado.materia}
+                      >
+                        <option value="">Selecione</option>
+
+                        {modulosDisponiveis.map((modulo) => (
+                          <option key={modulo.id} value={modulo.nome}>
+                            {modulo.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={formGroupStyle}>
                       <label style={labelStyle}>Assunto</label>
 
                       <select
@@ -186,14 +234,17 @@ export default function Historico() {
                           setRegistroEditado({
                             ...registroEditado,
                             assunto: evento.target.value,
+                            assuntoId: moduloSelecionado?.assuntos.find(
+                              (item) => item.nome === evento.target.value
+                            )?.id,
                           })
                         }
                         style={inputStyle}
-                        disabled={!registroEditado.materia}
+                        disabled={!registroEditado.modulo}
                       >
                         <option value="">Selecione</option>
 
-                        {materiaSelecionada?.assuntos.map(
+                        {moduloSelecionado?.assuntos.map(
                           (assunto) => (
                             <option
                               key={assunto.id}

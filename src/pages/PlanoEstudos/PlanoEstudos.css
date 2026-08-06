@@ -282,3 +282,4 @@
     flex-direction: column;
   }
 }
+.plano-modulo { display:block; margin:6px 0 2px; color:#60a5fa; font-size:12px; font-weight:700; }

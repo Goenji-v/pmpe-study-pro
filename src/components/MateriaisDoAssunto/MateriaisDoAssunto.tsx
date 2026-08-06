@@ -13,11 +13,13 @@ import {
 
 type Props = {
   materia: string;
+  modulo?: string;
   assunto: string;
 };
 
 export default function MateriaisDoAssunto({
   materia,
+  modulo,
   assunto,
 }: Props) {
   const [
@@ -35,7 +37,7 @@ export default function MateriaisDoAssunto({
 
   useEffect(() => {
     carregar();
-  }, [materia, assunto]);
+  }, [materia, modulo, assunto]);
 
   async function carregar() {
     if (
@@ -54,7 +56,8 @@ export default function MateriaisDoAssunto({
       const lista =
         await listarMateriaisPorAssunto(
           materia,
-          assunto
+          assunto,
+          modulo
         );
 
       setMateriais(lista);
@@ -103,7 +106,10 @@ export default function MateriaisDoAssunto({
           </span>
 
           <h3>
-            {materia} — {assunto}
+            {materia}
+            {modulo ? ` → ${modulo}` : ""}
+            {" → "}
+            {assunto}
           </h3>
         </div>
 

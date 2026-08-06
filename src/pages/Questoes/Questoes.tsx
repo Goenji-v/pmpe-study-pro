@@ -3,6 +3,7 @@ import "./Questoes.css";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
+import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
 
 import type {
   Assunto,
@@ -15,6 +16,7 @@ export default function Questoes() {
   const { showToast } = useToast();
 
   const [materia, setMateria] = useState("");
+  const [modulo, setModulo] = useState("");
   const [assunto, setAssunto] = useState("");
   const [banca, setBanca] = useState("AOCP");
   const [certas, setCertas] = useState(0);
@@ -26,9 +28,26 @@ export default function Questoes() {
     (item: Materia) => item.nome === materia
   );
 
+  const modulosDisponiveis = materiaSelecionada
+    ? listarModulosDaMateria(materiaSelecionada)
+    : [];
+
+  const moduloSelecionado = modulosDisponiveis.find(
+    (item) => item.nome === modulo
+  );
+
+  const assuntoSelecionado = moduloSelecionado?.assuntos.find(
+    (item) => item.nome === assunto
+  );
+
   function salvarRegistro() {
     if (!materia) {
       showToast("Selecione uma matéria.", "warning");
+      return;
+    }
+
+    if (!modulo) {
+      showToast("Selecione um módulo.", "warning");
       return;
     }
 
@@ -56,7 +75,11 @@ export default function Questoes() {
     const novoRegistro: RegistroQuestao = {
       id: crypto.randomUUID(),
       materia,
+      materiaId: materiaSelecionada?.id,
+      modulo,
+      moduloId: moduloSelecionado?.id,
       assunto,
+      assuntoId: assuntoSelecionado?.id,
       banca,
       certas,
       erradas,
@@ -77,6 +100,7 @@ export default function Questoes() {
 
   function limparFormulario() {
     setMateria("");
+    setModulo("");
     setAssunto("");
     setBanca("AOCP");
     setCertas(0);
@@ -125,6 +149,7 @@ export default function Questoes() {
               value={materia}
               onChange={(evento) => {
                 setMateria(evento.target.value);
+                setModulo("");
                 setAssunto("");
               }}
             >
@@ -144,6 +169,32 @@ export default function Questoes() {
           </div>
 
           <div className="form-group">
+            <label htmlFor="modulo">Módulo</label>
+
+            <select
+              id="modulo"
+              value={modulo}
+              onChange={(evento) => {
+                setModulo(evento.target.value);
+                setAssunto("");
+              }}
+              disabled={!materia}
+            >
+              <option value="">
+                {materia
+                  ? "Selecione um módulo"
+                  : "Selecione primeiro uma matéria"}
+              </option>
+
+              {modulosDisponiveis.map((item) => (
+                <option key={item.id} value={item.nome}>
+                  {item.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="assunto">Assunto</label>
 
             <select
@@ -152,15 +203,15 @@ export default function Questoes() {
               onChange={(evento) =>
                 setAssunto(evento.target.value)
               }
-              disabled={!materia}
+              disabled={!modulo}
             >
               <option value="">
-                {materia
+                {modulo
                   ? "Selecione um assunto"
-                  : "Selecione primeiro uma matéria"}
+                  : "Selecione primeiro um módulo"}
               </option>
 
-              {materiaSelecionada?.assuntos.map(
+              {moduloSelecionado?.assuntos.map(
                 (item: Assunto) => (
                   <option
                     key={item.id}
@@ -331,7 +382,7 @@ export default function Questoes() {
                         </span>
                       </div>
 
-                      <p>{registro.assunto}</p>
+                      <p>{registro.modulo ? `${registro.modulo} → ${registro.assunto}` : registro.assunto}</p>
 
                       <p className="historico-info">
                         {registro.banca} •{" "}

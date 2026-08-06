@@ -23,6 +23,17 @@ import { planoPMPE } from "../data/planoPMPE";
 import { criarPrimeiraRevisao } from "../utils/revisoes";
 
 import {
+  atualizarAssuntoNaArvore,
+  migrarMateriasParaModulos,
+} from "../services/conteudos/migrarEstruturaConteudos";
+
+import {
+  encontrarAssunto,
+  listarAssuntosDaMateria,
+  listarModulosDaMateria,
+} from "../services/conteudos/navegarConteudos";
+
+import {
   useAuth,
 } from "./AuthContext";
 
@@ -85,7 +96,8 @@ type AppContextType = {
   definirConclusaoAssunto: (
     materiaId: string,
     assuntoId: string,
-    concluido: boolean
+    concluido: boolean,
+    moduloId?: string
   ) => void;
 };
 
@@ -138,36 +150,59 @@ function criarEstadoInicialDaConta():
 function reconciliarMateriasComPlano(
   materiasSalvas: Materia[]
 ): Materia[] {
-  const materiasDoPlano = gerarMateriasDoPlano();
+  const materiasNormalizadas =
+    migrarMateriasParaModulos(materiasSalvas);
 
-  if (!Array.isArray(materiasSalvas) || materiasSalvas.length === 0) {
+  const materiasDoPlano =
+    migrarMateriasParaModulos(gerarMateriasDoPlano());
+
+  if (materiasNormalizadas.length === 0) {
     return clonar(materiasDoPlano);
   }
 
-  return materiasSalvas.map((materiaSalva) => {
+  return materiasNormalizadas.map((materiaSalva) => {
     const materiaPlano = materiasDoPlano.find(
       (materia) =>
         materia.id === materiaSalva.id ||
-        normalizarTexto(materia.nome) === normalizarTexto(materiaSalva.nome)
+        normalizarTexto(materia.nome) ===
+          normalizarTexto(materiaSalva.nome)
     );
 
-    if (!materiaPlano) return materiaSalva;
+    if (!materiaPlano) {
+      return materiaSalva;
+    }
 
-    return {
-      ...materiaPlano,
-      ...materiaSalva,
-      assuntos: materiaSalva.assuntos.map((assuntoSalvo) => {
-        const assuntoPlano = materiaPlano.assuntos.find(
-          (assunto) =>
-            assunto.id === assuntoSalvo.id ||
-            normalizarTexto(assunto.nome) === normalizarTexto(assuntoSalvo.nome)
-        );
+    const assuntosDoPlano =
+      listarAssuntosDaMateria(materiaPlano);
 
-        return assuntoPlano
-          ? { ...assuntoPlano, ...assuntoSalvo }
-          : assuntoSalvo;
-      }),
-    };
+    const modulos = listarModulosDaMateria(materiaSalva).map(
+      (modulo) => ({
+        ...modulo,
+        assuntos: modulo.assuntos.map(
+          (assuntoSalvo) => {
+            const assuntoPlano =
+              assuntosDoPlano.find(
+                (assunto) =>
+                  assunto.id === assuntoSalvo.id ||
+                  normalizarTexto(assunto.nome) ===
+                    normalizarTexto(assuntoSalvo.nome)
+              );
+
+            return assuntoPlano
+              ? { ...assuntoPlano, ...assuntoSalvo }
+              : assuntoSalvo;
+          }
+        ),
+      })
+    );
+
+    return migrarMateriasParaModulos([
+      {
+        ...materiaPlano,
+        ...materiaSalva,
+        modulos,
+      },
+    ])[0];
   });
 }
 
@@ -208,6 +243,18 @@ export function AppProvider({
       chaveDaConta(userId, "materias"),
       gerarMateriasDoPlano()
     );
+
+  useEffect(() => {
+    const migradas =
+      migrarMateriasParaModulos(materias);
+
+    if (
+      JSON.stringify(migradas) !==
+      JSON.stringify(materias)
+    ) {
+      setMaterias(migradas);
+    }
+  }, [materias, setMaterias]);
 
   const [questoes, setQuestoes] =
     useLocalStorage<RegistroQuestao[]>(
@@ -689,10 +736,18 @@ export function AppProvider({
   function definirConclusaoAssunto(
     materiaId: string,
     assuntoId: string,
-    concluido: boolean
+    concluido: boolean,
+    moduloId?: string
   ) {
-    const materia = materias.find((item) => item.id === materiaId);
-    const assunto = materia?.assuntos.find((item) => item.id === assuntoId);
+    const materia = materias.find(
+      (item) => item.id === materiaId
+    );
+
+    const localizacao = materia
+      ? encontrarAssunto(materia, assuntoId, moduloId)
+      : null;
+
+    const assunto = localizacao?.assunto;
 
     if (!materia || !assunto) return;
 
@@ -700,18 +755,17 @@ export function AppProvider({
       anteriores.map((itemMateria) =>
         itemMateria.id !== materiaId
           ? itemMateria
-          : {
-              ...itemMateria,
-              assuntos: itemMateria.assuntos.map((itemAssunto) =>
-                itemAssunto.id !== assuntoId
-                  ? itemAssunto
-                  : {
-                      ...itemAssunto,
-                      concluido,
-                      atualizadoEm: new Date().toISOString(),
-                    }
-              ),
-            }
+          : atualizarAssuntoNaArvore(
+              itemMateria,
+              assuntoId,
+              (itemAssunto) => ({
+                ...itemAssunto,
+                concluido,
+                atualizadoEm:
+                  new Date().toISOString(),
+              }),
+              localizacao?.modulo.id
+            )
       )
     );
 
@@ -739,7 +793,12 @@ export function AppProvider({
           (revisao) =>
             !revisao.concluida &&
             normalizarTexto(revisao.materia) === normalizarTexto(materia.nome) &&
-            normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome)
+            normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome) &&
+            (
+              !localizacao?.modulo.id ||
+              !revisao.moduloId ||
+              revisao.moduloId === localizacao.modulo.id
+            )
         );
 
         if (jaExiste) return anteriores;
@@ -747,8 +806,10 @@ export function AppProvider({
         return [
           criarPrimeiraRevisao({
             materiaId: materia.id,
+            moduloId: localizacao?.modulo.id,
             assuntoId: assunto.id,
             materia: materia.nome,
+            modulo: localizacao?.modulo.nome,
             assunto: assunto.nome,
           }),
           ...anteriores,
@@ -761,7 +822,12 @@ export function AppProvider({
             !(
               !revisao.concluida &&
               normalizarTexto(revisao.materia) === normalizarTexto(materia.nome) &&
-              normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome)
+              normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome) &&
+              (
+                !localizacao?.modulo.id ||
+                !revisao.moduloId ||
+                revisao.moduloId === localizacao.modulo.id
+              )
             )
         )
       );

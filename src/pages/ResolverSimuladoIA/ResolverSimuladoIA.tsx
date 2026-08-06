@@ -41,7 +41,12 @@ type ResultadoSimuladoIA = {
 
 type DiagnosticoAssunto = {
   chave: string;
+
   materia: string;
+
+  modulo?: string;
+  moduloId?: string;
+
   assunto: string;
 
   total: number;
@@ -53,8 +58,14 @@ type DiagnosticoAssunto = {
 
 type RevisaoIA = {
   id: string;
+
   materia: string;
+
+  modulo?: string;
+  moduloId?: string;
+
   assunto: string;
+
   origem: "simulado-ia";
   criadaEm: string;
   concluida: boolean;
@@ -384,7 +395,7 @@ export default function ResolverSimuladoIA() {
         revisoesAtuais.map(
           (revisao) =>
             normalizar(
-              `${revisao.materia}::${revisao.assunto}`
+              `${revisao.materia}::${revisao.modulo || "Geral"}::${revisao.assunto}`
             )
         )
       );
@@ -396,7 +407,7 @@ export default function ResolverSimuladoIA() {
       (item) => {
         const chave =
           normalizar(
-            `${item.materia}::${item.assunto}`
+            `${item.materia}::${item.modulo || "Geral"}::${item.assunto}`
           );
 
         if (
@@ -408,6 +419,8 @@ export default function ResolverSimuladoIA() {
         novasRevisoes.push({
           id: crypto.randomUUID(),
           materia: item.materia,
+          modulo: item.modulo,
+          moduloId: item.moduloId,
           assunto: item.assunto,
           origem: "simulado-ia",
           criadaEm:
@@ -456,6 +469,7 @@ export default function ResolverSimuladoIA() {
         "pmpe_filtro_materiais",
         JSON.stringify({
           materia: item.materia,
+          modulo: item.modulo,
           assunto: item.assunto,
         })
       );
@@ -691,7 +705,9 @@ export default function ResolverSimuladoIA() {
                       </strong>
 
                       <span>
-                        {item.assunto}
+                        {item.modulo
+                          ? `${item.modulo} → ${item.assunto}`
+                          : item.assunto}
                       </span>
 
                       <div className="resolver-ia-diagnostico-barra">
@@ -865,7 +881,9 @@ export default function ResolverSimuladoIA() {
           </div>
 
           <p className="resolver-ia-assunto">
-            {questao.assunto}
+            {questao.modulo
+              ? `${questao.modulo} → ${questao.assunto}`
+              : questao.assunto}
           </p>
 
           <h2 className="resolver-ia-enunciado">
@@ -1122,19 +1140,28 @@ function calcularDiagnostico(
         questao.materia ||
         "Sem matéria";
 
+      const modulo =
+        questao.modulo ||
+        "Geral";
+
+      const moduloId =
+        questao.moduloId;
+
       const assunto =
         questao.assunto ||
         "Sem assunto";
 
       const chave =
         normalizar(
-          `${materia}::${assunto}`
+          `${materia}::${modulo}::${assunto}`
         );
 
       const atual =
         mapa.get(chave) ?? {
           chave,
           materia,
+          modulo,
+          moduloId,
           assunto,
           total: 0,
           certas: 0,

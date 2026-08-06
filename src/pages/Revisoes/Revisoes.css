@@ -175,3 +175,10 @@
     flex: 1;
   }
 }
+.revisao-caminho {
+  display: block;
+  margin-top: 5px;
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 700;
+}

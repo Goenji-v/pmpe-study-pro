@@ -12,6 +12,10 @@ import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 
 import { useApp } from "../../context/AppContext";
+import {
+  listarAssuntosDaMateria,
+  listarModulosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
 
 
 import {
@@ -237,8 +241,7 @@ export default function Dashboard() {
   const assuntosTotais =
     materias.reduce(
       (total, materia) =>
-        total +
-        materia.assuntos.length,
+        total + listarAssuntosDaMateria(materia).length,
       0
     );
 
@@ -246,9 +249,8 @@ export default function Dashboard() {
     materias.reduce(
       (total, materia) =>
         total +
-        materia.assuntos.filter(
-          (assunto) =>
-            assunto.concluido
+        listarAssuntosDaMateria(materia).filter(
+          (assunto) => assunto.concluido
         ).length,
       0
     );
@@ -414,73 +416,60 @@ export default function Dashboard() {
       return;
     }
 
-    const {
-      semana,
-      dia,
-      missao,
-    } = dadosPlano.proxima;
+    const { semana, dia, missao } = dadosPlano.proxima;
 
-    const cronometro = {
-      ativo: true,
-      pausado: false,
+    const materia = materias.find(
+      (item) => normalizarTextoDashboard(item.nome) === normalizarTextoDashboard(missao.materia)
+    );
 
-      materia:
-        missao.materia,
+    let moduloEncontrado:
+      | ReturnType<typeof listarModulosDaMateria>[number]
+      | undefined;
+    let assuntoEncontrado:
+      | ReturnType<typeof listarAssuntosDaMateria>[number]
+      | undefined;
 
-      assunto:
-        missao.assunto,
+    if (materia) {
+      for (const modulo of listarModulosDaMateria(materia)) {
+        const assunto = modulo.assuntos.find(
+          (item) => normalizarTextoDashboard(item.nome) === normalizarTextoDashboard(missao.assunto)
+        );
 
+        if (assunto) {
+          moduloEncontrado = modulo;
+          assuntoEncontrado = assunto;
+          break;
+        }
+      }
+    }
+
+    const prefillSessao = {
+      materia: missao.materia,
+      materiaId: materia?.id,
+      modulo: moduloEncontrado?.nome,
+      moduloId: moduloEncontrado?.id,
+      assunto: missao.assunto,
+      assuntoId: assuntoEncontrado?.id,
       tipo:
-        missao.tipo ===
-        "revisao"
+        missao.tipo === "revisao"
           ? "revisao"
-          : missao.tipo ===
-              "questoes"
+          : missao.tipo === "questoes"
             ? "questoes"
-            : "estudo",
-
-      objetivo:
-        `Semana ${semana} — ` +
-        `Dia ${dia} — ` +
-        `Missão ${missao.numero}`,
-
-      iniciadaEm:
-        new Date().toISOString(),
-
-      pausadaEm: null,
-
-      segundosPausados: 0,
-
-      missaoId:
-        missao.id,
-
+            : "aula",
+      objetivo: `Semana ${semana} — Dia ${dia} — Missão ${missao.numero}`,
+      missaoId: missao.id,
       semana,
-
       dia,
-
-      urlAula:
-        missao.urlAula,
-
-      urlQuestoes:
-        missao.urlQuestoes,
+      urlAula: missao.urlAula,
+      urlQuestoes: missao.urlQuestoes,
     };
 
-    localStorage.setItem(
-      "pmpe_cronometro_estudo",
-      JSON.stringify(
-        cronometro
-      )
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify(prefillSessao)
     );
 
-    window.dispatchEvent(
-      new Event(
-        "pmpe-cronometro-atualizado"
-      )
-    );
-
-    navigate(
-      "/central-estudos"
-    );
+    navigate("/central-estudos");
   }
 
   return (
@@ -1541,6 +1530,15 @@ function formatarData(
   ).toLocaleDateString(
     "pt-BR"
   );
+}
+
+function normalizarTextoDashboard(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function obterDataLocal(

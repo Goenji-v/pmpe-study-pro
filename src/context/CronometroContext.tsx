@@ -11,6 +11,10 @@ import { useApp } from "./AppContext";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import { criarPrimeiraRevisao } from "../utils/revisoes";
+import {
+  listarModulosDaMateria,
+  sincronizarEspelhoAssuntos,
+} from "../services/conteudos/navegarConteudos";
 
 import type {
   Dificuldade,
@@ -25,7 +29,11 @@ type StatusCronometro =
 
 export type SessaoAtiva = {
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
   tipo: TipoSessao;
   objetivo: string;
   observacao: string;
@@ -42,7 +50,11 @@ export type SessaoAtiva = {
 
 export type DadosIniciarSessao = {
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
   tipo: TipoSessao;
   objetivo?: string;
   observacao?: string;
@@ -83,10 +95,16 @@ type CronometroContextType = {
     dados: Partial<
       Pick<
         SessaoAtiva,
-        "materia" | "assunto" | "tipo" |
-        "objetivo" | "observacao"
+        "materia" | "materiaId" | "modulo" | "moduloId" |
+        "assunto" | "assuntoId" | "tipo" |
+        "objetivo" | "observacao" |
+        "missaoId" | "semana" | "dia" |
+        "urlAula" | "urlQuestoes"
       >
     >
+  ) => void;
+  prepararSessao: (
+    dados: DadosIniciarSessao
   ) => void;
   pausar: () => void;
   continuar: () => void;
@@ -232,7 +250,11 @@ export function CronometroProvider({
 
     setSessaoAtiva({
       materia: dados.materia.trim(),
+      materiaId: dados.materiaId,
+      modulo: dados.modulo?.trim() || undefined,
+      moduloId: dados.moduloId,
       assunto: dados.assunto.trim(),
+      assuntoId: dados.assuntoId,
       tipo: dados.tipo,
       objetivo: dados.objetivo?.trim() ?? "",
       observacao: dados.observacao?.trim() ?? "",
@@ -261,8 +283,11 @@ export function CronometroProvider({
     dados: Partial<
       Pick<
         SessaoAtiva,
-        "materia" | "assunto" | "tipo" |
-        "objetivo" | "observacao"
+        "materia" | "materiaId" | "modulo" | "moduloId" |
+        "assunto" | "assuntoId" | "tipo" |
+        "objetivo" | "observacao" |
+        "missaoId" | "semana" | "dia" |
+        "urlAula" | "urlQuestoes"
       >
     >
   ) {
@@ -276,6 +301,35 @@ export function CronometroProvider({
         ...dados,
       })
     );
+  }
+
+  function prepararSessao(
+    dados: DadosIniciarSessao
+  ) {
+    const novaSessao: SessaoAtiva = {
+      ...sessaoInicial,
+      materia: dados.materia.trim(),
+      materiaId: dados.materiaId,
+      modulo: dados.modulo?.trim() || undefined,
+      moduloId: dados.moduloId,
+      assunto: dados.assunto.trim(),
+      assuntoId: dados.assuntoId,
+      tipo: dados.tipo,
+      objetivo: dados.objetivo?.trim() ?? "",
+      observacao: dados.observacao?.trim() ?? "",
+      missaoId: dados.missaoId,
+      semana: dados.semana,
+      dia: dados.dia,
+      urlAula: dados.urlAula,
+      urlQuestoes: dados.urlQuestoes,
+      status: "parado",
+      iniciadoEm: null,
+      pausadoEm: null,
+      segundosPausados: 0,
+    };
+
+    setSessaoAtiva(novaSessao);
+    localStorage.removeItem(chaveStorage);
   }
 
   function pausar() {
@@ -358,7 +412,11 @@ export function CronometroProvider({
       id: crypto.randomUUID(),
       tipo: sessaoAtiva.tipo,
       materia: sessaoAtiva.materia,
+      materiaId: sessaoAtiva.materiaId,
+      modulo: sessaoAtiva.modulo,
+      moduloId: sessaoAtiva.moduloId,
       assunto: sessaoAtiva.assunto,
+      assuntoId: sessaoAtiva.assuntoId,
       objetivo:
         sessaoAtiva.objetivo ||
         undefined,
@@ -429,8 +487,20 @@ if (
             materia:
               sessaoAtiva.materia,
 
+            materiaId:
+              sessaoAtiva.materiaId,
+
+            modulo:
+              sessaoAtiva.modulo,
+
+            moduloId:
+              sessaoAtiva.moduloId,
+
             assunto:
               sessaoAtiva.assunto,
+
+            assuntoId:
+              sessaoAtiva.assuntoId,
 
             banca:
               dados.banca?.trim() ||
@@ -478,7 +548,8 @@ if (
         localizarMateriaEAssunto(
           materias,
           sessaoAtiva.materia,
-          sessaoAtiva.assunto
+          sessaoAtiva.assunto,
+          sessaoAtiva.moduloId
         );
 
       setMaterias(
@@ -486,7 +557,8 @@ if (
           marcarAssuntoConcluido(
             anteriores,
             sessaoAtiva.materia,
-            sessaoAtiva.assunto
+            sessaoAtiva.assunto,
+            sessaoAtiva.moduloId
           )
       );
 
@@ -503,6 +575,11 @@ if (
                 mesmoTexto(
                   revisao.assunto,
                   sessaoAtiva.assunto
+                ) &&
+                (
+                  !sessaoAtiva.moduloId ||
+                  !revisao.moduloId ||
+                  revisao.moduloId === sessaoAtiva.moduloId
                 )
             );
 
@@ -516,10 +593,14 @@ if (
             criarPrimeiraRevisao({
               materiaId:
                 referencia.materiaId,
+              moduloId:
+                referencia.moduloId,
               assuntoId:
                 referencia.assuntoId,
               materia:
                 sessaoAtiva.materia,
+              modulo:
+                referencia.modulo,
               assunto:
                 sessaoAtiva.assunto,
             }),
@@ -587,6 +668,7 @@ if (
         cronometroAtivo,
         iniciar,
         atualizarDados,
+        prepararSessao,
         pausar,
         continuar,
         finalizar,
@@ -681,73 +763,78 @@ function tipoGeraRevisao(
 }
 
 function localizarMateriaEAssunto(
-  materias: ReturnType<
-    typeof useApp
-  >["materias"],
+  materias: ReturnType<typeof useApp>["materias"],
   nomeMateria: string,
-  nomeAssunto: string
+  nomeAssunto: string,
+  moduloId?: string
 ) {
-  const materia =
-    materias.find(
-      (item) =>
-        mesmoTexto(
-          item.nome,
-          nomeMateria
-        )
+  const materia = materias.find((item) =>
+    mesmoTexto(item.nome, nomeMateria)
+  );
+
+  if (materia) {
+    const modulos = listarModulosDaMateria(materia);
+    const moduloPreferido = moduloId
+      ? modulos.find((item) => item.id === moduloId)
+      : undefined;
+
+    const moduloEncontrado = moduloPreferido ?? modulos.find((item) =>
+      item.assuntos.some((assunto) => mesmoTexto(assunto.nome, nomeAssunto))
     );
 
-  const assunto =
-    materia?.assuntos.find(
-      (item) =>
-        mesmoTexto(
-          item.nome,
-          nomeAssunto
-        )
+    const assunto = moduloEncontrado?.assuntos.find((item) =>
+      mesmoTexto(item.nome, nomeAssunto)
     );
+
+    if (moduloEncontrado && assunto) {
+      return {
+        materiaId: materia.id,
+        moduloId: moduloEncontrado.id,
+        modulo: moduloEncontrado.nome,
+        assuntoId: assunto.id,
+      };
+    }
+  }
 
   return {
-    materiaId:
-      materia?.id ||
-      criarId(nomeMateria),
-    assuntoId:
-      assunto?.id ||
-      criarId(
-        `${nomeMateria}-${nomeAssunto}`
-      ),
+    materiaId: materia?.id || criarId(nomeMateria),
+    moduloId,
+    modulo: undefined,
+    assuntoId: criarId(`${nomeMateria}-${nomeAssunto}`),
   };
 }
 
 function marcarAssuntoConcluido(
-  materias: ReturnType<
-    typeof useApp
-  >["materias"],
+  materias: ReturnType<typeof useApp>["materias"],
   nomeMateria: string,
-  nomeAssunto: string
+  nomeAssunto: string,
+  moduloId?: string
 ) {
-  return materias.map(
-    (materia) =>
-      mesmoTexto(
-        materia.nome,
-        nomeMateria
-      )
-        ? {
-            ...materia,
-            assuntos:
-              materia.assuntos.map(
-                (assunto) =>
-                  mesmoTexto(
-                    assunto.nome,
-                    nomeAssunto
-                  )
-                    ? {
-                        ...assunto,
-                        concluido: true,
-                      }
-                    : assunto
-              ),
-          }
-        : materia
-  );
+  return materias.map((materia) => {
+    if (!mesmoTexto(materia.nome, nomeMateria)) {
+      return materia;
+    }
+
+    const modulos = listarModulosDaMateria(materia).map((modulo) => {
+      if (moduloId && modulo.id !== moduloId) {
+        return modulo;
+      }
+
+      return {
+        ...modulo,
+        assuntos: modulo.assuntos.map((assunto) =>
+          mesmoTexto(assunto.nome, nomeAssunto)
+            ? { ...assunto, concluido: true }
+            : assunto
+        ),
+      };
+    });
+
+    return sincronizarEspelhoAssuntos({
+      ...materia,
+      modulos,
+    });
+  });
 }
 
 function mesmoTexto(

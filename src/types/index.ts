@@ -40,16 +40,33 @@ export type Assunto = {
   atualizadoEm?: string;
 };
 
+export type Modulo = {
+  id: string;
+  nome: string;
+  ordem: number;
+  assuntos: Assunto[];
+};
+
 export type Materia = {
   id: string;
   nome: string;
+  /** Estrutura canônica a partir da versão 2. */
+  modulos?: Modulo[];
+  /**
+   * Espelho temporário para compatibilidade com páginas ainda não migradas.
+   * Novas implementações devem usar `modulos`.
+   */
   assuntos: Assunto[];
 };
 
 export type RegistroQuestao = {
   id: string;
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
   banca: string;
   certas: number;
   erradas: number;
@@ -74,7 +91,11 @@ export type SessaoEstudo = {
   tipo: TipoSessao;
 
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
 
   objetivo?: string;
   observacao?: string;
@@ -121,6 +142,8 @@ export type QuestaoBanco = {
   id: string;
   materiaId: string;
   materia: string;
+  moduloId?: string;
+  modulo?: string;
   assuntoId: string;
   assunto: string;
   banca: string;
@@ -163,8 +186,10 @@ export type ConfiguracoesApp = {
 export type Revisao = {
   id: string;
   materiaId: string;
+  moduloId?: string;
   assuntoId: string;
   materia: string;
+  modulo?: string;
   assunto: string;
   etapa: EtapaRevisao;
   dataCriacao: string;
@@ -176,6 +201,8 @@ export type Revisao = {
 export interface QuestaoIA {
   id: string;
   materia: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
   banca: string;
   dificuldade:

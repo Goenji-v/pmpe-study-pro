@@ -1,5 +1,8 @@
 import { useMemo } from "react";
 import { useApp } from "../../context/AppContext";
+import {
+  listarModulosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
 import { useNavigate } from "react-router-dom";
 
 import "./MissaoDoDia.css";
@@ -13,14 +16,14 @@ type MissaoDoDiaProps = {
   atualizacao?: number;
 };
 
-const CHAVE_CRONOMETRO =
-  "pmpe_cronometro_estudo";
-
 export default function MissaoDoDia({
   atualizacao = 0,
 }: MissaoDoDiaProps) {
   const navigate = useNavigate();
-  const { missoesConcluidas } = useApp();
+  const {
+    materias,
+    missoesConcluidas,
+  } = useApp();
 
   const proxima = useMemo(
     () => getProximaMissao(missoesConcluidas),
@@ -32,54 +35,67 @@ export default function MissaoDoDia({
   ) {
     const { semana, dia, missao } = dados;
 
-    const tipo =
-      missao.tipo === "revisao"
-        ? "revisao"
-        : missao.tipo === "questoes"
-          ? "questoes"
-          : "aula";
+    const materia = materias.find(
+      (item) =>
+        normalizarTexto(item.nome) ===
+        normalizarTexto(missao.materia)
+    );
 
-    const cronometro = {
-      ativo: false,
-      pausado: false,
+    const modulos = materia
+      ? listarModulosDaMateria(materia)
+      : [];
 
-      tipo,
+    const modulo = modulos.find(
+      (item) =>
+        item.assuntos.some(
+          (assunto) =>
+            normalizarTexto(assunto.nome) ===
+            normalizarTexto(missao.assunto)
+        )
+    ) ?? modulos[0];
 
-      materia: missao.materia,
-      assunto: missao.assunto,
+    const assunto = modulo?.assuntos.find(
+      (item) =>
+        normalizarTexto(item.nome) ===
+        normalizarTexto(missao.assunto)
+    );
 
+    const prefillSessao = {
+      tipo:
+        missao.tipo === "revisao"
+          ? "revisao"
+          : missao.tipo === "questoes"
+            ? "questoes"
+            : "aula",
+      materia: materia?.nome ?? missao.materia,
+      materiaId: materia?.id,
+      modulo: modulo?.nome,
+      moduloId: modulo?.id,
+      assunto: assunto?.nome ?? missao.assunto,
+      assuntoId: assunto?.id,
       objetivo:
         `Semana ${semana} — ` +
         `Dia ${dia} — ` +
         `Missão ${missao.numero}`,
-
       observacao: "",
-
-      iniciadaEm: null,
-      pausadaEm: null,
-
-      segundosPausados: 0,
-
       missaoId: missao.id,
       semana,
       dia,
-
       urlAula: missao.urlAula,
       urlQuestoes: missao.urlQuestoes,
     };
 
-    localStorage.setItem(
-      CHAVE_CRONOMETRO,
-      JSON.stringify(cronometro)
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify(prefillSessao)
     );
 
-    window.dispatchEvent(
-      new Event(
-        "pmpe-cronometro-atualizado"
-      )
-    );
-
-    navigate("/central-estudos");
+    navigate("/central-estudos", {
+      state: {
+        origem: "dashboard",
+        prefillSessao,
+      },
+    });
   }
 
   if (!proxima) {
@@ -218,3 +234,14 @@ function formatarTipo(
 
   return nomes[tipo] || tipo;
 }
+function normalizarTexto(
+  valor: string
+) {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+

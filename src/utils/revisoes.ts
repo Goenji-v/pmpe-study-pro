@@ -25,8 +25,10 @@ export function adicionarDias(
 
 export function criarPrimeiraRevisao(params: {
   materiaId: string;
+  moduloId?: string;
   assuntoId: string;
   materia: string;
+  modulo?: string;
   assunto: string;
 }): Revisao {
   const agora = new Date();
@@ -34,8 +36,10 @@ export function criarPrimeiraRevisao(params: {
   return {
     id: crypto.randomUUID(),
     materiaId: params.materiaId,
+    moduloId: params.moduloId,
     assuntoId: params.assuntoId,
     materia: params.materia,
+    modulo: params.modulo,
     assunto: params.assunto,
     etapa: 1,
     dataCriacao: agora.toISOString(),
@@ -63,8 +67,10 @@ export function criarProximaRevisao(
   return {
     id: crypto.randomUUID(),
     materiaId: revisaoAtual.materiaId,
+    moduloId: revisaoAtual.moduloId,
     assuntoId: revisaoAtual.assuntoId,
     materia: revisaoAtual.materia,
+    modulo: revisaoAtual.modulo,
     assunto: revisaoAtual.assunto,
     etapa: proximaEtapa,
     dataCriacao: agora.toISOString(),

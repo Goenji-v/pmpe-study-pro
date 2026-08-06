@@ -10,6 +10,8 @@ export type DificuldadeIA =
 
 export type ConteudoGeracaoIA = {
   materia: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
 };
 
@@ -17,6 +19,8 @@ export type ParametrosGeracaoIA = {
   origem: "assunto" | "semana";
 
   materia?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto?: string;
 
   semana?: number;
@@ -132,7 +136,7 @@ function montarContextoGeracao(
     const lista = conteudos
       .map(
         (item, indice) =>
-          `${indice + 1}. ${item.materia} — ${item.assunto}`
+          `${indice + 1}. ${item.materia}${item.modulo ? ` → ${item.modulo}` : ""} → ${item.assunto}`
       )
       .join("\n");
 
@@ -151,6 +155,7 @@ function montarContextoGeracao(
 
   return [
     `Matéria: ${parametros.materia}`,
+    `Módulo: ${parametros.modulo || "Geral"}`,
     `Assunto: ${parametros.assunto}`,
     `Dificuldade: ${parametros.dificuldade}`,
   ].join("\n");
@@ -172,6 +177,17 @@ function normalizarQuestoes(
         questao.materia ||
         parametros.materia ||
         "Conteúdo da semana",
+
+      modulo:
+        questao.modulo ||
+        parametros.modulo ||
+        (parametros.origem === "assunto"
+          ? "Geral"
+          : undefined),
+
+      moduloId:
+        questao.moduloId ||
+        parametros.moduloId,
 
       assunto:
         questao.assunto ||

@@ -9,6 +9,14 @@ import "./Backup.css";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 
+import {
+  migrarMateriasParaModulos,
+} from "../../services/conteudos/migrarEstruturaConteudos";
+
+import {
+  listarAssuntosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
+
 import type {
   ConfiguracoesApp,
   Materia,
@@ -82,14 +90,14 @@ export default function Backup() {
 
   const totalAssuntos = materias.reduce(
     (total, materia) =>
-      total + materia.assuntos.length,
+      total + listarAssuntosDaMateria(materia).length,
     0
   );
 
   const assuntosConcluidos = materias.reduce(
     (total, materia) =>
       total +
-      materia.assuntos.filter(
+      listarAssuntosDaMateria(materia).filter(
         (assunto) => assunto.concluido
       ).length,
     0
@@ -110,7 +118,7 @@ export default function Backup() {
 
   function criarDadosBackup(): BackupDados {
     return {
-      versao: 1,
+      versao: 2,
       exportadoEm: new Date().toISOString(),
 
       dados: {
@@ -242,7 +250,9 @@ export default function Backup() {
       }
 
       setMaterias(
-        backup.dados.materias
+        migrarMateriasParaModulos(
+          backup.dados.materias
+        )
       );
 
       setQuestoes(
@@ -652,7 +662,7 @@ function validarBackup(
     valor as Partial<BackupDados>;
 
   if (
-    backup.versao !== 1 ||
+    ![1, 2].includes(backup.versao ?? 0) ||
     typeof backup.exportadoEm !==
       "string" ||
     typeof backup.dados !==
@@ -690,5 +700,14 @@ function validarBackup(
     );
   }
 
-  return backup as BackupDados;
+  return {
+    ...(backup as BackupDados),
+    versao: 2,
+    dados: {
+      ...(dados as BackupDados["dados"]),
+      materias: migrarMateriasParaModulos(
+        dados.materias
+      ),
+    },
+  };
 }

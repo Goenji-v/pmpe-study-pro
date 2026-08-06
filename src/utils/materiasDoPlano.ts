@@ -9,6 +9,11 @@ import type {
   Prioridade,
 } from "../types/index";
 
+import {
+  criarIdModuloGeral,
+  NOME_MODULO_GERAL,
+} from "../services/conteudos/navegarConteudos";
+
 function criarId(texto: string) {
   return texto
     .normalize("NFD")
@@ -105,18 +110,30 @@ export function gerarMateriasDoPlano(): Materia[] {
   return Array.from(
     mapa.entries()
   )
-    .map(([id, dados]) => ({
-      id,
-      nome: dados.nome,
-      assuntos: Array.from(
+    .map(([id, dados]) => {
+      const assuntos = Array.from(
         dados.assuntos.values()
       ).sort((a, b) =>
         a.nome.localeCompare(
           b.nome,
           "pt-BR"
         )
-      ),
-    }))
+      );
+
+      return {
+        id,
+        nome: dados.nome,
+        modulos: [
+          {
+            id: criarIdModuloGeral(id),
+            nome: NOME_MODULO_GERAL,
+            ordem: 0,
+            assuntos,
+          },
+        ],
+        assuntos,
+      };
+    })
     .sort((a, b) =>
       a.nome.localeCompare(
         b.nome,

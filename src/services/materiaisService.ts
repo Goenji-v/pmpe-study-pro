@@ -12,7 +12,11 @@ export type MaterialEstudo = {
 
   nome: string;
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
   observacao: string;
 
   criadoEm: string;
@@ -40,6 +44,13 @@ type MaterialBanco = {
   mime_type: string | null;
   tamanho_bytes: number | null;
   created_at: string;
+  dados: {
+    materiaId?: string;
+    modulo?: string;
+    moduloId?: string;
+    assuntoId?: string;
+    [chave: string]: unknown;
+  } | null;
 };
 
 type RegistroMaterialLocal =
@@ -91,6 +102,7 @@ export async function listarMateriais():
         "mime_type",
         "tamanho_bytes",
         "created_at",
+        "dados",
       ].join(",")
     )
     .eq(
@@ -119,7 +131,8 @@ export async function listarMateriais():
 
 export async function listarMateriaisPorAssunto(
   materia: string,
-  assunto: string
+  assunto: string,
+  modulo?: string
 ): Promise<MaterialEstudo[]> {
   const usuario =
     await exigirUsuario();
@@ -145,6 +158,7 @@ export async function listarMateriaisPorAssunto(
         "mime_type",
         "tamanho_bytes",
         "created_at",
+        "dados",
       ].join(",")
     )
     .eq(
@@ -173,17 +187,26 @@ export async function listarMateriaisPorAssunto(
   }
 
   return (
-  (data ?? []) as unknown as MaterialBanco[]
-).map(
-  converterMaterialBanco
-);
+    (data ?? []) as unknown as MaterialBanco[]
+  )
+    .map(converterMaterialBanco)
+    .filter(
+      (material) =>
+        !modulo?.trim() ||
+        material.modulo === modulo.trim() ||
+        (!material.modulo && modulo.trim() === "Geral")
+    );
 }
 
 export async function salvarArquivoMaterial(
   dados: {
     nome: string;
     materia: string;
+    materiaId?: string;
+    modulo?: string;
+    moduloId?: string;
     assunto: string;
+    assuntoId?: string;
     observacao: string;
     arquivo: File;
   }
@@ -269,7 +292,12 @@ export async function salvarArquivoMaterial(
         dados.arquivo.size,
       created_at:
         criadoEm,
-      dados: {},
+      dados: {
+        materiaId: dados.materiaId,
+        modulo: dados.modulo?.trim() || "Geral",
+        moduloId: dados.moduloId,
+        assuntoId: dados.assuntoId,
+      },
     })
     .select(
       [
@@ -287,6 +315,7 @@ export async function salvarArquivoMaterial(
         "mime_type",
         "tamanho_bytes",
         "created_at",
+        "dados",
       ].join(",")
     )
     .single();
@@ -314,7 +343,11 @@ export async function salvarLinkMaterial(
   dados: {
     nome: string;
     materia: string;
+    materiaId?: string;
+    modulo?: string;
+    moduloId?: string;
     assunto: string;
+    assuntoId?: string;
     observacao: string;
     url: string;
   }
@@ -353,7 +386,12 @@ export async function salvarLinkMaterial(
       created_at:
         new Date()
           .toISOString(),
-      dados: {},
+      dados: {
+        materiaId: dados.materiaId,
+        modulo: dados.modulo?.trim() || "Geral",
+        moduloId: dados.moduloId,
+        assuntoId: dados.assuntoId,
+      },
     })
     .select(
       [
@@ -371,6 +409,7 @@ export async function salvarLinkMaterial(
         "mime_type",
         "tamanho_bytes",
         "created_at",
+        "dados",
       ].join(",")
     )
     .single();
@@ -808,8 +847,11 @@ async function migrarMaterialLocal(
         material.criadoEm,
 
       dados: {
-        migradoDoIndexedDB:
-          true,
+        migradoDoIndexedDB: true,
+        materiaId: material.materiaId,
+        modulo: material.modulo || "Geral",
+        moduloId: material.moduloId,
+        assuntoId: material.assuntoId,
       },
     });
 
@@ -968,8 +1010,20 @@ function converterMaterialBanco(
     materia:
       registro.materia,
 
+    materiaId:
+      registro.dados?.materiaId,
+
+    modulo:
+      registro.dados?.modulo || "Geral",
+
+    moduloId:
+      registro.dados?.moduloId,
+
     assunto:
       registro.assunto,
+
+    assuntoId:
+      registro.dados?.assuntoId,
 
     observacao:
       registro.observacao ||

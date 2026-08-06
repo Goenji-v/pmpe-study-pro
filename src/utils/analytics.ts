@@ -10,6 +10,7 @@ export type ResumoMateria = {
 
 export type ResumoAssunto = {
   materia: string;
+  modulo: string;
   assunto: string;
   certas: number;
   erradas: number;
@@ -98,6 +99,7 @@ export function calcularResumoPorAssunto(
     string,
     {
       materia: string;
+      modulo: string;
       assunto: string;
       certas: number;
       erradas: number;
@@ -105,10 +107,12 @@ export function calcularResumoPorAssunto(
   >();
 
   registros.forEach((registro) => {
-    const chave = `${registro.materia}::${registro.assunto}`;
+    const modulo = registro.modulo || "Geral";
+    const chave = `${registro.materia}::${modulo}::${registro.assunto}`;
 
     const atual = mapa.get(chave) || {
       materia: registro.materia,
+      modulo,
       assunto: registro.assunto,
       certas: 0,
       erradas: 0,
@@ -138,17 +142,17 @@ export function calcularResumoPorAssunto(
 }
 
 export function calcularProgressoEdital(materias: Materia[]) {
-  const totalAssuntos = materias.reduce(
-    (total, materia) => total + materia.assuntos.length,
-    0
+  const todosAssuntos = materias.flatMap((materia) =>
+    materia.modulos?.length
+      ? materia.modulos.flatMap((modulo) => modulo.assuntos)
+      : materia.assuntos
   );
 
-  const assuntosConcluidos = materias.reduce(
-    (total, materia) =>
-      total +
-      materia.assuntos.filter((assunto) => assunto.concluido).length,
-    0
-  );
+  const totalAssuntos = todosAssuntos.length;
+
+  const assuntosConcluidos = todosAssuntos.filter(
+    (assunto) => assunto.concluido
+  ).length;
 
   const percentual =
     totalAssuntos === 0
