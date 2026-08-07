@@ -61,3 +61,133 @@
 @media (max-width:1250px){ .conteudos-cadastros-3{grid-template-columns:1fr 1fr}.conteudos-cadastros-3 article:last-child{grid-column:1/-1} }
 @media (max-width:900px){ .conteudos-cadastros-3{grid-template-columns:1fr}.conteudos-cadastros-3 article:last-child{grid-column:auto}.conteudos-grid-form-assunto,.conteudos-grid-form-modulo{grid-template-columns:1fr 1fr}.conteudos-assunto-item{grid-template-columns:auto 1fr auto}.conteudos-mover{grid-column:2/-1;max-width:none}.conteudos-modulo-topo{align-items:flex-start;flex-direction:column} }
 @media (max-width:650px){ .conteudos-grid-form-assunto,.conteudos-grid-form-modulo{grid-template-columns:1fr}.conteudos-mover{grid-column:1/-1} }
+
+.conteudos-trilha-fixa {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.14);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.conteudos-importar { background: #7c3aed !important; }
+.conteudos-status-aula { display: flex; flex-direction: column; gap: 6px; min-width: 132px; }
+.conteudos-status-aula button { padding: 7px 9px; font-size: 12px; white-space: nowrap; }
+.conteudos-estudei-agora { background: #16a34a !important; }
+.conteudos-ja-estudado { background: #475569 !important; }
+.conteudos-reabrir { background: #475569 !important; }
+.conteudos-concluido-badge { color: #86efac; font-size: 12px; font-weight: 800; }
+.conteudos-importacao-aviso { margin: 0 0 18px; padding: 12px 14px; border-radius: 10px; background: rgba(37, 99, 235, .12); color: #bfdbfe; line-height: 1.45; }
+.conteudos-modal-importacao { width: min(620px, 100%); }
+
+@media (max-width: 900px) {
+  .conteudos-status-aula { grid-column: 1 / -1; width: 100%; flex-direction: row; flex-wrap: wrap; }
+}
+
+
+/* Trilha de Português: aula como unidade completa de estudo */
+.conteudos-metricas-aula { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.conteudos-metricas-aula span { font-size:11px; color:#cbd5e1; background:#1e293b; border:1px solid #334155; border-radius:999px; padding:4px 7px; }
+.conteudos-acoes-aula { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.conteudos-acoes-aula button { padding:8px 10px; font-size:12px; white-space:nowrap; background:#1d4ed8; }
+.conteudos-assunto-item:has(.conteudos-acoes-aula) { grid-template-columns:auto minmax(220px,1fr) auto minmax(300px,auto); }
+@media (max-width:1100px){ .conteudos-assunto-item:has(.conteudos-acoes-aula){grid-template-columns:auto 1fr auto}.conteudos-acoes-aula{grid-column:1/-1;justify-content:flex-start} }
+@media (max-width:650px){ .conteudos-assunto-item:has(.conteudos-acoes-aula){grid-template-columns:1fr}.conteudos-status-aula,.conteudos-assunto-info,.prioridade,.conteudos-acoes-aula{grid-column:1/-1}.conteudos-acoes-aula button{flex:1 1 44%} }
+
+/* Português: lista enxuta para navegação rápida */
+.conteudos-assunto-item:has(.conteudos-acoes-aula) {
+  grid-template-columns: minmax(220px, 1fr) auto minmax(260px, auto);
+  gap: 14px;
+  padding: 14px 16px;
+}
+.conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-assunto-info strong {
+  font-size: 14px;
+}
+.conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-metricas-aula {
+  margin-top: 7px;
+}
+.conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-acoes-aula {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(82px, auto));
+  gap: 7px;
+  justify-content: end;
+}
+.conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-acoes-aula button {
+  min-height: 36px;
+  padding: 8px 11px;
+}
+@media (max-width: 900px) {
+  .conteudos-assunto-item:has(.conteudos-acoes-aula) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-acoes-aula {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+  }
+}
+@media (max-width: 520px) {
+  .conteudos-assunto-item:has(.conteudos-acoes-aula) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+  .conteudos-assunto-item:has(.conteudos-acoes-aula) .prioridade {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+  .conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-assunto-info {
+    grid-column: 1;
+  }
+  .conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-acoes-aula {
+    grid-column: 1 / -1;
+  }
+  .conteudos-assunto-item:has(.conteudos-acoes-aula) .conteudos-acoes-aula button {
+    width: 100%;
+    grid-column: auto;
+    font-size: 12px;
+    padding: 8px 6px;
+  }
+}
+
+
+/* Módulos recolhíveis: mesma lógica visual do menu lateral */
+.conteudos-modulo-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.conteudos-modulo-resumo { min-width: 0; }
+.conteudos-modulo-seta {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  color: #60a5fa;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform .18s ease;
+}
+.conteudos-modulo-seta.fechada { transform: rotate(-90deg); }
+.conteudos-modulo-card.fechado .conteudos-modulo-topo { margin-bottom: 0; }
+.conteudos-modulo-toggle:hover h3 { color: #bfdbfe; }
+@media (max-width:900px) {
+  .conteudos-modulo-topo { width: 100%; }
+  .conteudos-modulo-toggle { width: 100%; }
+}

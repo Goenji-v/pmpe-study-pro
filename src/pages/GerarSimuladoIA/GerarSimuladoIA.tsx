@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -99,6 +100,20 @@ export default function GerarSimuladoIA() {
 
   const [sucesso, setSucesso] =
     useState("");
+
+  useEffect(() => {
+    const salvo = sessionStorage.getItem("pmpe:gerar-ia:prefill");
+    if (!salvo) return;
+    try {
+      const prefill = JSON.parse(salvo) as { materia?: string; modulo?: string; assunto?: string };
+      setOrigem("assunto");
+      if (prefill.materia) setMateriaSelecionada(prefill.materia);
+      if (prefill.modulo) setModuloSelecionado(prefill.modulo);
+      if (prefill.assunto) setAssuntoSelecionado(prefill.assunto);
+    } finally {
+      sessionStorage.removeItem("pmpe:gerar-ia:prefill");
+    }
+  }, []);
 
   const [
     questoesGeradas,

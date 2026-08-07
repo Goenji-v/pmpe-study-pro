@@ -310,8 +310,7 @@ export default function PlanoEstudos() {
           </h1>
 
           <p>
-            Oito semanas baseadas no
-            planejamento RDC.
+            Oito semanas do planejamento principal. Português usa a trilha oficial do curso Rota Policial.
           </p>
         </div>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Questoes.css";
 
 import { useApp } from "../../context/AppContext";
@@ -23,6 +23,19 @@ export default function Questoes() {
   const [erradas, setErradas] = useState(0);
   const [minutos, setMinutos] = useState(0);
   const [observacao, setObservacao] = useState("");
+
+  useEffect(() => {
+    const salvo = sessionStorage.getItem("pmpe:registrar-questoes:prefill");
+    if (!salvo) return;
+    try {
+      const prefill = JSON.parse(salvo) as { materia?: string; modulo?: string; assunto?: string };
+      if (prefill.materia) setMateria(prefill.materia);
+      if (prefill.modulo) setModulo(prefill.modulo);
+      if (prefill.assunto) setAssunto(prefill.assunto);
+    } finally {
+      sessionStorage.removeItem("pmpe:registrar-questoes:prefill");
+    }
+  }, []);
 
   const materiaSelecionada = materias.find(
     (item: Materia) => item.nome === materia

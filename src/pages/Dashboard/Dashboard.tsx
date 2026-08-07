@@ -264,6 +264,33 @@ export default function Dashboard() {
             100
         );
 
+  const trilhaPortugues = useMemo(() => {
+    const materia = materias.find(
+      (item) => normalizarTextoDashboard(item.nome) === "portugues"
+    );
+
+    if (!materia) return null;
+
+    const modulos = listarModulosDaMateria(materia);
+    const assuntos = modulos.flatMap((modulo) =>
+      modulo.assuntos.map((assunto) => ({ modulo, assunto }))
+    );
+    const concluidos = assuntos.filter(({ assunto }) => assunto.concluido).length;
+    const importados = assuntos.filter(
+      ({ assunto }) => assunto.concluido && assunto.conclusaoOrigem === "importado"
+    ).length;
+    const proximo = assuntos.find(({ assunto }) => !assunto.concluido) ?? null;
+
+    return {
+      materia,
+      total: assuntos.length,
+      concluidos,
+      importados,
+      percentual: assuntos.length === 0 ? 0 : Math.round((concluidos / assuntos.length) * 100),
+      proximo,
+    };
+  }, [materias]);
+
   const registrosQuestoesHoje =
     questoes.filter(
       (registro) =>
@@ -410,6 +437,31 @@ export default function Dashboard() {
       )
       .slice(0, 5);
 
+
+  function iniciarProximaAulaPortugues() {
+    if (!trilhaPortugues?.proximo) return;
+
+    const { materia, proximo } = trilhaPortugues;
+    const prefillSessao = {
+      materia: materia.nome,
+      materiaId: materia.id,
+      modulo: proximo.modulo.nome,
+      moduloId: proximo.modulo.id,
+      assunto: proximo.assunto.nome,
+      assuntoId: proximo.assunto.id,
+      tipo: "aula" as const,
+      objetivo: "Avançar na trilha oficial de Português",
+      urlAula: proximo.assunto.aula,
+      urlQuestoes: proximo.assunto.questoes,
+    };
+
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify(prefillSessao)
+    );
+
+    navigate("/central-estudos");
+  }
 
   function iniciarProximaMissao() {
     if (!dadosPlano.proxima) {
@@ -684,6 +736,45 @@ export default function Dashboard() {
           }
         />
       </div>
+
+      {trilhaPortugues && (
+        <div className="dashboard-painel dashboard-portugues-trilha">
+          <div className="dashboard-painel-topo">
+            <div>
+              <h2>📘 Trilha de Português</h2>
+              <p>Curso oficial organizado por módulos e aulas.</p>
+            </div>
+            <strong className="dashboard-portugues-percentual">{trilhaPortugues.percentual}%</strong>
+          </div>
+
+          <div className="dashboard-barra">
+            <div style={{ width: `${trilhaPortugues.percentual}%` }} />
+          </div>
+
+          <div className="dashboard-portugues-dados">
+            <span>
+              {trilhaPortugues.concluidos} de {trilhaPortugues.total} aulas concluídas
+              {trilhaPortugues.importados > 0 ? ` · ${trilhaPortugues.importados} importadas` : ""}
+            </span>
+            {trilhaPortugues.proximo ? (
+              <>
+                <small>{trilhaPortugues.proximo.modulo.nome}</small>
+                <strong>{trilhaPortugues.proximo.assunto.nome}</strong>
+                <div className="dashboard-missao-botoes">
+                  <button type="button" className="dashboard-iniciar-missao" onClick={iniciarProximaAulaPortugues}>
+                    ▶ Continuar Português
+                  </button>
+                  <button type="button" className="dashboard-ver-plano" onClick={() => navigate("/estudos")}>
+                    Ver todos os módulos
+                  </button>
+                </div>
+              </>
+            ) : (
+              <strong>Trilha de Português concluída.</strong>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="dashboard-grid">
         <div className="dashboard-painel">

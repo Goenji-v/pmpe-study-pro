@@ -38,6 +38,8 @@ export type Assunto = {
   anotacoes?: string;
   materiais?: MaterialAssunto[];
   atualizadoEm?: string;
+  conclusaoOrigem?: "estudo" | "importado";
+  concluidoEm?: string;
 };
 
 export type Modulo = {

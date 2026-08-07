@@ -10,6 +10,11 @@ import type {
 } from "../types/index";
 
 import {
+  CURSO_PORTUGUES_NOME,
+  cursoPortuguesModulos,
+} from "../data/cursoPortugues";
+
+import {
   criarIdModuloGeral,
   NOME_MODULO_GERAL,
 } from "../services/conteudos/navegarConteudos";
@@ -52,7 +57,8 @@ export function gerarMateriasDoPlano(): Materia[] {
         if (
           missao.tipo === "livre" ||
           missao.materia ===
-            "Matéria com maior dificuldade"
+            "Matéria com maior dificuldade" ||
+          missao.materia === CURSO_PORTUGUES_NOME
         ) {
           return;
         }
@@ -107,7 +113,10 @@ export function gerarMateriasDoPlano(): Materia[] {
     });
   });
 
-  return Array.from(
+  const portuguesId = criarId(CURSO_PORTUGUES_NOME);
+  const assuntosPortugues = cursoPortuguesModulos.flatMap((modulo) => modulo.assuntos);
+
+  const materias = Array.from(
     mapa.entries()
   )
     .map(([id, dados]) => {
@@ -140,4 +149,18 @@ export function gerarMateriasDoPlano(): Materia[] {
         "pt-BR"
       )
     );
+
+  materias.push({
+    id: portuguesId,
+    nome: CURSO_PORTUGUES_NOME,
+    modulos: cursoPortuguesModulos.map((modulo) => ({
+      ...modulo,
+      assuntos: modulo.assuntos.map((assunto) => ({ ...assunto })),
+    })),
+    assuntos: assuntosPortugues.map((assunto) => ({ ...assunto })),
+  });
+
+  return materias.sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR")
+  );
 }

@@ -97,8 +97,15 @@ type AppContextType = {
     materiaId: string,
     assuntoId: string,
     concluido: boolean,
-    moduloId?: string
+    moduloId?: string,
+    modo?: "agora" | "ja-estudado"
   ) => void;
+
+  importarProgressoMateria: (
+    materiaId: string,
+    moduloId: string,
+    assuntoId: string
+  ) => number;
 };
 
 const AppContext =
@@ -160,7 +167,7 @@ function reconciliarMateriasComPlano(
     return clonar(materiasDoPlano);
   }
 
-  return materiasNormalizadas.map((materiaSalva) => {
+  const resultado = materiasNormalizadas.map((materiaSalva) => {
     const materiaPlano = materiasDoPlano.find(
       (materia) =>
         materia.id === materiaSalva.id ||
@@ -170,6 +177,44 @@ function reconciliarMateriasComPlano(
 
     if (!materiaPlano) {
       return materiaSalva;
+    }
+
+    // Português é uma trilha canônica: os módulos/aulas vêm do curso comprado.
+    // Preservamos progresso, notas e materiais apenas quando a aula atual
+    // corresponde a uma aula da nova trilha.
+    if (normalizarTexto(materiaPlano.nome) === "portugues") {
+      const assuntosSalvos = listarAssuntosDaMateria(materiaSalva);
+
+      const modulos = listarModulosDaMateria(materiaPlano).map((moduloPlano) => ({
+        ...moduloPlano,
+        assuntos: moduloPlano.assuntos.map((assuntoPlano) => {
+          const assuntoSalvo = assuntosSalvos.find(
+            (assunto) =>
+              assunto.id === assuntoPlano.id ||
+              normalizarTexto(assunto.nome) === normalizarTexto(assuntoPlano.nome)
+          );
+
+          return assuntoSalvo
+            ? {
+                ...assuntoPlano,
+                ...assuntoSalvo,
+                id: assuntoPlano.id,
+                nome: assuntoPlano.nome,
+                aula: assuntoPlano.aula,
+              }
+            : assuntoPlano;
+        }),
+      }));
+
+      return migrarMateriasParaModulos([
+        {
+          ...materiaPlano,
+          id: materiaPlano.id,
+          nome: materiaPlano.nome,
+          modulos,
+          assuntos: modulos.flatMap((modulo) => modulo.assuntos),
+        },
+      ])[0];
     }
 
     const assuntosDoPlano =
@@ -204,6 +249,22 @@ function reconciliarMateriasComPlano(
       },
     ])[0];
   });
+
+  // Garante que uma matéria canônica nova (por exemplo, Português após a
+  // migração) apareça também para contas que já possuíam dados salvos.
+  materiasDoPlano.forEach((materiaPlano) => {
+    const existe = resultado.some(
+      (materia) =>
+        materia.id === materiaPlano.id ||
+        normalizarTexto(materia.nome) === normalizarTexto(materiaPlano.nome)
+    );
+
+    if (!existe) {
+      resultado.push(clonar(materiaPlano));
+    }
+  });
+
+  return resultado.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
 function normalizarTexto(
@@ -245,14 +306,14 @@ export function AppProvider({
     );
 
   useEffect(() => {
-    const migradas =
-      migrarMateriasParaModulos(materias);
+    const reconciliadas =
+      reconciliarMateriasComPlano(materias);
 
     if (
-      JSON.stringify(migradas) !==
+      JSON.stringify(reconciliadas) !==
       JSON.stringify(materias)
     ) {
-      setMaterias(migradas);
+      setMaterias(reconciliadas);
     }
   }, [materias, setMaterias]);
 
@@ -737,7 +798,8 @@ export function AppProvider({
     materiaId: string,
     assuntoId: string,
     concluido: boolean,
-    moduloId?: string
+    moduloId?: string,
+    modo: "agora" | "ja-estudado" = "agora"
   ) {
     const materia = materias.find(
       (item) => item.id === materiaId
@@ -761,6 +823,10 @@ export function AppProvider({
               (itemAssunto) => ({
                 ...itemAssunto,
                 concluido,
+                conclusaoOrigem: concluido
+                  ? (modo === "ja-estudado" ? "importado" : "estudo")
+                  : undefined,
+                concluidoEm: concluido ? new Date().toISOString() : undefined,
                 atualizadoEm:
                   new Date().toISOString(),
               }),
@@ -787,7 +853,7 @@ export function AppProvider({
         : anteriores.filter((id) => !idsRelacionados.includes(id))
     );
 
-    if (concluido) {
+    if (concluido && modo === "agora") {
       setRevisoes((anteriores) => {
         const jaExiste = anteriores.some(
           (revisao) =>
@@ -811,6 +877,8 @@ export function AppProvider({
             materia: materia.nome,
             modulo: localizacao?.modulo.nome,
             assunto: assunto.nome,
+            revisoesExistentes: anteriores,
+            limiteDiario: configuracoes.metaRevisoesDiaria,
           }),
           ...anteriores,
         ];
@@ -835,6 +903,91 @@ export function AppProvider({
 
     window.dispatchEvent(new Event("pmpe-materias-atualizadas"));
     window.dispatchEvent(new Event("pmpe-dashboard-atualizado"));
+  }
+
+  function importarProgressoMateria(
+    materiaId: string,
+    moduloId: string,
+    assuntoId: string
+  ) {
+    const materia = materias.find((item) => item.id === materiaId);
+    if (!materia) return 0;
+
+    const modulosOrdenados = listarModulosDaMateria(materia)
+      .slice()
+      .sort((a, b) => a.ordem - b.ordem);
+    const alvos: Array<{ moduloId: string; assuntoId: string }> = [];
+    let encontrou = false;
+
+    for (const modulo of modulosOrdenados) {
+      for (const assunto of modulo.assuntos) {
+        alvos.push({ moduloId: modulo.id, assuntoId: assunto.id });
+        if (modulo.id === moduloId && assunto.id === assuntoId) {
+          encontrou = true;
+          break;
+        }
+      }
+      if (encontrou) break;
+    }
+
+    if (!encontrou || alvos.length === 0) return 0;
+
+    const idsAssuntos = new Set(alvos.map((item) => item.assuntoId));
+
+    setMaterias((anteriores) =>
+      anteriores.map((itemMateria) => {
+        if (itemMateria.id !== materiaId) return itemMateria;
+        const modulos = listarModulosDaMateria(itemMateria).map((modulo) => ({
+          ...modulo,
+          assuntos: modulo.assuntos.map((assunto) =>
+            idsAssuntos.has(assunto.id)
+              ? {
+                  ...assunto,
+                  concluido: true,
+                  conclusaoOrigem: "importado" as const,
+                  concluidoEm: assunto.concluidoEm ?? new Date().toISOString(),
+                  atualizadoEm: new Date().toISOString(),
+                }
+              : assunto
+          ),
+        }));
+        return { ...itemMateria, modulos, assuntos: modulos.flatMap((modulo) => modulo.assuntos) };
+      })
+    );
+
+    // Itens importados são histórico: remove somente revisões pendentes ligadas a eles.
+    setRevisoes((anteriores) =>
+      anteriores.filter(
+        (revisao) =>
+          revisao.concluida ||
+          revisao.materiaId !== materiaId ||
+          !idsAssuntos.has(revisao.assuntoId)
+      )
+    );
+
+    const nomesAlvo = new Set(
+      listarAssuntosDaMateria(materia)
+        .filter((assunto) => idsAssuntos.has(assunto.id))
+        .map((assunto) => normalizarTexto(assunto.nome))
+    );
+    const idsMissoes = planoPMPE.flatMap((semana) =>
+      semana.dias.flatMap((dia) =>
+        dia.missoes
+          .filter(
+            (missao) =>
+              normalizarTexto(missao.materia) === normalizarTexto(materia.nome) &&
+              nomesAlvo.has(normalizarTexto(missao.assunto))
+          )
+          .map((missao) => missao.id)
+      )
+    );
+    setMissoesConcluidas((anteriores) =>
+      Array.from(new Set([...anteriores, ...idsMissoes]))
+    );
+
+    window.dispatchEvent(new Event("pmpe-materias-atualizadas"));
+    window.dispatchEvent(new Event("pmpe-dashboard-atualizado"));
+    return alvos.length;
   }
 
   return (
@@ -862,6 +1015,7 @@ export function AppProvider({
         erroNuvem,
         sincronizarAgora,
         definirConclusaoAssunto,
+        importarProgressoMateria,
       }}
     >
       {children}

@@ -62,10 +62,9 @@ export const planoPMPE: SemanaPlano[] = [
             1,
             1,
             "Português",
-            "Compreensão e interpretação de textos",
+            "Fonema e Letra",
             "conteudo",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-22/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&my_questions=not_resolved&per_page=20&subject_ids%5B%5D=19271"
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1938"
           ),
           missao(
             1,
@@ -139,10 +138,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Tipos e gêneros textuais",
+            "Vogal, Consoante e Semivogal",
             "conteudo",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-23/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&my_questions=not_resolved&per_page=20&subject_ids%5B%5D=14656"
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1940"
           ),
           missao(
             1,
@@ -245,10 +243,9 @@ export const planoPMPE: SemanaPlano[] = [
             1,
             1,
             "Português",
-            "Ortografia",
+            "Ditongo",
             "conteudo",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-24/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&per_page=20&subject_ids%5B%5D=14621"
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1939"
           ),
           missao(
             2,
@@ -320,10 +317,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão geral via questões",
-            "revisao",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-23/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&my_questions=not_resolved&per_page=20&subject_ids%5B%5D=14656"
+            "Tritongo e Hiato",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1941"
           ),
           missao(
             2,
@@ -418,7 +414,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(3, 1, 1, "Português", "Classe de palavras - 1"),
+          missao(
+            3,
+            1,
+            1,
+            "Português",
+            "Dígrafo e Encontro Consonantal - Parte 1",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1942"
+          ),
           missao(3, 1, 2, "Constitucional", "Remédios constitucionais"),
         ],
         revisao: "Revisão do dia",
@@ -461,7 +465,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 4,
         missoes: [
-          missao(3, 4, 1, "Português", "Classe de palavras - 2"),
+          missao(
+            3,
+            4,
+            1,
+            "Português",
+            "Dígrafo e Encontro Consonantal - Parte 2",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1943"
+          ),
           missao(
             3,
             4,
@@ -525,7 +537,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(4, 1, 1, "Português", "Revisão geral", "revisao"),
+          missao(
+            4,
+            1,
+            1,
+            "Português",
+            "Sílaba - Parte 1",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1944"
+          ),
           missao(
             4,
             1,
@@ -575,8 +595,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão geral via questões",
-            "revisao"
+            "Sílaba - Parte 2",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=2394"
           ),
           missao(
             4,
@@ -663,7 +684,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(5, 1, 1, "Português", "Classe de palavras - 3"),
+          missao(
+            5,
+            1,
+            1,
+            "Português",
+            "Acentuação - Parte 01",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1945"
+          ),
           missao(
             5,
             1,
@@ -710,7 +739,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Coordenação e subordinação - aulas 1, 2 e 3"
+            "Acentuação - Parte 02",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1946"
           ),
           missao(
             5,
@@ -781,7 +812,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(6, 1, 1, "Português", "Pontuação"),
+          missao(
+            6,
+            1,
+            1,
+            "Português",
+            "Acentuação - Parte 03",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1947"
+          ),
           missao(6, 1, 2, "Constitucional", "Poder Executivo"),
         ],
         revisao: "Revisão do dia",
@@ -829,8 +868,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão via questões",
-            "revisao"
+            "Acentuação - Parte 04",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=2398"
           ),
           missao(
             6,
@@ -909,8 +949,9 @@ export const planoPMPE: SemanaPlano[] = [
             1,
             1,
             "Português",
-            "Revisão geral via questões",
-            "revisao"
+            "Aula 01 - Os 5 Pilares do Português",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1948"
           ),
           missao(
             7,
@@ -975,8 +1016,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão via questões",
-            "revisao"
+            "Aula 02 - Morfologia: Visão Geral",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1949"
           ),
           missao(
             7,
@@ -1064,7 +1106,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(8, 1, 1, "Português", "Revisão final", "revisao"),
+          missao(
+            8,
+            1,
+            1,
+            "Português",
+            "Aula 03 - Morfologia: Os 3 Pilares",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1950"
+          ),
           missao(
             8,
             1,
@@ -1121,8 +1171,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão final",
-            "revisao"
+            "Aula 04 - Classificação das Palavras: Variáveis e Invariáveis - Parte 1",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1951"
           ),
           missao(
             8,

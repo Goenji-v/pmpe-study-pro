@@ -182,3 +182,30 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+.revisoes-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin: -8px 0 22px;
+  padding: 14px 16px;
+  background: #172033;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: #cbd5e1;
+}
+
+.revisoes-toolbar button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 14px;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 650px) {
+  .revisoes-toolbar { align-items: stretch; flex-direction: column; }
+}

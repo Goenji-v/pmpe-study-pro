@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -20,8 +21,17 @@ type EditorAssunto = {
 } | null;
 
 export default function Estudos() {
-  const { materias, setMaterias, definirConclusaoAssunto } = useApp();
+  const {
+    materias,
+    setMaterias,
+    definirConclusaoAssunto,
+    importarProgressoMateria,
+    questoes,
+    sessoes,
+    revisoes,
+  } = useApp();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [busca, setBusca] = useState("");
   const [nomeMateria, setNomeMateria] = useState("");
@@ -32,6 +42,10 @@ export default function Estudos() {
   const [nomeAssunto, setNomeAssunto] = useState("");
   const [prioridadeAssunto, setPrioridadeAssunto] = useState<Prioridade>("media");
   const [editor, setEditor] = useState<EditorAssunto>(null);
+  const [importarAberto, setImportarAberto] = useState(false);
+  const [moduloImportacao, setModuloImportacao] = useState("");
+  const [assuntoImportacao, setAssuntoImportacao] = useState("");
+  const [modulosFechados, setModulosFechados] = useState<Record<string, boolean>>({});
 
   const materiasComModulos = useMemo(
     () => materias.map(normalizarMateriaComModulos),
@@ -73,6 +87,51 @@ export default function Estudos() {
     return materia && modulo && assunto ? { materia, modulo, assunto } : null;
   }, [editor, materiasComModulos]);
 
+
+  function alternarModulo(materiaId: string, moduloId: string) {
+    const chave = `${materiaId}:${moduloId}`;
+    setModulosFechados((atual) => ({ ...atual, [chave]: !atual[chave] }));
+  }
+
+  function metricasAssunto(materia: Materia, modulo: Modulo, assunto: Assunto) {
+    const sessoesDoAssunto = sessoes.filter((sessao) =>
+      (sessao.assuntoId && sessao.assuntoId === assunto.id) ||
+      (!sessao.assuntoId && sessao.materia === materia.nome && sessao.assunto === assunto.nome)
+    );
+    const registros = questoes.filter((registro) =>
+      (registro.assuntoId && registro.assuntoId === assunto.id) ||
+      (!registro.assuntoId && registro.materia === materia.nome && registro.assunto === assunto.nome)
+    );
+    const revisoesDoAssunto = revisoes.filter((revisao) =>
+      (revisao.assuntoId && revisao.assuntoId === assunto.id) ||
+      (!revisao.assuntoId && revisao.materia === materia.nome && revisao.assunto === assunto.nome)
+    );
+    const minutos = sessoesDoAssunto.reduce((total, sessao) => total + sessao.minutos, 0) +
+      registros.reduce((total, registro) => total + registro.minutos, 0);
+    const certas = registros.reduce((total, registro) => total + registro.certas, 0);
+    const erradas = registros.reduce((total, registro) => total + registro.erradas, 0);
+    const totalQuestoes = certas + erradas;
+    const aproveitamento = totalQuestoes ? Math.round((certas / totalQuestoes) * 100) : 0;
+    const revisoesPendentes = revisoesDoAssunto.filter((revisao) => !revisao.concluida).length;
+    return { minutos, certas, erradas, totalQuestoes, aproveitamento, revisoesPendentes };
+  }
+
+  function abrirCentral(materia: Materia, modulo: Modulo, assunto: Assunto) {
+    sessionStorage.setItem("pmpe:central-estudos:prefill", JSON.stringify({
+      materia: materia.nome, materiaId: materia.id, modulo: modulo.nome, moduloId: modulo.id,
+      assunto: assunto.nome, assuntoId: assunto.id, tipo: "aula",
+      objetivo: `Estudar ${assunto.nome}`, urlAula: assunto.aula, urlQuestoes: assunto.questoes,
+    }));
+    navigate("/central-estudos");
+  }
+
+  function abrirIA(materia: Materia, modulo: Modulo, assunto: Assunto) {
+    sessionStorage.setItem("pmpe:gerar-ia:prefill", JSON.stringify({
+      materia: materia.nome, modulo: modulo.nome, assunto: assunto.nome,
+    }));
+    navigate("/gerar-simulado-ia");
+  }
+
   function atualizarMateria(materiaId: string, transformador: (materia: Materia) => Materia) {
     setMaterias((anteriores) =>
       anteriores.map((item) => {
@@ -105,6 +164,9 @@ export default function Estudos() {
     const materia = materiasComModulos.find((m) => m.id === materiaNovoModulo);
     const nome = nomeModulo.trim();
     if (!materia) return showToast("Selecione uma matéria.", "warning");
+    if (normalizarTexto(materia.nome) === "portugues") {
+      return showToast("Português usa a trilha oficial do curso e não aceita módulos extras.", "warning");
+    }
     if (!nome) return showToast("Informe o nome do módulo.", "warning");
     if ((materia.modulos ?? []).some((m) => normalizarTexto(m.nome) === normalizarTexto(nome))) {
       return showToast("Esse módulo já existe nessa matéria.", "warning");
@@ -127,6 +189,9 @@ export default function Estudos() {
     const modulo = materia?.modulos?.find((m) => m.id === moduloNovoAssunto);
     const nome = nomeAssunto.trim();
     if (!materia) return showToast("Selecione uma matéria.", "warning");
+    if (normalizarTexto(materia.nome) === "portugues") {
+      return showToast("Português usa a trilha oficial do curso e não aceita aulas extras.", "warning");
+    }
     if (!modulo) return showToast("Selecione um módulo.", "warning");
     if (!nome) return showToast("Informe o nome do assunto.", "warning");
     if (modulo.assuntos.some((a) => normalizarTexto(a.nome) === normalizarTexto(nome))) {
@@ -225,6 +290,37 @@ export default function Estudos() {
     }));
   }
 
+  function abrirImportacao(materia: Materia) {
+    const primeiroModulo = (materia.modulos ?? []).slice().sort((a, b) => a.ordem - b.ordem)[0];
+    setModuloImportacao(primeiroModulo?.id ?? "");
+    setAssuntoImportacao(primeiroModulo?.assuntos[0]?.id ?? "");
+    setImportarAberto(true);
+  }
+
+  function confirmarImportacao(materia: Materia) {
+    if (!moduloImportacao || !assuntoImportacao) {
+      showToast("Selecione até qual aula você já estudou.", "warning");
+      return;
+    }
+
+    const quantidade = importarProgressoMateria(
+      materia.id,
+      moduloImportacao,
+      assuntoImportacao
+    );
+
+    if (quantidade <= 0) {
+      showToast("Não foi possível localizar essa aula na trilha.", "error");
+      return;
+    }
+
+    setImportarAberto(false);
+    showToast(
+      `${quantidade} aula${quantidade === 1 ? "" : "s"} marcada${quantidade === 1 ? "" : "s"} como já estudada${quantidade === 1 ? "" : "s"}, sem gerar revisões.`,
+      "success"
+    );
+  }
+
   return (
     <section className="conteudos-container">
       <header className="conteudos-cabecalho">
@@ -287,6 +383,7 @@ export default function Estudos() {
       {materiasFiltradas.length === 0 && <div className="conteudos-vazio">Nenhum conteúdo encontrado.</div>}
 
       {materiasFiltradas.map((materia) => {
+        const trilhaFixa = normalizarTexto(materia.nome) === "portugues";
         const todos = (materia.modulos ?? []).flatMap((m) => m.assuntos);
         const concluidos = todos.filter((a) => a.concluido).length;
         const progresso = todos.length ? Math.round((concluidos / todos.length) * 100) : 0;
@@ -296,7 +393,12 @@ export default function Estudos() {
               <div><h2>{materia.nome}</h2><p>{concluidos} de {todos.length} assuntos concluídos</p></div>
               <div className="conteudos-materia-acoes">
                 <strong>{progresso}%</strong>
-                <button type="button" className="conteudos-excluir" onClick={() => excluirMateria(materia)}>Excluir matéria</button>
+                {trilhaFixa && (
+                  <button type="button" className="conteudos-importar" onClick={() => abrirImportacao(materia)}>Importar progresso</button>
+                )}
+                {!trilhaFixa && (
+                  <button type="button" className="conteudos-excluir" onClick={() => excluirMateria(materia)}>Excluir matéria</button>
+                )}
               </div>
             </div>
             <div className="conteudos-progresso"><div style={{ width: `${progresso}%` }} /></div>
@@ -305,39 +407,93 @@ export default function Estudos() {
               {(materia.modulos ?? []).map((modulo) => {
                 const feitos = modulo.assuntos.filter((a) => a.concluido).length;
                 const pct = modulo.assuntos.length ? Math.round(feitos / modulo.assuntos.length * 100) : 0;
+                const chaveModulo = `${materia.id}:${modulo.id}`;
+                const moduloFechado = Boolean(modulosFechados[chaveModulo]);
                 return (
-                  <section key={modulo.id} className="conteudos-modulo-card">
+                  <section key={modulo.id} className={`conteudos-modulo-card${moduloFechado ? " fechado" : ""}`}>
                     <header className="conteudos-modulo-topo">
-                      <div><h3>{modulo.nome}</h3><small>{feitos}/{modulo.assuntos.length} concluídos · {pct}%</small></div>
+                      <button
+                        type="button"
+                        className="conteudos-modulo-toggle"
+                        onClick={() => alternarModulo(materia.id, modulo.id)}
+                        aria-expanded={!moduloFechado}
+                        aria-label={`${moduloFechado ? "Expandir" : "Recolher"} ${modulo.nome}`}
+                      >
+                        <span className={`conteudos-modulo-seta${moduloFechado ? " fechada" : ""}`}>⌄</span>
+                        <span className="conteudos-modulo-resumo">
+                          <h3>{modulo.nome}</h3>
+                          <small>{feitos}/{modulo.assuntos.length} concluídos · {pct}%{trilhaFixa ? ` · ${modulo.assuntos.reduce((t, a) => t + metricasAssunto(materia, modulo, a).minutos, 0)} min` : ""}</small>
+                        </span>
+                      </button>
                       <div className="conteudos-modulo-acoes">
-                        <button type="button" onClick={() => renomearModulo(materia, modulo)}>Editar</button>
-                        <button type="button" className="conteudos-excluir" onClick={() => excluirModulo(materia, modulo)}>Excluir</button>
+                        {trilhaFixa ? (
+                          <span className="conteudos-trilha-fixa">Trilha oficial</span>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => renomearModulo(materia, modulo)}>Editar</button>
+                            <button type="button" className="conteudos-excluir" onClick={() => excluirModulo(materia, modulo)}>Excluir</button>
+                          </>
+                        )}
                       </div>
                     </header>
-                    <div className="conteudos-progresso conteudos-progresso-modulo"><div style={{ width: `${pct}%` }} /></div>
-                    <div className="conteudos-assuntos">
-                      {modulo.assuntos.map((assunto) => (
+                    {!moduloFechado && (
+                      <>
+                        <div className="conteudos-progresso conteudos-progresso-modulo"><div style={{ width: `${pct}%` }} /></div>
+                        <div className="conteudos-assuntos">
+                          {modulo.assuntos.map((assunto) => (
                         <div key={assunto.id} className="conteudos-assunto-item">
-                          <input type="checkbox" checked={assunto.concluido}
-                            onChange={() => definirConclusaoAssunto(materia.id, assunto.id, !assunto.concluido)} />
+                          {!trilhaFixa && (
+                            <input type="checkbox" checked={assunto.concluido}
+                              onChange={() => definirConclusaoAssunto(materia.id, assunto.id, !assunto.concluido, modulo.id)} />
+                          )}
                           <div className="conteudos-assunto-info">
                             <strong className={assunto.concluido ? "concluido" : ""}>{assunto.nome}</strong>
-                            <small>{assunto.resumo || assunto.anotacoes ? "Possui anotações salvas" : "Sem anotações"}</small>
+                            {!trilhaFixa && (
+                              <small>{assunto.resumo || assunto.anotacoes ? "Possui anotações salvas" : "Sem anotações"}</small>
+                            )}
+                            {trilhaFixa && (() => {
+                              const m = metricasAssunto(materia, modulo, assunto);
+                              return (
+                                <div className="conteudos-metricas-aula">
+                                  <span>⏱ {m.minutos} min</span>
+                                  <span>❓ {m.totalQuestoes} questões</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                           <span className={`prioridade prioridade-${assunto.prioridade}`}>{assunto.prioridade}</span>
-                          <select className="conteudos-mover" value={modulo.id}
-                            onChange={(e) => moverAssunto(materia, modulo.id, assunto, e.target.value)}>
-                            {(materia.modulos ?? []).map((destino) =>
-                              <option key={destino.id} value={destino.id}>Mover: {destino.nome}</option>)}
-                          </select>
-                          <button type="button" onClick={() => setEditor({ materiaId: materia.id, moduloId: modulo.id, assuntoId: assunto.id })}>
-                            📝 Notas
-                          </button>
-                          <button type="button" className="conteudos-excluir" onClick={() => excluirAssunto(materia, modulo, assunto)}>Excluir</button>
+                          {!trilhaFixa && (
+                            <select className="conteudos-mover" value={modulo.id}
+                              onChange={(e) => moverAssunto(materia, modulo.id, assunto, e.target.value)}>
+                              {(materia.modulos ?? []).map((destino) =>
+                                <option key={destino.id} value={destino.id}>Mover: {destino.nome}</option>)}
+                            </select>
+                          )}
+                          {trilhaFixa ? (
+                            <div className="conteudos-acoes-aula">
+                              <button type="button" onClick={() => abrirCentral(materia, modulo, assunto)}>▶ Estudar</button>
+                              {assunto.aula && (
+                                <button type="button" onClick={() => window.open(assunto.aula, "_blank", "noopener,noreferrer")}>🎥 Videoaula</button>
+                              )}
+                              <button type="button" onClick={() => abrirIA(materia, modulo, assunto)}>🤖 IA</button>
+                            </div>
+                          ) : (
+                            <>
+                              {assunto.aula && (
+                                <button type="button" onClick={() => window.open(assunto.aula, "_blank", "noopener,noreferrer")}>🎥 Aula</button>
+                              )}
+                              <button type="button" onClick={() => setEditor({ materiaId: materia.id, moduloId: modulo.id, assuntoId: assunto.id })}>📝 Notas</button>
+                            </>
+                          )}
+                          {!trilhaFixa && (
+                            <button type="button" className="conteudos-excluir" onClick={() => excluirAssunto(materia, modulo, assunto)}>Excluir</button>
+                          )}
                         </div>
                       ))}
-                      {modulo.assuntos.length === 0 && <p className="conteudos-sem-assuntos">Módulo sem assuntos.</p>}
-                    </div>
+                          {modulo.assuntos.length === 0 && <p className="conteudos-sem-assuntos">Módulo sem assuntos.</p>}
+                        </div>
+                      </>
+                    )}
                   </section>
                 );
               })}
@@ -345,6 +501,60 @@ export default function Estudos() {
           </article>
         );
       })}
+
+      {importarAberto && (() => {
+        const portugues = materiasComModulos.find((materia) => normalizarTexto(materia.nome) === "portugues");
+        if (!portugues) return null;
+        const moduloSelecionado = portugues.modulos?.find((modulo) => modulo.id === moduloImportacao);
+        return (
+          <div className="conteudos-modal-fundo" role="presentation">
+            <section className="conteudos-modal conteudos-modal-importacao" role="dialog" aria-modal="true">
+              <header>
+                <div>
+                  <small>Português · migração de progresso</small>
+                  <h2>Até onde você já estudou?</h2>
+                </div>
+                <button type="button" onClick={() => setImportarAberto(false)}>✕</button>
+              </header>
+
+              <p className="conteudos-importacao-aviso">
+                Todas as aulas até a escolhida serão marcadas como concluídas sem criar revisões. Revisões pendentes dessas aulas também serão removidas.
+              </p>
+
+              <label>
+                Módulo
+                <select
+                  value={moduloImportacao}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setModuloImportacao(id);
+                    const modulo = portugues.modulos?.find((item) => item.id === id);
+                    setAssuntoImportacao(modulo?.assuntos[0]?.id ?? "");
+                  }}
+                >
+                  {(portugues.modulos ?? []).slice().sort((a, b) => a.ordem - b.ordem).map((modulo) => (
+                    <option key={modulo.id} value={modulo.id}>{modulo.nome}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Última aula já estudada
+                <select value={assuntoImportacao} onChange={(e) => setAssuntoImportacao(e.target.value)}>
+                  {(moduloSelecionado?.assuntos ?? []).map((assunto, indice) => (
+                    <option key={assunto.id} value={assunto.id}>{indice + 1}. {assunto.nome}</option>
+                  ))}
+                </select>
+              </label>
+
+              <footer>
+                <button type="button" className="secundario" onClick={() => setImportarAberto(false)}>Cancelar</button>
+                <button type="button" onClick={() => confirmarImportacao(portugues)}>Importar sem revisões</button>
+              </footer>
+            </section>
+          </div>
+        );
+      })()}
 
       {assuntoEmEdicao && (
         <EditorAssuntoModal
@@ -431,7 +641,11 @@ function EditorAssuntoModal({
 
         <label>
           Nome do assunto
-          <input value={nome} onChange={(e) => setNome(e.target.value)} />
+          <input
+            value={nome}
+            disabled={normalizarTexto(materia.nome) === "portugues"}
+            onChange={(e) => setNome(e.target.value)}
+          />
         </label>
 
         <label>

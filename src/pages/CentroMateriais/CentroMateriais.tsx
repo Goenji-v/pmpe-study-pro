@@ -72,6 +72,19 @@ export default function CentroMateriais() {
   const [erro, setErro] =
     useState("");
 
+  useEffect(() => {
+    const salvo = sessionStorage.getItem("pmpe:materiais:prefill");
+    if (!salvo) return;
+    try {
+      const prefill = JSON.parse(salvo) as { materia?: string; modulo?: string; assunto?: string };
+      if (prefill.materia) { setMateria(prefill.materia); setFiltroMateria(prefill.materia); }
+      if (prefill.modulo) { setModulo(prefill.modulo); setFiltroModulo(prefill.modulo); }
+      if (prefill.assunto) { setAssunto(prefill.assunto); setPesquisa(prefill.assunto); }
+    } finally {
+      sessionStorage.removeItem("pmpe:materiais:prefill");
+    }
+  }, []);
+
   const materiaAtual = useMemo(
     () =>
       materias.find(

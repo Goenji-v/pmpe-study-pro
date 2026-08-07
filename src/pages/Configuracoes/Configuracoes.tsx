@@ -246,7 +246,7 @@ export default function Configuracoes() {
 
           <div className="configuracoes-form-group">
             <label htmlFor="metaRevisoes">
-              Revisões por dia
+              Revisões por dia (meta e limite da agenda)
             </label>
 
             <input

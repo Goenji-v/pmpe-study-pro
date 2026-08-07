@@ -14,6 +14,7 @@ import {
   criarProximaRevisao,
   formatarDataRevisao,
   statusDaRevisao,
+  redistribuirRevisoesPendentes,
 } from "../../utils/revisoes";
 
 import type { Revisao } from "../../types";
@@ -41,6 +42,7 @@ export default function Revisoes() {
     materias,
     revisoes,
     setRevisoes,
+    configuracoes,
   } = useApp();
 
   const { usuario } =
@@ -300,49 +302,25 @@ export default function Revisoes() {
       dataConclusao: agora,
     };
 
-    const proximaRevisao =
-      criarProximaRevisao(
-        revisao
+    setRevisoes((revisoesAnteriores) => {
+      const listaAtualizada = revisoesAnteriores.map((item) =>
+        item.id === revisao.id ? revisaoConcluida : item
       );
 
-    setRevisoes(
-      (
-        revisoesAnteriores
-      ) => {
-        const listaAtualizada =
-          revisoesAnteriores.map(
-            (item) =>
-              item.id ===
-              revisao.id
-                ? revisaoConcluida
-                : item
-          );
-
-        if (
-          !proximaRevisao
-        ) {
-          return listaAtualizada;
-        }
-
-        return [
-          proximaRevisao,
-          ...listaAtualizada,
-        ];
-      }
-    );
-
-    if (proximaRevisao) {
-      showToast(
-        `Revisão concluída. Próxima etapa agendada para ${formatarDataRevisao(
-          proximaRevisao.dataPrevista
-        )}.`,
-        "success"
+      const proximaRevisao = criarProximaRevisao(
+        revisao,
+        listaAtualizada,
+        configuracoes.metaRevisoesDiaria
       );
+
+      if (!proximaRevisao) return listaAtualizada;
+      return [proximaRevisao, ...listaAtualizada];
+    });
+
+    if (revisao.etapa < 4) {
+      showToast("Revisão concluída. Próxima etapa adicionada à agenda.", "success");
     } else {
-      showToast(
-        "Ciclo de revisões finalizado.",
-        "success"
-      );
+      showToast("Ciclo de revisões finalizado.", "success");
     }
   }
 
@@ -382,6 +360,19 @@ export default function Revisoes() {
     );
   }
 
+  function reorganizarAgenda() {
+    const limite = configuracoes.metaRevisoesDiaria;
+    if (limite <= 0) {
+      showToast("Defina uma meta de revisões por dia maior que zero nas Configurações.", "warning");
+      return;
+    }
+
+    setRevisoes((anteriores) =>
+      redistribuirRevisoesPendentes(anteriores, limite)
+    );
+    showToast(`Agenda reorganizada com limite de ${limite} revisões por dia.`, "success");
+  }
+
   return (
     <section className="revisoes-container">
       <h1 className="revisoes-title">
@@ -389,10 +380,13 @@ export default function Revisoes() {
       </h1>
 
       <p className="revisoes-subtitle">
-        Sistema automático de revisões
-        em 24 horas, 7 dias, 30 dias e
-        90 dias.
+        Sistema automático 0-1-7-15, com distribuição conforme sua meta diária.
       </p>
+
+      <div className="revisoes-toolbar">
+        <span>Limite atual: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia</span>
+        <button type="button" onClick={reorganizarAgenda}>Reorganizar agenda</button>
+      </div>
 
       <div className="revisoes-resumo">
         <ResumoCard

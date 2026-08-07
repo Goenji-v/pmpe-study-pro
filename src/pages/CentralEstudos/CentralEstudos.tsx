@@ -318,6 +318,8 @@ const [
       moduloId: primeiroModulo?.id,
       assunto: "",
       assuntoId: undefined,
+      urlAula: undefined,
+      urlQuestoes: undefined,
     });
   }
 
@@ -337,6 +339,8 @@ const [
       moduloId: modulo?.id,
       assunto: "",
       assuntoId: undefined,
+      urlAula: undefined,
+      urlQuestoes: undefined,
     });
   }
 
@@ -350,6 +354,8 @@ const [
     atualizarDados({
       assunto: assunto?.nome ?? "",
       assuntoId: assunto?.id,
+      urlAula: assunto?.aula,
+      urlQuestoes: assunto?.questoes,
     });
   }
 
