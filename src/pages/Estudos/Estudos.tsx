@@ -93,7 +93,11 @@ export default function Estudos() {
     setModulosFechados((atual) => ({ ...atual, [chave]: !atual[chave] }));
   }
 
-  function metricasAssunto(materia: Materia, modulo: Modulo, assunto: Assunto) {
+  function metricasAssunto(
+  materia: Materia,
+  _modulo: Modulo,
+  assunto: Assunto
+) {
     const sessoesDoAssunto = sessoes.filter((sessao) =>
       (sessao.assuntoId && sessao.assuntoId === assunto.id) ||
       (!sessao.assuntoId && sessao.materia === materia.nome && sessao.assunto === assunto.nome)
