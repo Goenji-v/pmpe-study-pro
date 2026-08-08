@@ -17,6 +17,10 @@ import {
   listarModulosDaMateria,
 } from "../../services/conteudos/navegarConteudos";
 
+import {
+  calcularGamificacao,
+} from "../../services/gamificacaoService";
+
 
 import {
   getProgressoPlano,
@@ -225,18 +229,20 @@ export default function Dashboard() {
 
   const minutosQuestoes =
     questoes.reduce(
-      (
-        total: number,
-        registro: RegistroQuestao
-      ) =>
-        total +
-        registro.minutos,
+      (total: number, registro: RegistroQuestao) => {
+        const duplicadoPorSessao = sessoes.some((sessao) =>
+          sessao.tipo === "questoes" &&
+          sessao.materia === registro.materia &&
+          sessao.assunto === registro.assunto &&
+          Math.abs(new Date(sessao.data).getTime() - new Date(registro.data).getTime()) < 5000
+        );
+
+        return total + (duplicadoPorSessao ? 0 : registro.minutos);
+      },
       0
     );
 
-  const minutosTotais =
-    minutosSessoes +
-    minutosQuestoes;
+  const minutosTotais = minutosSessoes + minutosQuestoes;
 
   const assuntosTotais =
     materias.reduce(
@@ -311,12 +317,15 @@ export default function Dashboard() {
     );
 
   const minutosQuestoesHoje =
-    registrosQuestoesHoje.reduce(
-      (total, registro) =>
-        total +
-        registro.minutos,
-      0
-    );
+    registrosQuestoesHoje.reduce((total, registro) => {
+      const duplicadoPorSessao = sessoes.some((sessao) =>
+        sessao.tipo === "questoes" &&
+        sessao.materia === registro.materia &&
+        sessao.assunto === registro.assunto &&
+        Math.abs(new Date(sessao.data).getTime() - new Date(registro.data).getTime()) < 5000
+      );
+      return total + (duplicadoPorSessao ? 0 : registro.minutos);
+    }, 0);
 
   const sessoesHoje =
     sessoes.filter(
@@ -424,6 +433,70 @@ export default function Dashboard() {
       ultimoSimuladoIA
     );
 
+  const gamificacao = useMemo(
+    () =>
+      calcularGamificacao({
+        sessoes,
+        questoes,
+        revisoes,
+        simulados,
+      }),
+    [sessoes, questoes, revisoes, simulados]
+  );
+
+  const xpNoNivel =
+    gamificacao.xp % 250;
+
+  const xpParaProximoNivel =
+    250;
+
+  const progressoNivel =
+    Math.round(
+      (xpNoNivel / xpParaProximoNivel) * 100
+    );
+
+  const ouro =
+    Math.floor(gamificacao.xp / 5);
+
+  const conquistas =
+    calcularConquistasDashboard({
+      minutosTotais,
+      totalQuestoes,
+      totalCertas,
+      simulados: simulados.length,
+      sequencia,
+      assuntosConcluidos,
+      assuntosTotais,
+    });
+
+  const semanaAtualDashboard =
+    calcularSemanaDashboard(
+      questoes,
+      sessoes,
+      revisoes
+    );
+
+  const conquistasDetalhadas = montarConquistasDashboard({
+    minutosTotais, totalQuestoes, totalCertas, simulados: simulados.length,
+    sequencia, assuntosConcluidos, assuntosTotais,
+  });
+
+  const metaGeralHoje = Math.round((
+    progressoQuestoesHoje + progressoTempoHoje + progressoRevisoesHoje
+  ) / 3);
+
+  const estatisticasPeriodos = montarEstatisticasPeriodos(questoes, sessoes);
+
+  const recomendacaoCoach = montarRecomendacaoCoach({
+    revisoesAtrasadas: revisoesAtrasadas.length,
+    piorMateria: piorMateria?.materia,
+    piorPercentual: piorMateria?.percentual,
+    questoesHoje,
+    minutosHoje,
+    metaQuestoes: configuracoes.metaQuestoesDiaria,
+    metaMinutos: configuracoes.metaMinutosDiaria,
+  });
+
   const ultimasSessoes =
     [...sessoes]
       .sort(
@@ -526,42 +599,198 @@ export default function Dashboard() {
 
   return (
     <section className="dashboard-container">
-      <RankingResumo />
-      <div className="dashboard-cabecalho">
-        <div>
-        <MissaoDoDia
-            atualizacao={atualizacaoPlano}
-         />
+      <section className="dashboard-player">
+        <div className="dashboard-player-identidade">
+          <div className="dashboard-player-avatar">
+            {(configuracoes.nomeUsuario || "U")
+              .trim()
+              .charAt(0)
+              .toUpperCase()}
+          </div>
 
-          <h1>
-            Olá,{" "}
-            {
-              configuracoes.nomeUsuario
-            }
-          </h1>
+          <div>
+            <span className="dashboard-player-saudacao">
+              Olá, {configuracoes.nomeUsuario}
+            </span>
+
+            <strong>
+              Nível {gamificacao.nivel} · {gamificacao.tituloNivel}
+            </strong>
+
+            <div className="dashboard-player-xp">
+              <div>
+                <span>XP</span>
+                <b>
+                  {xpNoNivel} / {xpParaProximoNivel}
+                </b>
+              </div>
+
+              <div className="dashboard-player-xp-barra">
+                <div style={{ width: `${progressoNivel}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="dashboard-player-indicadores">
+          <button
+            type="button"
+            onClick={() => navigate("/ranking")}
+          >
+            <span>🏆</span>
+            <strong>{conquistas}</strong>
+            <small>Conquistas</small>
+          </button>
+
+          <div>
+            <span>🪙</span>
+            <strong>{ouro}</strong>
+            <small>Ouro</small>
+          </div>
+
+          <div>
+            <span>🔥</span>
+            <strong>{sequencia}</strong>
+            <small>dias</small>
+          </div>
+        </div>
+      </section>
+
+      <section className="dashboard-hero-grid">
+        <div className="dashboard-hero-progresso">
+          <div className="dashboard-hero-topo">
+            <div>
+              <span>PROGRESSO DO PLANO</span>
+              <h1>{dadosPlano.progresso}% concluído</h1>
+              <p>
+                {dadosPlano.concluidas} de {dadosPlano.total} missões finalizadas
+              </p>
+            </div>
+
+            <strong>{dadosPlano.progresso}%</strong>
+          </div>
+
+          <div className="dashboard-hero-barra">
+            <div style={{ width: `${dadosPlano.progresso}%` }} />
+          </div>
+
+          <div className="dashboard-hero-meta">
+            <span>
+              Semana {dadosPlano.semanaAtual} de 8
+            </span>
+            <span>
+              {dadosPlano.pendentes} missões pendentes
+            </span>
+          </div>
+        </div>
+
+        <div className="dashboard-semana-card">
+          <div className="dashboard-semana-titulo">
+            <div>
+              <span>SEQUÊNCIA</span>
+              <strong>{sequencia} dias</strong>
+            </div>
+            <span className="dashboard-semana-fogo">🔥</span>
+          </div>
+
+          <div className="dashboard-semana-dias">
+            {semanaAtualDashboard.map((dia) => (
+              <div
+                key={dia.chave}
+                className={[
+                  "dashboard-semana-dia",
+                  dia.estudou ? "feito" : "",
+                  dia.hoje ? "hoje" : "",
+                  dia.futuro ? "futuro" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <span>{dia.rotulo}</span>
+                <strong>
+                  {dia.estudou
+                    ? "✓"
+                    : dia.hoje
+                      ? "•"
+                      : dia.futuro
+                        ? "○"
+                        : "–"}
+                </strong>
+                <small>{dia.numero}</small>
+              </div>
+            ))}
+          </div>
+
+          <p>
+            {sequencia > 0
+              ? "Mantenha sua sequência estudando pelo menos 30 minutos por dia."
+              : "Estude 30 minutos hoje para iniciar sua sequência."}
+          </p>
+        </div>
+      </section>
+
+      <RankingResumo />
+
+      <section className="dashboard-v22-grid">
+        <article className="dashboard-v22-card dashboard-meta-premium">
+          <div className="dashboard-v22-topo">
+            <div><span>META DO DIA</span><h2>{metaGeralHoje}% concluída</h2></div>
+            <strong>{formatarMinutos(minutosHoje)}</strong>
+          </div>
+          <div className="dashboard-v22-progress"><div style={{ width: `${metaGeralHoje}%` }} /></div>
+          <div className="dashboard-v22-metas">
+            <span>⏱ {minutosHoje}/{configuracoes.metaMinutosDiaria} min</span>
+            <span>📝 {questoesHoje}/{configuracoes.metaQuestoesDiaria} questões</span>
+            <span>🔁 {revisoesConcluidasHoje}/{configuracoes.metaRevisoesDiaria} revisões</span>
+          </div>
+        </article>
+
+        <article className="dashboard-v22-card dashboard-coach-premium">
+          <div className="dashboard-v22-topo">
+            <div><span>IA COACH</span><h2>{recomendacaoCoach.titulo}</h2></div><b>🧠</b>
+          </div>
+          <p>{recomendacaoCoach.texto}</p>
+          <button type="button" onClick={() => navigate(recomendacaoCoach.rota)}>Começar agora →</button>
+        </article>
+      </section>
+
+      <section className="dashboard-v22-card dashboard-estatisticas-periodos">
+        <div className="dashboard-v22-topo"><div><span>DESEMPENHO</span><h2>Seu ritmo de estudo</h2></div></div>
+        <div className="dashboard-periodos-grid">
+          {estatisticasPeriodos.map((periodo) => (
+            <div key={periodo.rotulo}>
+              <span>{periodo.rotulo}</span>
+              <strong>{formatarMinutos(periodo.minutos)}</strong>
+              <small>{periodo.questoes} questões</small>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="dashboard-v22-card dashboard-conquistas-premium">
+        <div className="dashboard-v22-topo">
+          <div><span>CONQUISTAS</span><h2>{conquistasDetalhadas.filter((item) => item.desbloqueada).length} desbloqueadas</h2></div>
+          <strong>{conquistasDetalhadas.length} desafios</strong>
+        </div>
+        <div className="dashboard-conquistas-grid">
+          {conquistasDetalhadas.slice(0, 8).map((item) => (
+            <div key={item.titulo} className={item.desbloqueada ? "desbloqueada" : "bloqueada"}>
+              <b>{item.icone}</b><div><strong>{item.titulo}</strong><small>{item.descricao}</small></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="dashboard-cabecalho dashboard-cabecalho-compacto">
+        <div>
+          <MissaoDoDia
+            atualizacao={atualizacaoPlano}
+          />
 
           <p>
             Preparação focada na{" "}
-            <strong>
-              {
-                configuracoes.concurso
-              }
-            </strong>
-            .
+            <strong>{configuracoes.concurso}</strong>.
           </p>
-        </div>
-
-        <div className="dashboard-sequencia">
-          <span>
-            🔥 Sequência
-          </span>
-
-          <strong>
-            {sequencia}{" "}
-            {sequencia === 1
-              ? "dia"
-              : "dias"}
-          </strong>
         </div>
       </div>
 
@@ -1209,6 +1438,145 @@ function LinhaDiagnostico({
   );
 }
 
+function calcularConquistasDashboard({
+  minutosTotais,
+  totalQuestoes,
+  totalCertas,
+  simulados,
+  sequencia,
+  assuntosConcluidos,
+  assuntosTotais,
+}: {
+  minutosTotais: number;
+  totalQuestoes: number;
+  totalCertas: number;
+  simulados: number;
+  sequencia: number;
+  assuntosConcluidos: number;
+  assuntosTotais: number;
+}) {
+  const metas = [
+    minutosTotais >= 60,
+    minutosTotais >= 600,
+    minutosTotais >= 3000,
+    totalQuestoes >= 100,
+    totalQuestoes >= 500,
+    totalQuestoes >= 1000,
+    totalCertas >= 500,
+    simulados >= 1,
+    simulados >= 10,
+    sequencia >= 3,
+    sequencia >= 7,
+    sequencia >= 30,
+    assuntosConcluidos >= 10,
+    assuntosTotais > 0 &&
+      assuntosConcluidos === assuntosTotais,
+  ];
+
+  return metas.filter(Boolean).length;
+}
+
+function calcularSemanaDashboard(
+  questoes: RegistroQuestao[],
+  sessoes: SessaoEstudo[],
+  revisoes: Revisao[]
+) {
+  const minutosPorDia =
+    new Map<string, number>();
+
+  const adicionarMinutos = (
+    data: string,
+    minutos: number
+  ) => {
+    const chave =
+      obterDataLocalSeguro(data);
+
+    minutosPorDia.set(
+      chave,
+      (minutosPorDia.get(chave) || 0) +
+        (Number(minutos) || 0)
+    );
+  };
+
+  sessoes.forEach((sessao) =>
+    adicionarMinutos(
+      sessao.data,
+      sessao.minutos
+    )
+  );
+
+  questoes.forEach((registro) =>
+    adicionarMinutos(
+      registro.data,
+      registro.minutos
+    )
+  );
+
+  revisoes.forEach((revisao) => {
+    if (
+      revisao.concluida &&
+      revisao.dataConclusao
+    ) {
+      const chave =
+        obterDataLocalSeguro(
+          revisao.dataConclusao
+        );
+
+      if (!minutosPorDia.has(chave)) {
+        minutosPorDia.set(chave, 0);
+      }
+    }
+  });
+
+  const hoje = inicioDoDia(new Date());
+  const diaSemana = hoje.getDay();
+  const deslocamentoSegunda =
+    diaSemana === 0 ? -6 : 1 - diaSemana;
+  const segunda =
+    adicionarDias(
+      hoje,
+      deslocamentoSegunda
+    );
+
+  const rotulos = [
+    "S",
+    "T",
+    "Q",
+    "Q",
+    "S",
+    "S",
+    "D",
+  ];
+
+  return Array.from(
+    { length: 7 },
+    (_, indice) => {
+      const data =
+        adicionarDias(
+          segunda,
+          indice
+        );
+
+      const chave =
+        obterDataLocal(data);
+
+      const minutos =
+        minutosPorDia.get(chave) || 0;
+
+      return {
+        chave,
+        rotulo: rotulos[indice],
+        numero: data.getDate(),
+        estudou: minutos >= 30,
+        hoje:
+          chave === obterDataLocal(hoje),
+        futuro:
+          data.getTime() > hoje.getTime(),
+      };
+    }
+  );
+}
+
 function calcularPercentualMeta(
   atual: number,
   meta: number
@@ -1716,4 +2084,47 @@ function adicionarDias(
   );
 
   return copia;
+}
+
+function montarConquistasDashboard(d: { minutosTotais:number; totalQuestoes:number; totalCertas:number; simulados:number; sequencia:number; assuntosConcluidos:number; assuntosTotais:number; }) {
+  return [
+    { icone:"🌱", titulo:"Primeiro passo", descricao:"Estude 60 minutos", desbloqueada:d.minutosTotais>=60 },
+    { icone:"📝", titulo:"100 questões", descricao:"Resolva 100 questões", desbloqueada:d.totalQuestoes>=100 },
+    { icone:"🎯", titulo:"500 acertos", descricao:"Acerte 500 questões", desbloqueada:d.totalCertas>=500 },
+    { icone:"🔥", titulo:"3 dias", descricao:"Mantenha 3 dias de sequência", desbloqueada:d.sequencia>=3 },
+    { icone:"⚡", titulo:"7 dias", descricao:"Mantenha 7 dias de sequência", desbloqueada:d.sequencia>=7 },
+    { icone:"🏆", titulo:"Primeiro simulado", descricao:"Finalize um simulado", desbloqueada:d.simulados>=1 },
+    { icone:"📚", titulo:"10 conteúdos", descricao:"Conclua 10 assuntos", desbloqueada:d.assuntosConcluidos>=10 },
+    { icone:"👑", titulo:"Edital dominado", descricao:"Conclua todos os assuntos", desbloqueada:d.assuntosTotais>0 && d.assuntosConcluidos===d.assuntosTotais },
+  ];
+}
+
+function montarEstatisticasPeriodos(questoes: RegistroQuestao[], sessoes: SessaoEstudo[]) {
+  const agora = new Date();
+  const inicioHoje = inicioDoDia(agora).getTime();
+  const diaSemana = (agora.getDay()+6)%7;
+  const inicioSemana = inicioHoje - diaSemana*86400000;
+  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+  const periodos = [
+    { rotulo:"Hoje", inicio:inicioHoje }, { rotulo:"Semana", inicio:inicioSemana },
+    { rotulo:"Mês", inicio:inicioMes }, { rotulo:"Total", inicio:0 },
+  ];
+  return periodos.map((p) => {
+    const ss=sessoes.filter(x=>new Date(x.data).getTime()>=p.inicio);
+    const qs=questoes.filter(x=>new Date(x.data).getTime()>=p.inicio);
+    const minutosSessao=ss.reduce((t,x)=>t+x.minutos,0);
+    const minutosQuestao=qs.reduce((t,x)=>{
+      const dup=ss.some(se=>se.tipo==="questoes" && se.materia===x.materia && se.assunto===x.assunto && Math.abs(new Date(se.data).getTime()-new Date(x.data).getTime())<5000);
+      return t+(dup?0:x.minutos);
+    },0);
+    return { rotulo:p.rotulo, minutos:minutosSessao+minutosQuestao, questoes:qs.reduce((t,x)=>t+x.certas+x.erradas,0) };
+  });
+}
+
+function montarRecomendacaoCoach(d:{ revisoesAtrasadas:number; piorMateria?:string; piorPercentual?:number; questoesHoje:number; minutosHoje:number; metaQuestoes:number; metaMinutos:number; }) {
+  if(d.revisoesAtrasadas>0) return { titulo:`${d.revisoesAtrasadas} revisão${d.revisoesAtrasadas>1?"ões":""} atrasada${d.revisoesAtrasadas>1?"s":""}`, texto:"Priorize o conteúdo vencido antes de avançar para matéria nova.", rota:"/revisoes" };
+  if(d.piorMateria && (d.piorPercentual ?? 100)<70) return { titulo:`Reforce ${d.piorMateria}`, texto:`Seu aproveitamento nessa matéria está em ${d.piorPercentual}%. Um bloco de questões direcionadas tem maior retorno agora.`, rota:"/questoes" };
+  if(d.minutosHoje<d.metaMinutos) return { titulo:"Complete sua meta de tempo", texto:`Faltam ${Math.max(0,d.metaMinutos-d.minutosHoje)} minutos para fechar a meta diária.`, rota:"/central-estudos" };
+  if(d.questoesHoje<d.metaQuestoes) return { titulo:"Feche a meta de questões", texto:`Faltam ${Math.max(0,d.metaQuestoes-d.questoesHoje)} questões para a meta de hoje.`, rota:"/questoes" };
+  return { titulo:"Meta diária em bom ritmo", texto:"Mantenha a consistência e avance para a próxima missão do plano.", rota:"/plano" };
 }

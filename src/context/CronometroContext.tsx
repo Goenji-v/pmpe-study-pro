@@ -512,10 +512,10 @@ if (
             erradas:
               quantidadeErros,
 
-            minutos:
-              Math.round(
-                minutos
-              ),
+            // O tempo já pertence à Sessão de Estudo criada acima.
+            // O RegistroQuestao automático guarda apenas desempenho,
+            // evitando duplicar minutos nas estatísticas.
+            minutos: 0,
 
             data:
               finalizadaEm,

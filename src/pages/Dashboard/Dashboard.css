@@ -591,3 +591,308 @@
   color: #e2e8f0;
   font-size: 19px;
 }
+
+/* ===== Dashboard 2.0 ===== */
+.dashboard-player {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding: 18px 22px;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, .14), rgba(15, 23, 42, .88) 45%),
+    #111827;
+}
+
+.dashboard-player-identidade {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dashboard-player-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #2563eb, #1d4ed8);
+  color: white;
+  font-size: 23px;
+  font-weight: 900;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, .24);
+}
+
+.dashboard-player-saudacao {
+  display: block;
+  margin-bottom: 3px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.dashboard-player-identidade strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 17px;
+}
+
+.dashboard-player-xp {
+  width: min(520px, 52vw);
+  margin-top: 9px;
+}
+
+.dashboard-player-xp > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  color: #93c5fd;
+  font-size: 11px;
+}
+
+.dashboard-player-xp-barra,
+.dashboard-hero-barra {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: #334155;
+}
+
+.dashboard-player-xp-barra > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.dashboard-player-indicadores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(84px, 1fr));
+  gap: 9px;
+}
+
+.dashboard-player-indicadores > div,
+.dashboard-player-indicadores > button {
+  min-width: 84px;
+  padding: 10px 12px;
+  border: 1px solid #334155;
+  border-radius: 13px;
+  background: rgba(15, 23, 42, .78);
+  color: #fff;
+  text-align: center;
+}
+
+.dashboard-player-indicadores > button {
+  cursor: pointer;
+}
+
+.dashboard-player-indicadores span {
+  display: block;
+  font-size: 16px;
+}
+
+.dashboard-player-indicadores strong {
+  display: block;
+  margin: 3px 0 1px;
+  font-size: 17px;
+}
+
+.dashboard-player-indicadores small {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.dashboard-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(330px, .8fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.dashboard-hero-progresso,
+.dashboard-semana-card {
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background: #1e293b;
+  padding: 22px;
+}
+
+.dashboard-hero-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-hero-topo span,
+.dashboard-semana-titulo span:first-child {
+  color: #60a5fa;
+  font-size: 10px;
+  letter-spacing: .1em;
+  font-weight: 800;
+}
+
+.dashboard-hero-topo h1 {
+  margin: 6px 0 4px;
+  font-size: 27px;
+}
+
+.dashboard-hero-topo p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.dashboard-hero-topo > strong {
+  align-self: center;
+  color: #60a5fa;
+  font-size: 34px;
+}
+
+.dashboard-hero-barra {
+  height: 11px;
+  margin: 18px 0 12px;
+}
+
+.dashboard-hero-barra > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);
+}
+
+.dashboard-hero-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.dashboard-semana-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-semana-titulo strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 24px;
+}
+
+.dashboard-semana-fogo {
+  font-size: 30px;
+}
+
+.dashboard-semana-dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+  margin: 19px 0 12px;
+}
+
+.dashboard-semana-dia {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  color: #64748b;
+}
+
+.dashboard-semana-dia > span {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.dashboard-semana-dia > strong {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #475569;
+  border-radius: 50%;
+  color: #64748b;
+}
+
+.dashboard-semana-dia > small {
+  font-size: 9px;
+}
+
+.dashboard-semana-dia.feito > strong {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, .15);
+  color: #4ade80;
+}
+
+.dashboard-semana-dia.hoje > strong {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .13);
+  color: #93c5fd;
+}
+
+.dashboard-semana-dia.futuro {
+  opacity: .55;
+}
+
+.dashboard-semana-card > p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.dashboard-cabecalho-compacto {
+  margin-top: 12px;
+}
+
+@media (max-width: 1120px) {
+  .dashboard-player,
+  .dashboard-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-player {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-player-xp {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-player {
+    padding: 15px;
+  }
+
+  .dashboard-player-indicadores {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .dashboard-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-hero-progresso,
+  .dashboard-semana-card {
+    padding: 16px;
+  }
+
+  .dashboard-hero-topo h1 {
+    font-size: 22px;
+  }
+
+  .dashboard-hero-topo > strong {
+    font-size: 26px;
+  }
+
+  .dashboard-hero-meta {
+    gap: 8px;
+    flex-direction: column;
+  }
+}
+
+/* Dashboard 2.2 — Etapa 2 */
+.dashboard-v22-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:20px 0}.dashboard-v22-card{background:linear-gradient(145deg,#172235,#111b2c);border:1px solid #334155;border-radius:18px;padding:20px;box-shadow:0 12px 35px rgba(0,0,0,.12);margin-bottom:18px}.dashboard-v22-grid .dashboard-v22-card{margin-bottom:0}.dashboard-v22-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.dashboard-v22-topo span{font-size:11px;letter-spacing:.12em;font-weight:800;color:#60a5fa}.dashboard-v22-topo h2{margin:5px 0 0;font-size:21px}.dashboard-v22-progress{height:10px;background:#263449;border-radius:999px;overflow:hidden;margin:18px 0 13px}.dashboard-v22-progress>div{height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#22c55e);transition:width .6s ease}.dashboard-v22-metas{display:flex;flex-wrap:wrap;gap:8px}.dashboard-v22-metas span{padding:7px 10px;border-radius:999px;background:#0f172a;color:#cbd5e1;font-size:12px}.dashboard-coach-premium{background:linear-gradient(145deg,rgba(124,58,237,.18),#111b2c 58%);border-color:rgba(139,92,246,.45)}.dashboard-coach-premium .dashboard-v22-topo span{color:#c4b5fd}.dashboard-coach-premium .dashboard-v22-topo>b{font-size:30px}.dashboard-coach-premium p{color:#cbd5e1;line-height:1.55;margin:14px 0}.dashboard-coach-premium button{border:0;border-radius:10px;padding:10px 14px;background:#7c3aed;color:white;font-weight:800;cursor:pointer}.dashboard-periodos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.dashboard-periodos-grid>div{background:#0f172a;border:1px solid #2b3a50;border-radius:13px;padding:14px}.dashboard-periodos-grid span,.dashboard-periodos-grid small{display:block;color:#94a3b8}.dashboard-periodos-grid strong{display:block;font-size:21px;margin:6px 0}.dashboard-conquistas-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.dashboard-conquistas-grid>div{display:flex;align-items:center;gap:10px;border:1px solid #334155;border-radius:13px;padding:13px;background:#0f172a}.dashboard-conquistas-grid b{font-size:24px}.dashboard-conquistas-grid strong,.dashboard-conquistas-grid small{display:block}.dashboard-conquistas-grid small{color:#94a3b8;margin-top:3px;font-size:11px}.dashboard-conquistas-grid .bloqueada{opacity:.42;filter:grayscale(1)}.dashboard-conquistas-grid .desbloqueada{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07)}
+@media(max-width:900px){.dashboard-v22-grid{grid-template-columns:1fr}.dashboard-periodos-grid,.dashboard-conquistas-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.dashboard-periodos-grid,.dashboard-conquistas-grid{grid-template-columns:1fr}.dashboard-v22-metas{flex-direction:column}.dashboard-v22-metas span{border-radius:10px}}
