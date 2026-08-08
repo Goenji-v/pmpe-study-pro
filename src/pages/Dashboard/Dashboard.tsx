@@ -4,9 +4,6 @@ import {
   useState,
 } from "react";
 
-import MissaoDoDia from "../../components/MissaoDoDia/MissaoDoDia";
-import RankingResumo from "../../components/RankingResumo/RankingResumo";
-
 import { useNavigate } from "react-router-dom";
 
 import "./Dashboard.css";
@@ -261,14 +258,7 @@ export default function Dashboard() {
       0
     );
 
-  const progressoEdital =
-    assuntosTotais === 0
-      ? 0
-      : Math.round(
-          (assuntosConcluidos /
-            assuntosTotais) *
-            100
-        );
+  
 
   const trilhaPortugues = useMemo(() => {
     const materia = materias.find(
@@ -597,9 +587,13 @@ export default function Dashboard() {
     navigate("/central-estudos");
   }
 
+  void trilhaPortugues;
+  void conquistasDetalhadas;
+  void iniciarProximaAulaPortugues;
+
   return (
     <section className="dashboard-container">
-      <section className="dashboard-player">
+      <section className="dashboard-player dashboard-player-compacto">
         <div className="dashboard-player-identidade">
           <div className="dashboard-player-avatar">
             {(configuracoes.nomeUsuario || "U")
@@ -609,10 +603,7 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <span className="dashboard-player-saudacao">
-              Olá, {configuracoes.nomeUsuario}
-            </span>
-
+            <span className="dashboard-player-saudacao">PERFIL DE ESTUDO</span>
             <strong>
               Nível {gamificacao.nivel} · {gamificacao.tituloNivel}
             </strong>
@@ -620,11 +611,8 @@ export default function Dashboard() {
             <div className="dashboard-player-xp">
               <div>
                 <span>XP</span>
-                <b>
-                  {xpNoNivel} / {xpParaProximoNivel}
-                </b>
+                <b>{xpNoNivel} / {xpParaProximoNivel}</b>
               </div>
-
               <div className="dashboard-player-xp-barra">
                 <div style={{ width: `${progressoNivel}%` }} />
               </div>
@@ -633,125 +621,127 @@ export default function Dashboard() {
         </div>
 
         <div className="dashboard-player-indicadores">
-          <button
-            type="button"
-            onClick={() => navigate("/ranking")}
-          >
-            <span>🏆</span>
-            <strong>{conquistas}</strong>
-            <small>Conquistas</small>
+          <button type="button" onClick={() => navigate("/conquistas")}>
+            <span>🏆</span><strong>{conquistas}</strong><small>Conquistas</small>
           </button>
-
-          <div>
-            <span>🪙</span>
-            <strong>{ouro}</strong>
-            <small>Ouro</small>
-          </div>
-
-          <div>
-            <span>🔥</span>
-            <strong>{sequencia}</strong>
-            <small>dias</small>
-          </div>
+          <div><span>🪙</span><strong>{ouro}</strong><small>Ouro</small></div>
+          <div><span>🔥</span><strong>{sequencia}</strong><small>dias</small></div>
         </div>
       </section>
 
-      <section className="dashboard-hero-grid">
-        <div className="dashboard-hero-progresso">
-          <div className="dashboard-hero-topo">
-            <div>
-              <span>PROGRESSO DO PLANO</span>
-              <h1>{dadosPlano.progresso}% concluído</h1>
-              <p>
-                {dadosPlano.concluidas} de {dadosPlano.total} missões finalizadas
-              </p>
-            </div>
-
-            <strong>{dadosPlano.progresso}%</strong>
+      <section className="dashboard-referencia-grid">
+        <article className="dashboard-referencia-card dashboard-referencia-progresso">
+          <div className="dashboard-referencia-boas-vindas">
+            <span>VISÃO GERAL</span>
+            <h1>Olá, {configuracoes.nomeUsuario} <b>👋</b></h1>
           </div>
 
-          <div className="dashboard-hero-barra">
+          <div className="dashboard-referencia-progresso-topo">
+            <div>
+              <small>Progresso do Plano de Estudos</small>
+              <strong>{dadosPlano.progresso}%</strong>
+            </div>
+            <span>{dadosPlano.concluidas}/{dadosPlano.total} missões</span>
+          </div>
+
+          <div className="dashboard-referencia-barra">
             <div style={{ width: `${dadosPlano.progresso}%` }} />
           </div>
 
-          <div className="dashboard-hero-meta">
-            <span>
-              Semana {dadosPlano.semanaAtual} de 8
-            </span>
-            <span>
-              {dadosPlano.pendentes} missões pendentes
-            </span>
+          <div className="dashboard-referencia-rodape">
+            <span>Semana {dadosPlano.semanaAtual} de 8</span>
+            <span>{dadosPlano.pendentes} pendentes</span>
           </div>
-        </div>
+        </article>
 
-        <div className="dashboard-semana-card">
-          <div className="dashboard-semana-titulo">
-            <div>
-              <span>SEQUÊNCIA</span>
-              <strong>{sequencia} dias</strong>
-            </div>
-            <span className="dashboard-semana-fogo">🔥</span>
-          </div>
+        <article className="dashboard-referencia-card dashboard-referencia-sequencia">
+          <span className="dashboard-referencia-kicker">SEQUÊNCIA</span>
+          <strong className="dashboard-referencia-numero">{sequencia}</strong>
+          <h2>Dias de Sequência</h2>
 
-          <div className="dashboard-semana-dias">
+          <div className="dashboard-referencia-dias">
             {semanaAtualDashboard.map((dia) => (
               <div
                 key={dia.chave}
                 className={[
-                  "dashboard-semana-dia",
+                  "dashboard-referencia-dia",
                   dia.estudou ? "feito" : "",
                   dia.hoje ? "hoje" : "",
                   dia.futuro ? "futuro" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                ].filter(Boolean).join(" ")}
               >
+                <strong>{dia.estudou ? "✓" : dia.hoje ? "•" : "○"}</strong>
                 <span>{dia.rotulo}</span>
-                <strong>
-                  {dia.estudou
-                    ? "✓"
-                    : dia.hoje
-                      ? "•"
-                      : dia.futuro
-                        ? "○"
-                        : "–"}
-                </strong>
-                <small>{dia.numero}</small>
               </div>
             ))}
           </div>
 
           <p>
             {sequencia > 0
-              ? "Mantenha sua sequência estudando pelo menos 30 minutos por dia."
-              : "Estude 30 minutos hoje para iniciar sua sequência."}
+              ? "Continue estudando para manter sua sequência."
+              : "Estude hoje para iniciar sua sequência."}
           </p>
-        </div>
+        </article>
+
+        <article className="dashboard-referencia-card dashboard-referencia-metricas">
+          <div className="dashboard-referencia-metrica">
+            <span className="icone azul">⏱</span>
+            <div><strong>{formatarMinutos(minutosHoje)}</strong><small>estudados hoje</small></div>
+          </div>
+          <div className="dashboard-referencia-metrica">
+            <span className="icone roxo">◷</span>
+            <div><strong>{formatarMinutos(estatisticasPeriodos.find((item) => item.rotulo === "Semana")?.minutos ?? 0)}</strong><small>esta semana</small></div>
+          </div>
+          <div className="dashboard-referencia-metrica">
+            <span className="icone laranja">📝</span>
+            <div><strong>{totalQuestoes}</strong><small>questões resolvidas</small></div>
+          </div>
+          <div className="dashboard-referencia-metrica">
+            <span className="icone verde">✓</span>
+            <div><strong>{aproveitamento}%</strong><small>taxa de acertos</small></div>
+          </div>
+        </article>
       </section>
 
-      <RankingResumo />
+      <div className="dashboard-grid dashboard-prioridade-grid">
+        <ProximaMissaoCard
+          proxima={dadosPlano.proxima}
+          onIniciar={iniciarProximaMissao}
+          onAbrirPlano={() => navigate("/plano")}
+        />
 
-      <section className="dashboard-v22-grid">
-        <article className="dashboard-v22-card dashboard-meta-premium">
-          <div className="dashboard-v22-topo">
-            <div><span>META DO DIA</span><h2>{metaGeralHoje}% concluída</h2></div>
-            <strong>{formatarMinutos(minutosHoje)}</strong>
+        <div className="dashboard-painel dashboard-plano dashboard-plano-compacto">
+          <div className="dashboard-painel-topo">
+            <div>
+              <span className="dashboard-kicker">PLANO TÁTICO</span>
+              <h2>📅 Semana {dadosPlano.semanaAtual} de 8</h2>
+              <p>{dadosPlano.concluidas} concluídas · {dadosPlano.pendentes} pendentes</p>
+            </div>
+            <strong className="dashboard-plano-percentual">{dadosPlano.progresso}%</strong>
           </div>
-          <div className="dashboard-v22-progress"><div style={{ width: `${metaGeralHoje}%` }} /></div>
-          <div className="dashboard-v22-metas">
-            <span>⏱ {minutosHoje}/{configuracoes.metaMinutosDiaria} min</span>
-            <span>📝 {questoesHoje}/{configuracoes.metaQuestoesDiaria} questões</span>
-            <span>🔁 {revisoesConcluidasHoje}/{configuracoes.metaRevisoesDiaria} revisões</span>
-          </div>
-        </article>
+          <BarraProgresso percentual={dadosPlano.progresso} />
+          <button type="button" className="dashboard-abrir-plano" onClick={() => navigate("/plano")}>Ver plano completo →</button>
+        </div>
+      </div>
 
-        <article className="dashboard-v22-card dashboard-coach-premium">
-          <div className="dashboard-v22-topo">
-            <div><span>IA COACH</span><h2>{recomendacaoCoach.titulo}</h2></div><b>🧠</b>
-          </div>
-          <p>{recomendacaoCoach.texto}</p>
-          <button type="button" onClick={() => navigate(recomendacaoCoach.rota)}>Começar agora →</button>
-        </article>
+      {revisoesAtrasadas.length > 0 && (
+        <div className="dashboard-alerta">
+          <strong>⚠ Você possui {revisoesAtrasadas.length} revisão{revisoesAtrasadas.length > 1 ? "ões" : ""} atrasada{revisoesAtrasadas.length > 1 ? "s" : ""}.</strong>
+          <p>Priorize as revisões vencidas antes de avançar para novos conteúdos.</p>
+        </div>
+      )}
+
+      <section className="dashboard-v22-card dashboard-meta-premium">
+        <div className="dashboard-v22-topo">
+          <div><span>META DO DIA</span><h2>{metaGeralHoje}% concluída</h2></div>
+          <strong>{formatarMinutos(minutosHoje)}</strong>
+        </div>
+        <div className="dashboard-v22-progress"><div style={{ width: `${metaGeralHoje}%` }} /></div>
+        <div className="dashboard-v22-metas">
+          <span>⏱ {minutosHoje}/{configuracoes.metaMinutosDiaria} min</span>
+          <span>📝 {questoesHoje}/{configuracoes.metaQuestoesDiaria} questões</span>
+          <span>🔁 {revisoesConcluidasHoje}/{configuracoes.metaRevisoesDiaria} revisões</span>
+        </div>
       </section>
 
       <section className="dashboard-v22-card dashboard-estatisticas-periodos">
@@ -767,496 +757,54 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="dashboard-v22-card dashboard-conquistas-premium">
-        <div className="dashboard-v22-topo">
-          <div><span>CONQUISTAS</span><h2>{conquistasDetalhadas.filter((item) => item.desbloqueada).length} desbloqueadas</h2></div>
-          <strong>{conquistasDetalhadas.length} desafios</strong>
-        </div>
-        <div className="dashboard-conquistas-grid">
-          {conquistasDetalhadas.slice(0, 8).map((item) => (
-            <div key={item.titulo} className={item.desbloqueada ? "desbloqueada" : "bloqueada"}>
-              <b>{item.icone}</b><div><strong>{item.titulo}</strong><small>{item.descricao}</small></div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="dashboard-cabecalho dashboard-cabecalho-compacto">
-        <div>
-          <MissaoDoDia
-            atualizacao={atualizacaoPlano}
-          />
-
-          <p>
-            Preparação focada na{" "}
-            <strong>{configuracoes.concurso}</strong>.
-          </p>
-        </div>
-      </div>
-
-      {revisoesAtrasadas.length >
-        0 && (
-        <div className="dashboard-alerta">
-          <strong>
-            ⚠ Você possui{" "}
-            {
-              revisoesAtrasadas.length
-            }{" "}
-            revisão
-            {revisoesAtrasadas.length >
-            1
-              ? "ões"
-              : ""}{" "}
-            atrasada
-            {revisoesAtrasadas.length >
-            1
-              ? "s"
-              : ""}
-            .
-          </strong>
-
-          <p>
-            Priorize as revisões
-            vencidas antes de avançar
-            para novos conteúdos.
-          </p>
-        </div>
-      )}
-
-      <div className="dashboard-cards">
-        <ResumoCard
-          icone="📝"
-          titulo="Questões"
-          valor={totalQuestoes}
-          detalhe={`${totalCertas} acertos`}
-        />
-
-        <ResumoCard
-          icone="🎯"
-          titulo="Aproveitamento"
-          valor={`${aproveitamento}%`}
-          detalhe="Desempenho geral"
-        />
-
-        <ResumoCard
-          icone="⏱"
-          titulo="Tempo estudado"
-          valor={formatarMinutos(
-            minutosTotais
-          )}
-          detalhe={`${sessoes.length} sessões`}
-        />
-
-        <ResumoCard
-          icone="📚"
-          titulo="Progresso do edital"
-          valor={`${progressoEdital}%`}
-          detalhe={`${assuntosConcluidos}/${assuntosTotais} assuntos`}
-        />
-
-        <ResumoCard
-          icone="✅"
-          titulo="Missões concluídas"
-          valor={
-            dadosPlano.concluidas
-          }
-          detalhe={`${dadosPlano.pendentes} pendentes`}
-        />
-
-        <ResumoCard
-          icone="📅"
-          titulo="Progresso do plano"
-          valor={`${dadosPlano.progresso}%`}
-          detalhe={`${dadosPlano.total} missões`}
-        />
-      </div>
-
-      <div className="dashboard-grid">
-        <div className="dashboard-painel dashboard-plano">
-          <div className="dashboard-painel-topo">
-            <div>
-              <h2>
-                📅 Plano Tático PMPE
-              </h2>
-
-              <p>
-                Semana{" "}
-                {
-                  dadosPlano.semanaAtual
-                }{" "}
-                de 8
-              </p>
-            </div>
-
-            <strong className="dashboard-plano-percentual">
-              {
-                dadosPlano.progresso
-              }
-              %
-            </strong>
-          </div>
-
-          <BarraProgresso
-            percentual={
-              dadosPlano.progresso
-            }
-          />
-
-          <div className="dashboard-plano-dados">
-            <div>
-              <span>
-                Concluídas
-              </span>
-
-              <strong>
-                {
-                  dadosPlano.concluidas
-                }
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Pendentes
-              </span>
-
-              <strong>
-                {
-                  dadosPlano.pendentes
-                }
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Semana atual
-              </span>
-
-              <strong>
-                {
-                  dadosPlano
-                    .progressoSemana
-                }
-                %
-              </strong>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="dashboard-abrir-plano"
-            onClick={() =>
-              navigate("/plano")
-            }
-          >
-            Abrir Plano de Estudos
-          </button>
-        </div>
-
-        <ProximaMissaoCard
-          proxima={
-            dadosPlano.proxima
-          }
-          onIniciar={
-            iniciarProximaMissao
-          }
-          onAbrirPlano={() =>
-            navigate("/plano")
-          }
-        />
-      </div>
-
-      {trilhaPortugues && (
-        <div className="dashboard-painel dashboard-portugues-trilha">
-          <div className="dashboard-painel-topo">
-            <div>
-              <h2>📘 Trilha de Português</h2>
-              <p>Curso oficial organizado por módulos e aulas.</p>
-            </div>
-            <strong className="dashboard-portugues-percentual">{trilhaPortugues.percentual}%</strong>
-          </div>
-
-          <div className="dashboard-barra">
-            <div style={{ width: `${trilhaPortugues.percentual}%` }} />
-          </div>
-
-          <div className="dashboard-portugues-dados">
-            <span>
-              {trilhaPortugues.concluidos} de {trilhaPortugues.total} aulas concluídas
-              {trilhaPortugues.importados > 0 ? ` · ${trilhaPortugues.importados} importadas` : ""}
-            </span>
-            {trilhaPortugues.proximo ? (
-              <>
-                <small>{trilhaPortugues.proximo.modulo.nome}</small>
-                <strong>{trilhaPortugues.proximo.assunto.nome}</strong>
-                <div className="dashboard-missao-botoes">
-                  <button type="button" className="dashboard-iniciar-missao" onClick={iniciarProximaAulaPortugues}>
-                    ▶ Continuar Português
-                  </button>
-                  <button type="button" className="dashboard-ver-plano" onClick={() => navigate("/estudos")}>
-                    Ver todos os módulos
-                  </button>
-                </div>
-              </>
-            ) : (
-              <strong>Trilha de Português concluída.</strong>
-            )}
-          </div>
-        </div>
-      )}
-
       <div className="dashboard-grid">
         <div className="dashboard-painel">
-          <div className="dashboard-painel-topo">
-            <div>
-              <h2>
-                🎯 Metas de hoje
-              </h2>
-
-              <p>
-                Acompanhamento das metas
-                configuradas.
-              </p>
-            </div>
-          </div>
-
-          <div className="dashboard-metas">
-            <MetaItem
-              titulo="Questões"
-              atual={
-                questoesHoje
-              }
-              meta={
-                configuracoes.metaQuestoesDiaria
-              }
-              percentual={
-                progressoQuestoesHoje
-              }
-              unidade=""
-            />
-
-            <MetaItem
-              titulo="Tempo"
-              atual={
-                minutosHoje
-              }
-              meta={
-                configuracoes.metaMinutosDiaria
-              }
-              percentual={
-                progressoTempoHoje
-              }
-              unidade=" min"
-            />
-
-            <MetaItem
-              titulo="Revisões"
-              atual={
-                revisoesConcluidasHoje
-              }
-              meta={
-                configuracoes.metaRevisoesDiaria
-              }
-              percentual={
-                progressoRevisoesHoje
-              }
-              unidade=""
-            />
-          </div>
+          <h2>📊 Diagnóstico</h2>
+          <LinhaDiagnostico titulo="Melhor matéria" valor={melhorMateria ? `${melhorMateria.materia} — ${melhorMateria.percentual}%` : "Sem dados"} classe="dashboard-positivo" />
+          <LinhaDiagnostico titulo="Matéria mais fraca" valor={piorMateria ? `${piorMateria.materia} — ${piorMateria.percentual}%` : "Sem dados"} classe="dashboard-negativo" />
+          <LinhaDiagnostico titulo="Questões hoje" valor={String(questoesHoje)} />
+          <LinhaDiagnostico titulo="Tempo hoje" valor={formatarMinutos(minutosHoje)} />
+          <LinhaDiagnostico titulo="Revisões hoje" valor={String(revisoesConcluidasHoje)} />
         </div>
 
         <div className="dashboard-painel">
-          <h2>
-            📊 Diagnóstico
-          </h2>
-
-          <LinhaDiagnostico
-            titulo="Melhor matéria"
-            valor={
-              melhorMateria
-                ? `${melhorMateria.materia} — ${melhorMateria.percentual}%`
-                : "Sem dados"
-            }
-            classe="dashboard-positivo"
-          />
-
-          <LinhaDiagnostico
-            titulo="Matéria mais fraca"
-            valor={
-              piorMateria
-                ? `${piorMateria.materia} — ${piorMateria.percentual}%`
-                : "Sem dados"
-            }
-            classe="dashboard-negativo"
-          />
-
-          <LinhaDiagnostico
-            titulo="Questões hoje"
-            valor={String(
-              questoesHoje
-            )}
-          />
-
-          <LinhaDiagnostico
-            titulo="Tempo hoje"
-            valor={formatarMinutos(
-              minutosHoje
-            )}
-          />
-
-          <LinhaDiagnostico
-            titulo="Revisões hoje"
-            valor={String(
-              revisoesConcluidasHoje
-            )}
-          />
-        </div>
-      </div>
-
-      <div className="dashboard-grid">
-        <div className="dashboard-painel">
-          <h2>
-            🎯 Último simulado
-          </h2>
-
+          <h2>🎯 Último simulado</h2>
           {ultimoResultado ? (
             <div className="dashboard-simulado">
-              <div>
-                <div className="dashboard-simulado-titulo">
-                  <strong>
-                    {ultimoResultado.nome}
-                  </strong>
-
-                  <span className="dashboard-simulado-origem">
-                    {ultimoResultado.origem}
-                  </span>
-                </div>
-
-                <p>
-                  {ultimoResultado.detalhe}
-                  {" • "}
-                  {formatarData(
-                    ultimoResultado.data
-                  )}
-                </p>
-              </div>
-
-              <div className="dashboard-simulado-resultado">
-                <strong>
-                  {ultimoResultado.percentual}%
-                </strong>
-
-                <span>
-                  {ultimoResultado.certas} certas
-                  {" • "}
-                  {ultimoResultado.erradas} erradas
-                  {ultimoResultado.emBranco > 0
-                    ? ` • ${ultimoResultado.emBranco} em branco`
-                    : ""}
-                </span>
-              </div>
+              <div><div className="dashboard-simulado-titulo"><strong>{ultimoResultado.nome}</strong><span className="dashboard-simulado-origem">{ultimoResultado.origem}</span></div><p>{ultimoResultado.detalhe}{" • "}{formatarData(ultimoResultado.data)}</p></div>
+              <div className="dashboard-simulado-resultado"><strong>{ultimoResultado.percentual}%</strong><span>{ultimoResultado.certas} certas{" • "}{ultimoResultado.erradas} erradas{ultimoResultado.emBranco > 0 ? ` • ${ultimoResultado.emBranco} em branco` : ""}</span></div>
             </div>
-          ) : (
-            <p className="dashboard-vazio">
-              Nenhum simulado registrado.
-            </p>
-          )}
-        </div>
-
-        <div className="dashboard-painel">
-          <h2>
-            🕘 Sessões recentes
-          </h2>
-
-          {ultimasSessoes.length ===
-          0 ? (
-            <p className="dashboard-vazio">
-              Nenhuma sessão
-              registrada.
-            </p>
-          ) : (
-            <div className="dashboard-sessoes">
-              {ultimasSessoes.map(
-                (sessao) => (
-                  <article
-                    key={sessao.id}
-                    className="dashboard-sessao"
-                  >
-                    <div>
-                      <strong>
-                        {
-                          sessao.materia
-                        }
-                      </strong>
-
-                      <p>
-                        {
-                          sessao.assunto
-                        }
-                      </p>
-                    </div>
-
-                    <div>
-                      <strong>
-                        {formatarMinutos(
-                          sessao.minutos
-                        )}
-                      </strong>
-
-                      <span>
-                        {formatarData(
-                          sessao.data
-                        )}
-                      </span>
-                    </div>
-                  </article>
-                )
-              )}
-            </div>
-          )}
+          ) : <p className="dashboard-vazio">Nenhum simulado registrado.</p>}
         </div>
       </div>
 
+      <div className="dashboard-painel">
+        <h2>🕘 Sessões recentes</h2>
+        {ultimasSessoes.length === 0 ? <p className="dashboard-vazio">Nenhuma sessão registrada.</p> : (
+          <div className="dashboard-sessoes">
+            {ultimasSessoes.map((sessao) => (
+              <article key={sessao.id} className="dashboard-sessao">
+                <div><strong>{sessao.materia}</strong><p>{sessao.assunto}</p></div>
+                <div><strong>{formatarMinutos(sessao.minutos)}</strong><span>{formatarData(sessao.data)}</span></div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <article className="dashboard-v22-card dashboard-coach-premium dashboard-coach-final">
+        <div className="dashboard-v22-topo">
+          <div><span>IA COACH</span><h2>{recomendacaoCoach.titulo}</h2></div><b>🧠</b>
+        </div>
+        <p>{recomendacaoCoach.texto}</p>
+        <button type="button" onClick={() => navigate(recomendacaoCoach.rota)}>Começar agora →</button>
+      </article>
 
     </section>
   );
 }
 
-type ResumoCardProps = {
-  icone: string;
-  titulo: string;
-  valor: string | number;
-  detalhe: string;
-};
 
-function ResumoCard({
-  icone,
-  titulo,
-  valor,
-  detalhe,
-}: ResumoCardProps) {
-  return (
-    <article className="dashboard-resumo-card">
-      <div className="dashboard-resumo-icone">
-        {icone}
-      </div>
-
-      <div>
-        <span>
-          {titulo}
-        </span>
-
-        <strong>
-          {valor}
-        </strong>
-
-        <small>
-          {detalhe}
-        </small>
-      </div>
-    </article>
-  );
-}
 
 type ProximaMissaoCardProps = {
   proxima:
@@ -1350,47 +898,7 @@ function ProximaMissaoCard({
   );
 }
 
-type MetaItemProps = {
-  titulo: string;
-  atual: number;
-  meta: number;
-  percentual: number;
-  unidade: string;
-};
 
-function MetaItem({
-  titulo,
-  atual,
-  meta,
-  percentual,
-  unidade,
-}: MetaItemProps) {
-  return (
-    <div className="dashboard-meta-item">
-      <div>
-        <span>
-          {titulo}
-        </span>
-
-        <strong>
-          {atual}
-          {unidade} / {meta}
-          {unidade}
-        </strong>
-      </div>
-
-      <BarraProgresso
-        percentual={
-          percentual
-        }
-      />
-
-      <small>
-        {percentual}% concluído
-      </small>
-    </div>
-  );
-}
 
 function BarraProgresso({
   percentual,

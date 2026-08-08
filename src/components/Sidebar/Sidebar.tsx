@@ -132,12 +132,6 @@ export default function Sidebar() {
             texto="Central de Desempenho"
           />
 
-          <ItemMenu
-            to="/ranking"
-            icone="🏆"
-            texto="Ranking"
-          />
-
         </div>
 
         {/* ================= NOVA CENTRAL ================= */}
@@ -177,11 +171,25 @@ export default function Sidebar() {
           titulo="Sistema"
           icone="⚙️"
           rotas={[
+            "/conquistas",
+            "/ranking",
             "/backup",
             "/configuracoes",
             "/admin",
           ]}
         >
+          <ItemMenu
+            to="/conquistas"
+            icone="🏆"
+            texto="Conquistas"
+          />
+
+          <ItemMenu
+            to="/ranking"
+            icone="🥇"
+            texto="Ranking"
+          />
+
           <ItemMenu
             to="/backup"
             icone="💾"

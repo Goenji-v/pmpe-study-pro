@@ -33,6 +33,7 @@ import NotFound from "./pages/NotFound/NotFound";
 import Ranking from "./pages/Ranking/Ranking";
 import RelatorioInteligente from "./pages/RelatorioInteligente/RelatorioInteligente";
 import Admin from "./pages/Admin/Admin";
+import Conquistas from "./pages/Conquistas/Conquistas";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Header from "./components/Header/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -196,6 +197,11 @@ function LayoutProtegido() {
                     <Route
                       path="/ranking"
                       element={<Ranking />}
+                    />
+
+                    <Route
+                      path="/conquistas"
+                      element={<Conquistas />}
                     />
 
                     {/* Sistema */}
