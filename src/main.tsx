@@ -6,6 +6,7 @@ import App from "./App";
 import "./global.css";
 import "./styles/mobile.css";
 import "./styles/visual-final.css";
+import "./styles/visual-3d.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
