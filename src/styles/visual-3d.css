@@ -1,0 +1,357 @@
+/* Etapa 6.1 — Visual Premium com 3D leve
+   Somente apresentação. Sem bibliotecas, imagens pesadas ou alterações de lógica. */
+
+:root {
+  --ui-3d-blue-top: #3598ff;
+  --ui-3d-blue: #1672e8;
+  --ui-3d-blue-bottom: #0e58c1;
+  --ui-3d-border: rgba(124, 181, 255, .42);
+  --ui-3d-highlight: rgba(255, 255, 255, .22);
+  --ui-3d-shadow: rgba(3, 12, 28, .48);
+}
+
+/* ===== Botões principais ===== */
+.dashboard-pro-actions .primary,
+.dashboard-pro-coach button,
+.dashboard-iniciar-missao {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #fff;
+  background:
+    linear-gradient(180deg, var(--ui-3d-blue-top) 0%, var(--ui-3d-blue) 48%, var(--ui-3d-blue-bottom) 100%);
+  border: 1px solid var(--ui-3d-border);
+  box-shadow:
+    0 8px 0 rgba(5, 53, 128, .52),
+    0 13px 24px rgba(18, 106, 226, .22),
+    inset 0 1px 0 var(--ui-3d-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, .22);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .22);
+  transform: translateY(-2px);
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    filter .16s ease,
+    border-color .16s ease;
+}
+
+.dashboard-pro-actions .primary::before,
+.dashboard-pro-coach button::before,
+.dashboard-iniciar-missao::before {
+  content: "";
+  position: absolute;
+  inset: 1px 8px auto;
+  height: 42%;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.16), transparent);
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .dashboard-pro-actions .primary:hover,
+  .dashboard-pro-coach button:hover,
+  .dashboard-iniciar-missao:hover {
+    transform: translateY(-4px);
+    filter: brightness(1.06) saturate(1.04);
+    border-color: rgba(148, 197, 255, .62);
+    box-shadow:
+      0 10px 0 rgba(5, 53, 128, .50),
+      0 17px 28px rgba(18, 106, 226, .27),
+      inset 0 1px 0 rgba(255,255,255,.30),
+      inset 0 -1px 0 rgba(0,0,0,.20);
+  }
+}
+
+.dashboard-pro-actions .primary:active,
+.dashboard-pro-coach button:active,
+.dashboard-iniciar-missao:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 2px 0 rgba(5, 53, 128, .58),
+    0 5px 10px rgba(18, 106, 226, .18),
+    inset 0 2px 5px rgba(0, 0, 0, .18),
+    inset 0 1px 0 rgba(255,255,255,.13);
+}
+
+/* ===== Botões secundários ===== */
+.dashboard-pro-actions button:not(.primary),
+.dashboard-pro-panel-title button,
+.dashboard-pro-search,
+.dashboard-pro-icon,
+.cloud-status,
+.logout-conta button {
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    border-color .16s ease,
+    background .16s ease,
+    filter .16s ease;
+}
+
+.dashboard-pro-actions button:not(.primary),
+.dashboard-pro-panel-title button,
+.dashboard-pro-search,
+.dashboard-pro-icon {
+  background: linear-gradient(180deg, rgba(31, 49, 75, .92), rgba(15, 28, 48, .96));
+  border-color: rgba(91, 116, 151, .46);
+  box-shadow:
+    0 4px 0 rgba(4, 12, 25, .48),
+    0 8px 16px rgba(2, 8, 23, .14),
+    inset 0 1px 0 rgba(255,255,255,.06);
+  transform: translateY(-1px);
+}
+
+@media (hover: hover) {
+  .dashboard-pro-actions button:not(.primary):hover,
+  .dashboard-pro-panel-title button:hover,
+  .dashboard-pro-search:hover,
+  .dashboard-pro-icon:hover {
+    transform: translateY(-3px);
+    border-color: rgba(93, 163, 240, .48);
+    background: linear-gradient(180deg, rgba(37, 60, 92, .96), rgba(17, 33, 57, .98));
+  }
+}
+
+.dashboard-pro-actions button:not(.primary):active,
+.dashboard-pro-panel-title button:active,
+.dashboard-pro-search:active,
+.dashboard-pro-icon:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 rgba(4, 12, 25, .52),
+    inset 0 2px 4px rgba(0,0,0,.18);
+}
+
+/* ===== Header ===== */
+@media (min-width: 901px) {
+  .header {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.025),
+      0 10px 28px rgba(2, 8, 23, .13);
+  }
+
+  .cloud-status {
+    background: linear-gradient(180deg, rgba(25, 40, 64, .92), rgba(12, 24, 42, .96));
+    box-shadow:
+      0 3px 0 rgba(3, 10, 22, .42),
+      inset 0 1px 0 rgba(255,255,255,.05);
+  }
+
+  @media (hover: hover) {
+    .cloud-status:hover {
+      transform: translateY(-1px);
+      border-color: rgba(96, 165, 250, .42);
+    }
+  }
+
+  .logout-conta button {
+    background: linear-gradient(180deg, rgba(190, 52, 58, .62), rgba(116, 24, 31, .56));
+    border-color: rgba(248, 113, 113, .34);
+    box-shadow:
+      0 3px 0 rgba(79, 12, 18, .48),
+      0 7px 13px rgba(127, 29, 29, .12),
+      inset 0 1px 0 rgba(255,255,255,.09);
+    transform: translateY(-1px);
+  }
+
+  .logout-conta button:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 rgba(79,12,18,.54), inset 0 2px 4px rgba(0,0,0,.18);
+  }
+}
+
+/* ===== Sidebar ===== */
+@media (min-width: 901px) {
+  .sidebar {
+    box-shadow:
+      14px 0 34px rgba(2, 8, 23, .10),
+      inset -1px 0 0 rgba(255,255,255,.015);
+  }
+
+  .sidebar-logo-icone {
+    background: linear-gradient(145deg, #3d9cff 0%, #1f75e7 52%, #1354b7 100%);
+    border: 1px solid rgba(124, 181, 255, .38);
+    box-shadow:
+      0 5px 0 rgba(11, 58, 132, .48),
+      0 11px 19px rgba(26, 111, 224, .18),
+      inset 0 1px 0 rgba(255,255,255,.22);
+    transform: translateY(-1px);
+  }
+
+  .sidebar-link {
+    transition:
+      transform .16s ease,
+      background .16s ease,
+      border-color .16s ease,
+      box-shadow .16s ease,
+      color .16s ease;
+  }
+
+  .sidebar-link-ativo {
+    color: #fff;
+    background:
+      linear-gradient(180deg, rgba(44, 116, 220, .33), rgba(25, 64, 126, .24));
+    border-color: rgba(86, 156, 244, .42);
+    box-shadow:
+      inset 3px 0 0 #4b9cff,
+      inset 0 1px 0 rgba(255,255,255,.07),
+      0 4px 0 rgba(3, 15, 34, .30),
+      0 8px 15px rgba(3, 12, 28, .10);
+    transform: translateY(-1px);
+  }
+
+  @media (hover: hover) {
+    .sidebar-link:hover {
+      transform: translateY(-1px) translateX(1px);
+      border-color: rgba(79, 116, 162, .42);
+    }
+
+    .sidebar-link-ativo:hover {
+      transform: translateY(-2px) translateX(1px);
+      border-color: rgba(96, 165, 250, .58);
+    }
+  }
+
+  .sidebar-link:active {
+    transform: translateY(1px);
+  }
+}
+
+/* ===== Cards: profundidade sem excesso ===== */
+.dashboard-pro-mission,
+.dashboard-pro-session,
+.dashboard-pro-panel,
+.dashboard-pro-weekly,
+.dashboard-pro-stat-art {
+  position: relative;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.025),
+    0 14px 28px rgba(2, 8, 23, .16),
+    0 3px 8px rgba(2, 8, 23, .18),
+    inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.dashboard-pro-mission {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.04),
+    0 16px 32px rgba(2, 8, 23, .20),
+    0 5px 0 rgba(5, 32, 68, .32),
+    inset 3px 0 0 #328bf2,
+    inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.dashboard-pro-session {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.025),
+    0 13px 27px rgba(2, 8, 23, .16),
+    0 4px 0 rgba(4, 17, 37, .28),
+    inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.dashboard-pro-timer {
+  border: 1px solid rgba(70, 139, 229, .24);
+  box-shadow:
+    0 10px 28px rgba(2, 8, 23, .28),
+    inset 0 3px 14px rgba(0, 0, 0, .20),
+    inset 0 -1px 0 rgba(255,255,255,.04);
+}
+
+.dashboard-pro-timer.active {
+  box-shadow:
+    0 12px 30px rgba(2, 8, 23, .28),
+    0 0 25px rgba(45, 140, 255, .14),
+    inset 0 3px 14px rgba(0, 0, 0, .20),
+    inset 0 -1px 0 rgba(255,255,255,.05);
+}
+
+.dashboard-pro-stat-art {
+  cursor: pointer;
+  transform: translateY(0);
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease,
+    filter .18s ease;
+}
+
+@media (hover: hover) {
+  .dashboard-pro-stat-art:hover {
+    transform: translateY(-4px);
+    filter: brightness(1.025);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.04),
+      0 19px 32px rgba(2, 8, 23, .22),
+      0 5px 0 rgba(4, 17, 37, .24),
+      inset 0 1px 0 rgba(255,255,255,.035);
+  }
+}
+
+.dashboard-pro-stat-art:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 6px 14px rgba(2,8,23,.18),
+    inset 0 2px 5px rgba(0,0,0,.12);
+}
+
+.dashboard-pro-stat-art > .dashboard-pro-stat-icon {
+  box-shadow:
+    inset 0 0 0 5px rgba(255,255,255,.025),
+    inset 0 2px 5px rgba(255,255,255,.045),
+    0 7px 14px rgba(2,8,23,.24);
+}
+
+/* ===== Mobile: 3D mais discreto ===== */
+@media (max-width: 900px) {
+  .dashboard-pro-actions .primary,
+  .dashboard-pro-coach button,
+  .dashboard-iniciar-missao {
+    transform: none;
+    box-shadow:
+      0 4px 0 rgba(5, 53, 128, .46),
+      0 8px 14px rgba(18,106,226,.16),
+      inset 0 1px 0 rgba(255,255,255,.17);
+  }
+
+  .dashboard-pro-actions .primary:active,
+  .dashboard-pro-coach button:active,
+  .dashboard-iniciar-missao:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 1px 0 rgba(5,53,128,.52),
+      inset 0 2px 4px rgba(0,0,0,.16);
+  }
+
+  .dashboard-pro-actions button:not(.primary),
+  .dashboard-pro-panel-title button,
+  .dashboard-pro-search,
+  .dashboard-pro-icon {
+    transform: none;
+    box-shadow:
+      0 3px 0 rgba(4,12,25,.38),
+      inset 0 1px 0 rgba(255,255,255,.04);
+  }
+
+  .dashboard-pro-mission,
+  .dashboard-pro-session,
+  .dashboard-pro-panel,
+  .dashboard-pro-weekly,
+  .dashboard-pro-stat-art {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.02),
+      0 8px 18px rgba(2,8,23,.14),
+      inset 0 1px 0 rgba(255,255,255,.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-pro-actions button,
+  .dashboard-pro-stat-art,
+  .dashboard-pro-search,
+  .dashboard-pro-icon,
+  .cloud-status,
+  .logout-conta button,
+  .sidebar-link {
+    transition: none !important;
+  }
+}

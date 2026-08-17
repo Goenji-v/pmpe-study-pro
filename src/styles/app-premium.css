@@ -1,0 +1,735 @@
+/* Etapa 6.4 — Padronização visual premium das telas internas
+   Camada exclusivamente visual. Dashboard permanece com o acabamento aprovado. */
+
+.page-interna {
+  --premium-bg: #0b1423;
+  --premium-surface: #111d2f;
+  --premium-surface-2: #0d1828;
+  --premium-surface-3: #142238;
+  --premium-border: rgba(100, 116, 139, .28);
+  --premium-border-strong: rgba(96, 165, 250, .28);
+  --premium-muted: #8fa2ba;
+  --premium-text: #eef5ff;
+  --premium-blue: #2f8cff;
+  --premium-blue-2: #176bd7;
+  --premium-shadow: 0 14px 34px rgba(2, 6, 23, .16), inset 0 1px 0 rgba(255, 255, 255, .025);
+  background:
+    radial-gradient(circle at 88% 0%, rgba(37, 99, 235, .055), transparent 25%),
+    linear-gradient(180deg, #0d1727 0%, var(--premium-bg) 100%);
+}
+
+.page-interna > section,
+.page-interna > div {
+  max-width: 1500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page-interna h1 {
+  color: #f7faff;
+  font-size: clamp(27px, 2.5vw, 32px);
+  line-height: 1.12;
+  letter-spacing: -.025em;
+}
+
+.page-interna h2 {
+  letter-spacing: -.012em;
+}
+
+.page-interna p,
+.page-interna small {
+  text-wrap: pretty;
+}
+
+.page-interna input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.page-interna select,
+.page-interna textarea {
+  min-height: 42px;
+  color: #f8fbff;
+  background: linear-gradient(180deg, rgba(10, 20, 35, .96), rgba(12, 23, 39, .96));
+  border-color: rgba(71, 85, 105, .72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+  outline: none;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.page-interna input::placeholder,
+.page-interna textarea::placeholder {
+  color: #64748b;
+}
+
+.page-interna input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.page-interna select:focus,
+.page-interna textarea:focus {
+  background: #0d192a;
+  border-color: rgba(75, 159, 255, .72);
+  box-shadow: 0 0 0 3px rgba(47, 140, 255, .11), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.page-interna button,
+.page-interna a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.page-interna button:focus-visible,
+.page-interna a:focus-visible,
+.page-interna input:focus-visible,
+.page-interna select:focus-visible,
+.page-interna textarea:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, .88);
+  outline-offset: 2px;
+}
+
+/* Superfícies principais */
+.page-interna :is(
+  .plano-progresso-geral,
+  .plano-resumo-semana,
+  .plano-conteudo-dia,
+  .plano-rotina-dia,
+  .plano-missao-card,
+  .plano-adaptacao,
+  .central-estudos-total,
+  .central-estudos-configuracao,
+  .central-estudos-cronometro,
+  .central-estudos-resumo,
+  .conteudos-painel-form,
+  .conteudos-materia-card,
+  .conteudos-modulo-card,
+  .revisao-resumo-card,
+  .revisoes-grupo,
+  .revisao-card,
+  .revisoes-toolbar,
+  .cq-resumo-card,
+  .cq-secao,
+  .cq-recomendacao,
+  .cq-vazio,
+  .simulado-resumo-card,
+  .simulados-card,
+  .simulado-item,
+  .simulados-central-acao,
+  .materiais-total,
+  .materiais-cadastro,
+  .materiais-biblioteca,
+  .materiais-materia,
+  .calendario-resumo-card,
+  .calendario-painel,
+  .calendario-detalhes,
+  .inteligencia-indice,
+  .inteligencia-prontidao,
+  .inteligencia-painel,
+  .inteligencia-resumo-card,
+  .coach-pontuacao,
+  .coach-resumo-card,
+  .coach-painel,
+  .ri-indice,
+  .ri-resumo-executivo,
+  .ri-painel,
+  .ri-card-comparacao,
+  .configuracoes-card,
+  .backup-resumo-card,
+  .backup-card,
+  .backup-sync-card,
+  .backup-preview-restauracao,
+  .admin-seguranca,
+  .admin-card,
+  .admin-painel,
+  .admin-estado,
+  .ranking-minha-posicao,
+  .ranking-resumo-card,
+  .ranking-tabela,
+  .ranking-regras,
+  .conquistas-hero,
+  .conquista-card
+) {
+  border-color: var(--premium-border);
+  box-shadow: var(--premium-shadow);
+}
+
+.page-interna :is(
+  .plano-progresso-geral,
+  .plano-resumo-semana,
+  .plano-conteudo-dia,
+  .central-estudos-total,
+  .central-estudos-configuracao,
+  .central-estudos-cronometro,
+  .conteudos-painel-form,
+  .conteudos-materia-card,
+  .revisoes-grupo,
+  .cq-secao,
+  .simulados-card,
+  .materiais-cadastro,
+  .materiais-biblioteca,
+  .calendario-painel,
+  .calendario-detalhes,
+  .coach-painel,
+  .ri-painel,
+  .configuracoes-card,
+  .backup-card,
+  .admin-painel,
+  .ranking-tabela
+) {
+  background: linear-gradient(145deg, rgba(18, 31, 50, .96), rgba(13, 24, 40, .97));
+}
+
+/* Cartões menores e itens de lista */
+.page-interna :is(
+  .plano-missao-card,
+  .plano-rotina-blocos article,
+  .plano-extras div,
+  .plano-adaptacao-indices div,
+  .plano-adaptacao-ranking article,
+  .conteudos-assunto-item,
+  .conteudos-materiais-lista article,
+  .revisao-card,
+  .cq-assunto-card,
+  .cq-mensagem,
+  .simulado-item,
+  .simulado-recomendacao,
+  .materiais-materia,
+  .calendario-dia,
+  .calendario-mini-resumo,
+  .calendario-evento,
+  .inteligencia-item-missao,
+  .inteligencia-dado-semana,
+  .inteligencia-alerta,
+  .inteligencia-assunto-card,
+  .inteligencia-previsao-dados div,
+  .coach-recomendacao,
+  .coach-materia,
+  .ri-recomendacao,
+  .backup-info-box,
+  .backup-auto-item,
+  .admin-linha,
+  .conquista-card
+) {
+  background-color: rgba(10, 20, 35, .72);
+  border-color: rgba(71, 85, 105, .52);
+}
+
+@media (hover: hover) {
+  .page-interna :is(
+    .plano-missao-card,
+    .conteudos-assunto-item,
+    .revisao-card,
+    .simulado-item,
+    .simulados-central-acao,
+    .materiais-materia,
+    .calendario-dia,
+    .inteligencia-item-missao,
+    .coach-recomendacao,
+    .conquista-card
+  ):hover {
+    border-color: rgba(96, 165, 250, .34);
+    box-shadow: 0 16px 30px rgba(2, 6, 23, .14), inset 0 1px 0 rgba(255, 255, 255, .035);
+  }
+}
+
+/* Ações importantes: 3D leve e consistente */
+.page-interna :is(
+  .plano-estudar,
+  .plano-concluir,
+  .plano-rotina-blocos button,
+  .plano-domingo-acao-missao button,
+  .central-botao-iniciar,
+  .central-botao-continuar,
+  .central-botao-finalizar,
+  .central-estudos-links button,
+  .materiais-salvar,
+  .conteudos-painel-form button:not(.conteudos-excluir),
+  .conteudos-acoes-aula button,
+  .revisoes-toolbar button,
+  .revisao-concluir,
+  .simulado-salvar,
+  .simulado-duplicar,
+  .cq-botao-secundario,
+  .cq-vazio button,
+  .inteligencia-botao-principal,
+  .inteligencia-botao-ia,
+  .coach-botao-primario,
+  .ri-recomendacao button,
+  .calendario-hoje,
+  .configuracoes-salvar,
+  .backup-exportar,
+  .backup-importar
+) {
+  border: 1px solid rgba(255, 255, 255, .10) !important;
+  box-shadow:
+    0 4px 0 rgba(2, 6, 23, .44),
+    0 10px 22px rgba(2, 6, 23, .15),
+    inset 0 1px 0 rgba(255, 255, 255, .14);
+  transform: translateY(-1px);
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease, border-color .15s ease;
+}
+
+@media (hover: hover) {
+  .page-interna :is(
+    .plano-estudar,
+    .plano-concluir,
+    .plano-rotina-blocos button,
+    .plano-domingo-acao-missao button,
+    .central-botao-iniciar,
+    .central-botao-continuar,
+    .central-botao-finalizar,
+    .central-estudos-links button,
+    .materiais-salvar,
+    .conteudos-painel-form button:not(.conteudos-excluir),
+    .conteudos-acoes-aula button,
+    .revisoes-toolbar button,
+    .revisao-concluir,
+    .simulado-salvar,
+    .simulado-duplicar,
+    .cq-botao-secundario,
+    .cq-vazio button,
+    .inteligencia-botao-principal,
+    .inteligencia-botao-ia,
+    .coach-botao-primario,
+    .ri-recomendacao button,
+    .calendario-hoje,
+    .configuracoes-salvar,
+    .backup-exportar,
+    .backup-importar
+  ):hover:not(:disabled) {
+    filter: brightness(1.06) saturate(1.03);
+    transform: translateY(-3px);
+    box-shadow:
+      0 6px 0 rgba(2, 6, 23, .40),
+      0 14px 26px rgba(2, 6, 23, .18),
+      inset 0 1px 0 rgba(255, 255, 255, .18);
+  }
+}
+
+.page-interna :is(
+  .plano-estudar,
+  .plano-concluir,
+  .plano-rotina-blocos button,
+  .plano-domingo-acao-missao button,
+  .central-botao-iniciar,
+  .central-botao-continuar,
+  .central-botao-finalizar,
+  .central-estudos-links button,
+  .materiais-salvar,
+  .conteudos-painel-form button:not(.conteudos-excluir),
+  .conteudos-acoes-aula button,
+  .revisoes-toolbar button,
+  .revisao-concluir,
+  .simulado-salvar,
+  .simulado-duplicar,
+  .cq-botao-secundario,
+  .cq-vazio button,
+  .inteligencia-botao-principal,
+  .inteligencia-botao-ia,
+  .coach-botao-primario,
+  .ri-recomendacao button,
+  .calendario-hoje,
+  .configuracoes-salvar,
+  .backup-exportar,
+  .backup-importar
+):active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(2, 6, 23, .42), 0 4px 9px rgba(2, 6, 23, .14), inset 0 2px 4px rgba(0, 0, 0, .14);
+}
+
+/* Planejamento */
+.page-interna .plano-semanas,
+.page-interna .plano-dias {
+  gap: 8px;
+}
+
+.page-interna .plano-semana-botao,
+.page-interna .plano-dia-botao,
+.page-interna .central-tipo,
+.page-interna .materiais-modos button,
+.page-interna .central-questoes-aba {
+  background: linear-gradient(180deg, rgba(18, 31, 50, .88), rgba(12, 23, 39, .88));
+  border-color: rgba(71, 85, 105, .48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+  transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.page-interna .plano-semana-ativa,
+.page-interna .plano-dia-ativo,
+.page-interna .central-tipo-ativo,
+.page-interna .materiais-modos button.ativo,
+.page-interna .central-questoes-aba-ativa {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(47, 140, 255, .34), rgba(23, 107, 215, .24));
+  border-color: rgba(96, 165, 250, .58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 7px 18px rgba(37, 99, 235, .11);
+}
+
+.page-interna .plano-missao-card {
+  border-left-width: 4px;
+}
+
+.page-interna .plano-missao-concluida {
+  opacity: .76;
+}
+
+.page-interna .plano-tipo,
+.page-interna .prioridade,
+.page-interna .conteudos-trilha-fixa,
+.page-interna .backup-schema-badge,
+.page-interna .admin-status,
+.page-interna .ri-tendencia {
+  backdrop-filter: blur(8px);
+}
+
+/* Central de Estudos */
+.page-interna .central-estudos-cronometro {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(47, 140, 255, .08), transparent 35%),
+    linear-gradient(145deg, rgba(18, 31, 50, .97), rgba(12, 23, 39, .98));
+}
+
+.page-interna .central-estudos-tempo {
+  color: #f7fbff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: .035em;
+  text-shadow: 0 0 28px rgba(96, 165, 250, .12);
+}
+
+.page-interna .central-estudos-resumo {
+  border-color: rgba(96, 165, 250, .17);
+}
+
+/* Conteúdos e materiais */
+.page-interna .conteudos-materia-card,
+.page-interna .conteudos-modulo-card {
+  overflow: hidden;
+}
+
+.page-interna .conteudos-modulo-card {
+  background: linear-gradient(180deg, rgba(14, 26, 43, .96), rgba(10, 20, 35, .96));
+}
+
+.page-interna .conteudos-progresso,
+.page-interna .conteudos-progresso-modulo,
+.page-interna .cq-progresso,
+.page-interna .conquista-barra,
+.page-interna .inteligencia-barra {
+  background: rgba(71, 85, 105, .34);
+}
+
+.page-interna .materiais-cadastro {
+  top: 82px;
+}
+
+/* Revisões */
+.page-interna .revisao-resumo-card {
+  background: linear-gradient(145deg, rgba(18, 31, 50, .94), rgba(12, 23, 39, .96));
+}
+
+.page-interna .revisoes-toolbar {
+  background: rgba(18, 31, 50, .78);
+}
+
+.page-interna .revisao-avaliacao,
+.page-interna .revisao-reagendar {
+  background: rgba(13, 24, 40, .86);
+  border-color: rgba(71, 85, 105, .44);
+}
+
+/* Questões e simulados */
+.page-interna .central-questoes-abas {
+  padding: 6px;
+  background: rgba(9, 18, 31, .72);
+  border-color: rgba(71, 85, 105, .42);
+}
+
+.page-interna .cq-resumo-card,
+.page-interna .simulado-resumo-card {
+  background: linear-gradient(145deg, rgba(18, 31, 50, .96), rgba(12, 23, 39, .96));
+}
+
+.page-interna .cq-resumo-card-destaque {
+  background: linear-gradient(145deg, rgba(37, 99, 235, .23), rgba(14, 27, 45, .96));
+  border-color: rgba(96, 165, 250, .36);
+}
+
+.page-interna .simulados-central-acao {
+  min-height: 108px;
+}
+
+.page-interna .simulados-central-icone,
+.page-interna .cq-resumo-icone,
+.page-interna .cq-recomendacao-icone,
+.page-interna .ri-resumo-icone {
+  border: 1px solid rgba(96, 165, 250, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+/* Calendário */
+.page-interna .calendario-dia {
+  background: rgba(10, 20, 35, .76);
+}
+
+.page-interna .calendario-dia-selecionado {
+  background: linear-gradient(180deg, rgba(37, 99, 235, .20), rgba(22, 51, 94, .13));
+  border-color: rgba(96, 165, 250, .62);
+}
+
+.page-interna .calendario-dia-hoje {
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .20), 0 0 0 2px rgba(37, 99, 235, .05);
+}
+
+/* Inteligência */
+.page-interna .inteligencia-container {
+  max-width: 1500px;
+  padding: 0;
+}
+
+.page-interna .inteligencia-indice,
+.page-interna .ri-indice,
+.page-interna .coach-pontuacao {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(99, 102, 241, .16), transparent 45%),
+    linear-gradient(145deg, rgba(26, 39, 65, .95), rgba(12, 23, 39, .96));
+}
+
+.page-interna .inteligencia-botao-principal,
+.page-interna .inteligencia-botao-ia,
+.page-interna .coach-botao-primario {
+  background: linear-gradient(180deg, #8b63f6 0%, #6654e8 55%, #5142c7 100%);
+}
+
+/* Sistema */
+.page-interna .configuracoes-card,
+.page-interna .backup-card,
+.page-interna .admin-painel,
+.page-interna .ranking-tabela {
+  border-radius: 15px;
+}
+
+.page-interna .backup-sync-card {
+  background: rgba(71, 85, 105, .36);
+}
+
+.page-interna .backup-sync-card > div {
+  background: rgba(10, 20, 35, .88);
+}
+
+.page-interna .backup-danger-card {
+  border-color: rgba(239, 68, 68, .34);
+}
+
+.page-interna .admin-card,
+.page-interna .ranking-resumo-card {
+  background: linear-gradient(145deg, rgba(18, 31, 50, .96), rgba(12, 23, 39, .96));
+}
+
+.page-interna .admin-linha,
+.page-interna .ranking-linha:not(.ranking-titulo) {
+  transition: border-color .16s ease, background .16s ease;
+}
+
+.page-interna .ranking-titulo,
+.page-interna .admin-tabela-cabecalho {
+  color: #7f91aa;
+}
+
+.page-interna .ranking-eu {
+  background: linear-gradient(90deg, rgba(37, 99, 235, .18), rgba(37, 99, 235, .05));
+}
+
+/* Estados vazios */
+.page-interna :is(
+  .revisoes-vazio,
+  .materiais-vazio,
+  .calendario-vazio,
+  .backup-empty,
+  .cq-vazio,
+  .admin-estado,
+  .ranking-vazio,
+  .conteudos-vazio,
+  .conteudos-sem-assuntos
+) {
+  border-color: rgba(71, 85, 105, .38);
+  background: rgba(10, 20, 35, .46);
+}
+
+/* Scrollbars locais */
+.page-interna * {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.page-interna *::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.page-interna *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.page-interna *::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 999px;
+}
+
+/* Admin no celular: tabela vira cartões legíveis */
+@media (max-width: 700px) {
+  .page-interna .admin-tabela-area {
+    overflow: visible;
+  }
+
+  .page-interna .admin-tabela-cabecalho {
+    display: none;
+  }
+
+  .page-interna .admin-linha {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding: 14px;
+  }
+
+  .page-interna .admin-identidade {
+    grid-column: 1 / -1;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(71, 85, 105, .34);
+  }
+
+  .page-interna .admin-linha > :nth-child(n+2):nth-child(-n+7) {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .page-interna .admin-linha > :nth-child(2)::before { content: "Cadastro"; }
+  .page-interna .admin-linha > :nth-child(3)::before { content: "Último login"; }
+  .page-interna .admin-linha > :nth-child(4)::before { content: "Horas"; }
+  .page-interna .admin-linha > :nth-child(5)::before { content: "Questões"; }
+  .page-interna .admin-linha > :nth-child(6)::before { content: "Acertos"; }
+  .page-interna .admin-linha > :nth-child(7)::before { content: "XP"; }
+
+  .page-interna .admin-linha > :nth-child(n+2):nth-child(-n+7)::before {
+    color: #6f819a;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+}
+
+/* Ranking no celular: elimina a tabela horizontal */
+@media (max-width: 600px) {
+  .page-interna .ranking-tabela {
+    display: grid;
+    gap: 9px;
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .page-interna .ranking-titulo {
+    display: none;
+  }
+
+  .page-interna .ranking-linha:not(.ranking-titulo) {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 13px 14px;
+    border: 1px solid rgba(71, 85, 105, .44);
+    border-radius: 12px;
+    background: rgba(10, 20, 35, .64);
+  }
+
+  .page-interna .ranking-linha:not(.ranking-titulo) > :nth-child(4),
+  .page-interna .ranking-linha:not(.ranking-titulo) > :nth-child(5),
+  .page-interna .ranking-linha:not(.ranking-titulo) > :nth-child(6) {
+    grid-row: 2;
+    color: #7f91aa;
+    font-size: 11px;
+  }
+
+  .page-interna .ranking-linha:not(.ranking-titulo) > :nth-child(4) { grid-column: 1; }
+  .page-interna .ranking-linha:not(.ranking-titulo) > :nth-child(5) { grid-column: 2; }
+  .page-interna .ranking-linha:not(.ranking-titulo) > :nth-child(6) { grid-column: 3; }
+}
+
+@media (max-width: 900px) {
+  .page-interna {
+    padding-top: 18px;
+  }
+
+  .page-interna .inteligencia-container {
+    padding: 0;
+  }
+
+  .page-interna .materiais-cadastro {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .page-interna {
+    padding: 16px 12px 28px;
+  }
+
+  .page-interna h1 {
+    font-size: 25px;
+  }
+
+  .page-interna :is(
+    .plano-conteudo-dia,
+    .plano-resumo-semana,
+    .central-estudos-configuracao,
+    .central-estudos-cronometro,
+    .conteudos-painel-form,
+    .conteudos-materia-card,
+    .revisoes-grupo,
+    .cq-secao,
+    .simulados-card,
+    .materiais-cadastro,
+    .materiais-biblioteca,
+    .calendario-painel,
+    .calendario-detalhes,
+    .inteligencia-painel,
+    .coach-painel,
+    .ri-painel,
+    .configuracoes-card,
+    .backup-card,
+    .admin-painel,
+    .ranking-regras,
+    .conquistas-hero
+  ) {
+    padding: 16px;
+    border-radius: 13px;
+  }
+
+  .page-interna :is(
+    .plano-estudar,
+    .plano-concluir,
+    .plano-rotina-blocos button,
+    .plano-domingo-acao-missao button,
+    .central-botao-iniciar,
+    .central-botao-continuar,
+    .central-botao-finalizar,
+    .central-estudos-links button,
+    .materiais-salvar,
+    .conteudos-painel-form button:not(.conteudos-excluir),
+    .conteudos-acoes-aula button,
+    .revisoes-toolbar button,
+    .revisao-concluir,
+    .simulado-salvar,
+    .simulado-duplicar,
+    .cq-botao-secundario,
+    .cq-vazio button,
+    .inteligencia-botao-principal,
+    .inteligencia-botao-ia,
+    .coach-botao-primario,
+    .ri-recomendacao button,
+    .calendario-hoje,
+    .configuracoes-salvar,
+    .backup-exportar,
+    .backup-importar
+  ) {
+    transform: none;
+    box-shadow: 0 3px 0 rgba(2, 6, 23, .32), 0 7px 14px rgba(2, 6, 23, .12), inset 0 1px 0 rgba(255, 255, 255, .10);
+  }
+}

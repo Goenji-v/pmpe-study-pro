@@ -1,0 +1,256 @@
+/* Etapa 6.6 — QA visual final
+   Guardas de responsividade e acabamento. Sem regras de negócio. */
+
+/* Base: nenhum filho pode forçar largura além da viewport. */
+.page,
+.page > *,
+.page-dashboard,
+.page-dashboard > *,
+.page-interna,
+.page-interna > * {
+  min-width: 0;
+}
+
+.page :is(img, svg, canvas, video, iframe) {
+  max-width: 100%;
+}
+
+.page :is(h1, h2, h3, h4, p, span, strong, b, small, label) {
+  overflow-wrap: break-word;
+}
+
+.page button,
+.page a,
+.page input,
+.page select,
+.page textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.page button {
+  white-space: normal;
+}
+
+/* Evita scroll horizontal causado por tabelas/grades legadas. */
+.page :is(.ranking-tabela, .admin-tabela-area, .calendario-painel, .conteudos-container, .plano-container) {
+  max-width: 100%;
+}
+
+/* Tablet: respiração intermediária sem ficar com cara de desktop espremido. */
+@media (min-width: 601px) and (max-width: 900px) {
+  .page {
+    padding-inline: 14px;
+  }
+
+  .page-interna h1 {
+    font-size: 25px;
+  }
+
+  .page-dashboard .dashboard-pro-stats-art {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  html,
+  body,
+  #root,
+  .layout,
+  .content,
+  .page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  /* Componentes de formulário: compactos, mas sem zoom automático em iOS. */
+  .page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .page select,
+  .page textarea {
+    font-size: 16px;
+  }
+
+  /* Botões principais continuam confortáveis para toque. */
+  .page :is(
+    .dashboard-pro-actions button,
+    .plano-missao-acoes button,
+    .central-estudos-acoes button,
+    .central-estudos-links button,
+    .conteudos-acoes-aula button,
+    .revisao-acoes button,
+    .simulados-central-acao,
+    .configuracoes-salvar,
+    .backup-exportar,
+    .backup-importar
+  ) {
+    min-height: 40px;
+  }
+
+  /* Dashboard: impedir desalinhamento/cortes em telas estreitas. */
+  .page-dashboard .dashboard-pro-stats-art,
+  .page-dashboard .dashboard-pro-middle,
+  .page-dashboard .dashboard-pro-footer-grid,
+  .page-dashboard .dashboard-pro-hero {
+    min-width: 0;
+  }
+
+  .page-dashboard .dashboard-pro-stat-art {
+    min-width: 0;
+  }
+
+  .page-dashboard .dashboard-pro-stat-copy {
+    min-width: 0;
+  }
+
+  .page-dashboard .dashboard-pro-stat-copy > :is(strong, b, small) {
+    max-width: 100%;
+  }
+
+  .page-dashboard .dashboard-pro-stat-copy > b,
+  .page-dashboard .dashboard-pro-stat-copy > small {
+    line-height: 1.15;
+  }
+
+  .page-dashboard .dashboard-pro-stat-streak {
+    overflow: hidden;
+  }
+
+  .page-dashboard .dashboard-pro-streak-top,
+  .page-dashboard .dashboard-pro-streak-week {
+    min-width: 0;
+  }
+
+  .page-dashboard .dashboard-pro-streak-week span {
+    overflow-wrap: normal;
+  }
+
+  /* Gráfico: evita que legenda ou rótulos alarguem a página. */
+  .page-dashboard .dashboard-pro-chart-wrap,
+  .page-dashboard .dashboard-pro-chart,
+  .page-dashboard .dashboard-pro-chart-bars {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .page-dashboard .dashboard-pro-chart-legend {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+
+  /* Páginas internas: grids/resumos sempre cabem sem scroll lateral. */
+  .page-interna :is(
+    .plano-semanas,
+    .plano-dias,
+    .revisoes-resumo,
+    .simulados-resumo,
+    .backup-resumo-grid,
+    .coach-resumo,
+    .ri-cards,
+    .inteligencia-resumos,
+    .admin-cards,
+    .ranking-resumo-grid,
+    .calendario-resumo,
+    .cq-resumo-grid
+  ) > * {
+    min-width: 0;
+  }
+
+  .page-interna :is(
+    .plano-missao-card,
+    .conteudos-assunto-item,
+    .revisao-card,
+    .simulado-item,
+    .materiais-materia,
+    .inteligencia-item-missao,
+    .coach-recomendacao,
+    .ri-recomendacao,
+    .conquista-card
+  ) :is(h2, h3, p, span, strong, small) {
+    max-width: 100%;
+  }
+
+  /* Modais nunca ultrapassam a área visível. */
+  .page :is([role="dialog"], .conteudos-modal, .backup-modal, .simulado-modal) {
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+}
+
+/* Ajustes focados nas larguras Android mais comuns. */
+@media (max-width: 430px) {
+  .page-dashboard .dashboard-pro-chart {
+    height: 118px;
+  }
+
+  .page-dashboard .dashboard-pro-panel-title {
+    gap: 7px;
+  }
+
+  .page-dashboard .dashboard-pro-panel-title button {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .page-dashboard .dashboard-pro-stat-art {
+    min-height: 82px;
+  }
+
+  .page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > strong {
+    font-size: 15px;
+  }
+
+  .page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > b {
+    font-size: 9px;
+  }
+
+  .page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > small {
+    font-size: 8px;
+  }
+
+  .page-dashboard .dashboard-pro-stat-streak .dashboard-pro-stat-copy > strong {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 360px) {
+  .page,
+  .page-dashboard,
+  .page-interna {
+    padding-inline: 5px !important;
+  }
+
+  .page-dashboard .dashboard-pro-stats-art {
+    gap: 5px;
+  }
+
+  .page-dashboard .dashboard-pro-stat-art {
+    padding: 7px;
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .page-dashboard .dashboard-pro-stat-art > .dashboard-pro-stat-icon {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    flex-basis: 30px;
+  }
+
+  .page-dashboard .dashboard-pro-streak-week span {
+    font-size: 6.5px;
+  }
+}
+
+/* Acessibilidade visual: respeita usuários que desativam animações. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
