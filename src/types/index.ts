@@ -221,6 +221,8 @@ export type ConfiguracoesApp = {
   metaRevisoesDiaria: number;
   /** Quantidade de missões distribuídas em cada dia de segunda a sábado. */
   missoesPorDia?: number;
+  /** Semana mínima considerada como posição atual. Pendências anteriores não fazem o plano regredir. */
+  semanaAtualPlano?: number;
   tema: Tema;
 };
 
