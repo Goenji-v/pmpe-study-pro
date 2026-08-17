@@ -1,0 +1,212 @@
+/* Etapa 6.2 — Sidebar organizada */
+
+.sidebar-inicio {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 9px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid rgba(51, 65, 85, .52);
+}
+
+.sidebar-secao-label {
+  padding: 0 10px;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.sidebar-inicio .sidebar-link {
+  min-height: 43px;
+  color: #dbe7f7;
+  background: rgba(15, 23, 42, .48);
+  border-color: rgba(71, 85, 105, .26);
+}
+
+.sidebar-inicio .sidebar-link-icone {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #80bbff;
+  background: rgba(37, 99, 235, .12);
+  border: 1px solid rgba(59, 130, 246, .20);
+  font-size: 17px;
+}
+
+.sidebar-grupo {
+  border: 1px solid rgba(51, 65, 85, .18);
+  background: rgba(15, 23, 42, .20);
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.sidebar-grupo + .sidebar-grupo {
+  margin-top: 1px;
+}
+
+.sidebar-grupo-ativo {
+  background: linear-gradient(180deg, rgba(30, 64, 175, .10), rgba(15, 23, 42, .28));
+  border-color: rgba(59, 130, 246, .26);
+}
+
+.sidebar-grupo-botao {
+  min-height: 42px;
+  padding: 8px 10px;
+  color: #aebdd0;
+  text-transform: none;
+  letter-spacing: .01em;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.sidebar-grupo-botao:hover {
+  color: #f8fafc;
+  background: rgba(51, 65, 85, .26);
+}
+
+.sidebar-grupo-ativo > .sidebar-grupo-botao {
+  color: #e8f2ff;
+}
+
+.sidebar-grupo-identidade {
+  gap: 9px;
+}
+
+.sidebar-grupo-icone {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  border-radius: 8px;
+  color: #7eb8ff;
+  background: rgba(37, 99, 235, .08);
+  border: 1px solid rgba(59, 130, 246, .12);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.sidebar-grupo-ativo .sidebar-grupo-icone {
+  color: #b8d9ff;
+  background: linear-gradient(180deg, rgba(55, 143, 255, .26), rgba(24, 87, 179, .18));
+  border-color: rgba(96, 165, 250, .28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .10),
+    0 4px 10px rgba(2, 6, 23, .14);
+}
+
+.sidebar-seta {
+  font-size: 18px;
+  color: #60738e;
+}
+
+.sidebar-seta-aberta {
+  color: #7eb8ff;
+}
+
+.sidebar-submenu {
+  position: relative;
+  gap: 2px;
+  padding: 1px 6px 8px 45px;
+}
+
+.sidebar-submenu::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 10px;
+  left: 28px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(96, 165, 250, .30), rgba(71, 85, 105, .14));
+}
+
+.sidebar-submenu .sidebar-link {
+  position: relative;
+  min-height: 32px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  color: #8fa2ba;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.sidebar-submenu .sidebar-link::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #475569;
+  transform: translateY(-50%);
+  transition: background .16s ease, box-shadow .16s ease;
+}
+
+.sidebar-submenu .sidebar-link:hover {
+  color: #d8e5f5;
+  background: rgba(51, 65, 85, .22);
+  border-color: transparent;
+  transform: none;
+}
+
+.sidebar-submenu .sidebar-link-ativo {
+  color: #f3f8ff;
+  background: linear-gradient(90deg, rgba(37, 99, 235, .20), rgba(37, 99, 235, .05));
+  border-color: rgba(59, 130, 246, .20);
+  box-shadow: inset 2px 0 0 #3b82f6;
+}
+
+.sidebar-submenu .sidebar-link-ativo::before {
+  background: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, .10), 0 0 10px rgba(96, 165, 250, .42);
+}
+
+.sidebar-link-subitem .sidebar-link-texto {
+  padding-left: 1px;
+}
+
+.sidebar-rodape {
+  margin-top: 12px;
+  padding: 11px 12px;
+  background: linear-gradient(145deg, rgba(37, 99, 235, .09), rgba(15, 23, 42, .36));
+  border-color: rgba(59, 130, 246, .18);
+}
+
+@media (min-width: 901px) {
+  .sidebar {
+    width: 244px;
+    min-width: 244px;
+  }
+
+  .sidebar-menu {
+    gap: 5px;
+  }
+
+  .sidebar-logo {
+    margin-bottom: 9px;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar-inicio {
+    padding-bottom: 8px;
+  }
+
+  .sidebar-grupo-botao {
+    min-height: 45px;
+  }
+
+  .sidebar-submenu {
+    padding-left: 46px;
+  }
+
+  .sidebar-submenu .sidebar-link {
+    min-height: 38px;
+    font-size: 12px;
+  }
+}
