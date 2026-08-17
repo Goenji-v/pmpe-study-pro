@@ -40,6 +40,7 @@ import Header from "./components/Header/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
+import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
 
 import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -120,6 +121,7 @@ function LayoutProtegido() {
                 </main>
               </div>
             </div>
+            <BetaFeedback />
           </CronometroProvider>
         </AppProvider>
       </ToastProvider>

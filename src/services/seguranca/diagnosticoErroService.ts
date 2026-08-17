@@ -1,3 +1,5 @@
+import { supabase } from "../../lib/supabase";
+
 export type OrigemErroRuntime =
   | "react-boundary"
   | "window-error"
@@ -14,6 +16,8 @@ export type RegistroErroRuntime = {
 
 const CHAVE_ERROS = "pmpe:seguranca:erros-runtime";
 const LIMITE_ERROS = 20;
+const VERSAO_APP = "beta-v1";
+let enviandoRemoto = false;
 
 function mensagemDoErro(erro: unknown) {
   if (erro instanceof Error) return erro.message;
@@ -54,6 +58,33 @@ export function listarErrosRuntime(): RegistroErroRuntime[] {
   }
 }
 
+async function enviarErroRemoto(registro: RegistroErroRuntime) {
+  if (enviandoRemoto || typeof window === "undefined") return;
+
+  try {
+    enviandoRemoto = true;
+    const { data } = await supabase.auth.getUser();
+    const userId = data.user?.id;
+    if (!userId) return;
+
+    await supabase.from("erros_cliente").insert({
+      user_id: userId,
+      incident_id: registro.id,
+      origem: registro.origem,
+      mensagem: registro.mensagem.slice(0, 2000),
+      stack: registro.stack?.slice(0, 6000) ?? null,
+      rota: registro.rota.slice(0, 1000),
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 1000) : null,
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+      app_version: VERSAO_APP,
+    });
+  } catch {
+    // O diagnóstico remoto nunca pode gerar uma nova falha na aplicação.
+  } finally {
+    enviandoRemoto = false;
+  }
+}
+
 export function registrarErroRuntime(
   erro: unknown,
   origem: OrigemErroRuntime
@@ -77,6 +108,8 @@ export function registrarErroRuntime(
     } catch {
       // Diagnóstico nunca pode interromper o funcionamento do app.
     }
+
+    void enviarErroRemoto(registro);
   }
 
   return registro;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
+import BetaMonitor from "../../components/BetaMonitor/BetaMonitor";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
 import {
   carregarResumoAdmin,
@@ -156,6 +157,8 @@ export default function Admin() {
           </div>
         )}
       </section>
+
+      <BetaMonitor />
     </section>
   );
 }
