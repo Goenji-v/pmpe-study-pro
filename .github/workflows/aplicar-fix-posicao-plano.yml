@@ -1,0 +1,70 @@
+name: Aplicar fix posicao plano
+
+on:
+  push:
+    branches:
+      - fix-posicao-plano
+    paths:
+      - '.github/workflows/aplicar-fix-posicao-plano.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar ajustes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def trocar(path, antigo, novo):
+              p = Path(path)
+              texto = p.read_text()
+              if antigo not in texto:
+                  raise SystemExit(f'Padrão não encontrado em {path}: {antigo[:80]!r}')
+              p.write_text(texto.replace(antigo, novo, 1))
+
+          trocar(
+              'src/pages/Dashboard/Dashboard.tsx',
+              'getSemanaAtual(missoesConcluidas, planoCalendario);',
+              '''getSemanaAtual(\n        missoesConcluidas,\n        planoCalendario,\n        configuracoes.semanaAtualPlano\n      );'''
+          )
+          trocar(
+              'src/pages/Dashboard/Dashboard.tsx',
+              'getProximaMissao(missoesConcluidas, planoCalendario),',
+              '''getProximaMissao(\n          missoesConcluidas,\n          planoCalendario,\n          semanaAtual\n        ),'''
+          )
+
+          trocar(
+              'src/components/MissaoDoDia/MissaoDoDia.tsx',
+              '  getProximaMissao,\n  type ProximaMissaoPlano,',
+              '  getProximaMissao,\n  getSemanaAtual,\n  type ProximaMissaoPlano,'
+          )
+          trocar(
+              'src/components/MissaoDoDia/MissaoDoDia.tsx',
+              '''  const proxima = useMemo(\n    () => getProximaMissao(missoesConcluidas, planoCalendario),\n    [atualizacao, missoesConcluidas, planoCalendario]\n  );''',
+              '''  const semanaAtual = useMemo(\n    () => getSemanaAtual(\n      missoesConcluidas,\n      planoCalendario,\n      configuracoes.semanaAtualPlano\n    ),\n    [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]\n  );\n\n  const proxima = useMemo(\n    () => getProximaMissao(missoesConcluidas, planoCalendario, semanaAtual),\n    [atualizacao, missoesConcluidas, planoCalendario, semanaAtual]\n  );'''
+          )
+
+          trocar(
+              'src/pages/PlanoEstudos/PlanoEstudos.tsx',
+              'const semanaInicial = getSemanaAtual(concluidas, planoCalendario);',
+              '''const semanaInicial = getSemanaAtual(\n    concluidas,\n    planoCalendario,\n    configuracoes.semanaAtualPlano\n  );'''
+          )
+
+          Path('.github/workflows/aplicar-fix-posicao-plano.yml').unlink()
+
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "Study Pro Sync"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Corrige posição atual sem apagar pendências antigas"
+          git push origin HEAD:fix-posicao-plano
