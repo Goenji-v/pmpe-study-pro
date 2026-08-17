@@ -1,0 +1,797 @@
+.logout-conta button {
++    min-height: 36px;
++    height: 36px;
++    padding: 0 9px;
++    border-radius: 8px;
++    font-size: 10px;
++  }
++}
+diff -ruN '--exclude=*.png' '--exclude=*.svg' base1112_clean/src/components/MissaoDoDia/MissaoDoDia.tsx latest_clean/src/components/MissaoDoDia/MissaoDoDia.tsx
+--- base1112_clean/src/components/MissaoDoDia/MissaoDoDia.tsx	2026-08-09 01:14:12.000000000 +0000
++++ latest_clean/src/components/MissaoDoDia/MissaoDoDia.tsx	2026-08-15 22:40:43.000000000 +0000
+@@ -11,6 +11,7 @@
+   getProximaMissao,
+   type ProximaMissaoPlano,
+ } from "../../utils/planoUtils";
++import { criarPlanoCalendario, normalizarMissoesPorDia, NOMES_DIAS_PLANO } from "../../utils/planoCalendario";
+ 
+ type MissaoDoDiaProps = {
+   atualizacao?: number;
+@@ -23,11 +24,17 @@
+   const {
+     materias,
+     missoesConcluidas,
++    configuracoes,
+   } = useApp();
+ 
++  const planoCalendario = useMemo(
++    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1)),
++    [configuracoes.missoesPorDia]
++  );
++
+   const proxima = useMemo(
+-    () => getProximaMissao(missoesConcluidas),
+-    [atualizacao, missoesConcluidas]
++    () => getProximaMissao(missoesConcluidas, planoCalendario),
++    [atualizacao, missoesConcluidas, planoCalendario]
+   );
+ 
+   function iniciarMissao(
+@@ -144,7 +151,7 @@
+ 
+         <div className="missao-dia-local">
+           <span>Semana {semana}</span>
+-          <span>Dia {dia}</span>
++          <span>{NOMES_DIAS_PLANO[dia] ?? `Dia ${dia}`}</span>
+           <span>
+             Missão {missao.numero}
+           </span>
+diff -ruN '--exclude=*.png' '--exclude=*.svg' base1112_clean/src/components/RuntimeErrorGuard/RuntimeErrorGuard.tsx latest_clean/src/components/RuntimeErrorGuard/RuntimeErrorGuard.tsx
+--- base1112_clean/src/components/RuntimeErrorGuard/RuntimeErrorGuard.tsx	1970-01-01 00:00:00.000000000 +0000
++++ latest_clean/src/components/RuntimeErrorGuard/RuntimeErrorGuard.tsx	2026-08-14 22:14:59.000000000 +0000
+@@ -0,0 +1,45 @@
++import { useEffect, useRef } from "react";
++
++import { useToast } from "../../context/ToastContext";
++import { registrarErroRuntime } from "../../services/seguranca/diagnosticoErroService";
++
++export default function RuntimeErrorGuard() {
++  const { showToast } = useToast();
++  const ultimoAvisoRef = useRef(0);
++
++  useEffect(() => {
++    function avisar() {
++      const agora = Date.now();
++      if (agora - ultimoAvisoRef.current < 5000) return;
++
++      ultimoAvisoRef.current = agora;
++      showToast(
++        "Uma falha foi detectada, mas seus dados locais foram preservados. Se algo não responder, recarregue a página.",
++        "warning"
++      );
++    }
++
++    function aoErro(evento: ErrorEvent) {
++      registrarErroRuntime(
++        evento.error ?? evento.message ?? "Erro de execução",
++        "window-error"
++      );
++      avisar();
++    }
++
++    function aoRejeitar(evento: PromiseRejectionEvent) {
++      registrarErroRuntime(evento.reason, "promise-rejection");
++      avisar();
++    }
++
++    window.addEventListener("error", aoErro);
++    window.addEventListener("unhandledrejection", aoRejeitar);
++
++    return () => {
++      window.removeEventListener("error", aoErro);
++      window.removeEventListener("unhandledrejection", aoRejeitar);
++    };
++  }, [showToast]);
++
++  return null;
++}
+diff -ruN '--exclude=*.png' '--exclude=*.svg' base1112_clean/src/components/Sidebar/Sidebar.css latest_clean/src/components/Sidebar/Sidebar.css
+--- base1112_clean/src/components/Sidebar/Sidebar.css	2026-08-09 01:14:12.000000000 +0000
++++ latest_clean/src/components/Sidebar/Sidebar.css	2026-08-16 23:52:31.000000000 +0000
+@@ -388,4 +388,109 @@
+   .sidebar-menu {
+     grid-template-columns: 1fr;
+   }
+-}
+\ No newline at end of file
++}
++/* Etapa 20 — navegação mobile profissional */
++.sidebar-mobile-toggle,
++.sidebar-mobile-overlay {
++  display: none;
++}
++
++@media (max-width: 900px) {
++  body.menu-mobile-aberto {
++    overflow: hidden;
++  }
++
++  .sidebar-mobile-toggle {
++    position: fixed;
++    top: 12px;
++    left: 12px;
++    z-index: 1302;
++    width: 42px;
++    height: 42px;
++    display: grid;
++    place-items: center;
++    color: #f8fafc;
++    background: rgba(15, 23, 42, .96);
++    border: 1px solid #334155;
++    border-radius: 12px;
++    box-shadow: 0 10px 28px rgba(2, 6, 23, .32);
++    font-size: 21px;
++    line-height: 1;
++    backdrop-filter: blur(12px);
++  }
++
++  .sidebar-mobile-overlay {
++    position: fixed;
++    inset: 0;
++    z-index: 1298;
++    display: block;
++    width: 100%;
++    height: 100%;
++    padding: 0;
++    background: rgba(2, 6, 23, .72);
++    border: 0;
++    backdrop-filter: blur(3px);
++  }
++
++  .sidebar {
++    position: fixed;
++    inset: 0 auto 0 0;
++    z-index: 1300;
++    width: min(86vw, 330px);
++    min-width: 0;
++    height: 100dvh;
++    padding: 66px 14px 18px;
++    border-right: 1px solid #334155;
++    border-bottom: 0;
++    box-shadow: 18px 0 45px rgba(2, 6, 23, .36);
++    transform: translateX(-105%);
++    transition: transform .24s ease;
++    overscroll-behavior: contain;
++  }
++
++  .sidebar.sidebar-mobile-aberta {
++    transform: translateX(0);
++  }
++
++  .sidebar-logo {
++    padding-top: 0;
++  }
++
++  .sidebar-menu {
++    display: flex;
++    grid-template-columns: none;
++    gap: 8px;
++  }
++
++  .sidebar-principal,
++  .sidebar-grupo {
++    width: 100%;
++  }
++
++  .sidebar-link,
++  .sidebar-grupo-botao {
++    min-height: 46px;
++  }
++
++  .sidebar-rodape {
++    display: flex;
++  }
++}
++
++@media (max-width: 420px) {
++  .sidebar {
++    width: min(90vw, 315px);
++  }
++}
++
++/* Etapa 20.1 — botão do menu mais discreto */
++@media (max-width: 600px) {
++  .sidebar-mobile-toggle {
++    top: 9px;
++    left: 9px;
++    width: 38px;
++    height: 38px;
++    border-radius: 10px;
++    font-size: 19px;
++  }
++}
+diff -ruN '--exclude=*.png' '--exclude=*.svg' base1112_clean/src/components/Sidebar/Sidebar.tsx latest_clean/src/components/Sidebar/Sidebar.tsx
+--- base1112_clean/src/components/Sidebar/Sidebar.tsx	2026-08-09 01:14:12.000000000 +0000
++++ latest_clean/src/components/Sidebar/Sidebar.tsx	2026-08-16 09:35:59.000000000 +0000
+@@ -1,4 +1,5 @@
+ import {
++  useEffect,
+   useState,
+ } from "react";
+ 
+@@ -24,9 +25,48 @@
+ export default function Sidebar() {
+   const { administrador } =
+     useAdminStatus();
++  const location = useLocation();
++  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
++
++  useEffect(() => {
++    setMenuMobileAberto(false);
++  }, [location.pathname]);
++
++  useEffect(() => {
++    if (!menuMobileAberto) {
++      document.body.classList.remove("menu-mobile-aberto");
++      return;
++    }
++
++    document.body.classList.add("menu-mobile-aberto");
++
++    return () => {
++      document.body.classList.remove("menu-mobile-aberto");
++    };
++  }, [menuMobileAberto]);
+ 
+   return (
+-    <aside className="sidebar">
++    <>
++      <button
++        type="button"
++        className="sidebar-mobile-toggle"
++        aria-label={menuMobileAberto ? "Fechar menu" : "Abrir menu"}
++        aria-expanded={menuMobileAberto}
++        onClick={() => setMenuMobileAberto((aberto) => !aberto)}
++      >
++        <span aria-hidden="true">{menuMobileAberto ? "✕" : "☰"}</span>
++      </button>
++
++      {menuMobileAberto && (
++        <button
++          type="button"
++          className="sidebar-mobile-overlay"
++          aria-label="Fechar menu"
++          onClick={() => setMenuMobileAberto(false)}
++        />
++      )}
++
++      <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
+       <div className="sidebar-logo">
+         <div className="sidebar-logo-icone">
+           PM
+@@ -218,7 +258,8 @@
+         <strong>PMPE</strong>
+         <small>Planejamento tático</small>
+       </div>
+-    </aside>
++      </aside>
++    </>
+   );
+ }
+ 
+diff -ruN '--exclude=*.png' '--exclude=*.svg' base1112_clean/src/context/AppContext.tsx latest_clean/src/context/AppContext.tsx
+--- base1112_clean/src/context/AppContext.tsx	2026-08-12 00:31:05.000000000 +0000
++++ latest_clean/src/context/AppContext.tsx	2026-08-15 22:40:06.000000000 +0000
+@@ -16,10 +16,12 @@
+ } from "../hooks/useLocalStorage";
+ 
+ import {
++  ehEntradaOperacionalDoPlano,
++  ehMateriaOperacionalDoPlano,
+   gerarMateriasDoPlano,
+ } from "../utils/materiasDoPlano";
+ 
+-import { planoPMPE } from "../data/planoPMPE";
++import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
+ import { criarPrimeiraRevisao } from "../utils/revisoes";
+ 
+ import {
+@@ -34,16 +36,42 @@
+ } from "../services/conteudos/navegarConteudos";
+ 
+ import {
++  reconciliarQuestoesComConteudos,
++  reconciliarRevisoesComConteudos,
++  reconciliarSessoesComConteudos,
++  referenciasIguais,
++} from "../services/conteudos/sincronizacaoCanonica";
++
++import {
+   useAuth,
+ } from "./AuthContext";
+ 
+ import {
+   carregarEstadoDaNuvem,
+   montarEstadoNuvem,
++  obterRevisaoSincronizacao,
++  salvarEstadoComControleDeRevisao,
++  salvarEstadoEstruturalComSeguranca,
+   salvarEstadoNaNuvem,
++  validarIntegridadeEstado,
++  ConflitoSincronizacaoError,
+   type EstadoAppNuvem,
+ } from "../services/sincronizacaoService";
+ 
++import {
++  criarBackupAutomaticoLocal,
++} from "../services/seguranca/backupAutomaticoService";
++
++import {
++  limparEstadoPendenteSincronizacao,
++  navegadorEstaOnline,
++  obterEstadoPendenteSincronizacao,
++  obterMetadadosSincronizacaoLocal,
++  registrarEstadoPendenteSincronizacao,
++  registrarSincronizacaoConfirmada,
++  registrarTentativaPendente,
++} from "../services/seguranca/protecaoSincronizacaoService";
++
+ import type {
+   Assunto,
+   ConfiguracoesApp,
+@@ -60,6 +88,8 @@
+   | "carregando"
+   | "sincronizado"
+   | "salvando"
++  | "offline"
++  | "conflito"
+   | "erro";
+ 
+ type AppContextType = {
+@@ -92,7 +122,13 @@
+ 
+   statusNuvem: StatusNuvem;
+   erroNuvem: string;
++  alteracoesPendentes: number;
++  ultimaSincronizacao: string | null;
+   sincronizarAgora: () => Promise<void>;
++  resolverConflitoSincronizacao: (
++    preferencia: "nuvem" | "local"
++  ) => Promise<void>;
++  resumoSincronizacao: ReturnType<typeof obterMetadadosSincronizacaoLocal>;
+ 
+   adicionarMateria: (
+     nome: string
+@@ -149,67 +185,26 @@
+   }));
+ }
+ 
+-function reconciliarMateriasComPlano(
+-  salvas: Materia[]
+-) {
+-  const materiasDoPlano =
+-    migrarMateriasParaModulos(
+-      gerarMateriasDoPlano()
++function ehMateriaCanonicaDoPlano(materia: Materia) {
++  const canonicas = gerarMateriasDoPlano().some(
++    (item) =>
++      item.id === materia.id ||
++      normalizarTexto(item.nome) === normalizarTexto(materia.nome)
++  );
++
++  return (
++    canonicas ||
++    normalizarTexto(materia.nome) === "portugues"
++  );
++}
++
++function reconciliarMateriasComPlano(salvas: Materia[]) {
++  const materiasDoPlano = migrarMateriasParaModulos(
++    gerarMateriasDoPlano()
++  );
++
++  const salvasValidas = salvas.filter(
++    (materia) =>
++      ehMateriaCanonicaDoPlano(materia) ||
++      !ehMateriaOperacionalDoPlano(materia)
++  );
++
++  const resultado: Materia[] = [];
++
++  salvasValidas.forEach((materiaSalva) => {
++    const materiaPlano = materiasDoPlano.find(
++      (materia) =>
++        materia.id === materiaSalva.id ||
++        normalizarTexto(materia.nome) === normalizarTexto(materiaSalva.nome)
+     );
+ 
+-  const salvasNormalizadas =
+-    migrarMateriasParaModulos(
+-      salvas
+-    );
+-
+-  const portuguesDoPlano =
+-    materiasDoPlano.find(
+-      (materia) =>
+-        normalizarTexto(
+-          materia.nome
+-        ) === "portugues"
+-    );
+-
+-  let portuguesIncluido = false;
+-
+-  const resultado =
+-    salvasNormalizadas
+-      .filter(
+-        (materia) =>
+-          normalizarTexto(
+-            materia.nome
+-          ) !== "portugues"
+-      )
+-      .map((materiaSalva) => {
+-        const materiaPlano =
+-          materiasDoPlano.find(
+-            (materia) =>
+-              materia.id === materiaSalva.id ||
+-              normalizarTexto(materia.nome) ===
+-                normalizarTexto(materiaSalva.nome)
+-          );
+-
+-        if (!materiaPlano) {
+-          return materiaSalva;
+-        }
+-
+-        const assuntosDoPlano =
+-          listarAssuntosDaMateria(
+-            materiaPlano
+-          );
++    if (!materiaPlano) {
++      resultado.push(materiaSalva);
++      return;
++    }
++
++    if (normalizarTexto(materiaPlano.nome) === "portugues") {
++      const assuntosSalvos = listarAssuntosDaMateria(materiaSalva);
++
++      const modulos = listarModulosDaMateria(materiaPlano).map((moduloPlano) => ({
++        ...moduloPlano,
++        assuntos: moduloPlano.assuntos.map((assuntoPlano) => {
++          const assuntoSalvo = assuntosSalvos.find(
++            (assunto) =>
++              assunto.id === assuntoPlano.id ||
++              normalizarTexto(assunto.nome) === normalizarTexto(assuntoPlano.nome)
++          );
+ 
+-        const modulos =
+-          listarModulosDaMateria(
+-            materiaSalva
+-          ).map((modulo) => ({
+-            ...modulo,
+-            assuntos: modulo.assuntos.map(
+-              (assuntoSalvo) => {
+-                const assuntoPlano =
+-                  assuntosDoPlano.find(
+-                    (assunto) =>
+-                      assunto.id === assuntoSalvo.id ||
+-                      normalizarTexto(assunto.nome) ===
+-                        normalizarTexto(assuntoSalvo.nome)
+-              );
++          return reconciliarAssuntoPortugues(
++            assuntoPlano,
++            assuntoSalvo,
++            assuntosSalvos
++          );
++        }),
++      }));
++
++      const reconciliada = migrarMateriasParaModulos([
++        {
++          ...materiaPlano,
++          id: materiaPlano.id,
++          nome: materiaPlano.nome,
++          modulos,
++          assuntos: modulos.flatMap((modulo) => modulo.assuntos),
++        },
++      ])[0];
++
++      if (reconciliada) {
++        resultado.push(reconciliada);
++      }
++      return;
++    }
++
++    const assuntosCanonicos = listarAssuntosDaMateria(materiaPlano);
++    const idsCanonicos = new Set(assuntosCanonicos.map((assunto) => assunto.id));
++    const nomesCanonicos = new Set(
++      assuntosCanonicos.map((assunto) => normalizarTexto(assunto.nome))
++    );
++
++    const usados = new Set<string>();
++
++    let modulos = listarModulosDaMateria(materiaSalva).map((modulo) => ({
++      ...modulo,
++      assuntos: modulo.assuntos
++        .filter(
++          (assuntoSalvo) =>
++            !ehEntradaOperacionalDoPlano(
++              materiaSalva.nome,
++              assuntoSalvo.nome
++            )
++        )
++        .map((assuntoSalvo) => {
++          const assuntoPlano = assuntosCanonicos.find(
++            (assunto) =>
++              assunto.id === assuntoSalvo.id ||
++              normalizarTexto(assunto.nome) ===
++                normalizarTexto(assuntoSalvo.nome)
++          );
+ 
+-            return assuntoPlano
+-              ? { ...assuntoPlano, ...assuntoSalvo }
+-              : assuntoSalvo;
++          if (!assuntoPlano) {
++            // Assunto personalizado legítimo: mantém exatamente onde o usuário
++            // colocou, desde que não seja uma tarefa operacional do plano.
++            return assuntoSalvo;
+           }
+-        ),
+-      })
++
++          usados.add(assuntoPlano.id);
++          return reconciliarAssuntoCanonico(assuntoPlano, assuntoSalvo);
++        }),
++    }));
++
++    const faltantes = assuntosCanonicos.filter(
++      (assunto) => !usados.has(assunto.id)
+     );
+ 
+-    return migrarMateriasParaModulos([
++    if (faltantes.length > 0) {
++      const moduloGeralId = listarModulosDaMateria(materiaPlano)[0]?.id;
++      const indiceGeral = modulos.findIndex(
++        (modulo) =>
++          modulo.id === moduloGeralId ||
++          normalizarTexto(modulo.nome) === "geral"
++      );
++
++      if (indiceGeral >= 0) {
++        modulos = modulos.map((modulo, indice) =>
++          indice === indiceGeral
++            ? {
++                ...modulo,
++                assuntos: [
++                  ...modulo.assuntos,
++                  ...faltantes.map((assunto) => clonar(assunto)),
++                ],
++              }
++            : modulo
++        );
++      } else {
++        const moduloPlano = listarModulosDaMateria(materiaPlano)[0];
++        if (moduloPlano) {
++          modulos.push({
++            ...moduloPlano,
++            assuntos: faltantes.map((assunto) => clonar(assunto)),
++          });
++        }
++      }
++    }
++
++    // Remove duplicidades antigas mantendo a primeira posição escolhida pelo
++    // usuário. O espelho `assuntos` é reconstruído pela migração padrão.
++    const vistos = new Set<string>();
++    modulos = modulos.map((modulo) => ({
++      ...modulo,
++      assuntos: modulo.assuntos.filter((assunto) => {
++        const chave = idsCanonicos.has(assunto.id)
++          ? assunto.id
++          : nomesCanonicos.has(normalizarTexto(assunto.nome))
++            ? normalizarTexto(assunto.nome)
++            : assunto.id;
++
++        if (vistos.has(chave)) return false;
++        vistos.add(chave);
++        return true;
++      }),
++    }));
++
++    const reconciliada = migrarMateriasParaModulos([
+       {
+         ...materiaPlano,
+         ...materiaSalva,
++        id: materiaPlano.id,
++        nome: materiaPlano.nome,
+         modulos,
++        assuntos: modulos.flatMap((modulo) => modulo.assuntos),
+       },
+     ])[0];
++
++    if (reconciliada) {
++      resultado.push(reconciliada);
++    }
+   });
+ 
+-  // Garante que uma matéria canônica nova (por exemplo, Português após a
+-  // migração) apareça também para contas que já possuíam dados salvos.
++  // Garante que uma matéria/assunto canônico novo apareça também para contas
++  // que já possuíam dados salvos.
+   materiasDoPlano.forEach((materiaPlano) => {
+     const existe = resultado.some(
+       (materia) =>
+@@ -273,6 +399,43 @@
+   return resultado.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+ }
+ 
++function reconciliarAssuntoCanonico(
++  assuntoPlano: Assunto,
++  assuntoSalvo: Assunto | undefined
++): Assunto {
++  if (!assuntoSalvo) {
++    return clonar(assuntoPlano);
++  }
++
++  const aulas = (assuntoPlano.aulas ?? []).map((aulaPlano) => {
++    const aulaSalva = assuntoSalvo.aulas?.find(
++      (aula) =>
++        aula.id === aulaPlano.id ||
++        normalizarTexto(aula.nome) === normalizarTexto(aulaPlano.nome)
++    );
++
++    return aulaSalva
++      ? {
++          ...aulaPlano,
++          concluida: aulaSalva.concluida,
++          concluidaEm: aulaSalva.concluidaEm,
++        }
++      : aulaPlano;
++  });
++
++  return {
++    ...assuntoPlano,
++    ...assuntoSalvo,
++    id: assuntoPlano.id,
++    nome: assuntoPlano.nome,
++    prioridade: assuntoSalvo.prioridade ?? assuntoPlano.prioridade,
++    aula: assuntoPlano.aula,
++    questoes: assuntoPlano.questoes,
++    aulas,
++    tarefas: assuntoSalvo.tarefas ?? assuntoPlano.tarefas,
++  };
++}
++
+ function reconciliarAssuntoPortugues(
+   assuntoPlano: Assunto,
+   assuntoSalvo: Assunto | undefined,
+@@ -285,11 +448,37 @@
+         normalizarTexto(aula.nome) === normalizarTexto(aulaPlano.nome)
+     );
+ 
+-    // Na versão anterior cada videoaula era cadastrada como um assunto.
++    // Na versão anterior cada videoaula podia estar cadastrada como um
++    // assunto independente. Alguns nomes antigos não são idênticos aos nomes
++    // atuais (ex.: "Sílaba - Parte 1" -> "Parte 1" e "Parte 01" -> "Parte 1").
++    // O próprio Plano é a fonte mais segura de aliases porque a Etapa 14 já
++    // aponta cada missão antiga para o aulaId canônico atual.
++    const aliasesDoPlano = planoPMPELegado.flatMap((semana) =>
++      semana.dias.flatMap((dia) =>
++        dia.missoes
++          .filter(
++            (missao) =>
++              missao.tipo === "conteudo" &&
++              obterReferenciasDaMissao(missao).some(
++                (referencia) =>
++                  referencia.materiaId === "portugues" &&
++                  referencia.aulaId === aulaPlano.id
++              )
++          )
++          .map((missao) => normalizarTexto(missao.assunto))
++      )
++    );
++
+     const assuntoLegadoDaAula = assuntosSalvos.find(
+       (assunto) =>
+         assunto.id === aulaPlano.id ||
+-        normalizarTexto(assunto.nome) === normalizarTexto(aulaPlano.nome)
++        normalizarTexto(assunto.nome) === normalizarTexto(aulaPlano.nome) ||
++        aliasesDoPlano.includes(normalizarTexto(assunto.nome)) ||
++        Boolean(
++          assunto.aula &&
++          aulaPlano.url &&
++          assunto.aula === aulaPlano.url
++        )
+     );
+ 
+     return {
+@@ -316,7 +505,7 @@
+     aulas,
+     tarefas: assuntoSalvo?.tarefas ?? assuntoPlano.tarefas,
+     aula: aulas[0]?.url ?? assuntoPlano.aula,
+-    concluido: assuntoSalvo?.concluido ?? todasAsAulasConcluidas,
++    concluido: assuntoSalvo?.concluido === true || todasAsAulasConcluidas,
+     concluidoEm:
+       assuntoSalvo?.concluidoEm ??
+       (todasAsAulasConcluidas
+@@ -342,6 +531,281 @@
+     );
+ }
+ 
++function sincronizarMissoesDeConteudoComMaterias(
++  materias: Materia[],
++  atuais: string[]
++) {
++  const idsMissoesConteudo = new Set<string>();
++  const idsConcluidos = new Set<string>();
++  const atuaisSet = new Set(atuais);
++
++  const referenciaConcluida = (
++    referencia: ReturnType<typeof obterReferenciasDaMissao>[number]
++  ) => {
++    const materia = materias.find((item) => item.id === referencia.materiaId);
++    const modulo = materia
++      ? listarModulosDaMateria(materia).find((item) => item.id === referencia.moduloId)
++      : undefined;
++    const assunto = modulo?.assuntos.find((item) => item.id === referencia.assuntoId);
++    if (!assunto) return null;
++
++    if (referencia.aulaId) {
++      const aula = assunto.aulas?.find((item) => item.id === referencia.aulaId);
++      return aula ? aula.concluida : null;
++    }
++
++    return assunto.concluido;
++  };
++
++  planoPMPE.forEach((semana) => {
++    semana.dias.forEach((dia) => {
++      dia.missoes.forEach((missao) => {
++        if (missao.tipo !== "conteudo") return;
++
++        idsMissoesConteudo.add(missao.id);
++        const referencias = obterReferenciasDaMissao(missao);
++        if (referencias.length === 0) {
++          if (atuaisSet.has(missao.id)) idsConcluidos.add(missao.id);
++          return;
++        }
++
++        const estados = referencias.map(referenciaConcluida);
++        if (estados.some((estado) => estado === null)) {
++          if (atuaisSet.has(missao.id)) idsConcluidos.add(missao.id);
++          return;
++        }
++
++        if (estados.every(Boolean)) idsConcluidos.add(missao.id);
++      });
++    });
++  });
++
++  const operacionais = atuais.filter((id) => !idsMissoesConteudo.has(id));
++  return Array.from(new Set([...operacionais, ...Array.from(idsConcluidos)]));
++}
++
++/**
++ * Recupera progresso de Português gravado por versões anteriores antes de
++ * recalcular as missões pela árvore canônica. A regra é intencionalmente
++ * conservadora: só usa evidências fortes já existentes no histórico.
++ *
++ * Fontes aceitas:
++ * - missão de Português já concluída;
++ * - sessão vinculada a uma missão de Português;
++ * - revisão de Português (uma revisão só existia após conclusão).
++ *
++ * Isso impede a Etapa 14 de transformar "histórico não reconhecido" em
++ * "não concluído" e depois sobrescrever esse estado na nuvem.
++ */
++function recuperarHistoricoPortugues(
++  materias: Materia[],
++  missoesConcluidas: string[],
++  sessoes: SessaoEstudo[],
++  revisoes: Revisao[]
++): Materia[] {
++  const portugues = materias.find(
++    (materia) => normalizarTexto(materia.nome) === "portugues"
++  );
++
++  if (!portugues) return materias;
++
++  const au
