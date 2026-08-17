@@ -137,7 +137,11 @@ export default function Dashboard() {
 
   const dadosPlano = useMemo(() => {
     const semanaAtual =
-      getSemanaAtual(missoesConcluidas, planoCalendario);
+      getSemanaAtual(
+        missoesConcluidas,
+        planoCalendario,
+        configuracoes.semanaAtualPlano
+      );
     const diaAtual = obterDiaAtualPlano();
     const concluidasSet = new Set(missoesConcluidas);
     const semanaDoCalendario = planoCalendario.find(
@@ -176,7 +180,11 @@ export default function Dashboard() {
         getTotalPendentes(missoesConcluidas, planoCalendario),
 
       proxima:
-        getProximaMissao(missoesConcluidas, planoCalendario),
+        getProximaMissao(
+          missoesConcluidas,
+          planoCalendario,
+          semanaAtual
+        ),
 
       missaoHoje,
       hojeConcluido,

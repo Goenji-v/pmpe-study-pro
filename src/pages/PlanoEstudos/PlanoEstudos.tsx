@@ -193,7 +193,11 @@ export default function PlanoEstudos() {
     [missoesPorDia]
   );
 
-  const semanaInicial = getSemanaAtual(concluidas, planoCalendario);
+  const semanaInicial = getSemanaAtual(
+    concluidas,
+    planoCalendario,
+    configuracoes.semanaAtualPlano
+  );
   const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
     planoCalendario.find((item) => item.numero === semanaInicial) ?? planoCalendario[0];

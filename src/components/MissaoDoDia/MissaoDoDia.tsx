@@ -9,6 +9,7 @@ import "./MissaoDoDia.css";
 
 import {
   getProximaMissao,
+  getSemanaAtual,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
 import { criarPlanoCalendario, normalizarMissoesPorDia, NOMES_DIAS_PLANO } from "../../utils/planoCalendario";
@@ -32,9 +33,18 @@ export default function MissaoDoDia({
     [configuracoes.missoesPorDia]
   );
 
+  const semanaAtual = useMemo(
+    () => getSemanaAtual(
+      missoesConcluidas,
+      planoCalendario,
+      configuracoes.semanaAtualPlano
+    ),
+    [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]
+  );
+
   const proxima = useMemo(
-    () => getProximaMissao(missoesConcluidas, planoCalendario),
-    [atualizacao, missoesConcluidas, planoCalendario]
+    () => getProximaMissao(missoesConcluidas, planoCalendario, semanaAtual),
+    [atualizacao, missoesConcluidas, planoCalendario, semanaAtual]
   );
 
   function iniciarMissao(
