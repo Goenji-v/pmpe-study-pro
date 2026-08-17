@@ -2,6 +2,7 @@ import {
   BrowserRouter,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 
 import PlanoEstudos from "./pages/PlanoEstudos/PlanoEstudos";
@@ -46,6 +47,9 @@ import { CronometroProvider } from "./context/CronometroContext";
 import { AuthProvider } from "./context/AuthContext";
 
 function LayoutProtegido() {
+  const location = useLocation();
+  const paginaDashboard = location.pathname === "/";
+
   return (
     <ProtectedRoute>
       <ToastProvider>
@@ -58,7 +62,7 @@ function LayoutProtegido() {
               <div className="content">
                 <Header />
 
-                <main className="page">
+                <main className={`page ${paginaDashboard ? "page-dashboard" : "page-interna"}`}>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
 
