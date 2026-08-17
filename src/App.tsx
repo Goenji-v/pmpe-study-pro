@@ -40,21 +40,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
 
-import {
-  AppProvider,
-} from "./context/AppContext";
-
-import {
-  ToastProvider,
-} from "./context/ToastContext";
-
-import {
-  CronometroProvider,
-} from "./context/CronometroContext";
-
-import {
-  AuthProvider,
-} from "./context/AuthContext";
+import { AppProvider } from "./context/AppContext";
+import { ToastProvider } from "./context/ToastContext";
+import { CronometroProvider } from "./context/CronometroContext";
+import { AuthProvider } from "./context/AuthContext";
 
 function LayoutProtegido() {
   return (
@@ -71,189 +60,58 @@ function LayoutProtegido() {
 
                 <main className="page">
                   <Routes>
-                    <Route
-                      path="/"
-                      element={<Dashboard />}
-                    />
+                    <Route path="/" element={<Dashboard />} />
 
-                    <Route
-                      path="/plano"
-                      element={<PlanoEstudos />}
-                    />
-
+                    <Route path="/plano" element={<PlanoEstudos />} />
                     {/* Compatibilidade com links antigos do Dashboard */}
-                    <Route
-                      path="/plano-estudos"
-                      element={<PlanoEstudos />}
-                    />
+                    <Route path="/plano-estudos" element={<PlanoEstudos />} />
 
-                    <Route
-                      path="/calendario"
-                      element={<Calendario />}
-                    />
+                    <Route path="/calendario" element={<Calendario />} />
+                    <Route path="/cronograma-ia" element={<CronogramaIA />} />
+                    <Route path="/central-estudos" element={<CentralEstudos />} />
+                    <Route path="/materiais" element={<CentroMateriais />} />
+                    <Route path="/inteligencia" element={<CentralInteligencia />} />
 
-                    <Route
-                      path="/cronograma-ia"
-                      element={<CronogramaIA />}
-                    />
-
-                    <Route
-                      path="/central-estudos"
-                      element={<CentralEstudos />}
-                    />
-
-                    <Route
-                      path="/materiais"
-                      element={<CentroMateriais />}
-                    />
-
-<Route
-  path="/inteligencia"
-  element={<CentralInteligencia />}
-/>
-
-<Route
-  path="/ranking"
-  element={<Ranking />}
-/>
-
-<Route
-  path="/relatorio-inteligente"
-  element={<RelatorioInteligente />}
-/>
-
-<Route
-  path="/admin"
-  element={<Admin />}
-/>
-
-                    <Route
-                      path="/estudos"
-                      element={<Estudos />}
-                    />
-
+                    <Route path="/estudos" element={<Estudos />} />
                     {/* Compatibilidade com links antigos de Conteúdos */}
-                    <Route
-                      path="/conteudos"
-                      element={<Estudos />}
-                    />
-
+                    <Route path="/conteudos" element={<Estudos />} />
                     {/* Compatibilidade com links antigos da busca global */}
                     <Route path="/buscar" element={<Estudos />} />
                     <Route path="/pesquisa" element={<Estudos />} />
                     <Route path="/search" element={<Estudos />} />
 
-                    <Route
-                      path="/revisoes"
-                      element={<Revisoes />}
-                    />
+                    <Route path="/revisoes" element={<Revisoes />} />
 
                     {/* Central de Questões */}
-                    <Route
-                      path="/questoes"
-                      element={<CentralQuestoes />}
-                    />
-
-                    {/* Rotas individuais mantidas */}
-                    <Route
-                      path="/registrar-questoes"
-                      element={<Questoes />}
-                    />
-
-                    <Route
-                      path="/historico"
-                      element={<Historico />}
-                    />
-
-                    <Route
-                      path="/banco-questoes"
-                      element={<BancoQuestoes />}
-                    />
-
-                    <Route
-                      path="/estatisticas"
-                      element={<Estatisticas />}
-                    />
+                    <Route path="/questoes" element={<CentralQuestoes />} />
+                    <Route path="/registrar-questoes" element={<Questoes />} />
+                    <Route path="/historico" element={<Historico />} />
+                    <Route path="/banco-questoes" element={<BancoQuestoes />} />
+                    <Route path="/estatisticas" element={<Estatisticas />} />
 
                     {/* Central de Simulados */}
-                    <Route
-                      path="/simulados"
-                      element={<Simulados />}
-                    />
-
-                    <Route
-                      path="/resolver-simulado-ia"
-                      element={<ResolverSimuladoIA />}
-                    />
-
-                    <Route
-                      path="/gerar-simulado-ia"
-                      element={<GerarSimuladoIA />}
-                    />
-
-                    <Route
-                      path="/estatisticas-simulado-ia"
-                      element={<EstatisticasSimuladoIA />}
-                    />
+                    <Route path="/simulados" element={<Simulados />} />
+                    <Route path="/resolver-simulado-ia" element={<ResolverSimuladoIA />} />
+                    <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
+                    <Route path="/estatisticas-simulado-ia" element={<EstatisticasSimuladoIA />} />
 
                     {/* Central de Desempenho */}
-                    <Route
-                      path="/desempenho"
-                      element={<CentralDesempenho />}
-                    />
+                    <Route path="/desempenho" element={<CentralDesempenho />} />
+                    <Route path="/historico-sessoes" element={<HistoricoSessoes />} />
+                    <Route path="/estatisticas-sessoes" element={<EstatisticasSessoes />} />
+                    <Route path="/ranking" element={<Ranking />} />
+                    <Route path="/conquistas" element={<Conquistas />} />
 
-                    <Route
-                      path="/historico-sessoes"
-                      element={<HistoricoSessoes />}
-                    />
-
-                    <Route
-                      path="/estatisticas-sessoes"
-                      element={<EstatisticasSessoes />}
-                    />
-
-
-                    <Route
-                      path="/ranking"
-                      element={<Ranking />}
-                    />
-
-                    <Route
-                      path="/conquistas"
-                      element={<Conquistas />}
-                    />
+                    {/* Inteligência */}
+                    <Route path="/relatorio-inteligente" element={<RelatorioInteligente />} />
+                    <Route path="/ia-coach" element={<IACoach />} />
 
                     {/* Sistema */}
+                    <Route path="/backup" element={<Backup />} />
+                    <Route path="/configuracoes" element={<Configuracoes />} />
+                    <Route path="/admin" element={<Admin />} />
 
-                    <Route
-                      path="/relatorio-inteligente"
-                      element={<RelatorioInteligente />}
-                    />
-
-                    <Route
-                      path="/ia-coach"
-                      element={<IACoach />}
-                    />
-
-                    <Route
-                      path="/backup"
-                      element={<Backup />}
-                    />
-
-                    <Route
-                      path="/configuracoes"
-                      element={<Configuracoes />}
-                    />
-
-                    <Route
-                      path="/admin"
-                      element={<Admin />}
-                    />
-
-                    <Route
-                      path="*"
-                      element={<NotFound />}
-                    />
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
               </div>
@@ -270,17 +128,10 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <BrowserRouter>
-        <Routes>
-          <Route
-            path="/login"
-            element={<Auth />}
-          />
-
-          <Route
-            path="/*"
-            element={<LayoutProtegido />}
-          />
-        </Routes>
+          <Routes>
+            <Route path="/login" element={<Auth />} />
+            <Route path="/*" element={<LayoutProtegido />} />
+          </Routes>
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>
