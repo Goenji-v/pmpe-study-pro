@@ -18,13 +18,11 @@ type GrupoMenuProps = {
   titulo: string;
   icone: string;
   rotas: string[];
-  abertoInicialmente?: boolean;
   children: React.ReactNode;
 };
 
 export default function Sidebar() {
-  const { administrador } =
-    useAdminStatus();
+  const { administrador } = useAdminStatus();
   const location = useLocation();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
@@ -67,197 +65,120 @@ export default function Sidebar() {
       )}
 
       <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-icone">
-          PM
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-icone">PM</div>
+
+          <div>
+            <strong>PMPE</strong>
+            <span>Study Pro</span>
+          </div>
         </div>
 
-        <div>
-          <strong>PMPE</strong>
-          <span>Study Pro</span>
-        </div>
-      </div>
-
-      <nav className="sidebar-menu">
-
-        {/* ================= PRINCIPAL ================= */}
-
-        <div className="sidebar-principal">
-          <ItemMenu
-            to="/"
-            icone="🏠"
-            texto="Dashboard"
-            final
-          />
-
-          <ItemMenu
-            to="/cronograma-ia"
-            icone="🧠"
-            texto="Cronograma IA"
-          />
-
-          <ItemMenu
-            to="/plano"
-            icone="📅"
-            texto="Plano de Estudos"
-          />
-
-          <ItemMenu
-            to="/calendario"
-            icone="🗓️"
-            texto="Calendário"
-          />
-        </div>
-
-        {/* ================= ESTUDOS ================= */}
-
-        <GrupoMenu
-          titulo="Estudos"
-          icone="📚"
-          abertoInicialmente
-          rotas={[
-            "/central-estudos",
-            "/materiais",
-            "/estudos",
-            "/revisoes",
-          ]}
-        >
-          <ItemMenu
-            to="/central-estudos"
-            icone="⏱"
-            texto="Central de Estudos"
-          />
-
-          <ItemMenu
-            to="/materiais"
-            icone="📂"
-            texto="Centro de Materiais"
-          />
-
-          <ItemMenu
-            to="/estudos"
-            icone="📖"
-            texto="Conteúdos"
-          />
-
-          <ItemMenu
-            to="/revisoes"
-            icone="🔁"
-            texto="Revisões"
-          />
-        </GrupoMenu>
-
-        {/* ================= QUESTÕES ================= */}
-
-        <div className="sidebar-principal">
-          <ItemMenu
-            to="/questoes"
-            icone="📝"
-            texto="Central de Questões"
-          />
-        </div>
-
-        {/* ================= SIMULADOS ================= */}
-
-        <div className="sidebar-principal">
-          <ItemMenu
-            to="/simulados"
-            icone="🎯"
-            texto="Central de Simulados"
-          />
-
-          <ItemMenu
-            to="/desempenho"
-            icone="📊"
-            texto="Central de Desempenho"
-          />
-
-        </div>
-
-        {/* ================= NOVA CENTRAL ================= */}
-
-        <GrupoMenu
-          titulo="Inteligência"
-          icone="🧠"
-          abertoInicialmente
-          rotas={[
-            "/inteligencia",
-            "/relatorio-inteligente",
-            "/ia-coach",
-          ]}
-        >
-          <ItemMenu
-            to="/inteligencia"
-            icone="🧠"
-            texto="Central de Inteligência"
-          />
-
-          <ItemMenu
-            to="/relatorio-inteligente"
-            icone="📈"
-            texto="Relatório Inteligente"
-          />
-
-          <ItemMenu
-            to="/ia-coach"
-            icone="🤖"
-            texto="IA Coach"
-          />
-        </GrupoMenu>
-
-        {/* ================= SISTEMA ================= */}
-
-        <GrupoMenu
-          titulo="Sistema"
-          icone="⚙️"
-          rotas={[
-            "/conquistas",
-            "/ranking",
-            "/backup",
-            "/configuracoes",
-            "/admin",
-          ]}
-        >
-          <ItemMenu
-            to="/conquistas"
-            icone="🏆"
-            texto="Conquistas"
-          />
-
-          <ItemMenu
-            to="/ranking"
-            icone="🥇"
-            texto="Ranking"
-          />
-
-          <ItemMenu
-            to="/backup"
-            icone="💾"
-            texto="Backup"
-          />
-
-          <ItemMenu
-            to="/configuracoes"
-            icone="⚙"
-            texto="Configurações"
-          />
-
-          {administrador && (
+        <nav className="sidebar-menu" aria-label="Navegação principal">
+          <div className="sidebar-inicio">
+            <span className="sidebar-secao-label">VISÃO GERAL</span>
             <ItemMenu
-              to="/admin"
-              icone="🛡️"
-              texto="Administração"
+              to="/"
+              icone="⌂"
+              texto="Dashboard"
+              final
             />
-          )}
-        </GrupoMenu>
+          </div>
 
-      </nav>
+          <GrupoMenu
+            titulo="Planejamento"
+            icone="▦"
+            rotas={[
+              "/cronograma-ia",
+              "/plano",
+              "/plano-estudos",
+              "/calendario",
+            ]}
+          >
+            <ItemMenu to="/plano" texto="Plano de Estudos" />
+            <ItemMenu to="/calendario" texto="Calendário" />
+            <ItemMenu to="/cronograma-ia" texto="Cronograma IA" />
+          </GrupoMenu>
 
-      <div className="sidebar-rodape">
-        <span>Foco atual</span>
-        <strong>PMPE</strong>
-        <small>Planejamento tático</small>
-      </div>
+          <GrupoMenu
+            titulo="Estudos"
+            icone="▤"
+            rotas={[
+              "/central-estudos",
+              "/materiais",
+              "/estudos",
+              "/conteudos",
+              "/revisoes",
+            ]}
+          >
+            <ItemMenu to="/central-estudos" texto="Central de Estudos" />
+            <ItemMenu to="/estudos" texto="Conteúdos" />
+            <ItemMenu to="/materiais" texto="Materiais" />
+            <ItemMenu to="/revisoes" texto="Revisões" />
+          </GrupoMenu>
+
+          <GrupoMenu
+            titulo="Prática"
+            icone="◎"
+            rotas={[
+              "/questoes",
+              "/registrar-questoes",
+              "/banco-questoes",
+              "/simulados",
+              "/resolver-simulado-ia",
+              "/gerar-simulado-ia",
+              "/estatisticas-simulado-ia",
+              "/desempenho",
+              "/historico",
+              "/estatisticas",
+            ]}
+          >
+            <ItemMenu to="/questoes" texto="Questões" />
+            <ItemMenu to="/simulados" texto="Simulados" />
+            <ItemMenu to="/desempenho" texto="Desempenho" />
+          </GrupoMenu>
+
+          <GrupoMenu
+            titulo="Inteligência"
+            icone="✦"
+            rotas={[
+              "/inteligencia",
+              "/relatorio-inteligente",
+              "/ia-coach",
+            ]}
+          >
+            <ItemMenu to="/inteligencia" texto="Central de Inteligência" />
+            <ItemMenu to="/relatorio-inteligente" texto="Relatório Inteligente" />
+            <ItemMenu to="/ia-coach" texto="IA Coach" />
+          </GrupoMenu>
+
+          <GrupoMenu
+            titulo="Sistema"
+            icone="⚙"
+            rotas={[
+              "/conquistas",
+              "/ranking",
+              "/backup",
+              "/configuracoes",
+              "/admin",
+            ]}
+          >
+            <ItemMenu to="/ranking" texto="Ranking" />
+            <ItemMenu to="/conquistas" texto="Conquistas" />
+            <ItemMenu to="/backup" texto="Backup e Segurança" />
+            <ItemMenu to="/configuracoes" texto="Configurações" />
+
+            {administrador && (
+              <ItemMenu to="/admin" texto="Administração" />
+            )}
+          </GrupoMenu>
+        </nav>
+
+        <div className="sidebar-rodape">
+          <span>Foco atual</span>
+          <strong>PMPE</strong>
+          <small>Planejamento tático</small>
+        </div>
       </aside>
     </>
   );
@@ -267,7 +188,6 @@ function GrupoMenu({
   titulo,
   icone,
   rotas,
-  abertoInicialmente = false,
   children,
 }: GrupoMenuProps) {
   const location = useLocation();
@@ -278,48 +198,42 @@ function GrupoMenu({
       location.pathname.startsWith(`${rota}/`)
   );
 
-  const [aberto, setAberto] = useState(
-    abertoInicialmente || possuiRotaAtiva
-  );
+  const [aberto, setAberto] = useState(possuiRotaAtiva);
 
-  const grupoAberto =
-    aberto || possuiRotaAtiva;
+  useEffect(() => {
+    setAberto(possuiRotaAtiva);
+  }, [location.pathname, possuiRotaAtiva]);
 
   return (
     <div
       className={`sidebar-grupo ${
-        possuiRotaAtiva
-          ? "sidebar-grupo-ativo"
-          : ""
+        possuiRotaAtiva ? "sidebar-grupo-ativo" : ""
       }`}
     >
       <button
         type="button"
         className="sidebar-grupo-botao"
-        onClick={() =>
-          setAberto((valor) => !valor)
-        }
+        aria-expanded={aberto}
+        onClick={() => setAberto((valor) => !valor)}
       >
         <span className="sidebar-grupo-identidade">
-          <span className="sidebar-grupo-icone">
+          <span className="sidebar-grupo-icone" aria-hidden="true">
             {icone}
           </span>
-
           <span>{titulo}</span>
         </span>
 
         <span
           className={`sidebar-seta ${
-            grupoAberto
-              ? "sidebar-seta-aberta"
-              : ""
+            aberto ? "sidebar-seta-aberta" : ""
           }`}
+          aria-hidden="true"
         >
           ›
         </span>
       </button>
 
-      {grupoAberto && (
+      {aberto && (
         <div className="sidebar-submenu">
           {children}
         </div>
@@ -330,7 +244,7 @@ function GrupoMenu({
 
 type ItemMenuProps = {
   to: string;
-  icone: string;
+  icone?: string;
   texto: string;
   final?: boolean;
 };
@@ -347,15 +261,15 @@ function ItemMenu({
       end={final}
       className={({ isActive }) =>
         `sidebar-link ${
-          isActive
-            ? "sidebar-link-ativo"
-            : ""
-        }`
+          isActive ? "sidebar-link-ativo" : ""
+        } ${icone ? "sidebar-link-com-icone" : "sidebar-link-subitem"}`
       }
     >
-      <span className="sidebar-link-icone">
-        {icone}
-      </span>
+      {icone && (
+        <span className="sidebar-link-icone" aria-hidden="true">
+          {icone}
+        </span>
+      )}
 
       <span className="sidebar-link-texto">
         {texto}
