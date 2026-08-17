@@ -14,7 +14,6 @@
 
   background: rgba(30, 41, 59, 0.96);
   border-bottom: 1px solid #334155;
-
   backdrop-filter: blur(12px);
 }
 
@@ -22,25 +21,26 @@
   min-width: max-content;
 }
 
-.header-identidade h1 {
+.header-identidade strong {
+  display: block;
   margin: 0;
 
   color: #f8fafc;
-  font-size: 20px;
-  letter-spacing: 0.5px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
 }
 
 .header-identidade span {
   display: block;
-
   margin-top: 3px;
 
   color: #60a5fa;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.header-direita {
+.header-acoes {
   min-width: 0;
 
   display: flex;
@@ -49,279 +49,17 @@
   gap: 14px;
 }
 
-.header-cronometro {
-  min-width: 430px;
-
-  display: grid;
-  grid-template-columns:
-    minmax(150px, 1fr)
-    auto
-    auto;
-  align-items: center;
-  gap: 14px;
-
-  padding: 9px 12px;
-
-  background: rgba(
-    22,
-    163,
-    74,
-    0.11
-  );
-
-  border: 1px solid
-    rgba(34, 197, 94, 0.4);
-
-  border-radius: 14px;
-}
-
-.header-cronometro-pausado {
-  background: rgba(
-    245,
-    158,
-    11,
-    0.11
-  );
-
-  border-color: rgba(
-    245,
-    158,
-    11,
-    0.45
-  );
-}
-
-.header-cronometro-info {
-  min-width: 0;
-
-  padding: 0;
-
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-
-  color: #ffffff;
-  background: transparent;
-  border: none;
-
-  text-align: left;
-  cursor: pointer;
-}
-
-.header-cronometro-info strong,
-.header-cronometro-info small {
-  max-width: 180px;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.header-cronometro-info strong {
-  margin-top: 3px;
-
-  color: #f8fafc;
-  font-size: 13px;
-}
-
-.header-cronometro-info small {
-  margin-top: 2px;
-
-  color: #94a3b8;
-  font-size: 11px;
-}
-
-.header-cronometro-status {
-  color: #86efac;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.header-cronometro-pausado
-  .header-cronometro-status {
-  color: #fcd34d;
-}
-
-.header-cronometro-tempo {
-  color: #f8fafc;
-
-  font-family:
-    "Courier New", monospace;
-
-  font-size: 21px;
-  font-weight: 800;
-  letter-spacing: 1px;
-
-  white-space: nowrap;
-}
-
-.header-cronometro-pausado
-  .header-cronometro-tempo {
-  color: #f59e0b;
-}
-
-.header-cronometro-acoes {
-  display: flex;
-  gap: 7px;
-}
-
-.header-cronometro-acoes button {
-  width: 34px;
-  height: 34px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: #ffffff;
-  border: none;
-  border-radius: 9px;
-
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.header-pausar {
-  background: #d97706;
-}
-
-.header-pausar:hover {
-  background: #b45309;
-}
-
-.header-continuar {
-  background: #16a34a;
-}
-
-.header-continuar:hover {
-  background: #15803d;
-}
-
-.header-finalizar {
-  background: #dc2626;
-}
-
-.header-finalizar:hover {
-  background: #b91c1c;
-}
-
-.header-usuario {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  padding: 7px 10px;
-
-  color: #ffffff;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 12px;
-
-  text-align: left;
-  cursor: pointer;
-}
-
-.header-usuario:hover {
-  background: #0f172a;
-  border-color: #334155;
-}
-
-.header-avatar {
-  width: 38px;
-  height: 38px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  flex-shrink: 0;
-
-  color: #ffffff;
-  background: #2563eb;
-  border-radius: 50%;
-
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.header-usuario div {
-  display: flex;
-  flex-direction: column;
-}
-
-.header-usuario strong {
-  font-size: 13px;
-}
-
-.header-usuario small {
-  margin-top: 2px;
-
-  color: #94a3b8;
-  font-size: 11px;
-}
-
-@media (max-width: 1100px) {
-  .header-cronometro {
-    min-width: 340px;
-  }
-
-  .header-cronometro-info small {
-    display: none;
-  }
-}
-
 @media (max-width: 850px) {
   .header {
-    align-items: flex-start;
-    flex-direction: column;
-
-    padding: 14px 20px;
+    padding: 10px 16px;
+    gap: 12px;
   }
 
-  .header-direita {
-    width: 100%;
-
-    justify-content: space-between;
-  }
-
-  .header-cronometro {
-    min-width: 0;
-    flex: 1;
+  .header-acoes {
+    margin-left: auto;
   }
 }
 
-@media (max-width: 650px) {
-  .header-direita {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .header-cronometro {
-    width: 100%;
-
-    grid-template-columns:
-      minmax(0, 1fr)
-      auto;
-  }
-
-  .header-cronometro-tempo {
-    font-size: 18px;
-  }
-
-  .header-cronometro-acoes {
-    grid-column: 1 / -1;
-  }
-
-  .header-cronometro-acoes button {
-    flex: 1;
-    width: auto;
-  }
-
-  .header-usuario {
-    width: 100%;
-  }
-}
 /* Etapa 20.1 — topo compacto no celular */
 @media (max-width: 600px) {
   .header {
@@ -336,6 +74,7 @@
 
   .header-acoes {
     width: 100%;
+    margin-left: 0;
     justify-content: space-between;
     gap: 7px;
   }
