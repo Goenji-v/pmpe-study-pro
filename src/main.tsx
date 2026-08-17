@@ -7,6 +7,7 @@ import "./global.css";
 import "./styles/mobile.css";
 import "./styles/visual-final.css";
 import "./styles/visual-3d.css";
+import "./styles/sidebar-organizado.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
