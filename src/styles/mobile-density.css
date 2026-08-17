@@ -1,0 +1,253 @@
+/* Etapa 6.5 — Densidade mobile
+   Mais conteúdo visível por tela, sem alterar o desktop nem regras de negócio. */
+
+@media (max-width: 600px) {
+  .page {
+    padding: 8px 7px calc(16px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .header {
+    min-height: 56px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .page-interna {
+    padding: 9px 8px calc(18px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .page-interna h1 {
+    font-size: 21px !important;
+    line-height: 1.1;
+  }
+
+  .page-interna h2 { font-size: 16px; line-height: 1.2; }
+  .page-interna h3 { font-size: 14px; line-height: 1.25; }
+  .page-interna p { font-size: 12px; line-height: 1.42; }
+  .page-interna small { font-size: 10px; line-height: 1.35; }
+
+  .page-interna input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .page-interna select,
+  .page-interna textarea {
+    min-height: 40px;
+    padding: 9px 10px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  .page-interna button {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .page-interna :is(.plano-cabecalho,.central-estudos-cabecalho,.conteudos-cabecalho,.materiais-cabecalho,.calendario-cabecalho,.inteligencia-cabecalho,.coach-cabecalho,.ri-cabecalho,.admin-cabecalho,.ranking-cabecalho) {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .page-interna :is(.revisoes-subtitle,.simulados-subtitle,.configuracoes-subtitle,.backup-subtitle) {
+    margin-bottom: 14px;
+    font-size: 12px;
+  }
+
+  .page-interna :is(.plano-conteudo-dia,.plano-resumo-semana,.central-estudos-configuracao,.central-estudos-cronometro,.conteudos-painel-form,.conteudos-materia-card,.revisoes-grupo,.cq-secao,.simulados-card,.materiais-cadastro,.materiais-biblioteca,.calendario-painel,.calendario-detalhes,.inteligencia-painel,.inteligencia-prontidao,.coach-painel,.ri-painel,.configuracoes-card,.backup-card,.admin-painel,.ranking-regras,.conquistas-hero) {
+    padding: 11px !important;
+    border-radius: 11px !important;
+  }
+
+  .page-interna :is(.plano-progresso-geral,.central-estudos-total,.materiais-total,.coach-pontuacao,.ri-indice,.inteligencia-indice,.ranking-minha-posicao,.admin-seguranca) {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    text-align: left;
+  }
+
+  .page-interna :is(.plano-progresso-geral strong,.central-estudos-total strong,.materiais-total strong,.coach-pontuacao strong,.ri-indice strong,.inteligencia-indice strong,.ranking-minha-posicao strong) {
+    font-size: 22px;
+  }
+
+  .page-interna :is(.plano-missao-card,.plano-rotina-blocos article,.plano-extras div,.conteudos-assunto-item,.conteudos-modulo-card,.revisao-card,.cq-resumo-card,.cq-assunto-card,.simulado-resumo-card,.simulado-item,.simulados-central-acao,.materiais-materia,.calendario-resumo-card,.calendario-mini-resumo,.calendario-evento,.inteligencia-resumo-card,.inteligencia-item-missao,.inteligencia-dado-semana,.inteligencia-alerta,.inteligencia-assunto-card,.coach-resumo-card,.coach-recomendacao,.ri-card-comparacao,.ri-recomendacao,.backup-resumo-card,.backup-auto-item,.admin-card,.admin-linha,.ranking-resumo-card,.ranking-linha:not(.ranking-titulo),.conquista-card) {
+    padding: 10px !important;
+    border-radius: 10px !important;
+  }
+
+  .page-interna :is(.revisoes-resumo,.simulados-resumo,.backup-resumo-grid,.coach-resumo,.ri-cards,.inteligencia-resumos,.admin-cards,.ranking-resumo-grid,.calendario-resumo,.cq-resumo-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    margin-bottom: 12px;
+  }
+
+  .page-interna :is(.revisao-resumo-card strong,.simulado-resumo-card strong,.backup-resumo-card strong,.coach-resumo-card strong,.ri-card-comparacao > strong,.inteligencia-resumo-card strong,.admin-card strong,.ranking-resumo-card strong,.calendario-resumo-card strong,.cq-resumo-card strong) {
+    font-size: 20px;
+    margin-top: 5px;
+    margin-bottom: 4px;
+  }
+
+  .page-interna :is(.plano-semanas,.plano-dias,.plano-missoes-grid,.plano-extras,.central-estudos-grid,.conteudos-cadastros,.conteudos-cadastros-3,.materiais-grid,.simulados-grid,.coach-grid,.ri-grid-duplo,.inteligencia-grid-principal,.inteligencia-grid-duplo,.configuracoes-grid,.backup-grid,.conquistas-grid) {
+    gap: 8px !important;
+  }
+
+  .page-interna .plano-semana-botao,
+  .page-interna .plano-dia-botao {
+    min-height: 48px;
+    padding: 7px 9px;
+    border-radius: 9px;
+  }
+
+  .page-interna .plano-semanas,
+  .page-interna .plano-dias { margin-bottom: 12px; }
+
+  .page-interna .plano-resumo-semana,
+  .page-interna .plano-titulo-dia,
+  .page-interna .plano-rotina-dia,
+  .page-interna .plano-adaptacao { margin-bottom: 10px; }
+
+  .page-interna .plano-missao-topo { margin-bottom: 9px; font-size: 11px; }
+  .page-interna .plano-missao-card h3 { margin-bottom: 5px; }
+  .page-interna .plano-missao-acoes { gap: 6px; margin-top: 10px; }
+
+  .page-interna .central-estudos-grid { gap: 8px; }
+  .page-interna .central-estudos-tipos { gap: 6px; margin-bottom: 12px; }
+  .page-interna .central-tipo { min-height: 42px; padding: 7px 6px; font-size: 11px; }
+  .page-interna .central-estudos-formulario { gap: 10px; }
+  .page-interna .central-estudos-tempo { margin: 9px 0 8px; font-size: clamp(32px, 10vw, 42px); }
+  .page-interna .central-estudos-resumo { padding: 10px; }
+  .page-interna .central-estudos-links,
+  .page-interna .central-estudos-acoes { gap: 6px; margin-top: 10px; }
+
+  .page-interna .conteudos-cabecalho { margin-bottom: 10px; }
+  .page-interna .conteudos-materia-card { margin-bottom: 10px; }
+  .page-interna .conteudos-modulos,
+  .page-interna .conteudos-assuntos,
+  .page-interna .conteudos-materiais-lista { gap: 7px; }
+  .page-interna .conteudos-progresso { margin: 9px 0 11px; }
+  .page-interna .conteudos-metricas-aula { gap: 4px; margin-top: 5px; }
+  .page-interna .conteudos-metricas-aula span { padding: 3px 6px; font-size: 9px; }
+  .page-interna .conteudos-acoes-aula,
+  .page-interna .conteudos-acoes-unificadas { gap: 5px; }
+
+  .page-interna .revisoes-resumo,
+  .page-interna .revisoes-grupo { margin-bottom: 12px; }
+  .page-interna .revisoes-grupo h2 { margin-bottom: 10px; }
+  .page-interna .revisoes-lista { gap: 7px; }
+  .page-interna .revisao-card { gap: 8px; }
+  .page-interna .revisao-acoes { gap: 5px; }
+
+  .page-interna .central-questoes-topo { margin-bottom: 12px; }
+  .page-interna .central-questoes-abas { gap: 5px; padding: 5px; margin-bottom: 12px; border-radius: 10px; }
+  .page-interna .central-questoes-aba { min-height: 40px; padding: 7px 8px; font-size: 11px; }
+  .page-interna .cq-painel { gap: 10px; }
+  .page-interna .cq-secao-topo { gap: 8px; margin-bottom: 12px; }
+
+  .page-interna .simulados-central-acoes { gap: 7px; margin-bottom: 12px; }
+  .page-interna .simulados-central-acao { min-height: 82px; gap: 9px; }
+  .page-interna .simulados-central-icone { width: 34px; height: 34px; font-size: 17px; }
+  .page-interna .simulados-card { margin-bottom: 12px; }
+  .page-interna .simulado-form-group { margin-bottom: 10px; }
+
+  .page-interna .materiais-filtros { gap: 7px; margin-bottom: 11px; }
+  .page-interna .materiais-grupos { gap: 10px; }
+
+  .page-interna .calendario-layout { gap: 9px; }
+  .page-interna .calendario-dia { min-height: 86px; padding: 7px; border-radius: 8px; }
+  .page-interna .calendario-detalhes-resumo { gap: 6px; margin-bottom: 9px; }
+
+  .page-interna .inteligencia-prontidao,
+  .page-interna .inteligencia-resumos,
+  .page-interna .inteligencia-grid-principal,
+  .page-interna .inteligencia-grid-duplo,
+  .page-interna .ri-cards,
+  .page-interna .ri-grid-duplo,
+  .page-interna .coach-resumo,
+  .page-interna .coach-grid { margin-bottom: 10px; }
+
+  .page-interna .inteligencia-item-missao { gap: 8px; }
+  .page-interna .inteligencia-numero-missao,
+  .page-interna .coach-recomendacao-numero,
+  .page-interna .ri-recomendacao-numero { width: 30px; height: 30px; }
+
+  .page-interna .conquistas-page { gap: 10px; }
+  .page-interna .conquistas-grid { gap: 8px; }
+  .page-interna .conquista-icone { width: 40px; height: 40px; flex-basis: 40px; font-size: 20px; }
+
+  /* Dashboard: mesma sensação de zoom mais afastado. */
+  .page-dashboard { padding: 8px 7px calc(16px + env(safe-area-inset-bottom)) !important; }
+  .page-dashboard .dashboard-pro-v3 { padding-bottom: 10px; }
+  .page-dashboard .dashboard-pro-header { gap: 5px; margin-bottom: 8px; }
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-header h1 { font-size: 20px; }
+  .page-dashboard .dashboard-pro-header p { font-size: 11px; }
+  .page-dashboard .dashboard-pro-search { height: 40px; min-height: 40px; font-size: 13px; }
+
+  .page-dashboard .dashboard-pro-hero,
+  .page-dashboard .dashboard-pro-middle,
+  .page-dashboard .dashboard-pro-footer-grid,
+  .page-dashboard .dashboard-fechamento-grid,
+  .page-dashboard .dashboard-prioridade-grid,
+  .page-dashboard .dashboard-v22-grid,
+  .page-dashboard .dashboard-referencia-grid { gap: 7px; margin-bottom: 7px; }
+
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-mission,
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-session,
+  .page-dashboard .dashboard-pro-panel,
+  .page-dashboard .dashboard-v22-card,
+  .page-dashboard .dashboard-referencia-card { padding: 10px; border-radius: 11px; }
+
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-mission h2 { font-size: 17px; margin-bottom: 6px; }
+  .page-dashboard .dashboard-pro-mission-meta { font-size: 10px; }
+  .page-dashboard .dashboard-pro-actions { gap: 5px; margin-top: 9px; }
+  .page-dashboard .dashboard-pro-actions button { min-height: 40px; height: 40px; font-size: 11px; }
+
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-timer,
+  .page-dashboard .dashboard-pro-timer { width: 94px; height: 94px; }
+
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-timer strong,
+  .page-dashboard .dashboard-pro-timer strong { font-size: 20px; }
+
+  .page-dashboard .dashboard-pro-session-info h2 { font-size: 15px; }
+  .page-dashboard .dashboard-pro-session-info p { font-size: 10px; }
+  .page-dashboard .dashboard-pro-stats,
+  .page-dashboard .dashboard-pro-stats-art { gap: 6px; margin-bottom: 7px; }
+
+  .page-dashboard .dashboard-pro-stat-art {
+    min-height: 86px;
+    padding: 8px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .page-dashboard .dashboard-pro-stat-art > .dashboard-pro-stat-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    flex-basis: 32px;
+    font-size: 15px;
+  }
+
+  .page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > strong { font-size: 16px; }
+  .page-dashboard .dashboard-pro-stat-streak { min-height: 92px; padding: 8px 10px; }
+  .page-dashboard .dashboard-pro-panel,
+  .page-dashboard .dashboard-pro-weekly,
+  .page-dashboard .dashboard-v22-card,
+  .page-dashboard .dashboard-referencia-card { padding: 10px; }
+}
+
+@media (max-width: 430px) {
+  .page,
+  .page-dashboard,
+  .page-interna {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  .page-interna h1 { font-size: 20px !important; }
+
+  .page-interna :is(.revisoes-resumo,.simulados-resumo,.backup-resumo-grid,.coach-resumo,.ri-cards,.inteligencia-resumos,.admin-cards,.ranking-resumo-grid,.calendario-resumo,.cq-resumo-grid,.plano-semanas,.plano-dias) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-header h1 { font-size: 19px; }
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-mission h2 { font-size: 16px; }
+}
