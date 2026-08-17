@@ -108,6 +108,33 @@
   flex-wrap: wrap;
 }
 
+.revisao-avaliacao,
+.revisao-reagendar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+  background: #172033;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+
+.revisao-avaliacao span,
+.revisao-reagendar span {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.revisao-acoes .avaliacao-dificil { background: #b91c1c; }
+.revisao-acoes .avaliacao-media { background: #d97706; }
+.revisao-acoes .avaliacao-facil { background: #15803d; }
+.revisao-reagendar button { background: #475569; }
+.revisao-resultado { display: block; margin-top: 7px; font-weight: 800; }
+.resultado-facil { color: #4ade80; }
+.resultado-media { color: #fbbf24; }
+.resultado-dificil { color: #f87171; }
+
 .revisao-acoes button {
   border: none;
   border-radius: 9px;
@@ -171,7 +198,47 @@
     width: 100%;
   }
 
+  .revisao-avaliacao,
+  .revisao-reagendar {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
   .revisao-acoes button {
     flex: 1;
   }
+}
+.revisao-caminho {
+  display: block;
+  margin-top: 5px;
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.revisoes-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin: -8px 0 22px;
+  padding: 14px 16px;
+  background: #172033;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: #cbd5e1;
+}
+
+.revisoes-toolbar button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 14px;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 650px) {
+  .revisoes-toolbar { align-items: stretch; flex-direction: column; }
 }

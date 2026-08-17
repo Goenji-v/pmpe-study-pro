@@ -2,6 +2,8 @@ import type {
   QuestaoIA,
 } from "../types/index";
 
+import { criarUrlApi } from "../config/api";
+
 export type DificuldadeIA =
   | "Fácil"
   | "Média"
@@ -10,6 +12,8 @@ export type DificuldadeIA =
 
 export type ConteudoGeracaoIA = {
   materia: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
 };
 
@@ -17,6 +21,8 @@ export type ParametrosGeracaoIA = {
   origem: "assunto" | "semana";
 
   materia?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto?: string;
 
   semana?: number;
@@ -38,8 +44,7 @@ type RespostaErro = {
   resposta?: string;
 };
 
-const API_URL =
-  "http://localhost:3001/api/gerar";
+const API_URL = criarUrlApi("/api/gerar");
 
 export async function gerarQuestoesIA(
   parametros: ParametrosGeracaoIA
@@ -47,24 +52,32 @@ export async function gerarQuestoesIA(
   const assuntoCompleto =
     montarContextoGeracao(parametros);
 
-  const resposta = await fetch(
-    API_URL,
-    {
-      method: "POST",
+  let resposta: Response;
 
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
+  try {
+    resposta = await fetch(
+      API_URL,
+      {
+        method: "POST",
 
-      body: JSON.stringify({
-        assunto: assuntoCompleto,
-        quantidade:
-          parametros.quantidade,
-        banca: parametros.banca,
-      }),
-    }
-  );
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          assunto: assuntoCompleto,
+          quantidade:
+            parametros.quantidade,
+          banca: parametros.banca,
+        }),
+      }
+    );
+  } catch {
+    throw new Error(
+      "Não foi possível conectar à IA. Verifique se a API está online e tente novamente."
+    );
+  }
 
   let dados:
     | RespostaSucesso
@@ -132,7 +145,7 @@ function montarContextoGeracao(
     const lista = conteudos
       .map(
         (item, indice) =>
-          `${indice + 1}. ${item.materia} — ${item.assunto}`
+          `${indice + 1}. ${item.materia}${item.modulo ? ` → ${item.modulo}` : ""} → ${item.assunto}`
       )
       .join("\n");
 
@@ -151,6 +164,7 @@ function montarContextoGeracao(
 
   return [
     `Matéria: ${parametros.materia}`,
+    `Módulo: ${parametros.modulo || "Geral"}`,
     `Assunto: ${parametros.assunto}`,
     `Dificuldade: ${parametros.dificuldade}`,
   ].join("\n");
@@ -172,6 +186,17 @@ function normalizarQuestoes(
         questao.materia ||
         parametros.materia ||
         "Conteúdo da semana",
+
+      modulo:
+        questao.modulo ||
+        parametros.modulo ||
+        (parametros.origem === "assunto"
+          ? "Geral"
+          : undefined),
+
+      moduloId:
+        questao.moduloId ||
+        parametros.moduloId,
 
       assunto:
         questao.assunto ||

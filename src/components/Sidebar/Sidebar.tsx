@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -24,9 +25,48 @@ type GrupoMenuProps = {
 export default function Sidebar() {
   const { administrador } =
     useAdminStatus();
+  const location = useLocation();
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+
+  useEffect(() => {
+    setMenuMobileAberto(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuMobileAberto) {
+      document.body.classList.remove("menu-mobile-aberto");
+      return;
+    }
+
+    document.body.classList.add("menu-mobile-aberto");
+
+    return () => {
+      document.body.classList.remove("menu-mobile-aberto");
+    };
+  }, [menuMobileAberto]);
 
   return (
-    <aside className="sidebar">
+    <>
+      <button
+        type="button"
+        className="sidebar-mobile-toggle"
+        aria-label={menuMobileAberto ? "Fechar menu" : "Abrir menu"}
+        aria-expanded={menuMobileAberto}
+        onClick={() => setMenuMobileAberto((aberto) => !aberto)}
+      >
+        <span aria-hidden="true">{menuMobileAberto ? "✕" : "☰"}</span>
+      </button>
+
+      {menuMobileAberto && (
+        <button
+          type="button"
+          className="sidebar-mobile-overlay"
+          aria-label="Fechar menu"
+          onClick={() => setMenuMobileAberto(false)}
+        />
+      )}
+
+      <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
       <div className="sidebar-logo">
         <div className="sidebar-logo-icone">
           PM
@@ -132,12 +172,6 @@ export default function Sidebar() {
             texto="Central de Desempenho"
           />
 
-          <ItemMenu
-            to="/ranking"
-            icone="🏆"
-            texto="Ranking"
-          />
-
         </div>
 
         {/* ================= NOVA CENTRAL ================= */}
@@ -177,11 +211,25 @@ export default function Sidebar() {
           titulo="Sistema"
           icone="⚙️"
           rotas={[
+            "/conquistas",
+            "/ranking",
             "/backup",
             "/configuracoes",
             "/admin",
           ]}
         >
+          <ItemMenu
+            to="/conquistas"
+            icone="🏆"
+            texto="Conquistas"
+          />
+
+          <ItemMenu
+            to="/ranking"
+            icone="🥇"
+            texto="Ranking"
+          />
+
           <ItemMenu
             to="/backup"
             icone="💾"
@@ -210,7 +258,8 @@ export default function Sidebar() {
         <strong>PMPE</strong>
         <small>Planejamento tático</small>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

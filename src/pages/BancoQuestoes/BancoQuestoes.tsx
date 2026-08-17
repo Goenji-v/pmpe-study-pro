@@ -3,6 +3,7 @@ import "./BancoQuestoes.css";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
+import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
 
 import type {
   Assunto,
@@ -21,6 +22,7 @@ export default function BancoQuestoes() {
   const { showToast } = useToast();
 
   const [materiaId, setMateriaId] = useState("");
+  const [moduloId, setModuloId] = useState("");
   const [assuntoId, setAssuntoId] = useState("");
   const [banca, setBanca] = useState("AOCP");
   const [dificuldade, setDificuldade] =
@@ -39,14 +41,27 @@ export default function BancoQuestoes() {
     (materia: Materia) => materia.id === materiaId
   );
 
+  const modulosDisponiveis = materiaSelecionada
+    ? listarModulosDaMateria(materiaSelecionada)
+    : [];
+
+  const moduloSelecionado = modulosDisponiveis.find(
+    (modulo) => modulo.id === moduloId
+  );
+
   function salvarQuestao() {
     const assuntoSelecionado =
-      materiaSelecionada?.assuntos.find(
+      moduloSelecionado?.assuntos.find(
         (assunto: Assunto) => assunto.id === assuntoId
       );
 
     if (!materiaSelecionada) {
       showToast("Selecione uma matéria.", "warning");
+      return;
+    }
+
+    if (!moduloSelecionado) {
+      showToast("Selecione um módulo.", "warning");
       return;
     }
 
@@ -93,6 +108,8 @@ export default function BancoQuestoes() {
       id: crypto.randomUUID(),
       materiaId: materiaSelecionada.id,
       materia: materiaSelecionada.nome,
+      moduloId: moduloSelecionado.id,
+      modulo: moduloSelecionado.nome,
       assuntoId: assuntoSelecionado.id,
       assunto: assuntoSelecionado.nome,
       banca,
@@ -135,6 +152,7 @@ export default function BancoQuestoes() {
 
   function limparFormulario() {
     setMateriaId("");
+    setModuloId("");
     setAssuntoId("");
     setBanca("AOCP");
     setDificuldade("media");
@@ -204,6 +222,7 @@ export default function BancoQuestoes() {
               value={materiaId}
               onChange={(evento) => {
                 setMateriaId(evento.target.value);
+                setModuloId("");
                 setAssuntoId("");
               }}
             >
@@ -223,6 +242,29 @@ export default function BancoQuestoes() {
           </div>
 
           <div className="banco-form-group">
+            <label>Módulo</label>
+
+            <select
+              value={moduloId}
+              onChange={(evento) => {
+                setModuloId(evento.target.value);
+                setAssuntoId("");
+              }}
+              disabled={!materiaId}
+            >
+              <option value="">
+                Selecione um módulo
+              </option>
+
+              {modulosDisponiveis.map((modulo) => (
+                <option key={modulo.id} value={modulo.id}>
+                  {modulo.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="banco-form-group">
             <label>Assunto</label>
 
             <select
@@ -230,13 +272,13 @@ export default function BancoQuestoes() {
               onChange={(evento) =>
                 setAssuntoId(evento.target.value)
               }
-              disabled={!materiaId}
+              disabled={!moduloId}
             >
               <option value="">
                 Selecione um assunto
               </option>
 
-              {materiaSelecionada?.assuntos.map(
+              {moduloSelecionado?.assuntos.map(
                 (assunto: Assunto) => (
                   <option
                     key={assunto.id}

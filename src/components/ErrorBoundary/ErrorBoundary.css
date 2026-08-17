@@ -7,14 +7,16 @@
 }
 
 .error-boundary-card {
-  width: min(620px, 100%);
+  width: min(660px, 100%);
   padding: 32px;
+  border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
 }
 
 .error-boundary-card > span {
+  color: #b45309;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -22,6 +24,20 @@
 
 .error-boundary-card h1 {
   margin: 10px 0 12px;
+  color: #0f172a;
+}
+
+.error-boundary-card p {
+  color: #475569;
+  line-height: 1.6;
+}
+
+.error-boundary-incidente {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 12px;
 }
 
 .error-boundary-card details {
@@ -47,8 +63,16 @@
 .error-boundary-acoes button {
   min-height: 42px;
   padding: 0 18px;
-  border: 0;
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
   cursor: pointer;
   font-weight: 700;
+  background: #fff;
+  color: #0f172a;
+}
+
+.error-boundary-acoes button:first-child {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #fff;
 }

@@ -1,6 +1,7 @@
 import {
   planoPMPE,
   type MissaoPlano,
+  type SemanaPlano,
 } from "../data/planoPMPE";
 
 export const CHAVE_MISSOES_CONCLUIDAS =
@@ -37,21 +38,21 @@ export function getMissoesConcluidas(): string[] {
   }
 }
 
-export function getTodosIdsMissoes(): string[] {
-  return planoPMPE.flatMap((semana) =>
+export function getTodosIdsMissoes(plano: SemanaPlano[] = planoPMPE): string[] {
+  return plano.flatMap((semana) =>
     semana.dias.flatMap((dia) =>
       dia.missoes.map((missao) => missao.id)
     )
   );
 }
 
-export function getTotalMissoes(): number {
-  return getTodosIdsMissoes().length;
+export function getTotalMissoes(plano: SemanaPlano[] = planoPMPE): number {
+  return getTodosIdsMissoes(plano).length;
 }
 
-export function getTotalConcluidas(concluidasInformadas?: string[]): number {
+export function getTotalConcluidas(concluidasInformadas?: string[], plano: SemanaPlano[] = planoPMPE): number {
   const idsValidos = new Set(
-    getTodosIdsMissoes()
+    getTodosIdsMissoes(plano)
   );
 
   const concluidas = concluidasInformadas ?? getMissoesConcluidas();
@@ -61,34 +62,35 @@ export function getTotalConcluidas(concluidasInformadas?: string[]): number {
   ).length;
 }
 
-export function getTotalPendentes(concluidasInformadas?: string[]): number {
+export function getTotalPendentes(concluidasInformadas?: string[], plano: SemanaPlano[] = planoPMPE): number {
   return Math.max(
     0,
-    getTotalMissoes() -
-      getTotalConcluidas(concluidasInformadas)
+    getTotalMissoes(plano) -
+      getTotalConcluidas(concluidasInformadas, plano)
   );
 }
 
-export function getProgressoPlano(concluidasInformadas?: string[]): number {
-  const total = getTotalMissoes();
+export function getProgressoPlano(concluidasInformadas?: string[], plano: SemanaPlano[] = planoPMPE): number {
+  const total = getTotalMissoes(plano);
 
   if (total === 0) {
     return 0;
   }
 
   return Math.round(
-    (getTotalConcluidas(concluidasInformadas) / total) * 100
+    (getTotalConcluidas(concluidasInformadas, plano) / total) * 100
   );
 }
 
 export function getProximaMissao(
-  concluidasInformadas?: string[]
+  concluidasInformadas?: string[],
+  plano: SemanaPlano[] = planoPMPE
 ): ProximaMissaoPlano | null {
   const concluidas = new Set(
     concluidasInformadas ?? getMissoesConcluidas()
   );
 
-  for (const semana of planoPMPE) {
+  for (const semana of plano) {
     for (const dia of semana.dias) {
       for (const missao of dia.missoes) {
         if (!concluidas.has(missao.id)) {
@@ -107,9 +109,10 @@ export function getProximaMissao(
 
 export function getProgressoSemana(
   numeroSemana: number,
-  concluidasInformadas?: string[]
+  concluidasInformadas?: string[],
+  plano: SemanaPlano[] = planoPMPE
 ): number {
-  const semana = planoPMPE.find(
+  const semana = plano.find(
     (item) => item.numero === numeroSemana
   );
 
@@ -141,11 +144,11 @@ export function getProgressoSemana(
   );
 }
 
-export function getSemanaAtual(concluidasInformadas?: string[]): number {
-  const proxima = getProximaMissao(concluidasInformadas);
+export function getSemanaAtual(concluidasInformadas?: string[], plano: SemanaPlano[] = planoPMPE): number {
+  const proxima = getProximaMissao(concluidasInformadas, plano);
 
   if (!proxima) {
-    return planoPMPE.length;
+    return plano.length;
   }
 
   return proxima.semana;

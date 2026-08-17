@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -13,6 +14,10 @@ import {
   gerarQuestoesIA,
   type DificuldadeIA,
 } from "../../services/gemini";
+
+import {
+  listarModulosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
 
 import {
   listarSemanasDoPlano,
@@ -49,6 +54,11 @@ export default function GerarSimuladoIA() {
   const [
     materiaSelecionada,
     setMateriaSelecionada,
+  ] = useState("");
+
+  const [
+    moduloSelecionado,
+    setModuloSelecionado,
   ] = useState("");
 
   const [
@@ -91,6 +101,20 @@ export default function GerarSimuladoIA() {
   const [sucesso, setSucesso] =
     useState("");
 
+  useEffect(() => {
+    const salvo = sessionStorage.getItem("pmpe:gerar-ia:prefill");
+    if (!salvo) return;
+    try {
+      const prefill = JSON.parse(salvo) as { materia?: string; modulo?: string; assunto?: string };
+      setOrigem("assunto");
+      if (prefill.materia) setMateriaSelecionada(prefill.materia);
+      if (prefill.modulo) setModuloSelecionado(prefill.modulo);
+      if (prefill.assunto) setAssuntoSelecionado(prefill.assunto);
+    } finally {
+      sessionStorage.removeItem("pmpe:gerar-ia:prefill");
+    }
+  }, []);
+
   const [
     questoesGeradas,
     setQuestoesGeradas,
@@ -117,8 +141,22 @@ export default function GerarSimuladoIA() {
       ]
     );
 
+  const modulosDisponiveis =
+    materiaAtual
+      ? listarModulosDaMateria(
+          materiaAtual
+        )
+      : [];
+
+  const moduloAtual =
+    modulosDisponiveis.find(
+      (modulo) =>
+        modulo.nome ===
+        moduloSelecionado
+    );
+
   const assuntosDisponiveis =
-    materiaAtual?.assuntos ?? [];
+    moduloAtual?.assuntos ?? [];
 
   const conteudosSemana =
     useMemo(
@@ -186,6 +224,7 @@ export default function GerarSimuladoIA() {
       novaMateria
     );
 
+    setModuloSelecionado("");
     setAssuntoSelecionado("");
     setErro("");
     setSucesso("");
@@ -201,6 +240,17 @@ export default function GerarSimuladoIA() {
     ) {
       setErro(
         "Selecione uma matéria."
+      );
+
+      return;
+    }
+
+    if (
+      origem === "assunto" &&
+      !moduloSelecionado.trim()
+    ) {
+      setErro(
+        "Selecione um módulo."
       );
 
       return;
@@ -258,6 +308,16 @@ export default function GerarSimuladoIA() {
           materia:
             origem === "assunto"
               ? materiaSelecionada
+              : undefined,
+
+          modulo:
+            origem === "assunto"
+              ? moduloSelecionado
+              : undefined,
+
+          moduloId:
+            origem === "assunto"
+              ? moduloAtual?.id
               : undefined,
 
           assunto:
@@ -349,6 +409,7 @@ export default function GerarSimuladoIA() {
 
     setOrigem("assunto");
     setMateriaSelecionada("");
+    setModuloSelecionado("");
     setAssuntoSelecionado("");
     setSemanaSelecionada(1);
     setBanca("AOCP");
@@ -487,6 +548,45 @@ export default function GerarSimuladoIA() {
 
             <div className="gerar-ia-campo">
               <label>
+                Módulo
+              </label>
+
+              <select
+                value={
+                  moduloSelecionado
+                }
+                onChange={(evento) => {
+                  setModuloSelecionado(
+                    evento.target.value
+                  );
+                  setAssuntoSelecionado("");
+                }}
+                disabled={
+                  gerando ||
+                  !materiaSelecionada
+                }
+              >
+                <option value="">
+                  {materiaSelecionada
+                    ? "Selecione o módulo"
+                    : "Selecione primeiro a matéria"}
+                </option>
+
+                {modulosDisponiveis.map(
+                  (modulo) => (
+                    <option
+                      key={modulo.id}
+                      value={modulo.nome}
+                    >
+                      {modulo.nome}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            <div className="gerar-ia-campo">
+              <label>
                 Assunto
               </label>
 
@@ -508,13 +608,13 @@ export default function GerarSimuladoIA() {
                 }
                 disabled={
                   gerando ||
-                  !materiaSelecionada
+                  !moduloSelecionado
                 }
               >
                 <option value="">
-                  {materiaSelecionada
+                  {moduloSelecionado
                     ? "Selecione o assunto"
-                    : "Selecione primeiro a matéria"}
+                    : "Selecione primeiro o módulo"}
                 </option>
 
                 {assuntosDisponiveis.map(

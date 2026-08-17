@@ -33,10 +33,12 @@ import NotFound from "./pages/NotFound/NotFound";
 import Ranking from "./pages/Ranking/Ranking";
 import RelatorioInteligente from "./pages/RelatorioInteligente/RelatorioInteligente";
 import Admin from "./pages/Admin/Admin";
+import Conquistas from "./pages/Conquistas/Conquistas";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Header from "./components/Header/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
+import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
 
 import {
   AppProvider,
@@ -58,6 +60,7 @@ function LayoutProtegido() {
   return (
     <ProtectedRoute>
       <ToastProvider>
+        <RuntimeErrorGuard />
         <AppProvider>
           <CronometroProvider>
             <div className="layout">
@@ -75,6 +78,12 @@ function LayoutProtegido() {
 
                     <Route
                       path="/plano"
+                      element={<PlanoEstudos />}
+                    />
+
+                    {/* Compatibilidade com links antigos do Dashboard */}
+                    <Route
+                      path="/plano-estudos"
                       element={<PlanoEstudos />}
                     />
 
@@ -122,6 +131,17 @@ function LayoutProtegido() {
                       path="/estudos"
                       element={<Estudos />}
                     />
+
+                    {/* Compatibilidade com links antigos de Conteúdos */}
+                    <Route
+                      path="/conteudos"
+                      element={<Estudos />}
+                    />
+
+                    {/* Compatibilidade com links antigos da busca global */}
+                    <Route path="/buscar" element={<Estudos />} />
+                    <Route path="/pesquisa" element={<Estudos />} />
+                    <Route path="/search" element={<Estudos />} />
 
                     <Route
                       path="/revisoes"
@@ -196,6 +216,11 @@ function LayoutProtegido() {
                     <Route
                       path="/ranking"
                       element={<Ranking />}
+                    />
+
+                    <Route
+                      path="/conquistas"
+                      element={<Conquistas />}
                     />
 
                     {/* Sistema */}

@@ -1,7 +1,14 @@
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
@@ -19,7 +26,26 @@ import type {
   TipoSessao,
 } from "../../types/index";
 
+import type {
+  DadosIniciarSessao,
+} from "../../context/CronometroContext";
+
+import {
+  listarModulosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
+import { localizarProximaAula } from "../../services/conteudos/localizarConteudo";
+import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
+import { planoPMPE } from "../../data/planoPMPE";
+
+type EstadoNavegacaoCentral = {
+  origem?: "dashboard" | "plano";
+  prefillSessao?: DadosIniciarSessao;
+};
+
 export default function CentralEstudos() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const {
     materias,
     sessoes,
@@ -31,6 +57,7 @@ export default function CentralEstudos() {
     cronometroAtivo,
     iniciar,
     atualizarDados,
+    prepararSessao,
     pausar,
     continuar,
     finalizar,
@@ -45,6 +72,25 @@ export default function CentralEstudos() {
       sessaoAtiva.status ===
       "pausado",
   };
+
+  const missaoPlanoAtual = useMemo(
+    () =>
+      estado.missaoId
+        ? planoPMPE
+            .flatMap((semana) => semana.dias)
+            .flatMap((dia) => dia.missoes)
+            .find((missao) => missao.id === estado.missaoId)
+        : undefined,
+    [estado.missaoId]
+  );
+
+  const sessaoVinculadaAConteudo = Boolean(
+    missaoPlanoAtual?.conteudo
+  );
+
+  const sessaoVinculadaAAula = Boolean(
+    estado.aulaId
+  );
 
   const [mensagem, setMensagem] =
     useState("");
@@ -88,36 +134,180 @@ const [
   "facil" | "media" | "dificil"
 >("media");
 
+
 const [
   observacaoFinalizacao,
   setObservacaoFinalizacao,
 ] = useState("");
+
+const [
+  concluirAssunto,
+  setConcluirAssunto,
+] = useState(false);
+
+  const prefillAplicadoRef = useRef(false);
+
+  useEffect(() => {
+    if (prefillAplicadoRef.current || materias.length === 0) {
+      return;
+    }
+
+    const estadoNavegacao =
+      location.state as EstadoNavegacaoCentral | null;
+
+    let prefill = estadoNavegacao?.prefillSessao;
+
+    if (!prefill) {
+      const prefillSalvo = sessionStorage.getItem(
+        "pmpe:central-estudos:prefill"
+      );
+
+      if (prefillSalvo) {
+        try {
+          prefill = JSON.parse(prefillSalvo) as DadosIniciarSessao;
+        } catch {
+          sessionStorage.removeItem(
+            "pmpe:central-estudos:prefill"
+          );
+        }
+      }
+    }
+
+    if (!prefill) {
+      return;
+    }
+
+    // Etapa 15: mesmo um prefill salvo por versão antiga é refeito a partir
+    // da missão e dos IDs canônicos atuais antes de abrir a Central.
+    if (prefill.missaoId) {
+      const missao = planoPMPE
+        .flatMap((semana) => semana.dias)
+        .flatMap((dia) => dia.missoes)
+        .find((item) => item.id === prefill?.missaoId);
+
+      if (missao) {
+        prefill = {
+          ...prefill,
+          ...criarDadosSessaoDaMissao(
+            materias,
+            missao,
+            prefill.semana ?? 1,
+            prefill.dia ?? 1
+          ),
+        };
+      }
+    }
+
+    const materia =
+      materias.find((item) => item.id === prefill.materiaId) ??
+      materias.find((item) => item.nome === prefill.materia);
+
+    const modulos = materia
+      ? listarModulosDaMateria(materia)
+      : [];
+
+    const modulo =
+      modulos.find((item) => item.id === prefill.moduloId) ??
+      modulos.find((item) => item.nome === prefill.modulo) ??
+      modulos.find((item) =>
+        item.assuntos.some((assunto) =>
+          assunto.id === prefill.assuntoId ||
+          assunto.nome === prefill.assunto
+        )
+      ) ??
+      modulos[0];
+
+    const assunto =
+      modulo?.assuntos.find((item) => item.id === prefill.assuntoId) ??
+      modulo?.assuntos.find((item) => item.nome === prefill.assunto);
+
+    prefillAplicadoRef.current = true;
+
+    prepararSessao({
+      materia: materia?.nome ?? prefill.materia,
+      materiaId: materia?.id ?? prefill.materiaId,
+      modulo: modulo?.nome ?? prefill.modulo,
+      moduloId: modulo?.id ?? prefill.moduloId,
+      assunto: assunto?.nome ?? prefill.assunto,
+      assuntoId: assunto?.id ?? prefill.assuntoId,
+      tipo:
+        prefill.tipo === "estudo"
+          ? "aula"
+          : prefill.tipo,
+      objetivo: prefill.objetivo ?? "",
+      observacao: prefill.observacao ?? "",
+      missaoId: prefill.missaoId,
+      semana: prefill.semana,
+      dia: prefill.dia,
+      urlAula: prefill.urlAula,
+      urlQuestoes: prefill.urlQuestoes,
+    });
+
+    sessionStorage.removeItem(
+      "pmpe:central-estudos:prefill"
+    );
+
+    if (location.state) {
+      navigate(location.pathname, {
+        replace: true,
+        state: null,
+      });
+    }
+  }, [
+    location.pathname,
+    location.state,
+    materias,
+    navigate,
+    prepararSessao,
+  ]);
 
   const materiaSelecionada =
     useMemo(
       () =>
         materias.find(
           (materia) =>
-            materia.nome ===
-            estado.materia
+            materia.id === estado.materiaId ||
+            materia.nome === estado.materia
         ),
-      [materias, estado.materia]
+      [materias, estado.materia, estado.materiaId]
     );
 
+  const modulosDisponiveis = useMemo(
+    () =>
+      materiaSelecionada
+        ? listarModulosDaMateria(materiaSelecionada)
+        : [],
+    [materiaSelecionada]
+  );
+
+  const moduloSelecionado = useMemo(
+    () =>
+      modulosDisponiveis.find(
+        (modulo) => modulo.id === estado.moduloId
+      ) ?? modulosDisponiveis[0],
+    [modulosDisponiveis, estado.moduloId]
+  );
+
   const assuntosDisponiveis =
-    materiaSelecionada?.assuntos ?? [];
+    moduloSelecionado?.assuntos ?? [];
 
   const materiaObrigatoria =
     estado.tipo === "aula" ||
-    estado.tipo === "questoes";
+    estado.tipo === "questoes" ||
+    estado.tipo === "revisao";
 
   const assuntoLivre =
-    estado.tipo === "revisao" ||
     estado.tipo === "simulado";
+
+  const formatoRevisao = estado.formatoRevisao ?? "teoria";
 
   function alterarCampo(
     campo:
+      | "materiaId"
+      | "modulo"
+      | "moduloId"
       | "assunto"
+      | "assuntoId"
       | "objetivo"
       | "observacao",
     valor: string
@@ -139,27 +329,88 @@ const [
 
     atualizarDados({
       tipo,
+      formatoRevisao: tipo === "revisao" ? "teoria" : undefined,
 
       materia:
-        tipo === "revisao" ||
         tipo === "simulado"
           ? ""
           : estado.materia,
 
+      materiaId:
+        tipo === "simulado"
+          ? undefined
+          : estado.materiaId,
+      modulo: undefined,
+      moduloId: undefined,
       assunto: "",
+      assuntoId: undefined,
+      aulaId: undefined,
     });
   }
 
   function selecionarMateria(
-    materia: string
+    materiaId: string
   ) {
     if (cronometroAtivo) {
       return;
     }
 
+    const materia = materias.find(
+      (item) => item.id === materiaId
+    );
+
+    const primeiroModulo = materia
+      ? listarModulosDaMateria(materia)[0]
+      : undefined;
+
     atualizarDados({
-      materia,
+      materia: materia?.nome ?? "",
+      materiaId: materia?.id,
+      modulo: primeiroModulo?.nome,
+      moduloId: primeiroModulo?.id,
       assunto: "",
+      assuntoId: undefined,
+      aulaId: undefined,
+      urlAula: undefined,
+      urlQuestoes: undefined,
+    });
+  }
+
+  function selecionarModulo(
+    moduloId: string
+  ) {
+    if (cronometroAtivo) {
+      return;
+    }
+
+    const modulo = modulosDisponiveis.find(
+      (item) => item.id === moduloId
+    );
+
+    atualizarDados({
+      modulo: modulo?.nome,
+      moduloId: modulo?.id,
+      assunto: "",
+      assuntoId: undefined,
+      aulaId: undefined,
+      urlAula: undefined,
+      urlQuestoes: undefined,
+    });
+  }
+
+  function selecionarAssunto(
+    assuntoId: string
+  ) {
+    const assunto = assuntosDisponiveis.find(
+      (item) => item.id === assuntoId
+    );
+
+    atualizarDados({
+      assunto: assunto?.nome ?? "",
+      assuntoId: assunto?.id,
+      aulaId: assunto ? localizarProximaAula(assunto)?.id : undefined,
+      urlAula: assunto ? (localizarProximaAula(assunto)?.url ?? assunto.aula) : undefined,
+      urlQuestoes: assunto?.questoes,
     });
   }
 
@@ -171,11 +422,29 @@ const [
         materia:
           estado.materia,
 
+        materiaId:
+          estado.materiaId,
+
+        modulo:
+          estado.modulo,
+
+        moduloId:
+          estado.moduloId,
+
         assunto:
           estado.assunto,
 
+        assuntoId:
+          estado.assuntoId,
+
+        aulaId:
+          estado.aulaId,
+
         tipo:
           estado.tipo,
+
+        formatoRevisao:
+          estado.tipo === "revisao" ? formatoRevisao : undefined,
 
         objetivo:
           estado.objetivo,
@@ -247,6 +516,7 @@ const [
     setBanca("");
     setDificuldade("media");
     setAvaliacaoRevisao("media");
+    setConcluirAssunto(false);
 
     setObservacaoFinalizacao(
       estado.observacao || ""
@@ -292,10 +562,9 @@ const [
       number | undefined;
 
     const exigeQuestoes =
-      estado.tipo ===
-        "questoes" ||
-      estado.tipo ===
-        "simulado";
+      estado.tipo === "questoes" ||
+      estado.tipo === "simulado" ||
+      (estado.tipo === "revisao" && formatoRevisao === "questoes");
 
     if (exigeQuestoes) {
       totalQuestoes =
@@ -374,6 +643,16 @@ const [
             "revisao"
               ? avaliacaoRevisao
               : undefined,
+
+        formatoRevisao:
+          estado.tipo === "revisao"
+            ? formatoRevisao
+            : undefined,
+
+        concluirAssunto:
+          concluirAssunto &&
+          (estado.tipo === "aula" ||
+            estado.tipo === "questoes"),
       });
 
     if (!resultado) {
@@ -386,8 +665,8 @@ const [
 
     setMensagem(
       resultado.revisaoCriada
-        ? "Sessão salva e primeira revisão criada automaticamente."
-        : "Sessão salva."
+        ? "Sessão salva. Assunto concluído e revisão programada."
+        : "Sessão salva sem duplicar o tempo."
     );
   }
 
@@ -400,9 +679,9 @@ const [
           </h1>
 
           <p>
-            Registre aulas,
-            revisões, questões e
-            simulados separadamente.
+            Uma sessão, um único tempo.
+            Teoria, questões e revisão ficam
+            vinculadas ao conteúdo correto.
           </p>
         </div>
 
@@ -499,7 +778,7 @@ const [
 
               <select
                 value={
-                  estado.materia
+                  materiaSelecionada?.id ?? ""
                 }
                 onChange={(evento) =>
                   selecionarMateria(
@@ -524,7 +803,7 @@ const [
                         materia.id
                       }
                       value={
-                        materia.nome
+                        materia.id
                       }
                     >
                       {
@@ -536,15 +815,37 @@ const [
               </select>
             </div>
 
+            {!assuntoLivre && (
+              <div className="central-estudos-campo">
+                <label>Módulo</label>
+
+                <select
+                  value={moduloSelecionado?.id ?? ""}
+                  onChange={(evento) =>
+                    selecionarModulo(evento.target.value)
+                  }
+                  disabled={estado.ativo || !materiaSelecionada}
+                >
+                  <option value="">
+                    {materiaSelecionada
+                      ? "Selecione o módulo"
+                      : "Selecione primeiro a matéria"}
+                  </option>
+
+                  {modulosDisponiveis.map((modulo) => (
+                    <option key={modulo.id} value={modulo.id}>
+                      {modulo.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="central-estudos-campo">
               <label>
-                {estado.tipo ===
-                "revisao"
-                  ? "Nome da revisão"
-                  : estado.tipo ===
-                      "simulado"
-                    ? "Nome do simulado"
-                    : "Assunto"}
+                {estado.tipo === "simulado"
+                  ? "Nome do simulado"
+                  : "Assunto"}
               </label>
 
               {assuntoLivre ? (
@@ -555,41 +856,27 @@ const [
                   onChange={(
                     evento
                   ) =>
-                    alterarCampo(
-                      "assunto",
-                      evento.target
-                        .value
-                    )
+                    atualizarDados({
+                      assunto: evento.target.value,
+                      assuntoId: undefined,
+                    })
                   }
                   disabled={
                     estado.ativo
                   }
-                  placeholder={
-                    estado.tipo ===
-                    "revisao"
-                      ? "Digite o conteúdo revisado"
-                      : "Digite o nome do simulado"
-                  }
+                  placeholder="Digite o nome do simulado"
                 />
               ) : (
                 <>
                   <select
                     value={
-                      assuntosDisponiveis.some(
-                        (assunto) =>
-                          assunto.nome ===
-                          estado.assunto
-                      )
-                        ? estado.assunto
-                        : ""
+                      estado.assuntoId ?? ""
                     }
                     onChange={(
                       evento
                     ) =>
-                      alterarCampo(
-                        "assunto",
-                        evento.target
-                          .value
+                      selecionarAssunto(
+                        evento.target.value
                       )
                     }
                     disabled={
@@ -610,7 +897,7 @@ const [
                             assunto.id
                           }
                           value={
-                            assunto.nome
+                            assunto.id
                           }
                         >
                           {
@@ -642,6 +929,35 @@ const [
                 </>
               )}
             </div>
+
+            {estado.tipo === "revisao" && (
+              <div className="central-estudos-campo central-estudos-revisao-formato">
+                <label>Formato da revisão</label>
+                <div className="central-revisao-opcoes">
+                  <button
+                    type="button"
+                    className={formatoRevisao === "teoria" ? "ativo" : ""}
+                    onClick={() => atualizarDados({ formatoRevisao: "teoria" })}
+                    disabled={estado.ativo}
+                  >
+                    📖 Teoria
+                  </button>
+                  <button
+                    type="button"
+                    className={formatoRevisao === "questoes" ? "ativo" : ""}
+                    onClick={() => atualizarDados({ formatoRevisao: "questoes" })}
+                    disabled={estado.ativo}
+                  >
+                    📝 Questões
+                  </button>
+                </div>
+                <small>
+                  {formatoRevisao === "teoria"
+                    ? "Releitura, resumo, anotações ou revisão do material."
+                    : "Ao finalizar, informe total, acertos, banca e dificuldade. O desempenho entra nas estatísticas do assunto."}
+                </small>
+              </div>
+            )}
 
             <div className="central-estudos-campo">
               <label>
@@ -740,10 +1056,18 @@ const [
                 )}
             </strong>
 
+            {estado.modulo && (
+              <small>Módulo: {estado.modulo}</small>
+            )}
+
             <p>
               {estado.assunto ||
                 "Nenhum assunto informado"}
             </p>
+
+            {estado.tipo === "revisao" && (
+              <small>Formato: {formatoRevisao === "questoes" ? "Questões" : "Teoria"}</small>
+            )}
 
             {estado.objetivo && (
               <small>
@@ -923,10 +1247,9 @@ const [
                 />
               </label>
 
-              {(estado.tipo ===
-                "questoes" ||
-                estado.tipo ===
-                  "simulado") && (
+              {(estado.tipo === "questoes" ||
+                estado.tipo === "simulado" ||
+                (estado.tipo === "revisao" && formatoRevisao === "questoes")) && (
                 <>
                   <label>
                     Questões realizadas
@@ -1061,6 +1384,42 @@ const [
                 </label>
               )}
 
+              {(estado.tipo === "aula" ||
+                estado.tipo === "questoes") &&
+                !sessaoVinculadaAConteudo && (
+                <label className="finalizacao-concluir finalizacao-campo-largo">
+                  <input
+                    type="checkbox"
+                    checked={concluirAssunto}
+                    onChange={(evento) =>
+                      setConcluirAssunto(evento.target.checked)
+                    }
+                  />
+
+                  <span>
+                    <strong>Concluir este assunto</strong>
+                    <small>
+                      Marque apenas quando terminar o conteúdo. A revisão 1–7–15
+                      será criada uma única vez.
+                    </small>
+                  </span>
+                </label>
+              )}
+
+              {(estado.tipo === "aula" || estado.tipo === "questoes") &&
+                sessaoVinculadaAConteudo && (
+                  <div className="finalizacao-concluir finalizacao-campo-largo">
+                    <span>
+                      <strong>Conteúdo vinculado ao Plano</strong>
+                      <small>
+                        {sessaoVinculadaAAula
+                          ? "Ao finalizar, esta aula será marcada como concluída. O assunto só fecha quando todas as aulas dele forem concluídas."
+                          : "Ao finalizar, este assunto será marcado como concluído e o Plano será atualizado junto com Conteúdos."}
+                      </small>
+                    </span>
+                  </div>
+                )}
+
               <label className="finalizacao-campo-largo">
                 Observações
 
@@ -1154,6 +1513,7 @@ function nomePorTipo(
     revisao: "Revisão",
     questoes: "Questões",
     simulado: "Simulado",
+    redacao: "Redação",
   };
 
   return nomes[tipo] || "Estudo";
@@ -1172,6 +1532,7 @@ function iconePorTipo(
     revisao: "🔁",
     questoes: "📝",
     simulado: "🎯",
+    redacao: "✍️",
   };
 
   return icones[tipo] || "📚";
@@ -1221,4 +1582,3 @@ function formatarSegundos(
     )
     .join(":");
 }
-

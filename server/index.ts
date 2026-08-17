@@ -307,6 +307,15 @@ app.post(
           banca?: string;
           periodo?: "hoje" | "7-dias";
           tempoDisponivelMinutos?: number;
+          perfilEstudo?: {
+            diasPorSemana?: number;
+            materiaMaiorDificuldade?: string;
+            nivelAtual?: string;
+            formatoPreferido?: string;
+            domingoEstrategico?: boolean;
+            observacao?: string;
+            modo?: "assistido";
+          };
           metas?: unknown;
           questoes?: unknown[];
           sessoes?: unknown[];
@@ -363,6 +372,9 @@ ${quantidadeDias}
 TEMPO DISPONÍVEL POR DIA:
 ${tempoDisponivel} minutos
 
+PERFIL E PREFERÊNCIAS DO ESTUDANTE:
+${JSON.stringify(dados.perfilEstudo || {}, null, 2)}
+
 METAS:
 ${JSON.stringify(dados.metas || {}, null, 2)}
 
@@ -388,6 +400,9 @@ CRITÉRIOS:
 - respeite o tempo disponível por dia;
 - não concentre todo o período em uma única matéria;
 - use quantidades de questões realistas;
+- considere explicitamente a matéria de maior dificuldade e o formato preferido;
+- se domingoEstrategico for verdadeiro, reserve o domingo para redação e simulado;
+- trate o resultado apenas como proposta assistida, sem declarar que o plano original foi substituído;
 - para o período de 7 dias, distribua tarefas entre os dias 1 e 7;
 - para hoje, use dia 1;
 - não invente missãoId: use somente IDs existentes nas missões pendentes;

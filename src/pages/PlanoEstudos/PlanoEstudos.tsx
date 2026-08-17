@@ -4,13 +4,14 @@ import {
 } from "react";
 
 import {
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 
 import "./PlanoEstudos.css";
 
 import {
-  planoPMPE,
+  obterReferenciasDaMissao,
   type DiaPlano,
   type MissaoPlano,
 } from "../../data/planoPMPE";
@@ -23,34 +24,194 @@ import {
   useCronometro,
 } from "../../context/CronometroContext";
 
+import { localizarConteudoDaMissao, localizarConteudosDaMissao } from "../../services/conteudos/localizarConteudo";
+import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
+import {
+  getProgressoPlano,
+  getProgressoSemana,
+  getSemanaAtual,
+} from "../../utils/planoUtils";
+import {
+  adaptarMissaoFlexivel,
+  calcularDiagnosticoSemanalPlano,
+} from "../../utils/adaptacaoPlano";
+import {
+  criarPlanoCalendario,
+  NOMES_DIAS_PLANO,
+  normalizarMissoesPorDia,
+  obterDiaAtualPlano,
+} from "../../utils/planoCalendario";
+
 export default function PlanoEstudos() {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const estadoNavegacao = location.state as { semana?: number; dia?: number } | null;
 
   const {
     materias,
+    questoes,
+    sessoes,
+    revisoes,
+    setSessoes,
+    setSimulados,
     missoesConcluidas:
       concluidas,
     setMissoesConcluidas:
       setConcluidas,
     definirConclusaoAssunto,
+    definirConclusaoAula,
+    configuracoes,
   } = useApp();
+
+  const [temaRedacao, setTemaRedacao] = useState("");
+  const [minutosRedacao, setMinutosRedacao] = useState("");
+  const [notaRedacao, setNotaRedacao] = useState("");
+  const [nomeSimulado, setNomeSimulado] = useState("");
+  const [totalSimulado, setTotalSimulado] = useState("");
+  const [acertosSimulado, setAcertosSimulado] = useState("");
+  const [minutosSimulado, setMinutosSimulado] = useState("");
+  const [cadernoUrl, setCadernoUrl] = useState("");
+  const [comentadoUrl, setComentadoUrl] = useState("");
+  const [mensagemDomingo, setMensagemDomingo] = useState("");
+
+  function marcarMissaoDomingoConcluida(tipo: "redacao" | "simulado") {
+    const domingoAtual = planoCalendario
+      .find((semana) => semana.numero === semanaSelecionada)
+      ?.dias.find((itemDia) => itemDia.numero === 7);
+    const missao = domingoAtual?.missoes.find((item) => item.tipo === tipo);
+
+    if (!missao) return;
+
+    setConcluidas((anteriores) =>
+      anteriores.includes(missao.id)
+        ? anteriores
+        : [...anteriores, missao.id]
+    );
+    window.dispatchEvent(new Event("pmpe-plano-atualizado"));
+    window.dispatchEvent(new Event("pmpe-dashboard-atualizado"));
+  }
+
+  function salvarRedacaoDomingo() {
+    const tema = temaRedacao.trim();
+    const minutosTexto = Number(minutosRedacao);
+    const nota = notaRedacao.trim() ? Number(notaRedacao) : undefined;
+    const domingoAtual = planoCalendario
+      .find((semana) => semana.numero === semanaSelecionada)
+      ?.dias.find((itemDia) => itemDia.numero === 7);
+    const missaoRedacao = domingoAtual?.missoes.find((item) => item.tipo === "redacao");
+
+    if (missaoRedacao && concluidas.includes(missaoRedacao.id)) {
+      setMensagemDomingo("A redação deste domingo já foi salva.");
+      return;
+    }
+
+    if (!tema || !Number.isFinite(minutosTexto) || minutosTexto < 1) {
+      setMensagemDomingo("Informe o tema e o tempo da redação.");
+      return;
+    }
+    if (nota !== undefined && (!Number.isFinite(nota) || nota < 0)) {
+      setMensagemDomingo("Informe uma nota válida para a redação.");
+      return;
+    }
+
+    const agora = new Date().toISOString();
+    setSessoes((anteriores) => [{
+      id: crypto.randomUUID(),
+      data: agora,
+      tipo: "redacao",
+      materia: "Redação",
+      assunto: tema,
+      objetivo: tema,
+      minutos: Math.round(minutosTexto),
+      notaRedacao: nota,
+      semana: semanaSelecionada,
+      dia: 7,
+    }, ...anteriores]);
+
+    marcarMissaoDomingoConcluida("redacao");
+    setTemaRedacao("");
+    setMinutosRedacao("");
+    setNotaRedacao("");
+    setMensagemDomingo("Redação salva. O simulado pode ser feito e salvo depois.");
+  }
+
+  function salvarSimuladoDomingo() {
+    const nome = nomeSimulado.trim();
+    const total = Number(totalSimulado);
+    const acertos = Number(acertosSimulado);
+    const minutosSim = Number(minutosSimulado);
+    const domingoAtual = planoCalendario
+      .find((semana) => semana.numero === semanaSelecionada)
+      ?.dias.find((itemDia) => itemDia.numero === 7);
+    const missaoSimulado = domingoAtual?.missoes.find((item) => item.tipo === "simulado");
+
+    if (missaoSimulado && concluidas.includes(missaoSimulado.id)) {
+      setMensagemDomingo("O simulado deste domingo já foi salvo.");
+      return;
+    }
+
+    if (!nome || !Number.isInteger(total) || total < 1 || !Number.isInteger(acertos) || acertos < 0 || acertos > total || !Number.isFinite(minutosSim) || minutosSim < 1) {
+      setMensagemDomingo("Preencha corretamente o nome, total, acertos e tempo do simulado.");
+      return;
+    }
+
+    const agora = new Date().toISOString();
+    setSimulados((anteriores) => [{
+      id: crypto.randomUUID(),
+      nome,
+      banca: "Misto",
+      certas: acertos,
+      erradas: total - acertos,
+      anuladas: 0,
+      totalQuestoes: total,
+      minutos: Math.round(minutosSim),
+      data: agora,
+      cadernoUrl: cadernoUrl.trim() || undefined,
+      comentadoUrl: comentadoUrl.trim() || undefined,
+    }, ...anteriores]);
+
+    marcarMissaoDomingoConcluida("simulado");
+    setNomeSimulado("");
+    setTotalSimulado("");
+    setAcertosSimulado("");
+    setMinutosSimulado("");
+    setCadernoUrl("");
+    setComentadoUrl("");
+    setMensagemDomingo(`Simulado salvo: ${acertos}/${total} questões (${Math.round(acertos / total * 100)}%).`);
+  }
 
   const {
     iniciar,
   } = useCronometro();
 
+  const missoesPorDia = normalizarMissoesPorDia(
+    configuracoes.missoesPorDia ?? 1
+  );
+
+  const planoCalendario = useMemo(
+    () => criarPlanoCalendario(missoesPorDia),
+    [missoesPorDia]
+  );
+
+  const semanaInicial = getSemanaAtual(concluidas, planoCalendario);
+  const diaCalendarioHoje = obterDiaAtualPlano();
+  const semanaInicialDisponivel =
+    planoCalendario.find((item) => item.numero === semanaInicial) ?? planoCalendario[0];
+  const diaInicial = semanaInicialDisponivel?.dias.some((item) => item.numero === diaCalendarioHoje)
+    ? diaCalendarioHoje
+    : (semanaInicialDisponivel?.dias[0]?.numero ?? 1);
+
   const [
     semanaSelecionada,
     setSemanaSelecionada,
-  ] = useState(1);
+  ] = useState(estadoNavegacao?.semana ?? semanaInicial);
 
   const [
     diaSelecionado,
     setDiaSelecionado,
-  ] = useState(1);
+  ] = useState(estadoNavegacao?.dia ?? diaInicial);
 
-  const semana = planoPMPE.find(
+  const semana = planoCalendario.find(
     (item) =>
       item.numero ===
       semanaSelecionada
@@ -62,82 +223,54 @@ export default function PlanoEstudos() {
       diaSelecionado
   );
 
+  const missaoRedacaoDomingo = diaSelecionado === 7
+    ? dia?.missoes.find((missao) => missao.tipo === "redacao")
+    : undefined;
+  const missaoSimuladoDomingo = diaSelecionado === 7
+    ? dia?.missoes.find((missao) => missao.tipo === "simulado")
+    : undefined;
+  const redacaoDomingoConcluida = Boolean(
+    missaoRedacaoDomingo && concluidas.includes(missaoRedacaoDomingo.id)
+  );
+  const simuladoDomingoConcluido = Boolean(
+    missaoSimuladoDomingo && concluidas.includes(missaoSimuladoDomingo.id)
+  );
+
   const todasAsMissoes =
     useMemo(
       () =>
-        planoPMPE.flatMap(
+        planoCalendario.flatMap(
           (itemSemana) =>
             itemSemana.dias.flatMap(
               (itemDia) =>
                 itemDia.missoes
             )
         ),
-      []
+      [planoCalendario]
     );
 
-  const totalMissoes =
-    todasAsMissoes.length;
+  // Etapa 15: Plano e Dashboard usam exatamente o mesmo cálculo de progresso.
+  const progressoGeral = useMemo(
+    () => getProgressoPlano(concluidas, planoCalendario),
+    [concluidas, planoCalendario]
+  );
 
-  const progressoGeral =
-    useMemo(() => {
-      if (totalMissoes === 0) {
-        return 0;
-      }
+  const progressoSemana = useMemo(
+    () => getProgressoSemana(semanaSelecionada, concluidas, planoCalendario),
+    [semanaSelecionada, concluidas, planoCalendario]
+  );
 
-      const idsValidos = new Set(
-        todasAsMissoes.map(
-          (missao) => missao.id
-        )
-      );
+  const diagnosticoSemanal = useMemo(
+    () => calcularDiagnosticoSemanalPlano({
+      questoes,
+      sessoes,
+      revisoes,
+      materiasDisponiveis: materias.map((materia) => materia.nome),
+    }),
+    [questoes, sessoes, revisoes, materias]
+  );
 
-      const concluidasValidas =
-        concluidas.filter((id) =>
-          idsValidos.has(id)
-        ).length;
-
-      return Math.round(
-        (concluidasValidas /
-          totalMissoes) *
-          100
-      );
-    }, [
-      concluidas,
-      todasAsMissoes,
-      totalMissoes,
-    ]);
-
-  const progressoSemana =
-    useMemo(() => {
-      if (!semana) {
-        return 0;
-      }
-
-      const idsDaSemana =
-        semana.dias.flatMap(
-          (itemDia) =>
-            itemDia.missoes.map(
-              (missao) =>
-                missao.id
-            )
-        );
-
-      if (
-        idsDaSemana.length === 0
-      ) {
-        return 0;
-      }
-
-      const feitas =
-        idsDaSemana.filter((id) =>
-          concluidas.includes(id)
-        ).length;
-
-      return Math.round(
-        (feitas /
-          idsDaSemana.length) *
-          100
-      );
-    }, [semana, concluidas]);
+  const topPrioridades = diagnosticoSemanal.materias.slice(0, 3);
 
   function selecionarSemana(
     numeroSemana: number
@@ -174,17 +307,24 @@ export default function PlanoEstudos() {
         normalizarTexto(missao.materia)
     );
 
-    const assuntoRelacionado = materiaRelacionada?.assuntos.find(
-      (assunto) =>
-        normalizarTexto(assunto.nome) ===
-        normalizarTexto(missao.assunto)
-    );
+    const localizacao = materiaRelacionada
+      ? localizarConteudoDaMissao(materiaRelacionada, missao)
+      : null;
 
-    if (materiaRelacionada && assuntoRelacionado) {
+    if (materiaRelacionada && localizacao?.aula) {
+      definirConclusaoAula(
+        materiaRelacionada.id,
+        localizacao.assunto.id,
+        localizacao.aula.id,
+        concluindo,
+        localizacao.modulo.id
+      );
+    } else if (materiaRelacionada && localizacao) {
       definirConclusaoAssunto(
         materiaRelacionada.id,
-        assuntoRelacionado.id,
-        concluindo
+        localizacao.assunto.id,
+        concluindo,
+        localizacao.modulo.id
       );
     } else {
       setConcluidas((anteriores) =>
@@ -228,46 +368,14 @@ export default function PlanoEstudos() {
   function iniciarEstudo(
     missao: MissaoPlano
   ) {
-    const tipoSessao =
-      missao.tipo ===
-      "revisao"
-        ? "revisao"
-        : missao.tipo ===
-            "questoes"
-          ? "questoes"
-          : "aula";
+    const dadosSessao = criarDadosSessaoDaMissao(
+      materias,
+      missao,
+      semanaSelecionada,
+      diaSelecionado
+    );
 
-    const iniciada =
-      iniciar({
-        materia:
-          missao.materia,
-
-        assunto:
-          missao.assunto,
-
-        tipo:
-          tipoSessao,
-
-        objetivo:
-          `Semana ${semanaSelecionada} — ` +
-          `Dia ${diaSelecionado} — ` +
-          `Missão ${missao.numero}`,
-
-        missaoId:
-          missao.id,
-
-        semana:
-          semanaSelecionada,
-
-        dia:
-          diaSelecionado,
-
-        urlAula:
-          missao.urlAula,
-
-        urlQuestoes:
-          missao.urlQuestoes,
-      });
+    const iniciada = iniciar(dadosSessao);
 
     if (iniciada) {
       navigate(
@@ -285,8 +393,7 @@ export default function PlanoEstudos() {
           </h1>
 
           <p>
-            Oito semanas baseadas no
-            planejamento RDC.
+            {planoCalendario.length} semanas no ritmo atual de {missoesPorDia} {missoesPorDia === 1 ? "missão" : "missões"} por dia. Domingo é exclusivo para redação e simulado.
           </p>
         </div>
 
@@ -301,8 +408,52 @@ export default function PlanoEstudos() {
         </div>
       </div>
 
+      <section className="plano-adaptacao">
+        <div className="plano-adaptacao-principal">
+          <div>
+            <span className="plano-adaptacao-etiqueta">ETAPA 17 · ADAPTAÇÃO CONTROLADA</span>
+            <h2>Prioridade da semana</h2>
+            {diagnosticoSemanal.materiaPrioritaria ? (
+              <>
+                <strong>{diagnosticoSemanal.materiaPrioritaria}</strong>
+                <p>{diagnosticoSemanal.motivos[0] ?? "Prioridade calculada a partir do desempenho recente."}</p>
+              </>
+            ) : (
+              <p>Registre estudo, questões ou revisões para liberar uma prioridade baseada em dados.</p>
+            )}
+          </div>
+          <div className="plano-adaptacao-indices">
+            <div><span>Prioridade</span><strong>{diagnosticoSemanal.prioridade}/100</strong></div>
+            <div><span>Confiança</span><strong>{diagnosticoSemanal.confianca}%</strong></div>
+            <div><span>Janela</span><strong>{diagnosticoSemanal.janelaDias} dias</strong></div>
+          </div>
+        </div>
+
+        <div className="plano-adaptacao-ranking">
+          {topPrioridades.length > 0 ? topPrioridades.map((item, indice) => (
+            <article key={item.materia}>
+              <span>{indice + 1}</span>
+              <div>
+                <strong>{item.materia}</strong>
+                <small>
+                  {item.percentualAcertos !== undefined ? `${item.percentualAcertos}% acertos · ` : ""}
+                  {item.questoes} questões · {item.revisoesAtrasadas} revisões atrasadas
+                </small>
+              </div>
+              <b>{item.prioridade}</b>
+            </article>
+          )) : (
+            <p className="plano-adaptacao-vazio">Sem dados suficientes na janela recente.</p>
+          )}
+        </div>
+
+        <p className="plano-adaptacao-regra">
+          A sequência fixa não é alterada. A adaptação atua somente nas missões flexíveis de reforço; domingos continuam exclusivos para redação + simulado.
+        </p>
+      </section>
+
       <div className="plano-semanas">
-        {planoPMPE.map(
+        {planoCalendario.map(
           (itemSemana) => {
             const idsDaSemana =
               itemSemana.dias.flatMap(
@@ -411,7 +562,7 @@ export default function PlanoEstudos() {
                 }
               >
                 <span>
-                  Dia {itemDia.numero}
+                  {NOMES_DIAS_PLANO[itemDia.numero] ?? `Dia ${itemDia.numero}`}
                 </span>
 
                 <small>
@@ -432,8 +583,7 @@ export default function PlanoEstudos() {
           <div className="plano-titulo-dia">
             <h2>
               Semana{" "}
-              {semanaSelecionada} —
-              Dia {diaSelecionado}
+              {semanaSelecionada} — {NOMES_DIAS_PLANO[diaSelecionado] ?? `Dia ${diaSelecionado}`}
             </h2>
 
             <span>
@@ -450,60 +600,112 @@ export default function PlanoEstudos() {
             </span>
           </div>
 
-          <div className="plano-missoes-grid">
-            {dia.missoes.map(
-              (
-                missao: MissaoPlano
-              ) => {
-                const concluida =
-                  concluidas.includes(
-                    missao.id
-                  );
+          {diaSelecionado === 7 && (
+            <div className="plano-rotina-dia plano-rotina-domingo">
+              <header><div><small>Domingo estratégico</small><h3>Redação + Simulado</h3></div><span>Prioridade semanal</span></header>
+              <div className="plano-rotina-blocos">
+                <article className={redacaoDomingoConcluida ? "plano-domingo-concluido" : ""}>
+                  <div className="plano-domingo-cabecalho-missao">
+                    <strong>✍️ Missão 1 — Redação</strong>
+                    {redacaoDomingoConcluida && <span>✓ Concluída</span>}
+                  </div>
+                  <div className="plano-domingo-form">
+                    <input disabled={redacaoDomingoConcluida} value={temaRedacao} onChange={(e) => setTemaRedacao(e.target.value)} placeholder="Tema da redação" />
+                    <div><input disabled={redacaoDomingoConcluida} type="number" min="1" value={minutosRedacao} onChange={(e) => setMinutosRedacao(e.target.value)} placeholder="Tempo (min)" /><input disabled={redacaoDomingoConcluida} type="number" min="0" step="0.1" value={notaRedacao} onChange={(e) => setNotaRedacao(e.target.value)} placeholder="Nota (opcional)" /></div>
+                  </div>
+                  <div className="plano-domingo-acao-missao">
+                    <button type="button" onClick={salvarRedacaoDomingo} disabled={redacaoDomingoConcluida}>
+                      {redacaoDomingoConcluida ? "Redação salva" : "Salvar redação"}
+                    </button>
+                  </div>
+                </article>
+                <article className={simuladoDomingoConcluido ? "plano-domingo-concluido" : ""}>
+                  <div className="plano-domingo-cabecalho-missao">
+                    <strong>🎯 Missão 2 — Simulado</strong>
+                    {simuladoDomingoConcluido && <span>✓ Concluído</span>}
+                  </div>
+                  <div className="plano-domingo-form">
+                    <input disabled={simuladoDomingoConcluido} value={nomeSimulado} onChange={(e) => setNomeSimulado(e.target.value)} placeholder="Nome do simulado" />
+                    <div><input disabled={simuladoDomingoConcluido} type="number" min="1" value={totalSimulado} onChange={(e) => setTotalSimulado(e.target.value)} placeholder="Total" /><input disabled={simuladoDomingoConcluido} type="number" min="0" value={acertosSimulado} onChange={(e) => setAcertosSimulado(e.target.value)} placeholder="Acertos" /><input disabled={simuladoDomingoConcluido} type="number" min="1" value={minutosSimulado} onChange={(e) => setMinutosSimulado(e.target.value)} placeholder="Minutos" /></div>
+                    <input disabled={simuladoDomingoConcluido} value={cadernoUrl} onChange={(e) => setCadernoUrl(e.target.value)} placeholder="Link do caderno de questões/PDF" />
+                    <input disabled={simuladoDomingoConcluido} value={comentadoUrl} onChange={(e) => setComentadoUrl(e.target.value)} placeholder="Link do simulado comentado/PDF" />
+                  </div>
+                  <div className="plano-domingo-acao-missao">
+                    <button type="button" onClick={salvarSimuladoDomingo} disabled={simuladoDomingoConcluido}>
+                      {simuladoDomingoConcluido ? "Simulado salvo" : "Salvar simulado"}
+                    </button>
+                  </div>
+                </article>
+              </div>
+              <div className="plano-domingo-rodape">
+                {mensagemDomingo && <span>{mensagemDomingo}</span>}
+              </div>
+            </div>
+          )}
+
+          {diaSelecionado !== 7 && (
+            <div className="plano-missoes-grid">
+              {dia.missoes.map((missao: MissaoPlano) => {
+                const missaoExibida = adaptarMissaoFlexivel(missao, diagnosticoSemanal);
+                const concluida = concluidas.includes(missao.id);
+                const materia = materias.find(
+                  (item) => normalizarTexto(item.nome) === normalizarTexto(missaoExibida.materia)
+                );
+                const missaoParaLocalizar = missaoExibida.adaptada ? missaoExibida : missao;
+                const localizacoes = materia
+                  ? localizarConteudosDaMissao(materia, missaoParaLocalizar)
+                  : [];
+                const localizacaoAtual = materia
+                  ? localizarConteudoDaMissao(materia, missaoParaLocalizar)
+                  : null;
+                const referencias = obterReferenciasDaMissao(missao);
+                const loteAgrupado = referencias.length > 1;
+                const itensConcluidos = localizacoes.filter(({ assunto, aula }) =>
+                  aula ? aula.concluida : assunto.concluido
+                ).length;
+                const urlAulaAtual =
+                  localizacaoAtual?.aula?.url ??
+                  localizacaoAtual?.assunto.aula ??
+                  missao.urlAula;
 
                 return (
                   <article
                     key={missao.id}
-                    className={
-                      `plano-missao-card ${
-                        concluida
-                          ? "plano-missao-concluida"
-                          : ""
-                      }`
-                    }
+                    className={`plano-missao-card ${concluida ? "plano-missao-concluida" : ""}`}
                   >
                     <div className="plano-missao-topo">
-                      <span>
-                        Missão{" "}
-                        {missao.numero}
-                      </span>
-
-                      <span className="plano-tipo">
-                        {formatarTipo(
-                          missao.tipo
-                        )}
-                      </span>
+                      <span>Missão {missao.numero}</span>
+                      <span className="plano-tipo">{formatarTipo(missao.tipo)}</span>
                     </div>
 
-                    <h3>
-                      {missao.materia}
-                    </h3>
+                    <h3>{missaoExibida.materia}</h3>
 
-                    <p>
-                      {missao.assunto}
-                    </p>
+                    {localizacaoAtual && (
+                      <small className="plano-modulo">
+                        Módulo: {localizacaoAtual.modulo.nome}
+                      </small>
+                    )}
+
+                    <p>{missaoExibida.assunto}</p>
+
+                    {missaoExibida.adaptada && (
+                      <small className="plano-adaptada-badge">⚡ Reforço adaptado automaticamente</small>
+                    )}
+
+                    {loteAgrupado && (
+                      <small className="plano-modulo">
+                        Lote do dia: {itensConcluidos}/{referencias.length} aulas concluídas
+                      </small>
+                    )}
 
                     <div className="plano-missao-acoes">
-                      {missao.urlAula && (
+                      {urlAulaAtual && (
                         <button
                           type="button"
                           className="plano-aula"
-                          onClick={() =>
-                            abrirLink(
-                              missao.urlAula
-                            )
-                          }
+                          onClick={() => abrirLink(urlAulaAtual)}
                         >
-                          🎥 Aula RDC
+                          🎥 {loteAgrupado ? "Próxima aula" : "Aula RDC"}
                         </button>
                       )}
 
@@ -511,11 +713,7 @@ export default function PlanoEstudos() {
                         <button
                           type="button"
                           className="plano-questoes"
-                          onClick={() =>
-                            abrirLink(
-                              missao.urlQuestoes
-                            )
-                          }
+                          onClick={() => abrirLink(missao.urlQuestoes)}
                         >
                           📝 Questões
                         </button>
@@ -524,40 +722,28 @@ export default function PlanoEstudos() {
                       <button
                         type="button"
                         className="plano-estudar"
-                        onClick={() =>
-                          iniciarEstudo(
-                            missao
-                          )
-                        }
+                        onClick={() => iniciarEstudo(missaoExibida)}
                       >
                         ⏱ Estudar
                       </button>
 
-                      <button
-                        type="button"
-                        className={
-                          concluida
-                            ? "plano-desmarcar"
-                            : "plano-concluir"
-                        }
-                        onClick={() =>
-                          alternarConclusao(
-                            missao.id
-                          )
-                        }
-                      >
-                        {concluida
-                          ? "↩ Desmarcar"
-                          : "✓ Concluir"}
-                      </button>
+                      {!loteAgrupado && (
+                        <button
+                          type="button"
+                          className={concluida ? "plano-desmarcar" : "plano-concluir"}
+                          onClick={() => alternarConclusao(missao.id)}
+                        >
+                          {concluida ? "↩ Desmarcar" : "✓ Concluir"}
+                        </button>
+                      )}
                     </div>
                   </article>
                 );
-              }
-            )}
-          </div>
+              })}
+            </div>
+          )}
 
-          {(dia.revisao ||
+          {diaSelecionado !== 7 && (dia.revisao ||
             dia.atividadeExtra) && (
             <div className="plano-extras">
               {dia.revisao && (
@@ -621,6 +807,7 @@ function formatarTipo(
     revisao: "Revisão",
     questoes: "Questões",
     redacao: "Redação",
+    simulado: "Simulado",
     livre: "Livre",
   };
 

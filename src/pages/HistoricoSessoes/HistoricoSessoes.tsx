@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import "./HistoricoSessoes.css";
 
@@ -11,6 +12,7 @@ import type {
 } from "../../types/index";
 
 export default function HistoricoSessoes() {
+  const location = useLocation();
   const { sessoes, setSessoes } = useApp();
   const { showToast } = useToast();
 
@@ -20,7 +22,10 @@ export default function HistoricoSessoes() {
   >("");
   const [periodo, setPeriodo] = useState<
     "todos" | "hoje" | "semana" | "mes"
-  >("todos");
+  >(() => {
+    const estado = location.state as { periodo?: "todos" | "hoje" | "semana" | "mes" } | null;
+    return estado?.periodo ?? "todos";
+  });
 
   const [editandoId, setEditandoId] = useState<
     string | null
@@ -755,6 +760,7 @@ function formatarTipo(
     leitura: "📄 Leitura/PDF",
     videoaula: "🎥 Videoaula",
     simulado: "🎯 Simulado",
+    redacao: "✍️ Redação",
   };
 
   return tipos[tipo];

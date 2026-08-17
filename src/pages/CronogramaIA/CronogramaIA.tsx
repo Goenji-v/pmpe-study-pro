@@ -13,6 +13,16 @@ import "./CronogramaIA.css";
 import {
   useApp,
 } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
+import {
+  chaveSemana,
+  criarAjusteControlado,
+  gerarRelatorioMensal,
+  type AjusteControlado,
+} from "../../utils/cronogramaAdaptativo";
+import {
+  calcularDiagnosticoSemanalPlano,
+} from "../../utils/adaptacaoPlano";
 
 import {
   planoPMPE,
@@ -27,11 +37,44 @@ import {
   type TarefaCronogramaIA,
 } from "../../services/cronogramaIAService";
 
+type PerfilCronograma = {
+  minutosPorDia: number;
+  diasPorSemana: number;
+  materiaMaiorDificuldade: string;
+  nivelAtual: "iniciante" | "intermediario" | "avancado";
+  formatoPreferido: "teoria-questoes" | "teoria" | "questoes";
+  domingoEstrategico: boolean;
+  observacao: string;
+};
+
+function carregarPerfil(chave: string, minutos: number): PerfilCronograma {
+  try {
+    const salvo = localStorage.getItem(chave);
+    if (salvo) return JSON.parse(salvo) as PerfilCronograma;
+  } catch { /* usa o perfil inicial */ }
+  return { minutosPorDia: minutos, diasPorSemana: 6, materiaMaiorDificuldade: "", nivelAtual: "intermediario", formatoPreferido: "teoria-questoes", domingoEstrategico: true, observacao: "" };
+}
+
+function carregarLista(chave: string): string[] {
+  try {
+    const salvo = JSON.parse(localStorage.getItem(chave) ?? "[]");
+    return Array.isArray(salvo) ? salvo.filter((item): item is string => typeof item === "string") : [];
+  } catch { return []; }
+}
+
+function carregarAjustes(chave: string): AjusteControlado[] {
+  try {
+    const salvo = JSON.parse(localStorage.getItem(chave) ?? "[]");
+    return Array.isArray(salvo) ? salvo as AjusteControlado[] : [];
+  } catch { return []; }
+}
+
 export default function CronogramaIA() {
   const navigate =
     useNavigate();
 
   const {
+    materias,
     questoes,
     sessoes,
     revisoes,
@@ -39,6 +82,19 @@ export default function CronogramaIA() {
     configuracoes,
     missoesConcluidas,
   } = useApp();
+
+  const { usuario } = useAuth();
+  const chavePerfil = `pmpe:${usuario?.id ?? "local"}:perfil-cronograma-ia`;
+  const chaveAprovados = `pmpe:${usuario?.id ?? "local"}:cronogramas-ia-aprovados`;
+  const chaveAjustes = `pmpe:${usuario?.id ?? "local"}:ajustes-controlados`;
+  const chaveAutomacao = `pmpe:${usuario?.id ?? "local"}:automacao-controlada`;
+  const [perfil, setPerfil] = useState(() => carregarPerfil(chavePerfil, configuracoes.metaMinutosDiaria || 120));
+  const [perfilSalvo, setPerfilSalvo] = useState(() => Boolean(localStorage.getItem(chavePerfil)));
+  const [aprovados, setAprovados] = useState<string[]>(() => carregarLista(chaveAprovados));
+  const [mensagemPerfil, setMensagemPerfil] = useState("");
+  const [automacaoAtiva, setAutomacaoAtiva] = useState(() => localStorage.getItem(chaveAutomacao) === "true");
+  const [ajustes, setAjustes] = useState<AjusteControlado[]>(() => carregarAjustes(chaveAjustes));
+  const [mensagemAutomacao, setMensagemAutomacao] = useState("");
 
   const [
     periodo,
@@ -126,9 +182,84 @@ export default function CronogramaIA() {
       ]
     );
 
+  const relatorioMensal = useMemo(() => gerarRelatorioMensal({
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    minutosMetaDia: perfil.minutosPorDia,
+    diasSemana: perfil.diasPorSemana,
+  }), [questoes, sessoes, revisoes, simulados, perfil.minutosPorDia, perfil.diasPorSemana]);
+
+  const diagnosticoSemanal = useMemo(() => calcularDiagnosticoSemanalPlano({
+    questoes,
+    sessoes,
+    revisoes,
+    materiasDisponiveis: materias.map((materia) => materia.nome),
+  }), [questoes, sessoes, revisoes, materias]);
+
+  const prioridadeAtiva =
+    ajustes.find((item) => item.ativo)?.materiaPrioritaria ??
+    diagnosticoSemanal.materiaPrioritaria ??
+    perfil.materiaMaiorDificuldade;
+
   useEffect(() => {
     void carregarHistorico();
   }, []);
+
+  useEffect(() => {
+    if (!automacaoAtiva || new Date().getDay() !== 1 || ajustes.some((item) => item.semana === chaveSemana())) return;
+    const ajuste = criarAjusteControlado(relatorioMensal, perfil.materiaMaiorDificuldade);
+    if (!ajuste) return;
+    const novaLista = [ajuste, ...ajustes];
+    const novoPerfil = { ...perfil, materiaMaiorDificuldade: ajuste.materiaPrioritaria };
+    setAjustes(novaLista);
+    setPerfil(novoPerfil);
+    localStorage.setItem(chaveAjustes, JSON.stringify(novaLista));
+    localStorage.setItem(chavePerfil, JSON.stringify(novoPerfil));
+    setMensagemAutomacao(`Ajuste semanal aplicado: prioridade em ${ajuste.materiaPrioritaria}.`);
+  }, [automacaoAtiva, relatorioMensal, ajustes, perfil, chaveAjustes, chavePerfil]);
+
+  function salvarPerfil() {
+    if (perfil.minutosPorDia < 20 || perfil.diasPorSemana < 1 || perfil.diasPorSemana > 7 || !perfil.materiaMaiorDificuldade) {
+      setMensagemPerfil("Preencha o tempo, os dias e a matéria de maior dificuldade.");
+      return;
+    }
+    const perfilFinal = { ...perfil, domingoEstrategico: true };
+    setPerfil(perfilFinal);
+    localStorage.setItem(chavePerfil, JSON.stringify(perfilFinal));
+    setTempoDisponivel(perfilFinal.minutosPorDia);
+    setPerfilSalvo(true);
+    setMensagemPerfil("Perfil salvo. A IA usará estas respostas nas próximas propostas.");
+  }
+
+  function identificadorCronograma(cronograma: CronogramaGeradoIA) {
+    return cronograma.id || cronograma.geradoEm;
+  }
+
+  function aprovarCronograma(cronograma: CronogramaGeradoIA) {
+    const id = identificadorCronograma(cronograma);
+    const novaLista = Array.from(new Set([...aprovados, id]));
+    setAprovados(novaLista);
+    localStorage.setItem(chaveAprovados, JSON.stringify(novaLista));
+  }
+
+  function alternarAutomacao(ativa: boolean) {
+    setAutomacaoAtiva(ativa);
+    localStorage.setItem(chaveAutomacao, String(ativa));
+    setMensagemAutomacao(ativa ? "Automação ativada. Os ajustes ocorrerão somente às segundas-feiras." : "Automação pausada.");
+  }
+
+  function desfazerAjuste(ajuste: AjusteControlado) {
+    if (!ajuste.ativo) return;
+    const novaLista = ajustes.map((item) => item.id === ajuste.id ? { ...item, ativo: false, desfeitoEm: new Date().toISOString() } : item);
+    const novoPerfil = { ...perfil, materiaMaiorDificuldade: ajuste.materiaAnterior };
+    setAjustes(novaLista);
+    setPerfil(novoPerfil);
+    localStorage.setItem(chaveAjustes, JSON.stringify(novaLista));
+    localStorage.setItem(chavePerfil, JSON.stringify(novoPerfil));
+    setMensagemAutomacao("Último ajuste desfeito. A prioridade anterior foi restaurada.");
+  }
 
   async function carregarHistorico() {
     try {
@@ -173,6 +304,11 @@ export default function CronogramaIA() {
       return;
     }
 
+    if (!perfilSalvo) {
+      setErro("Salve primeiro o questionário inicial.");
+      return;
+    }
+
     try {
       setGerando(true);
       setErro("");
@@ -192,6 +328,17 @@ export default function CronogramaIA() {
 
           tempoDisponivelMinutos:
             tempoDisponivel,
+
+          perfilEstudo: {
+            diasPorSemana: perfil.diasPorSemana,
+            materiaMaiorDificuldade: perfil.materiaMaiorDificuldade,
+            nivelAtual: perfil.nivelAtual,
+            formatoPreferido: perfil.formatoPreferido,
+            domingoEstrategico: true,
+            observacao: perfil.observacao,
+            modo: "assistido",
+            prioridadeAutomatica: prioridadeAtiva,
+          },
 
           metas: {
             minutosDia:
@@ -484,6 +631,66 @@ export default function CronogramaIA() {
         </div>
       </div>
 
+      <section className="cronograma-questionario">
+        <div className="cronograma-questionario-topo">
+          <div><span>ETAPA 9</span><h2>Seu perfil de estudo</h2><p>Estas respostas formam a base do cronograma. Você pode atualizá-las quando sua rotina mudar.</p></div>
+          <strong>{perfilSalvo ? "✓ Perfil configurado" : "Configuração pendente"}</strong>
+        </div>
+        <div className="cronograma-perguntas">
+          <label>Minutos disponíveis por dia<input type="number" min="20" max="600" value={perfil.minutosPorDia} onChange={(e) => setPerfil({ ...perfil, minutosPorDia: Number(e.target.value) })} /></label>
+          <label>Dias de estudo por semana<input type="number" min="1" max="7" value={perfil.diasPorSemana} onChange={(e) => setPerfil({ ...perfil, diasPorSemana: Number(e.target.value) })} /></label>
+          <label>Maior dificuldade<select value={perfil.materiaMaiorDificuldade} onChange={(e) => setPerfil({ ...perfil, materiaMaiorDificuldade: e.target.value })}><option value="">Selecione</option>{materias.map((materia) => <option key={materia.id} value={materia.nome}>{materia.nome}</option>)}</select></label>
+          <label>Nível atual<select value={perfil.nivelAtual} onChange={(e) => setPerfil({ ...perfil, nivelAtual: e.target.value as PerfilCronograma["nivelAtual"] })}><option value="iniciante">Iniciante</option><option value="intermediario">Intermediário</option><option value="avancado">Avançado</option></select></label>
+          <label>Formato preferido<select value={perfil.formatoPreferido} onChange={(e) => setPerfil({ ...perfil, formatoPreferido: e.target.value as PerfilCronograma["formatoPreferido"] })}><option value="teoria-questoes">Teoria + questões</option><option value="teoria">Mais teoria</option><option value="questoes">Mais questões</option></select></label>
+          <div className="cronograma-domingo-fixo"><strong>Domingo estratégico</strong><span>Redação + simulado · regra fixa do plano</span></div>
+          <label className="cronograma-observacao">Observação sobre sua rotina<textarea value={perfil.observacao} onChange={(e) => setPerfil({ ...perfil, observacao: e.target.value })} placeholder="Ex.: de manhã teoria; à noite questões e revisões." /></label>
+        </div>
+        <div className="cronograma-questionario-rodape">{mensagemPerfil && <span>{mensagemPerfil}</span>}<button type="button" onClick={salvarPerfil}>Salvar perfil</button></div>
+      </section>
+
+      <section className="cronograma-diagnostico-semanal">
+        <header>
+          <div><span>ETAPA 17</span><h2>Diagnóstico adaptativo · 14 dias</h2></div>
+          <strong>{prioridadeAtiva || "Coletando dados"}</strong>
+        </header>
+        <div className="cronograma-diagnostico-grid">
+          <div><span>Prioridade calculada</span><strong>{diagnosticoSemanal.prioridade}/100</strong></div>
+          <div><span>Confiança dos dados</span><strong>{diagnosticoSemanal.confianca}%</strong></div>
+          <div><span>Matérias com evidência</span><strong>{diagnosticoSemanal.materias.length}</strong></div>
+        </div>
+        <div className="cronograma-diagnostico-ranking">
+          {diagnosticoSemanal.materias.slice(0, 3).map((item, indice) => (
+            <article key={item.materia}>
+              <b>{indice + 1}</b>
+              <div><strong>{item.materia}</strong><small>{item.percentualAcertos !== undefined ? `${item.percentualAcertos}% de acertos · ` : ""}{item.questoes} questões · {item.revisoesAtrasadas} revisões atrasadas</small></div>
+              <em>{item.prioridade}</em>
+            </article>
+          ))}
+          {diagnosticoSemanal.materias.length === 0 && <p>Registre questões, estudo ou revisões para liberar o diagnóstico.</p>}
+        </div>
+        <p className="cronograma-diagnostico-regra">A prioridade influencia propostas da IA e os slots flexíveis de reforço. Conteúdo fixo e domingo não são movidos.</p>
+      </section>
+
+      <div className="cronograma-fechamento-grid">
+        <section className="cronograma-relatorio-mensal">
+          <header><div><span>ETAPA 11</span><h2>Relatório mensal</h2></div><strong>{new Date(`${relatorioMensal.mes}-02T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</strong></header>
+          <div className="cronograma-relatorio-cards">
+            <div><span>Tempo realizado</span><strong>{(relatorioMensal.minutosRealizados / 60).toFixed(1)}h</strong><small>de {(relatorioMensal.minutosPlanejados / 60).toFixed(1)}h planejadas</small></div>
+            <div><span>Questões</span><strong>{relatorioMensal.questoes}</strong><small>{relatorioMensal.aproveitamento}% de acertos</small></div>
+            <div><span>Revisões</span><strong>{relatorioMensal.revisoes}</strong><small>{relatorioMensal.simulados} simulados</small></div>
+            <div><span>Redações</span><strong>{relatorioMensal.redacoes}</strong><small>{relatorioMensal.percentualTempo}% da meta de tempo</small></div>
+          </div>
+          <div className="cronograma-diagnostico-mensal"><p><strong>Destaque:</strong> {relatorioMensal.materiaDestaque || "dados insuficientes"}</p><p><strong>Ponto crítico:</strong> {relatorioMensal.materiaCritica || "dados insuficientes"}</p><p><strong>Proposta:</strong> {relatorioMensal.proposta}</p></div>
+        </section>
+
+        <section className="cronograma-automacao-controlada">
+          <header><div><span>ETAPA 12</span><h2>Automação controlada</h2></div><label><input type="checkbox" checked={automacaoAtiva} onChange={(e) => alternarAutomacao(e.target.checked)} /><b>{automacaoAtiva ? "Ativa" : "Pausada"}</b></label></header>
+          <ul><li>Somente no início de uma nova semana</li><li>Nenhuma matéria é removida</li><li>Disponibilidade diária não é aumentada</li><li>Todo ajuste pode ser desfeito</li></ul>
+          {mensagemAutomacao && <p className="cronograma-mensagem-automacao">{mensagemAutomacao}</p>}
+          <div className="cronograma-historico-ajustes"><h3>Histórico de alterações</h3>{ajustes.length === 0 ? <p>Nenhum ajuste automático realizado.</p> : ajustes.slice(0, 6).map((ajuste) => <article key={ajuste.id}><div><strong>{ajuste.materiaPrioritaria}</strong><span>{ajuste.semana} · {ajuste.ativo ? "ativo" : "desfeito"}</span><p>{ajuste.motivo}</p></div>{ajuste.ativo && <button type="button" onClick={() => desfazerAjuste(ajuste)}>Desfazer</button>}</article>)}</div>
+        </section>
+      </div>
+
       {erro && (
         <div className="cronograma-erro">
           {erro}
@@ -569,6 +776,11 @@ export default function CronogramaIA() {
                     cronogramaAtual.tempoTotalMinutos
                   )}
                 </strong>
+              </div>
+
+              <div className={`cronograma-aprovacao ${aprovados.includes(identificadorCronograma(cronogramaAtual)) ? "aprovado" : ""}`}>
+                <div><span>ETAPA 10 · MODO ASSISTIDO</span><strong>{aprovados.includes(identificadorCronograma(cronogramaAtual)) ? "Plano aprovado" : "Proposta aguardando sua aprovação"}</strong><p>A IA recomenda a distribuição, mas não substitui nem altera automaticamente o cronograma original.</p></div>
+                {!aprovados.includes(identificadorCronograma(cronogramaAtual)) && <button type="button" onClick={() => aprovarCronograma(cronogramaAtual)}>Aprovar proposta</button>}
               </div>
 
               <div className="cronograma-objetivo">
@@ -680,13 +892,14 @@ export default function CronogramaIA() {
 
                                   <button
                                     type="button"
+                                    disabled={!aprovados.includes(identificadorCronograma(cronogramaAtual))}
                                     onClick={() =>
                                       iniciarTarefa(
                                         tarefa
                                       )
                                     }
                                   >
-                                    ▶ Iniciar
+                                    {aprovados.includes(identificadorCronograma(cronogramaAtual)) ? "▶ Iniciar" : "Aguardando aprovação"}
                                   </button>
                                 </div>
                               </div>

@@ -14,9 +14,12 @@ import {
   criarProximaRevisao,
   formatarDataRevisao,
   statusDaRevisao,
+  redistribuirRevisoesPendentes,
+  reagendarRevisao,
 } from "../../utils/revisoes";
 
-import type { Revisao } from "../../types";
+import type { Materia, Revisao } from "../../types";
+import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 
 type RevisaoIA = {
   id: string;
@@ -38,8 +41,10 @@ function chaveRevisoesIA(
 
 export default function Revisoes() {
   const {
+    materias,
     revisoes,
     setRevisoes,
+    configuracoes,
   } = useApp();
 
   const { usuario } =
@@ -132,8 +137,8 @@ export default function Revisoes() {
             return true;
           }
         )
-        .map(
-          criarRevisaoInicialIA
+        .map((revisaoIA) =>
+          criarRevisaoInicialIA(revisaoIA, materias)
         );
 
     /*
@@ -172,10 +177,46 @@ export default function Revisoes() {
     );
   }
 
+  const revisoesComModulo = useMemo(
+    () =>
+      revisoes.map((revisao) => {
+        if (revisao.modulo || revisao.moduloId) {
+          return revisao;
+        }
+
+        const materia = materias.find(
+          (item) =>
+            item.id === revisao.materiaId ||
+            item.nome === revisao.materia
+        );
+
+        const modulo = materia?.modulos?.find(
+          (item) =>
+            item.assuntos.some(
+              (assunto) =>
+                assunto.id === revisao.assuntoId ||
+                assunto.nome === revisao.assunto
+            )
+        );
+
+        return modulo
+          ? {
+              ...revisao,
+              modulo: modulo.nome,
+              moduloId: modulo.id,
+            }
+          : {
+              ...revisao,
+              modulo: "Geral",
+            };
+      }),
+    [materias, revisoes]
+  );
+
   const revisoesPendentes =
     useMemo(
       () =>
-        revisoes
+        revisoesComModulo
           .filter(
             (revisao) =>
               !revisao.concluida
@@ -189,13 +230,13 @@ export default function Revisoes() {
                 b.dataPrevista
               ).getTime()
           ),
-      [revisoes]
+      [revisoesComModulo]
     );
 
   const revisoesConcluidas =
     useMemo(
       () =>
-        revisoes
+        revisoesComModulo
           .filter(
             (revisao) =>
               revisao.concluida
@@ -211,7 +252,7 @@ export default function Revisoes() {
                   a.dataPrevista
               ).getTime()
           ),
-      [revisoes]
+      [revisoesComModulo]
     );
 
   const atrasadas =
@@ -251,7 +292,8 @@ export default function Revisoes() {
     );
 
   function concluirRevisao(
-    revisao: Revisao
+    revisao: Revisao,
+    desempenho: "facil" | "media" | "dificil"
   ) {
     const agora =
       new Date().toISOString();
@@ -261,52 +303,38 @@ export default function Revisoes() {
       ...revisao,
       concluida: true,
       dataConclusao: agora,
+      desempenho,
     };
 
-    const proximaRevisao =
-      criarProximaRevisao(
-        revisao
+    setRevisoes((revisoesAnteriores) => {
+      const listaAtualizada = revisoesAnteriores.map((item) =>
+        item.id === revisao.id ? revisaoConcluida : item
       );
 
-    setRevisoes(
-      (
-        revisoesAnteriores
-      ) => {
-        const listaAtualizada =
-          revisoesAnteriores.map(
-            (item) =>
-              item.id ===
-              revisao.id
-                ? revisaoConcluida
-                : item
-          );
-
-        if (
-          !proximaRevisao
-        ) {
-          return listaAtualizada;
-        }
-
-        return [
-          proximaRevisao,
-          ...listaAtualizada,
-        ];
-      }
-    );
-
-    if (proximaRevisao) {
-      showToast(
-        `Revisão concluída. Próxima etapa agendada para ${formatarDataRevisao(
-          proximaRevisao.dataPrevista
-        )}.`,
-        "success"
+      const proximaRevisao = criarProximaRevisao(
+        revisao,
+        listaAtualizada,
+        configuracoes.metaRevisoesDiaria
       );
+
+      if (!proximaRevisao) return listaAtualizada;
+      return [proximaRevisao, ...listaAtualizada];
+    });
+
+    if (revisao.etapa < 4) {
+      showToast("Revisão concluída. Próxima etapa adicionada à agenda.", "success");
     } else {
-      showToast(
-        "Ciclo de revisões finalizado.",
-        "success"
-      );
+      showToast("Ciclo de revisões finalizado.", "success");
     }
+  }
+
+  function reagendar(revisao: Revisao, dias: number) {
+    setRevisoes((anteriores) =>
+      anteriores.map((item) =>
+        item.id === revisao.id ? reagendarRevisao(item, dias) : item
+      )
+    );
+    showToast(`Revisão reagendada para daqui a ${dias} dia(s).`, "success");
   }
 
   function excluirRevisao(
@@ -345,6 +373,19 @@ export default function Revisoes() {
     );
   }
 
+  function reorganizarAgenda() {
+    const limite = configuracoes.metaRevisoesDiaria;
+    if (limite <= 0) {
+      showToast("Defina uma meta de revisões por dia maior que zero nas Configurações.", "warning");
+      return;
+    }
+
+    setRevisoes((anteriores) =>
+      redistribuirRevisoesPendentes(anteriores, limite)
+    );
+    showToast(`Agenda reorganizada com limite de ${limite} revisões por dia.`, "success");
+  }
+
   return (
     <section className="revisoes-container">
       <h1 className="revisoes-title">
@@ -352,10 +393,13 @@ export default function Revisoes() {
       </h1>
 
       <p className="revisoes-subtitle">
-        Sistema automático de revisões
-        em 24 horas, 7 dias, 30 dias e
-        90 dias.
+        Sistema automático 0-1-7-15, com distribuição conforme sua meta diária.
       </p>
+
+      <div className="revisoes-toolbar">
+        <span>Limite atual: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia</span>
+        <button type="button" onClick={reorganizarAgenda}>Reorganizar agenda</button>
+      </div>
 
       <div className="revisoes-resumo">
         <ResumoCard
@@ -409,6 +453,7 @@ export default function Revisoes() {
               concluirRevisao={
                 concluirRevisao
               }
+              reagendarRevisao={reagendar}
               excluirRevisao={
                 excluirRevisao
               }
@@ -423,6 +468,7 @@ export default function Revisoes() {
               concluirRevisao={
                 concluirRevisao
               }
+              reagendarRevisao={reagendar}
               excluirRevisao={
                 excluirRevisao
               }
@@ -437,6 +483,7 @@ export default function Revisoes() {
               concluirRevisao={
                 concluirRevisao
               }
+              reagendarRevisao={reagendar}
               excluirRevisao={
                 excluirRevisao
               }
@@ -470,6 +517,12 @@ export default function Revisoes() {
                         }
                       </strong>
 
+                      {revisao.modulo && (
+                        <small className="revisao-caminho">
+                          {revisao.modulo}
+                        </small>
+                      )}
+
                       <p>
                         {
                           revisao.assunto
@@ -487,6 +540,11 @@ export default function Revisoes() {
                             revisao.dataPrevista
                         )}
                       </span>
+                      {revisao.desempenho && (
+                        <small className={`revisao-resultado resultado-${revisao.desempenho}`}>
+                          Desempenho: {revisao.desempenho === "facil" ? "Fácil" : revisao.desempenho === "media" ? "Médio" : "Difícil"}
+                        </small>
+                      )}
                     </div>
                   </div>
                 )
@@ -524,8 +582,11 @@ type GrupoRevisoesProps = {
   revisoes: Revisao[];
 
   concluirRevisao: (
-    revisao: Revisao
+    revisao: Revisao,
+    desempenho: "facil" | "media" | "dificil"
   ) => void;
+
+  reagendarRevisao: (revisao: Revisao, dias: number) => void;
 
   excluirRevisao: (
     revisao: Revisao
@@ -536,6 +597,7 @@ function GrupoRevisoes({
   titulo,
   revisoes,
   concluirRevisao,
+  reagendarRevisao,
   excluirRevisao,
 }: GrupoRevisoesProps) {
   return (
@@ -561,6 +623,12 @@ function GrupoRevisoes({
                       revisao.materia
                     }
                   </strong>
+
+                  {revisao.modulo && (
+                    <small className="revisao-caminho">
+                      {revisao.modulo}
+                    </small>
+                  )}
 
                   <p>
                     {
@@ -592,17 +660,19 @@ function GrupoRevisoes({
                 </div>
 
                 <div className="revisao-acoes">
-                  <button
-                    type="button"
-                    className="revisao-concluir"
-                    onClick={() =>
-                      concluirRevisao(
-                        revisao
-                      )
-                    }
-                  >
-                    Concluir revisão
-                  </button>
+                  <div className="revisao-avaliacao" aria-label="Concluir e avaliar revisão">
+                    <span>Concluir:</span>
+                    <button type="button" className="avaliacao-dificil" onClick={() => concluirRevisao(revisao, "dificil")}>Difícil</button>
+                    <button type="button" className="avaliacao-media" onClick={() => concluirRevisao(revisao, "media")}>Médio</button>
+                    <button type="button" className="avaliacao-facil" onClick={() => concluirRevisao(revisao, "facil")}>Fácil</button>
+                  </div>
+
+                  <div className="revisao-reagendar">
+                    <span>Reagendar:</span>
+                    {[1, 3, 7].map((dias) => (
+                      <button type="button" key={dias} onClick={() => reagendarRevisao(revisao, dias)}>+{dias}d</button>
+                    ))}
+                  </div>
 
                   <button
                     type="button"
@@ -790,34 +860,30 @@ function removerDaFilaRevisoesIA(
 }
 
 function criarRevisaoInicialIA(
-  revisaoIA: RevisaoIA
+  revisaoIA: RevisaoIA,
+  materias: Materia[]
 ): Revisao {
-  const dataBase =
-    new Date();
+  const dataBase = new Date();
+  dataBase.setHours(0, 0, 0, 0);
 
-  dataBase.setHours(
-    0,
-    0,
-    0,
-    0
-  );
+  const referencia = localizarReferenciaCanonica(materias, {
+    materia: revisaoIA.materia,
+    assunto: revisaoIA.assunto,
+  });
 
   return {
     id: `ia-${revisaoIA.id}`,
-
-    materia:
-      revisaoIA.materia,
-
-    assunto:
-      revisaoIA.assunto,
-
+    materiaId: referencia?.materia.id ?? `legado-${normalizar(revisaoIA.materia)}`,
+    moduloId: referencia?.modulo.id,
+    assuntoId: referencia?.assunto.id ?? `legado-${normalizar(revisaoIA.materia)}-${normalizar(revisaoIA.assunto)}`,
+    materia: referencia?.materia.nome ?? revisaoIA.materia,
+    modulo: referencia?.modulo.nome,
+    assunto: referencia?.assunto.nome ?? revisaoIA.assunto,
     etapa: 1,
-
-    dataPrevista:
-      dataBase.toISOString(),
-
+    dataCriacao: revisaoIA.criadaEm || new Date().toISOString(),
+    dataPrevista: dataBase.toISOString(),
     concluida: false,
-  } as Revisao;
+  };
 }
 
 function normalizar(

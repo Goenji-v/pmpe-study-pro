@@ -165,3 +165,13 @@
     height: 280px;
   }
 }
+
+.estatistica-card small {
+  display: block;
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.texto-amarelo { color: #f59e0b; }
+.estatisticas-sem-linhas { color: #94a3b8; padding: 16px 0; }

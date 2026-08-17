@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api";
 import {
   supabase,
 } from "../lib/supabase";
@@ -45,6 +46,17 @@ export type DadosCronogramaIA = {
   banca: string;
   periodo: PeriodoCronogramaIA;
   tempoDisponivelMinutos: number;
+
+  perfilEstudo?: {
+    diasPorSemana: number;
+    materiaMaiorDificuldade: string;
+    nivelAtual: "iniciante" | "intermediario" | "avancado";
+    formatoPreferido: "teoria-questoes" | "teoria" | "questoes";
+    domingoEstrategico: boolean;
+    observacao: string;
+    modo: "assistido";
+    prioridadeAutomatica?: string;
+  };
 
   metas: {
     minutosDia: number;
@@ -118,9 +130,7 @@ type LinhaCronograma = {
   created_at: string;
 };
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  `http://${window.location.hostname}:3001`;
+
 
 export async function gerarCronogramaIA(
   dados: DadosCronogramaIA

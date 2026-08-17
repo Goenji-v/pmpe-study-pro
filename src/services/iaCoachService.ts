@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api";
 export type PrioridadeCoachIA =
   | "alta"
   | "media"
@@ -21,6 +22,7 @@ export type AcaoCoachIA = {
   tipo:
     TipoAcaoCoachIA;
   materia?: string;
+  modulo?: string;
   assunto?: string;
 };
 
@@ -57,6 +59,7 @@ export type DadosCoachIA = {
 
   assuntosCriticos: Array<{
     materia: string;
+    modulo?: string;
     assunto: string;
     percentual: number;
     erros: number;
@@ -81,10 +84,7 @@ type RespostaCoachErro = {
   erro: string;
 };
 
-const API_BASE_URL =
-  import.meta.env
-    .VITE_API_URL ||
-  `http://${window.location.hostname}:3001`;
+
 
 const CHAVE_ULTIMO_COACH =
   "pmpe_ultimo_diagnostico_coach";

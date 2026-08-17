@@ -26,11 +26,42 @@ export type MaterialAssunto = {
   criadoEm: string;
 };
 
+export type AulaAssunto = {
+  id: string;
+  nome: string;
+  url?: string;
+  ordem: number;
+  concluida: boolean;
+  concluidaEm?: string;
+};
+
+export type TipoTarefaAssunto =
+  | "teoria"
+  | "leitura"
+  | "questoes"
+  | "revisao"
+  | "redacao"
+  | "outra";
+
+export type TarefaAssunto = {
+  id: string;
+  nome: string;
+  tipo: TipoTarefaAssunto;
+  ordem: number;
+  concluida: boolean;
+  concluidaEm?: string;
+};
+
 export type Assunto = {
   id: string;
   nome: string;
   concluido: boolean;
   prioridade: Prioridade;
+  /** Partes internas do assunto. Não contam isoladamente no edital. */
+  aulas?: AulaAssunto[];
+  /** Atividades de apoio. Não contam como conteúdo concluído do edital. */
+  tarefas?: TarefaAssunto[];
+  /** Link legado mantido enquanto as outras telas migram para `aulas`. */
   aula?: string;
   questoes?: string;
   pdf?: string;
@@ -38,18 +69,37 @@ export type Assunto = {
   anotacoes?: string;
   materiais?: MaterialAssunto[];
   atualizadoEm?: string;
+  conclusaoOrigem?: "estudo" | "importado";
+  concluidoEm?: string;
+};
+
+export type Modulo = {
+  id: string;
+  nome: string;
+  ordem: number;
+  assuntos: Assunto[];
 };
 
 export type Materia = {
   id: string;
   nome: string;
+  /** Estrutura canônica a partir da versão 2. */
+  modulos?: Modulo[];
+  /**
+   * Espelho temporário para compatibilidade com páginas ainda não migradas.
+   * Novas implementações devem usar `modulos`.
+   */
   assuntos: Assunto[];
 };
 
 export type RegistroQuestao = {
   id: string;
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
   banca: string;
   certas: number;
   erradas: number;
@@ -65,7 +115,8 @@ export type TipoSessao =
   | "simulado"
   | "estudo"
   | "leitura"
-  | "videoaula";
+  | "videoaula"
+  | "redacao";
 
 export type SessaoEstudo = {
   id: string;
@@ -74,7 +125,11 @@ export type SessaoEstudo = {
   tipo: TipoSessao;
 
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
 
   objetivo?: string;
   observacao?: string;
@@ -98,6 +153,8 @@ export type SessaoEstudo = {
     | "facil"
     | "media"
     | "dificil";
+  formatoRevisao?: "teoria" | "questoes";
+  notaRedacao?: number;
 };
 
 export type Simulado = {
@@ -110,6 +167,9 @@ export type Simulado = {
   minutos: number;
   data: string;
   observacao?: string;
+  totalQuestoes?: number;
+  cadernoUrl?: string;
+  comentadoUrl?: string;
 };
 
 export type AlternativaQuestao = {
@@ -121,6 +181,8 @@ export type QuestaoBanco = {
   id: string;
   materiaId: string;
   materia: string;
+  moduloId?: string;
+  modulo?: string;
   assuntoId: string;
   assunto: string;
   banca: string;
@@ -157,25 +219,35 @@ export type ConfiguracoesApp = {
   metaQuestoesDiaria: number;
   metaMinutosDiaria: number;
   metaRevisoesDiaria: number;
+  /** Quantidade de missões distribuídas em cada dia de segunda a sábado. */
+  missoesPorDia?: number;
   tema: Tema;
 };
 
 export type Revisao = {
   id: string;
   materiaId: string;
+  moduloId?: string;
   assuntoId: string;
   materia: string;
+  modulo?: string;
   assunto: string;
   etapa: EtapaRevisao;
   dataCriacao: string;
   dataPrevista: string;
   concluida: boolean;
   dataConclusao?: string;
+  desempenho?: "facil" | "media" | "dificil";
+  certas?: number;
+  erradas?: number;
+  reagendadaEm?: string;
 };
 
 export interface QuestaoIA {
   id: string;
   materia: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
   banca: string;
   dificuldade:

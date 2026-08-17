@@ -7,6 +7,7 @@ import {
 import "./CentroMateriais.css";
 
 import { useApp } from "../../context/AppContext";
+import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
 
 import {
   abrirMaterial,
@@ -38,6 +39,9 @@ export default function CentroMateriais() {
   const [materia, setMateria] =
     useState("");
 
+  const [modulo, setModulo] =
+    useState("");
+
   const [assunto, setAssunto] =
     useState("");
 
@@ -56,6 +60,9 @@ export default function CentroMateriais() {
   const [filtroMateria, setFiltroMateria] =
     useState("");
 
+  const [filtroModulo, setFiltroModulo] =
+    useState("");
+
   const [salvando, setSalvando] =
     useState(false);
 
@@ -65,6 +72,19 @@ export default function CentroMateriais() {
   const [erro, setErro] =
     useState("");
 
+  useEffect(() => {
+    const salvo = sessionStorage.getItem("pmpe:materiais:prefill");
+    if (!salvo) return;
+    try {
+      const prefill = JSON.parse(salvo) as { materia?: string; modulo?: string; assunto?: string };
+      if (prefill.materia) { setMateria(prefill.materia); setFiltroMateria(prefill.materia); }
+      if (prefill.modulo) { setModulo(prefill.modulo); setFiltroModulo(prefill.modulo); }
+      if (prefill.assunto) { setAssunto(prefill.assunto); setPesquisa(prefill.assunto); }
+    } finally {
+      sessionStorage.removeItem("pmpe:materiais:prefill");
+    }
+  }, []);
+
   const materiaAtual = useMemo(
     () =>
       materias.find(
@@ -73,8 +93,24 @@ export default function CentroMateriais() {
     [materias, materia]
   );
 
+  const modulosDisponiveis = useMemo(
+    () =>
+      materiaAtual
+        ? listarModulosDaMateria(materiaAtual)
+        : [],
+    [materiaAtual]
+  );
+
+  const moduloAtual = useMemo(
+    () =>
+      modulosDisponiveis.find(
+        (item) => item.nome === modulo
+      ),
+    [modulosDisponiveis, modulo]
+  );
+
   const assuntosDisponiveis =
-    materiaAtual?.assuntos ?? [];
+    moduloAtual?.assuntos ?? [];
 
   const materiaisFiltrados = useMemo(() => {
     const termo = normalizar(pesquisa);
@@ -84,12 +120,18 @@ export default function CentroMateriais() {
         !filtroMateria ||
         material.materia === filtroMateria;
 
+      const correspondeModulo =
+        !filtroModulo ||
+        material.modulo === filtroModulo ||
+        (!material.modulo && filtroModulo === "Geral");
+
       const correspondePesquisa =
         !termo ||
         normalizar(
           [
             material.nome,
             material.materia,
+            material.modulo,
             material.assunto,
             material.observacao,
             material.nomeArquivo,
@@ -98,22 +140,47 @@ export default function CentroMateriais() {
             .join(" ")
         ).includes(termo);
 
-      return correspondeMateria && correspondePesquisa;
+      return (
+        correspondeMateria &&
+        correspondeModulo &&
+        correspondePesquisa
+      );
     });
-  }, [materiais, pesquisa, filtroMateria]);
+  }, [
+    materiais,
+    pesquisa,
+    filtroMateria,
+    filtroModulo,
+  ]);
 
   const grupos = useMemo(() => {
     const mapa = new Map<
       string,
-      Map<string, MaterialEstudo[]>
+      Map<
+        string,
+        Map<string, MaterialEstudo[]>
+      >
     >();
 
     materiaisFiltrados.forEach((material) => {
+      const nomeModulo =
+        material.modulo || "Geral";
+
       if (!mapa.has(material.materia)) {
         mapa.set(material.materia, new Map());
       }
 
-      const assuntos = mapa.get(material.materia);
+      const modulos = mapa.get(material.materia);
+
+      if (!modulos) {
+        return;
+      }
+
+      if (!modulos.has(nomeModulo)) {
+        modulos.set(nomeModulo, new Map());
+      }
+
+      const assuntos = modulos.get(nomeModulo);
 
       if (!assuntos) {
         return;
@@ -151,6 +218,12 @@ export default function CentroMateriais() {
 
   function alterarMateria(valor: string) {
     setMateria(valor);
+    setModulo("");
+    setAssunto("");
+  }
+
+  function alterarModulo(valor: string) {
+    setModulo(valor);
     setAssunto("");
   }
 
@@ -165,6 +238,11 @@ export default function CentroMateriais() {
 
     if (!materia.trim()) {
       setErro("Selecione uma matéria.");
+      return;
+    }
+
+    if (!modulo.trim()) {
+      setErro("Selecione um módulo.");
       return;
     }
 
@@ -191,14 +269,28 @@ export default function CentroMateriais() {
           ? await salvarArquivoMaterial({
               nome,
               materia,
+              materiaId: materiaAtual?.id,
+              modulo,
+              moduloId: moduloAtual?.id,
               assunto,
+              assuntoId:
+                moduloAtual?.assuntos.find(
+                  (item) => item.nome === assunto
+                )?.id,
               observacao,
               arquivo: arquivo as File,
             })
           : await salvarLinkMaterial({
               nome,
               materia,
+              materiaId: materiaAtual?.id,
+              modulo,
+              moduloId: moduloAtual?.id,
               assunto,
+              assuntoId:
+                moduloAtual?.assuntos.find(
+                  (item) => item.nome === assunto
+                )?.id,
               observacao,
               url,
             });
@@ -260,6 +352,7 @@ export default function CentroMateriais() {
   function limparFormulario() {
     setNome("");
     setMateria("");
+    setModulo("");
     setAssunto("");
     setObservacao("");
     setUrl("");
@@ -359,6 +452,31 @@ export default function CentroMateriais() {
               </select>
             </Campo>
 
+            <Campo label="Módulo">
+              <select
+                value={modulo}
+                onChange={(evento) =>
+                  alterarModulo(evento.target.value)
+                }
+                disabled={!materia}
+              >
+                <option value="">
+                  {materia
+                    ? "Selecione o módulo"
+                    : "Selecione primeiro a matéria"}
+                </option>
+
+                {modulosDisponiveis.map((item) => (
+                  <option
+                    key={item.id}
+                    value={item.nome}
+                  >
+                    {item.nome}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+
             <Campo label="Assunto">
               <select
                 value={
@@ -371,12 +489,12 @@ export default function CentroMateriais() {
                 onChange={(evento) =>
                   setAssunto(evento.target.value)
                 }
-                disabled={!materia}
+                disabled={!modulo}
               >
                 <option value="">
-                  {materia
+                  {modulo
                     ? "Selecione o assunto"
-                    : "Selecione primeiro a matéria"}
+                    : "Selecione primeiro o módulo"}
                 </option>
 
                 {assuntosDisponiveis.map((item) => (
@@ -482,6 +600,34 @@ export default function CentroMateriais() {
                 </option>
               ))}
             </select>
+
+            <select
+              value={filtroModulo}
+              onChange={(evento) =>
+                setFiltroModulo(evento.target.value)
+              }
+              disabled={!filtroMateria}
+            >
+              <option value="">
+                Todos os módulos
+              </option>
+
+              {materias
+                .find((item) => item.nome === filtroMateria)
+                ? listarModulosDaMateria(
+                    materias.find(
+                      (item) => item.nome === filtroMateria
+                    )!
+                  ).map((item) => (
+                    <option
+                      key={item.id}
+                      value={item.nome}
+                    >
+                      {item.nome}
+                    </option>
+                  ))
+                : null}
+            </select>
           </div>
 
           {carregando ? (
@@ -498,93 +644,96 @@ export default function CentroMateriais() {
             </div>
           ) : (
             <div className="materiais-grupos">
-              {grupos.map(([nomeMateria, assuntos]) => (
+              {grupos.map(([nomeMateria, modulos]) => (
                 <section
                   key={nomeMateria}
                   className="materiais-materia"
                 >
                   <h2>📘 {nomeMateria}</h2>
 
-                  {Array.from(assuntos.entries())
+                  {Array.from(modulos.entries())
                     .sort(([a], [b]) =>
                       a.localeCompare(b, "pt-BR")
                     )
-                    .map(([nomeAssunto, itens]) => (
+                    .map(([nomeModulo, assuntos]) => (
                       <div
-                        key={nomeAssunto}
-                        className="materiais-assunto"
+                        key={nomeModulo}
+                        className="materiais-modulo"
                       >
-                        <h3>📂 {nomeAssunto}</h3>
+                        <h3>🗂️ {nomeModulo}</h3>
 
-                        <div className="materiais-lista">
-                          {itens.map((material) => (
-                            <article
-                              key={material.id}
-                              className="material-card"
+                        {Array.from(assuntos.entries())
+                          .sort(([a], [b]) =>
+                            a.localeCompare(b, "pt-BR")
+                          )
+                          .map(([nomeAssunto, itens]) => (
+                            <div
+                              key={nomeAssunto}
+                              className="materiais-assunto"
                             >
-                              <div className="material-icone">
-                                {iconeMaterial(material)}
-                              </div>
+                              <h4>📂 {nomeAssunto}</h4>
 
-                              <div className="material-info">
-                                <strong>
-                                  {material.nome}
-                                </strong>
-
-                                <span>
-                                  {material.tipo === "arquivo"
-                                    ? `${material.nomeArquivo ?? "Arquivo"} • ${formatarTamanho(material.tamanhoBytes ?? 0)}`
-                                    : material.url}
-                                </span>
-
-                                {material.observacao && (
-                                  <p>
-                                    {material.observacao}
-                                  </p>
-                                )}
-
-                                <small>
-                                  Adicionado em{" "}
-                                  {formatarData(
-                                    material.criadoEm
-                                  )}
-                                </small>
-                              </div>
-
-                              <div className="material-acoes">
-                                <button
-                                  type="button"
-                                  className="material-abrir"
-                                  onClick={() => abrir(material)}
-                                >
-                                  Abrir
-                                </button>
-
-                                {material.tipo === "arquivo" && (
-                                  <button
-                                    type="button"
-                                    className="material-baixar"
-                                    onClick={() =>
-                                      baixar(material)
-                                    }
+                              <div className="materiais-lista">
+                                {itens.map((material) => (
+                                  <article
+                                    key={material.id}
+                                    className="material-card"
                                   >
-                                    Baixar
-                                  </button>
-                                )}
+                                    <div className="material-icone">
+                                      {iconeMaterial(material)}
+                                    </div>
 
-                                <button
-                                  type="button"
-                                  className="material-excluir"
-                                  onClick={() =>
-                                    excluir(material)
-                                  }
-                                >
-                                  Excluir
-                                </button>
+                                    <div className="material-info">
+                                      <strong>{material.nome}</strong>
+
+                                      <span>
+                                        {material.tipo === "arquivo"
+                                          ? `${material.nomeArquivo ?? "Arquivo"} • ${formatarTamanho(material.tamanhoBytes ?? 0)}`
+                                          : material.url}
+                                      </span>
+
+                                      {material.observacao && (
+                                        <p>{material.observacao}</p>
+                                      )}
+
+                                      <small>
+                                        Adicionado em{" "}
+                                        {formatarData(material.criadoEm)}
+                                      </small>
+                                    </div>
+
+                                    <div className="material-acoes">
+                                      <button
+                                        type="button"
+                                        className="material-abrir"
+                                        onClick={() => abrir(material)}
+                                      >
+                                        Abrir
+                                      </button>
+
+                                      {material.tipo === "arquivo" && (
+                                        <button
+                                          type="button"
+                                          className="material-baixar"
+                                          onClick={() => baixar(material)}
+                                        >
+                                          Baixar
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        className="material-excluir"
+                                        onClick={() => excluir(material)}
+                                      >
+                                        Excluir
+                                      </button>
+                                    </div>
+                                  </article>
+                                ))}
                               </div>
-                            </article>
+                            </div>
                           ))}
-                        </div>
                       </div>
                     ))}
                 </section>

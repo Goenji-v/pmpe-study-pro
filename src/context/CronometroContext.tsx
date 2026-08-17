@@ -10,7 +10,11 @@ import {
 import { useApp } from "./AppContext";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
-import { criarPrimeiraRevisao } from "../utils/revisoes";
+import {
+  listarModulosDaMateria,
+} from "../services/conteudos/navegarConteudos";
+import { obterReferenciasDaMissao, planoPMPE } from "../data/planoPMPE";
+import { criarDadosSessaoDaMissao } from "../services/conteudos/sincronizacaoCanonica";
 
 import type {
   Dificuldade,
@@ -25,8 +29,14 @@ type StatusCronometro =
 
 export type SessaoAtiva = {
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
+  aulaId?: string;
   tipo: TipoSessao;
+  formatoRevisao?: "teoria" | "questoes";
   objetivo: string;
   observacao: string;
   status: StatusCronometro;
@@ -42,8 +52,14 @@ export type SessaoAtiva = {
 
 export type DadosIniciarSessao = {
   materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
+  aulaId?: string;
   tipo: TipoSessao;
+  formatoRevisao?: "teoria" | "questoes";
   objetivo?: string;
   observacao?: string;
   missaoId?: string;
@@ -67,6 +83,10 @@ export type DadosFinalizacaoSessao = {
     | "facil"
     | "media"
     | "dificil";
+
+  formatoRevisao?: "teoria" | "questoes";
+
+  concluirAssunto?: boolean;
 };
 
 type ResultadoFinalizacao = {
@@ -83,10 +103,16 @@ type CronometroContextType = {
     dados: Partial<
       Pick<
         SessaoAtiva,
-        "materia" | "assunto" | "tipo" |
-        "objetivo" | "observacao"
+        "materia" | "materiaId" | "modulo" | "moduloId" |
+        "assunto" | "assuntoId" | "aulaId" | "tipo" | "formatoRevisao" |
+        "objetivo" | "observacao" |
+        "missaoId" | "semana" | "dia" |
+        "urlAula" | "urlQuestoes"
       >
     >
+  ) => void;
+  prepararSessao: (
+    dados: DadosIniciarSessao
   ) => void;
   pausar: () => void;
   continuar: () => void;
@@ -130,11 +156,11 @@ export function CronometroProvider({
 
   const {
     materias,
-    setMaterias,
     setSessoes,
     setQuestoes,
-    setRevisoes,
     setMissoesConcluidas,
+    definirConclusaoAssunto,
+    definirConclusaoAula,
   } = useApp();
 
   const { showToast } = useToast();
@@ -171,6 +197,51 @@ export function CronometroProvider({
       JSON.stringify(sessaoAtiva)
     );
   }, [chaveStorage, sessaoAtiva]);
+
+  // Etapa 15: se uma sessão em andamento veio do Plano, revalida sua
+  // referência ao carregar uma versão nova do app. Isso corrige sessões
+  // antigas sem reiniciar o cronômetro nem perder o tempo já contado.
+  useEffect(() => {
+    if (!sessaoAtiva.missaoId || materias.length === 0) return;
+
+    const missao = planoPMPE
+      .flatMap((semana) => semana.dias)
+      .flatMap((dia) => dia.missoes)
+      .find((item) => item.id === sessaoAtiva.missaoId);
+
+    if (!missao) return;
+
+    const canonica = criarDadosSessaoDaMissao(
+      materias,
+      missao,
+      sessaoAtiva.semana ?? 1,
+      sessaoAtiva.dia ?? 1
+    );
+
+    const precisaAtualizar =
+      sessaoAtiva.materiaId !== canonica.materiaId ||
+      sessaoAtiva.moduloId !== canonica.moduloId ||
+      sessaoAtiva.assuntoId !== canonica.assuntoId ||
+      sessaoAtiva.aulaId !== canonica.aulaId ||
+      sessaoAtiva.materia !== canonica.materia ||
+      sessaoAtiva.modulo !== canonica.modulo ||
+      sessaoAtiva.assunto !== canonica.assunto;
+
+    if (!precisaAtualizar) return;
+
+    setSessaoAtiva((anterior) => ({
+      ...anterior,
+      materia: canonica.materia,
+      materiaId: canonica.materiaId,
+      modulo: canonica.modulo,
+      moduloId: canonica.moduloId,
+      assunto: canonica.assunto,
+      assuntoId: canonica.assuntoId,
+      aulaId: canonica.aulaId,
+      urlAula: canonica.urlAula,
+      urlQuestoes: canonica.urlQuestoes,
+    }));
+  }, [materias, sessaoAtiva.missaoId]);
 
   useEffect(() => {
     if (sessaoAtiva.status !== "rodando") {
@@ -232,8 +303,14 @@ export function CronometroProvider({
 
     setSessaoAtiva({
       materia: dados.materia.trim(),
+      materiaId: dados.materiaId,
+      modulo: dados.modulo?.trim() || undefined,
+      moduloId: dados.moduloId,
       assunto: dados.assunto.trim(),
+      assuntoId: dados.assuntoId,
+      aulaId: dados.aulaId,
       tipo: dados.tipo,
+      formatoRevisao: dados.formatoRevisao,
       objetivo: dados.objetivo?.trim() ?? "",
       observacao: dados.observacao?.trim() ?? "",
       status: "rodando",
@@ -261,8 +338,11 @@ export function CronometroProvider({
     dados: Partial<
       Pick<
         SessaoAtiva,
-        "materia" | "assunto" | "tipo" |
-        "objetivo" | "observacao"
+        "materia" | "materiaId" | "modulo" | "moduloId" |
+        "assunto" | "assuntoId" | "aulaId" | "tipo" | "formatoRevisao" |
+        "objetivo" | "observacao" |
+        "missaoId" | "semana" | "dia" |
+        "urlAula" | "urlQuestoes"
       >
     >
   ) {
@@ -276,6 +356,37 @@ export function CronometroProvider({
         ...dados,
       })
     );
+  }
+
+  function prepararSessao(
+    dados: DadosIniciarSessao
+  ) {
+    const novaSessao: SessaoAtiva = {
+      ...sessaoInicial,
+      materia: dados.materia.trim(),
+      materiaId: dados.materiaId,
+      modulo: dados.modulo?.trim() || undefined,
+      moduloId: dados.moduloId,
+      assunto: dados.assunto.trim(),
+      assuntoId: dados.assuntoId,
+      aulaId: dados.aulaId,
+      tipo: dados.tipo,
+      formatoRevisao: dados.formatoRevisao,
+      objetivo: dados.objetivo?.trim() ?? "",
+      observacao: dados.observacao?.trim() ?? "",
+      missaoId: dados.missaoId,
+      semana: dados.semana,
+      dia: dados.dia,
+      urlAula: dados.urlAula,
+      urlQuestoes: dados.urlQuestoes,
+      status: "parado",
+      iniciadoEm: null,
+      pausadoEm: null,
+      segundosPausados: 0,
+    };
+
+    setSessaoAtiva(novaSessao);
+    localStorage.removeItem(chaveStorage);
   }
 
   function pausar() {
@@ -358,7 +469,11 @@ export function CronometroProvider({
       id: crypto.randomUUID(),
       tipo: sessaoAtiva.tipo,
       materia: sessaoAtiva.materia,
+      materiaId: sessaoAtiva.materiaId,
+      modulo: sessaoAtiva.modulo,
+      moduloId: sessaoAtiva.moduloId,
       assunto: sessaoAtiva.assunto,
+      assuntoId: sessaoAtiva.assuntoId,
       objetivo:
         sessaoAtiva.objetivo ||
         undefined,
@@ -388,6 +503,8 @@ export function CronometroProvider({
 
       avaliacaoRevisao:
         dados.avaliacaoRevisao,
+      formatoRevisao:
+        dados.formatoRevisao,
       data: finalizadaEm,
       iniciadaEm:
         sessaoAtiva.iniciadoEm ??
@@ -412,8 +529,8 @@ const quantidadeErros =
   dados.quantidadeErros;
 
 if (
-  sessaoAtiva.tipo ===
-    "questoes" &&
+  (sessaoAtiva.tipo === "questoes" ||
+    (sessaoAtiva.tipo === "revisao" && dados.formatoRevisao === "questoes")) &&
   typeof quantidadeAcertos ===
     "number" &&
   typeof quantidadeErros ===
@@ -429,8 +546,20 @@ if (
             materia:
               sessaoAtiva.materia,
 
+            materiaId:
+              sessaoAtiva.materiaId,
+
+            modulo:
+              sessaoAtiva.modulo,
+
+            moduloId:
+              sessaoAtiva.moduloId,
+
             assunto:
               sessaoAtiva.assunto,
+
+            assuntoId:
+              sessaoAtiva.assuntoId,
 
             banca:
               dados.banca?.trim() ||
@@ -442,10 +571,10 @@ if (
             erradas:
               quantidadeErros,
 
-            minutos:
-              Math.round(
-                minutos
-              ),
+            // O tempo já pertence à Sessão de Estudo criada acima.
+            // O RegistroQuestao automático guarda apenas desempenho,
+            // evitando duplicar minutos nas estatísticas.
+            minutos: 0,
 
             data:
               finalizadaEm,
@@ -459,74 +588,132 @@ if (
       );
     }
 
-    if (sessaoAtiva.missaoId) {
-      setMissoesConcluidas(
-        (anteriores) =>
-          Array.from(
-            new Set([
-              ...anteriores,
-              sessaoAtiva.missaoId as string,
-            ])
+    const missaoPlano = sessaoAtiva.missaoId
+      ? planoPMPE
+          .flatMap((semana) => semana.dias)
+          .flatMap((dia) => dia.missoes)
+          .find((missao) => missao.id === sessaoAtiva.missaoId)
+      : undefined;
+
+    const referenciasMissao = missaoPlano
+      ? obterReferenciasDaMissao(missaoPlano)
+      : [];
+    const referenciaMissao = referenciasMissao.find(
+      (referencia) =>
+        (!sessaoAtiva.materiaId || referencia.materiaId === sessaoAtiva.materiaId) &&
+        (!sessaoAtiva.assuntoId || referencia.assuntoId === sessaoAtiva.assuntoId) &&
+        (!sessaoAtiva.aulaId || referencia.aulaId === sessaoAtiva.aulaId)
+    ) ?? referenciasMissao[0];
+    let revisaoCriada = false;
+
+    const referenciaConcluidaAposFinalizacao = (
+      referencia: (typeof referenciasMissao)[number]
+    ) => {
+      const materia = materias.find((item) => item.id === referencia.materiaId);
+      const modulo = materia
+        ? listarModulosDaMateria(materia).find((item) => item.id === referencia.moduloId)
+        : undefined;
+      const assunto = modulo?.assuntos.find((item) => item.id === referencia.assuntoId);
+      if (!assunto) return false;
+
+      const ehReferenciaAtual = Boolean(
+        referenciaMissao &&
+        referencia.materiaId === referenciaMissao.materiaId &&
+        referencia.assuntoId === referenciaMissao.assuntoId &&
+        referencia.aulaId === referenciaMissao.aulaId
+      );
+
+      if (referencia.aulaId) {
+        const aula = assunto.aulas?.find((item) => item.id === referencia.aulaId);
+        return Boolean(aula?.concluida || ehReferenciaAtual);
+      }
+
+      return Boolean(assunto.concluido || ehReferenciaAtual);
+    };
+
+    if (sessaoAtiva.missaoId && referenciaMissao) {
+      const materiaDaMissao = materias.find((item) => item.id === referenciaMissao.materiaId);
+      const moduloDaMissao = materiaDaMissao
+        ? listarModulosDaMateria(materiaDaMissao).find((item) => item.id === referenciaMissao.moduloId)
+        : undefined;
+      const assuntoDaMissao = moduloDaMissao?.assuntos.find((item) => item.id === referenciaMissao.assuntoId);
+
+      if (referenciaMissao.aulaId) {
+        const vaiConcluirAssunto = Boolean(
+          assuntoDaMissao &&
+          !assuntoDaMissao.concluido &&
+          (assuntoDaMissao.aulas ?? []).length > 0 &&
+          (assuntoDaMissao.aulas ?? []).every(
+            (aula) => aula.id === referenciaMissao.aulaId || aula.concluida
           )
+        );
+        const aulaExiste = Boolean(
+          assuntoDaMissao?.aulas?.some((aula) => aula.id === referenciaMissao.aulaId)
+        );
+
+        if (aulaExiste) {
+          definirConclusaoAula(
+            referenciaMissao.materiaId,
+            referenciaMissao.assuntoId,
+            referenciaMissao.aulaId,
+            true,
+            referenciaMissao.moduloId
+          );
+          revisaoCriada = vaiConcluirAssunto;
+        } else if (assuntoDaMissao) {
+          definirConclusaoAssunto(
+            referenciaMissao.materiaId,
+            referenciaMissao.assuntoId,
+            true,
+            referenciaMissao.moduloId
+          );
+          revisaoCriada = !assuntoDaMissao.concluido;
+        }
+      } else if (assuntoDaMissao) {
+        definirConclusaoAssunto(
+          referenciaMissao.materiaId,
+          referenciaMissao.assuntoId,
+          true,
+          referenciaMissao.moduloId
+        );
+        revisaoCriada = !assuntoDaMissao.concluido;
+      }
+
+      const missaoCompleta = referenciasMissao.length > 0 &&
+        referenciasMissao.every(referenciaConcluidaAposFinalizacao);
+
+      setMissoesConcluidas((anteriores) =>
+        missaoCompleta
+          ? Array.from(new Set([...anteriores, sessaoAtiva.missaoId as string]))
+          : anteriores.filter((id) => id !== sessaoAtiva.missaoId)
+      );
+    } else if (sessaoAtiva.missaoId) {
+      setMissoesConcluidas((anteriores) =>
+        Array.from(new Set([...anteriores, sessaoAtiva.missaoId as string]))
       );
     }
 
-    let revisaoCriada = false;
+    // Sessões abertas fora do Plano continuam exigindo confirmação explícita
+    // para concluir o assunto. Missões do Plano já concluíram a aula exata acima.
+    if (
+      dados.concluirAssunto === true &&
+      tipoPermiteConcluirAssunto(sessaoAtiva.tipo) &&
+      !referenciaMissao
+    ) {
+      const materia = materias.find((item) => mesmoTexto(item.nome, sessaoAtiva.materia));
+      const assunto = materia
+        ? listarModulosDaMateria(materia)
+            .flatMap((modulo) => modulo.assuntos.map((item) => ({ modulo, assunto: item })))
+            .find(({ modulo, assunto }) =>
+              (!sessaoAtiva.moduloId || modulo.id === sessaoAtiva.moduloId) &&
+              (assunto.id === sessaoAtiva.assuntoId || mesmoTexto(assunto.nome, sessaoAtiva.assunto))
+            )
+        : undefined;
 
-    if (tipoGeraRevisao(sessaoAtiva.tipo)) {
-      const referencia =
-        localizarMateriaEAssunto(
-          materias,
-          sessaoAtiva.materia,
-          sessaoAtiva.assunto
-        );
-
-      setMaterias(
-        (anteriores) =>
-          marcarAssuntoConcluido(
-            anteriores,
-            sessaoAtiva.materia,
-            sessaoAtiva.assunto
-          )
-      );
-
-      setRevisoes(
-        (anteriores) => {
-          const jaExiste =
-            anteriores.some(
-              (revisao) =>
-                !revisao.concluida &&
-                mesmoTexto(
-                  revisao.materia,
-                  sessaoAtiva.materia
-                ) &&
-                mesmoTexto(
-                  revisao.assunto,
-                  sessaoAtiva.assunto
-                )
-            );
-
-          if (jaExiste) {
-            return anteriores;
-          }
-
-          revisaoCriada = true;
-
-          return [
-            criarPrimeiraRevisao({
-              materiaId:
-                referencia.materiaId,
-              assuntoId:
-                referencia.assuntoId,
-              materia:
-                sessaoAtiva.materia,
-              assunto:
-                sessaoAtiva.assunto,
-            }),
-            ...anteriores,
-          ];
-        }
-      );
+      if (materia && assunto) {
+        definirConclusaoAssunto(materia.id, assunto.assunto.id, true, assunto.modulo.id);
+        revisaoCriada = true;
+      }
     }
 
     setSessaoAtiva({
@@ -587,6 +774,7 @@ if (
         cronometroAtivo,
         iniciar,
         atualizarDados,
+        prepararSessao,
         pausar,
         continuar,
         finalizar,
@@ -668,7 +856,7 @@ function calcularSegundos(
   );
 }
 
-function tipoGeraRevisao(
+function tipoPermiteConcluirAssunto(
   tipo: TipoSessao
 ) {
   return [
@@ -678,76 +866,6 @@ function tipoGeraRevisao(
     "leitura",
     "questoes",
   ].includes(tipo);
-}
-
-function localizarMateriaEAssunto(
-  materias: ReturnType<
-    typeof useApp
-  >["materias"],
-  nomeMateria: string,
-  nomeAssunto: string
-) {
-  const materia =
-    materias.find(
-      (item) =>
-        mesmoTexto(
-          item.nome,
-          nomeMateria
-        )
-    );
-
-  const assunto =
-    materia?.assuntos.find(
-      (item) =>
-        mesmoTexto(
-          item.nome,
-          nomeAssunto
-        )
-    );
-
-  return {
-    materiaId:
-      materia?.id ||
-      criarId(nomeMateria),
-    assuntoId:
-      assunto?.id ||
-      criarId(
-        `${nomeMateria}-${nomeAssunto}`
-      ),
-  };
-}
-
-function marcarAssuntoConcluido(
-  materias: ReturnType<
-    typeof useApp
-  >["materias"],
-  nomeMateria: string,
-  nomeAssunto: string
-) {
-  return materias.map(
-    (materia) =>
-      mesmoTexto(
-        materia.nome,
-        nomeMateria
-      )
-        ? {
-            ...materia,
-            assuntos:
-              materia.assuntos.map(
-                (assunto) =>
-                  mesmoTexto(
-                    assunto.nome,
-                    nomeAssunto
-                  )
-                    ? {
-                        ...assunto,
-                        concluido: true,
-                      }
-                    : assunto
-              ),
-          }
-        : materia
-  );
 }
 
 function mesmoTexto(
@@ -769,23 +887,6 @@ function normalizar(
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
-}
-
-function criarId(
-  texto: string
-) {
-  return texto
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      ""
-    )
-    .toLowerCase()
-    .replace(
-      /[^a-z0-9]+/g,
-      "-"
-    )
-    .replace(/^-|-$/g, "");
 }
 
 export function formatarTempo(

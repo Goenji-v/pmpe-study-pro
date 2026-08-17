@@ -139,3 +139,8 @@
     flex-direction: column;
   }
 }
+.configuracoes-ritmo small {
+  margin-top: 8px;
+  color: #94a3b8;
+  line-height: 1.45;
+}

@@ -1,7 +1,5 @@
 # PMPE Study Pro
 
-- Versão: 4.0.0-m1
-- Módulo: Painel Administrativo
-- Base: projeto recebido em 02/08/2026
-- Requer execução de `supabase/ADMINISTRACAO.sql`
-- Requer `supabase/GAMIFICACAO_RANKING.sql` já instalado
+Versão de trabalho: Etapa 20 — Mobile profissional
+
+Inclui cumulativamente as correções e etapas anteriores presentes na base utilizada.

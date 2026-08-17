@@ -1,18 +1,32 @@
+import { cursoPortuguesModulos } from "./cursoPortugues";
+
 export type TipoMissaoPlano =
   | "conteudo"
   | "revisao"
   | "questoes"
   | "redacao"
+  | "simulado"
   | "livre";
+
+export type ReferenciaConteudoPlano = {
+  materiaId: string;
+  moduloId: string;
+  assuntoId: string;
+  aulaId?: string;
+};
 
 export type MissaoPlano = {
   id: string;
-  numero: 1 | 2;
+  numero: number;
   materia: string;
   assunto: string;
   tipo: TipoMissaoPlano;
   urlAula?: string;
   urlQuestoes?: string;
+  /** Primeira referência canônica, mantida por compatibilidade. */
+  conteudo?: ReferenciaConteudoPlano;
+  /** Uma missão pode agrupar várias aulas/assuntos no mesmo bloco diário. */
+  conteudos?: ReferenciaConteudoPlano[];
 };
 
 export type DiaPlano = {
@@ -31,7 +45,7 @@ export type SemanaPlano = {
 function missao(
   semana: number,
   dia: number,
-  numero: 1 | 2,
+  numero: number,
   materia: string,
   assunto: string,
   tipo: TipoMissaoPlano = "conteudo",
@@ -46,10 +60,138 @@ function missao(
     tipo,
     urlAula,
     urlQuestoes,
+    conteudo: criarReferenciaConteudo(materia, assunto, tipo, urlAula),
+    conteudos: (() => {
+      const referencia = criarReferenciaConteudo(materia, assunto, tipo, urlAula);
+      return referencia ? [referencia] : undefined;
+    })(),
   };
 }
 
-export const planoPMPE: SemanaPlano[] = [
+function criarIdConteudo(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+const referenciasPortugues: Record<
+  string,
+  Omit<ReferenciaConteudoPlano, "materiaId">
+> = {
+  "Fonema e Letra": {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-fonemas-letras",
+    aulaId: "portugues-fonema-letra",
+  },
+  "Vogal, Consoante e Semivogal": {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-fonemas-letras",
+    aulaId: "portugues-vogal-consoante-semivogal",
+  },
+  Ditongo: {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-encontros-vocalicos",
+    aulaId: "portugues-ditongo",
+  },
+  "Tritongo e Hiato": {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-encontros-vocalicos",
+    aulaId: "portugues-tritongo-hiato",
+  },
+  "Dígrafo e Encontro Consonantal - Parte 1": {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-digrafo-encontro-consonantal",
+    aulaId: "portugues-digrafo-encontro-consonantal-1",
+  },
+  "Dígrafo e Encontro Consonantal - Parte 2": {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-digrafo-encontro-consonantal",
+    aulaId: "portugues-digrafo-encontro-consonantal-2",
+  },
+  "Sílaba - Parte 1": {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-silaba",
+    aulaId: "portugues-silaba-1",
+  },
+  "Sílaba - Parte 2": {
+    moduloId: "portugues-modulo-0-fonologia",
+    assuntoId: "portugues-silaba",
+    aulaId: "portugues-silaba-2",
+  },
+  "Acentuação - Parte 01": {
+    moduloId: "portugues-modulo-1-ortografia-acentuacao",
+    assuntoId: "portugues-acentuacao",
+    aulaId: "portugues-acentuacao-1",
+  },
+  "Acentuação - Parte 02": {
+    moduloId: "portugues-modulo-1-ortografia-acentuacao",
+    assuntoId: "portugues-acentuacao",
+    aulaId: "portugues-acentuacao-2",
+  },
+  "Acentuação - Parte 03": {
+    moduloId: "portugues-modulo-1-ortografia-acentuacao",
+    assuntoId: "portugues-acentuacao",
+    aulaId: "portugues-acentuacao-3",
+  },
+  "Acentuação - Parte 04": {
+    moduloId: "portugues-modulo-1-ortografia-acentuacao",
+    assuntoId: "portugues-acentuacao",
+    aulaId: "portugues-acentuacao-4",
+  },
+  "Aula 01 - Os 5 Pilares do Português": {
+    moduloId: "portugues-modulo-2-classes-palavras",
+    assuntoId: "portugues-fundamentos-morfologia",
+    aulaId: "portugues-5-pilares",
+  },
+  "Aula 02 - Morfologia: Visão Geral": {
+    moduloId: "portugues-modulo-2-classes-palavras",
+    assuntoId: "portugues-fundamentos-morfologia",
+    aulaId: "portugues-morfologia-visao-geral",
+  },
+  "Aula 03 - Morfologia: Os 3 Pilares": {
+    moduloId: "portugues-modulo-2-classes-palavras",
+    assuntoId: "portugues-fundamentos-morfologia",
+    aulaId: "portugues-morfologia-3-pilares",
+  },
+  "Aula 04 - Classificação das Palavras: Variáveis e Invariáveis - Parte 1": {
+    moduloId: "portugues-modulo-2-classes-palavras",
+    assuntoId: "portugues-fundamentos-morfologia",
+    aulaId: "portugues-classes-variaveis-invariaveis-1",
+  },
+};
+
+function criarReferenciaConteudo(
+  materia: string,
+  assunto: string,
+  tipo: TipoMissaoPlano,
+  urlAula?: string
+): ReferenciaConteudoPlano | undefined {
+  if (tipo !== "conteudo") {
+    return undefined;
+  }
+
+  if (materia === "Português") {
+    const referencia = referenciasPortugues[assunto];
+    return referencia
+      ? { materiaId: "portugues", ...referencia }
+      : undefined;
+  }
+
+  const materiaId = criarIdConteudo(materia);
+  const assuntoId = criarIdConteudo(`${materia}-${assunto}`);
+
+  return {
+    materiaId,
+    moduloId: `modulo-geral-${materiaId}`,
+    assuntoId,
+    aulaId: urlAula ? `${assuntoId}-aula-1` : undefined,
+  };
+}
+
+export const planoPMPELegado: SemanaPlano[] = [
   {
     numero: 1,
     nome: "Semana 01",
@@ -62,10 +204,9 @@ export const planoPMPE: SemanaPlano[] = [
             1,
             1,
             "Português",
-            "Compreensão e interpretação de textos",
+            "Fonema e Letra",
             "conteudo",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-22/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&my_questions=not_resolved&per_page=20&subject_ids%5B%5D=19271"
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1938"
           ),
           missao(
             1,
@@ -139,10 +280,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Tipos e gêneros textuais",
+            "Vogal, Consoante e Semivogal",
             "conteudo",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-23/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&my_questions=not_resolved&per_page=20&subject_ids%5B%5D=14656"
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1940"
           ),
           missao(
             1,
@@ -245,10 +385,9 @@ export const planoPMPE: SemanaPlano[] = [
             1,
             1,
             "Português",
-            "Ortografia",
+            "Ditongo",
             "conteudo",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-24/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&per_page=20&subject_ids%5B%5D=14621"
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1939"
           ),
           missao(
             2,
@@ -320,10 +459,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão geral via questões",
-            "revisao",
-            "https://areadoaluno.resumodoconcurseiro.com.br/courses/pmpe-portugues/lessons/aula-23/",
-            "https://www.qconcursos.com/questoes-de-concursos/questoes?discipline_ids%5B%5D=1&examining_board_ids%5B%5D=379&my_questions=not_resolved&per_page=20&subject_ids%5B%5D=14656"
+            "Tritongo e Hiato",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1941"
           ),
           missao(
             2,
@@ -418,7 +556,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(3, 1, 1, "Português", "Classe de palavras - 1"),
+          missao(
+            3,
+            1,
+            1,
+            "Português",
+            "Dígrafo e Encontro Consonantal - Parte 1",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1942"
+          ),
           missao(3, 1, 2, "Constitucional", "Remédios constitucionais"),
         ],
         revisao: "Revisão do dia",
@@ -461,7 +607,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 4,
         missoes: [
-          missao(3, 4, 1, "Português", "Classe de palavras - 2"),
+          missao(
+            3,
+            4,
+            1,
+            "Português",
+            "Dígrafo e Encontro Consonantal - Parte 2",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1943"
+          ),
           missao(
             3,
             4,
@@ -525,7 +679,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(4, 1, 1, "Português", "Revisão geral", "revisao"),
+          missao(
+            4,
+            1,
+            1,
+            "Português",
+            "Sílaba - Parte 1",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1944"
+          ),
           missao(
             4,
             1,
@@ -575,8 +737,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão geral via questões",
-            "revisao"
+            "Sílaba - Parte 2",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=2394"
           ),
           missao(
             4,
@@ -663,7 +826,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(5, 1, 1, "Português", "Classe de palavras - 3"),
+          missao(
+            5,
+            1,
+            1,
+            "Português",
+            "Acentuação - Parte 01",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1945"
+          ),
           missao(
             5,
             1,
@@ -710,7 +881,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Coordenação e subordinação - aulas 1, 2 e 3"
+            "Acentuação - Parte 02",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1946"
           ),
           missao(
             5,
@@ -781,7 +954,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(6, 1, 1, "Português", "Pontuação"),
+          missao(
+            6,
+            1,
+            1,
+            "Português",
+            "Acentuação - Parte 03",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1947"
+          ),
           missao(6, 1, 2, "Constitucional", "Poder Executivo"),
         ],
         revisao: "Revisão do dia",
@@ -829,8 +1010,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão via questões",
-            "revisao"
+            "Acentuação - Parte 04",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=2398"
           ),
           missao(
             6,
@@ -909,8 +1091,9 @@ export const planoPMPE: SemanaPlano[] = [
             1,
             1,
             "Português",
-            "Revisão geral via questões",
-            "revisao"
+            "Aula 01 - Os 5 Pilares do Português",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1948"
           ),
           missao(
             7,
@@ -975,8 +1158,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão via questões",
-            "revisao"
+            "Aula 02 - Morfologia: Visão Geral",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1949"
           ),
           missao(
             7,
@@ -1064,7 +1248,15 @@ export const planoPMPE: SemanaPlano[] = [
       {
         numero: 1,
         missoes: [
-          missao(8, 1, 1, "Português", "Revisão final", "revisao"),
+          missao(
+            8,
+            1,
+            1,
+            "Português",
+            "Aula 03 - Morfologia: Os 3 Pilares",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1950"
+          ),
           missao(
             8,
             1,
@@ -1121,8 +1313,9 @@ export const planoPMPE: SemanaPlano[] = [
             4,
             1,
             "Português",
-            "Revisão final",
-            "revisao"
+            "Aula 04 - Classificação das Palavras: Variáveis e Invariáveis - Parte 1",
+            "conteudo",
+            "https://rotapolicial.curseduca.pro/m/lessons/lingua-portuguesa1778770535857?classId=1951"
           ),
           missao(
             8,
@@ -1182,3 +1375,188 @@ export const planoPMPE: SemanaPlano[] = [
     ],
   },
 ];
+
+type LotePortugues = {
+  nome: string;
+  referencias: ReferenciaConteudoPlano[];
+  urlAula?: string;
+};
+
+export function obterReferenciasDaMissao(
+  missao: Pick<MissaoPlano, "conteudo" | "conteudos">
+): ReferenciaConteudoPlano[] {
+  if (missao.conteudos?.length) return missao.conteudos;
+  return missao.conteudo ? [missao.conteudo] : [];
+}
+
+function criarLotesPortugues(): LotePortugues[] {
+  const lotes: LotePortugues[] = [];
+
+  const referenciasDoAssunto = (
+    moduloId: string,
+    assunto: (typeof cursoPortuguesModulos)[number]["assuntos"][number],
+    inicio = 0,
+    fim = assunto.aulas?.length ?? 0
+  ) =>
+    (assunto.aulas ?? []).slice(inicio, fim).map((aula) => ({
+      materiaId: "portugues",
+      moduloId,
+      assuntoId: assunto.id,
+      aulaId: aula.id,
+    }));
+
+  const urlDaPrimeira = (referencias: ReferenciaConteudoPlano[]) => {
+    for (const referencia of referencias) {
+      const modulo = cursoPortuguesModulos.find((item) => item.id === referencia.moduloId);
+      const assunto = modulo?.assuntos.find((item) => item.id === referencia.assuntoId);
+      const aula = assunto?.aulas?.find((item) => item.id === referencia.aulaId);
+      if (aula?.url) return aula.url;
+    }
+    return undefined;
+  };
+
+  for (const modulo of cursoPortuguesModulos) {
+    if (modulo.ordem === 0) {
+      for (let i = 0; i < modulo.assuntos.length; i += 2) {
+        const grupo = modulo.assuntos.slice(i, i + 2);
+        const referencias = grupo.flatMap((assunto) => referenciasDoAssunto(modulo.id, assunto));
+        lotes.push({
+          nome: `${grupo.map((assunto) => assunto.nome).join(" + ")} · ${referencias.length} aulas`,
+          referencias,
+          urlAula: urlDaPrimeira(referencias),
+        });
+      }
+      continue;
+    }
+
+    for (const assunto of modulo.assuntos) {
+      const total = assunto.aulas?.length ?? 0;
+      if (total === 0) continue;
+
+      let porDia: number;
+      if (total <= 3) porDia = total;
+      else if (total === 4) porDia = 2;
+      else if (total === 5) porDia = 3;
+      else if (total === 6) porDia = 3;
+      else if (total === 8) porDia = 2;
+      else if (total === 9) porDia = 3;
+      else porDia = Math.min(3, total);
+
+      for (let inicio = 0; inicio < total; inicio += porDia) {
+        const fim = Math.min(total, inicio + porDia);
+        const referencias = referenciasDoAssunto(modulo.id, assunto, inicio, fim);
+        const rotulo = total <= porDia
+          ? `${assunto.nome} · ${total} aula${total === 1 ? "" : "s"}`
+          : `${assunto.nome} · aulas ${inicio + 1}–${fim} de ${total}`;
+
+        lotes.push({
+          nome: rotulo,
+          referencias,
+          urlAula: urlDaPrimeira(referencias),
+        });
+      }
+    }
+  }
+
+  return lotes;
+}
+
+function aplicarLotePortugues(missaoOriginal: MissaoPlano, lote: LotePortugues): MissaoPlano {
+  return {
+    ...missaoOriginal,
+    materia: "Português",
+    assunto: lote.nome,
+    tipo: "conteudo",
+    urlAula: lote.urlAula,
+    conteudo: lote.referencias[0],
+    conteudos: lote.referencias,
+  };
+}
+
+function criarMissaoLotePortugues(id: string, numero: number, lote: LotePortugues): MissaoPlano {
+  return {
+    id,
+    numero,
+    materia: "Português",
+    assunto: lote.nome,
+    tipo: "conteudo",
+    urlAula: lote.urlAula,
+    conteudo: lote.referencias[0],
+    conteudos: lote.referencias,
+  };
+}
+
+function criarMissaoRevisaoExtensao(indice: number, numero: number): MissaoPlano {
+  const materias = ["Constitucional", "RLM", "Leis extravagantes", "Informática", "História"];
+  const materia = materias[indice % materias.length];
+  return {
+    id: `ext-revisao-${indice + 1}`,
+    numero,
+    materia,
+    assunto: "Revisão de manutenção via questões",
+    tipo: "revisao",
+  };
+}
+
+function criarDomingo(numeroSemana: number): DiaPlano {
+  return {
+    numero: 7,
+    missoes: [
+      { id: `s${numeroSemana}-d7-redacao`, numero: 1, materia: "Redação", assunto: "Redação semanal", tipo: "redacao" },
+      { id: `s${numeroSemana}-d7-simulado`, numero: 2, materia: "Simulado", assunto: "Simulado semanal", tipo: "simulado" },
+    ],
+  };
+}
+
+function criarPlanoReorganizado(): SemanaPlano[] {
+  const lotesPortugues = criarLotesPortugues();
+  let indiceLote = 0;
+
+  const blocos = planoPMPELegado.flatMap((semana) =>
+    semana.dias.map((dia) => ({
+      revisao: dia.revisao,
+      atividadeExtra: dia.atividadeExtra,
+      missoes: dia.missoes
+        .filter((missao) => missao.tipo !== "redacao")
+        .map((missao) => {
+          if (missao.materia !== "Português" || indiceLote >= lotesPortugues.length) return missao;
+          const lote = lotesPortugues[indiceLote++];
+          return aplicarLotePortugues(missao, lote);
+        }),
+    }))
+  );
+
+  let extensao = 0;
+  while (indiceLote < lotesPortugues.length) {
+    const lote = lotesPortugues[indiceLote++];
+    blocos.push({
+      revisao: "Revisão curta do conteúdo anterior",
+      atividadeExtra: undefined,
+      missoes: [
+        criarMissaoLotePortugues(`ext-portugues-${extensao + 1}`, 1, lote),
+        criarMissaoRevisaoExtensao(extensao, 2),
+      ],
+    });
+    extensao += 1;
+  }
+
+  const semanas: SemanaPlano[] = [];
+  let indiceBloco = 0;
+  let numeroSemana = 1;
+
+  while (indiceBloco < blocos.length) {
+    const dias: DiaPlano[] = [];
+    for (let numeroDia = 1; numeroDia <= 6; numeroDia += 1) {
+      const bloco = blocos[indiceBloco++];
+      if (!bloco) break;
+      dias.push({ numero: numeroDia, missoes: bloco.missoes, revisao: bloco.revisao, atividadeExtra: bloco.atividadeExtra });
+    }
+    dias.push(criarDomingo(numeroSemana));
+    semanas.push({ numero: numeroSemana, nome: `Semana ${String(numeroSemana).padStart(2, "0")}`, dias });
+    numeroSemana += 1;
+  }
+
+  return semanas;
+}
+
+export const planoPMPE: SemanaPlano[] = criarPlanoReorganizado();

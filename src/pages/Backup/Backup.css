@@ -231,3 +231,150 @@
     grid-template-columns: 1fr;
   }
 }
+.backup-sync-card {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 22px;
+  background: #334155;
+  border: 1px solid #334155;
+  border-radius: 16px;
+}
+
+.backup-sync-card > div {
+  padding: 16px 18px;
+  background: #0f172a;
+}
+
+.backup-sync-card span,
+.backup-auto-item span,
+.backup-section-heading p,
+.backup-preview-header span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.backup-sync-card strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.backup-preview-restauracao {
+  margin-top: 18px;
+  padding: 16px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 13px;
+}
+
+.backup-preview-header,
+.backup-section-heading,
+.backup-auto-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.backup-preview-header {
+  margin-bottom: 10px;
+}
+
+.backup-preview-header strong,
+.backup-auto-item strong {
+  display: block;
+  margin-top: 4px;
+}
+
+.backup-schema-badge {
+  padding: 5px 9px;
+  color: #bfdbfe !important;
+  background: rgba(37, 99, 235, 0.16);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.backup-restaurar-confirmado {
+  margin-top: 14px;
+  background: #7c3aed;
+}
+
+.backup-restaurar-confirmado:hover {
+  background: #6d28d9;
+}
+
+.backup-automaticos-card {
+  margin-bottom: 22px;
+}
+
+.backup-section-heading {
+  margin-bottom: 16px;
+}
+
+.backup-section-heading h2 {
+  margin-bottom: 5px;
+}
+
+.backup-section-heading p {
+  line-height: 1.5;
+}
+
+.backup-section-heading > strong {
+  color: #93c5fd;
+}
+
+.backup-auto-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.backup-auto-item {
+  padding: 12px 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 11px;
+}
+
+.backup-auto-item button {
+  padding: 8px 11px;
+  color: #e2e8f0;
+  background: #334155;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.backup-auto-item button:hover {
+  background: #475569;
+}
+
+.backup-empty {
+  padding: 18px;
+  color: #94a3b8;
+  text-align: center;
+  background: #0f172a;
+  border: 1px dashed #334155;
+  border-radius: 11px;
+}
+
+.backup-grid-inferior {
+  margin-top: 0;
+}
+
+@media (max-width: 800px) {
+  .backup-sync-card {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-auto-item,
+  .backup-section-heading,
+  .backup-preview-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

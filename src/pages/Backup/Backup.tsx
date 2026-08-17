@@ -1,4 +1,5 @@
 import {
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -7,97 +8,86 @@ import {
 import "./Backup.css";
 
 import { useApp } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { gerarMateriasDoPlano } from "../../utils/materiasDoPlano";
+import { listarAssuntosDaMateria } from "../../services/conteudos/navegarConteudos";
+import {
+  montarEstadoNuvem,
+  validarEMigrarEstado,
+} from "../../services/sincronizacaoService";
+import {
+  baixarArquivoBackupStudyPro,
+  criarArquivoBackupStudyPro,
+  lerArquivoBackupStudyPro,
+  type ArquivoBackupStudyPro,
+} from "../../services/seguranca/backupManualService";
+import {
+  listarBackupsAutomaticosLocais,
+  type BackupAutomaticoLocal,
+} from "../../services/seguranca/backupAutomaticoService";
 
 import type {
-  ConfiguracoesApp,
-  Materia,
-  QuestaoBanco,
   RegistroQuestao,
-  Revisao,
-  SessaoEstudo,
-  Simulado,
-  SimuladoGerado,
 } from "../../types/index";
 
-type BackupDados = {
-  versao: number;
-  exportadoEm: string;
-
-  dados: {
-    materias: Materia[];
-    questoes: RegistroQuestao[];
-    sessoes: SessaoEstudo[];
-    revisoes: Revisao[];
-    simulados: Simulado[];
-    bancoQuestoes: QuestaoBanco[];
-    simuladosGerados: SimuladoGerado[];
-    configuracoes: ConfiguracoesApp;
-  };
-};
-
-const CHAVE_ULTIMO_BACKUP = "pmpe_ultimo_backup";
+const CHAVE_ULTIMO_BACKUP = "pmpe_ultimo_backup_schema18";
 
 export default function Backup() {
   const {
     materias,
     setMaterias,
-
     questoes,
     setQuestoes,
-
     sessoes,
     setSessoes,
-
     revisoes,
     setRevisoes,
-
     simulados,
     setSimulados,
-
     bancoQuestoes,
     setBancoQuestoes,
-
     simuladosGerados,
     setSimuladosGerados,
-
     configuracoes,
-    setConfiguracoes,
+    missoesConcluidas,
+    setMissoesConcluidas,
+    restaurarEstadoCompleto,
+    statusNuvem,
+    alteracoesPendentes,
+    ultimaSincronizacao,
   } = useApp();
 
+  const { usuario } = useAuth();
   const { showToast } = useToast();
+  const inputArquivoRef = useRef<HTMLInputElement | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [ultimoBackup, setUltimoBackup] = useState<string | null>(() =>
+    localStorage.getItem(CHAVE_ULTIMO_BACKUP)
+  );
+  const [arquivoAnalisado, setArquivoAnalisado] =
+    useState<ArquivoBackupStudyPro | null>(null);
 
-  const inputArquivoRef =
-    useRef<HTMLInputElement | null>(null);
-
-  const [importando, setImportando] =
-    useState(false);
-
-  const [ultimoBackup, setUltimoBackup] =
-    useState<string | null>(() =>
-      localStorage.getItem(
-        CHAVE_ULTIMO_BACKUP
-      )
-    );
+  const backupsAutomaticos = useMemo(
+    () =>
+      usuario
+        ? listarBackupsAutomaticosLocais(usuario.id)
+        : [],
+    [usuario?.id, ultimoBackup, statusNuvem]
+  );
 
   const totalAssuntos = materias.reduce(
-    (total, materia) =>
-      total + materia.assuntos.length,
+    (total, materia) => total + listarAssuntosDaMateria(materia).length,
     0
   );
 
   const assuntosConcluidos = materias.reduce(
     (total, materia) =>
-      total +
-      materia.assuntos.filter(
-        (assunto) => assunto.concluido
-      ).length,
+      total + listarAssuntosDaMateria(materia).filter((assunto) => assunto.concluido).length,
     0
   );
 
-  const revisoesPendentes = revisoes.filter(
-    (revisao) => !revisao.concluida
-  ).length;
+  const revisoesPendentes = revisoes.filter((revisao) => !revisao.concluida).length;
 
   const totalRegistros =
     materias.length +
@@ -106,87 +96,37 @@ export default function Backup() {
     revisoes.length +
     simulados.length +
     bancoQuestoes.length +
-    simuladosGerados.length;
+    simuladosGerados.length +
+    missoesConcluidas.length;
 
-  function criarDadosBackup(): BackupDados {
-    return {
-      versao: 1,
-      exportadoEm: new Date().toISOString(),
-
-      dados: {
-        materias,
-        questoes,
-        sessoes,
-        revisoes,
-        simulados,
-        bancoQuestoes,
-        simuladosGerados,
-        configuracoes,
-      },
-    };
+  function criarEstadoAtual() {
+    return montarEstadoNuvem({
+      materias,
+      questoes,
+      sessoes,
+      revisoes,
+      simulados,
+      bancoQuestoes,
+      simuladosGerados,
+      configuracoes,
+      missoesConcluidas,
+    });
   }
 
   function exportarBackup() {
     try {
-      const backup = criarDadosBackup();
+      const backup = criarArquivoBackupStudyPro(criarEstadoAtual());
+      baixarArquivoBackupStudyPro(backup);
 
-      const conteudo = JSON.stringify(
-        backup,
-        null,
-        2
-      );
+      localStorage.setItem(CHAVE_ULTIMO_BACKUP, backup.exportadoEm);
+      setUltimoBackup(backup.exportadoEm);
+      window.dispatchEvent(new Event("pmpe-backup-atualizado"));
 
-      const arquivo = new Blob(
-        [conteudo],
-        {
-          type: "application/json;charset=utf-8",
-        }
-      );
-
-      const url =
-        URL.createObjectURL(arquivo);
-
-      const link =
-        document.createElement("a");
-
-      const dataArquivo =
-        formatarDataArquivo(new Date());
-
-      link.href = url;
-
-      link.download =
-        `pmpe-study-pro-backup-${dataArquivo}.json`;
-
-      document.body.appendChild(link);
-
-      link.click();
-
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(url);
-
-      const agora =
-        new Date().toISOString();
-
-      localStorage.setItem(
-        CHAVE_ULTIMO_BACKUP,
-        agora
-      );
-
-      setUltimoBackup(agora);
-
-      showToast(
-        "Backup exportado com sucesso.",
-        "success"
-      );
+      showToast("Backup completo exportado com sucesso.", "success");
     } catch (erro) {
-      console.error(
-        "Erro ao exportar backup:",
-        erro
-      );
-
+      console.error("Erro ao exportar backup:", erro);
       showToast(
-        "Não foi possível exportar o backup.",
+        erro instanceof Error ? erro.message : "Não foi possível exportar o backup.",
         "error"
       );
     }
@@ -196,97 +136,87 @@ export default function Backup() {
     inputArquivoRef.current?.click();
   }
 
-  async function importarBackup(
-    evento: ChangeEvent<HTMLInputElement>
-  ) {
-    const arquivo =
-      evento.target.files?.[0];
-
+  async function analisarArquivo(evento: ChangeEvent<HTMLInputElement>) {
+    const arquivo = evento.target.files?.[0];
     evento.target.value = "";
-
     if (!arquivo) return;
 
-    if (
-      !arquivo.name
-        .toLowerCase()
-        .endsWith(".json")
-    ) {
-      showToast(
-        "Selecione um arquivo JSON válido.",
-        "warning"
-      );
-
+    if (!arquivo.name.toLowerCase().endsWith(".json")) {
+      showToast("Selecione um arquivo JSON válido.", "warning");
       return;
     }
 
     try {
       setImportando(true);
-
-      const texto = await arquivo.text();
-
-      const backupDesconhecido: unknown =
-        JSON.parse(texto);
-
-      const backup =
-        validarBackup(
-          backupDesconhecido
-        );
-
-      const confirmar = window.confirm(
-        "A importação substituirá os dados atuais do aplicativo. Deseja continuar?"
-      );
-
-      if (!confirmar) {
-        setImportando(false);
-        return;
-      }
-
-      setMaterias(
-        backup.dados.materias
-      );
-
-      setQuestoes(
-        backup.dados.questoes
-      );
-
-      setSessoes(
-        backup.dados.sessoes
-      );
-
-      setRevisoes(
-        backup.dados.revisoes
-      );
-
-      setSimulados(
-        backup.dados.simulados
-      );
-
-      setBancoQuestoes(
-        backup.dados.bancoQuestoes
-      );
-
-      setSimuladosGerados(
-        backup.dados.simuladosGerados
-      );
-
-      setConfiguracoes(
-        backup.dados.configuracoes
-      );
-
-      showToast(
-        "Backup importado com sucesso.",
-        "success"
-      );
+      const backup = lerArquivoBackupStudyPro(await arquivo.text());
+      setArquivoAnalisado(backup);
+      showToast("Backup validado. Confira o resumo antes de restaurar.", "info");
     } catch (erro) {
-      console.error(
-        "Erro ao importar backup:",
-        erro
-      );
-
+      console.error("Erro ao analisar backup:", erro);
+      setArquivoAnalisado(null);
       showToast(
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível importar o backup.",
+        erro instanceof Error ? erro.message : "Não foi possível analisar o backup.",
+        "error"
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  async function confirmarRestauracaoArquivo() {
+    if (!arquivoAnalisado) return;
+
+    const confirmar = window.confirm(
+      `Restaurar o backup de ${formatarDataHora(arquivoAnalisado.exportadoEm)}?\n\n` +
+        `Matérias: ${arquivoAnalisado.resumo.materias}\n` +
+        `Questões registradas: ${arquivoAnalisado.resumo.questoesRegistradas}\n` +
+        `Sessões: ${arquivoAnalisado.resumo.sessoes}\n` +
+        `Revisões: ${arquivoAnalisado.resumo.revisoes}\n` +
+        `Missões concluídas: ${arquivoAnalisado.resumo.missoesConcluidas}\n\n` +
+        "Antes da restauração, o estado atual será guardado em um backup automático."
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setImportando(true);
+      await restaurarEstadoCompleto(arquivoAnalisado.estado);
+      setArquivoAnalisado(null);
+      showToast("Backup restaurado com segurança.", "success");
+    } catch (erro) {
+      console.error("Erro ao restaurar backup:", erro);
+      showToast(
+        erro instanceof Error ? erro.message : "Não foi possível restaurar o backup.",
+        "error"
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  async function restaurarBackupAutomatico(backup: BackupAutomaticoLocal) {
+    const estado = validarEMigrarEstado(backup.dados);
+
+    if (!estado) {
+      showToast("Este backup automático não passou na validação.", "error");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `Restaurar o backup automático de ${formatarDataHora(backup.criadoEm)}?\n\n` +
+        "O estado atual será preservado em outro backup antes da restauração."
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setImportando(true);
+      await restaurarEstadoCompleto(estado);
+      showToast("Backup automático restaurado com segurança.", "success");
+    } catch (erro) {
+      console.error("Erro ao restaurar backup automático:", erro);
+      showToast(
+        erro instanceof Error ? erro.message : "Não foi possível restaurar o backup automático.",
         "error"
       );
     } finally {
@@ -295,86 +225,62 @@ export default function Backup() {
   }
 
   function limparDados() {
-    const primeiraConfirmacao =
-      window.confirm(
-        "Tem certeza que deseja apagar todos os dados do aplicativo?"
-      );
-
+    const primeiraConfirmacao = window.confirm(
+      "Tem certeza que deseja apagar os dados de estudo deste aparelho?"
+    );
     if (!primeiraConfirmacao) return;
 
-    const segundaConfirmacao =
-      window.confirm(
-        "Esta ação não pode ser desfeita. Faça um backup antes de continuar. Deseja realmente apagar tudo?"
-      );
-
+    const segundaConfirmacao = window.confirm(
+      "Faça um backup antes de continuar. Deseja realmente apagar os registros?"
+    );
     if (!segundaConfirmacao) return;
 
-    setMaterias([]);
+    setMaterias(gerarMateriasDoPlano());
     setQuestoes([]);
     setSessoes([]);
     setRevisoes([]);
     setSimulados([]);
     setBancoQuestoes([]);
     setSimuladosGerados([]);
+    setMissoesConcluidas([]);
 
-    showToast(
-      "Todos os dados foram apagados.",
-      "info"
-    );
-  }
-
-  function restaurarMateriasPadrao() {
-    const confirmar = window.confirm(
-      "Deseja restaurar as matérias padrão? Os demais dados permanecerão salvos."
-    );
-
-    if (!confirmar) return;
-
-    localStorage.removeItem(
-      "pmpe_materias"
-    );
-
-    window.location.reload();
+    showToast("Dados de estudo redefinidos. A alteração entrará na sincronização normal.", "info");
   }
 
   return (
     <section className="backup-container">
-      <h1 className="backup-title">
-        💾 Backup
-      </h1>
+      <h1 className="backup-title">💾 Backup e segurança</h1>
 
       <p className="backup-subtitle">
-        Exporte, restaure e proteja os dados
-        do seu aplicativo.
+        Exporte, restaure e proteja o estado completo do Study Pro.
       </p>
 
-      <div className="backup-resumo-grid">
-        <ResumoCard
-          titulo="Matérias"
-          valor={materias.length}
-          detalhe={`${totalAssuntos} assuntos`}
-        />
+      <div className="backup-sync-card">
+        <div>
+          <span>Sincronização</span>
+          <strong>{textoStatus(statusNuvem)}</strong>
+        </div>
+        <div>
+          <span>Alterações pendentes</span>
+          <strong>{alteracoesPendentes}</strong>
+        </div>
+        <div>
+          <span>Última sincronização</span>
+          <strong>{ultimaSincronizacao ? formatarDataHora(ultimaSincronizacao) : "Ainda não registrada"}</strong>
+        </div>
+      </div>
 
+      <div className="backup-resumo-grid">
+        <ResumoCard titulo="Matérias" valor={materias.length} detalhe={`${totalAssuntos} assuntos`} />
         <ResumoCard
           titulo="Questões registradas"
           valor={questoes.length}
-          detalhe={`${calcularTotalQuestoes(
-            questoes
-          )} questões resolvidas`}
+          detalhe={`${calcularTotalQuestoes(questoes)} questões resolvidas`}
         />
-
-        <ResumoCard
-          titulo="Revisões"
-          valor={revisoes.length}
-          detalhe={`${revisoesPendentes} pendentes`}
-        />
-
+        <ResumoCard titulo="Revisões" valor={revisoes.length} detalhe={`${revisoesPendentes} pendentes`} />
         <ResumoCard
           titulo="Simulados"
-          valor={
-            simulados.length +
-            simuladosGerados.length
-          }
+          valor={simulados.length + simuladosGerados.length}
           detalhe={`${bancoQuestoes.length} questões no banco`}
         />
       </div>
@@ -382,50 +288,33 @@ export default function Backup() {
       <div className="backup-grid">
         <div className="backup-card">
           <h2>Exportar dados</h2>
-
           <p className="backup-card-text">
-            Cria um arquivo JSON contendo
-            matérias, histórico, revisões,
-            simulados, banco de questões e
-            configurações.
+            Gera um JSON Schema 18 com matérias, aulas, histórico, revisões, simulados,
+            configurações e missões concluídas. O arquivo recebe checksum de integridade.
           </p>
 
-          <button
-            className="backup-button backup-exportar"
-            onClick={exportarBackup}
-          >
-            📤 Exportar backup
+          <button className="backup-button backup-exportar" onClick={exportarBackup}>
+            📤 Exportar backup completo
           </button>
 
           <div className="backup-info-box">
-            <span>
-              Último backup exportado
-            </span>
-
-            <strong>
-              {ultimoBackup
-                ? formatarDataHora(
-                    ultimoBackup
-                  )
-                : "Nenhum backup registrado"}
-            </strong>
+            <span>Último backup exportado</span>
+            <strong>{ultimoBackup ? formatarDataHora(ultimoBackup) : "Nenhum backup registrado"}</strong>
           </div>
         </div>
 
         <div className="backup-card">
-          <h2>Importar dados</h2>
-
+          <h2>Restaurar arquivo</h2>
           <p className="backup-card-text">
-            Selecione um backup exportado
-            anteriormente. Os dados atuais
-            serão substituídos.
+            O arquivo é validado antes de qualquer alteração. Backups antigos V1/V2 também são
+            migrados para o formato atual quando possível.
           </p>
 
           <input
             ref={inputArquivoRef}
             type="file"
             accept=".json,application/json"
-            onChange={importarBackup}
+            onChange={analisarArquivo}
             className="backup-file-input"
           />
 
@@ -434,118 +323,94 @@ export default function Backup() {
             onClick={abrirSeletorArquivo}
             disabled={importando}
           >
-            {importando
-              ? "Importando..."
-              : "📥 Importar backup"}
+            {importando ? "Analisando..." : "📥 Selecionar backup"}
           </button>
 
-          <div className="backup-aviso">
-            <strong>Atenção</strong>
+          {arquivoAnalisado && (
+            <div className="backup-preview-restauracao">
+              <div className="backup-preview-header">
+                <div>
+                  <span>Backup validado</span>
+                  <strong>{formatarDataHora(arquivoAnalisado.exportadoEm)}</strong>
+                </div>
+                <span className="backup-schema-badge">Schema {arquivoAnalisado.schemaVersion}</span>
+              </div>
 
-            <p>
-              Faça um backup dos dados atuais
-              antes de importar outro arquivo.
-            </p>
-          </div>
+              <LinhaResumo titulo="Matérias" valor={arquivoAnalisado.resumo.materias} />
+              <LinhaResumo titulo="Questões" valor={arquivoAnalisado.resumo.questoesRegistradas} />
+              <LinhaResumo titulo="Sessões" valor={arquivoAnalisado.resumo.sessoes} />
+              <LinhaResumo titulo="Revisões" valor={arquivoAnalisado.resumo.revisoes} />
+              <LinhaResumo titulo="Missões concluídas" valor={arquivoAnalisado.resumo.missoesConcluidas} />
+
+              <button
+                className="backup-button backup-restaurar-confirmado"
+                onClick={() => void confirmarRestauracaoArquivo()}
+                disabled={importando}
+              >
+                Restaurar este backup
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="backup-grid">
+      <div className="backup-card backup-automaticos-card">
+        <div className="backup-section-heading">
+          <div>
+            <h2>Backups automáticos de segurança</h2>
+            <p>
+              Criados antes de migrações, restaurações, rollbacks e resolução de conflitos.
+              São mantidas até 10 cópias locais.
+            </p>
+          </div>
+          <strong>{backupsAutomaticos.length}/10</strong>
+        </div>
+
+        {backupsAutomaticos.length === 0 ? (
+          <div className="backup-empty">Nenhum backup automático foi necessário ainda.</div>
+        ) : (
+          <div className="backup-auto-lista">
+            {backupsAutomaticos.map((backup) => (
+              <div className="backup-auto-item" key={backup.id}>
+                <div>
+                  <strong>{rotuloMotivo(backup.motivo)}</strong>
+                  <span>{formatarDataHora(backup.criadoEm)} · origem schema {backup.schemaVersionOrigem}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void restaurarBackupAutomatico(backup)}
+                  disabled={importando}
+                >
+                  Restaurar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="backup-grid backup-grid-inferior">
         <div className="backup-card">
           <h2>Conteúdo atual</h2>
-
           <div className="backup-lista">
-            <LinhaResumo
-              titulo="Matérias"
-              valor={materias.length}
-            />
-
-            <LinhaResumo
-              titulo="Assuntos"
-              valor={totalAssuntos}
-            />
-
-            <LinhaResumo
-              titulo="Assuntos concluídos"
-              valor={assuntosConcluidos}
-            />
-
-            <LinhaResumo
-              titulo="Registros de questões"
-              valor={questoes.length}
-            />
-
-            <LinhaResumo
-              titulo="Sessões de estudo"
-              valor={sessoes.length}
-            />
-
-            <LinhaResumo
-              titulo="Revisões"
-              valor={revisoes.length}
-            />
-
-            <LinhaResumo
-              titulo="Simulados manuais"
-              valor={simulados.length}
-            />
-
-            <LinhaResumo
-              titulo="Simulados gerados"
-              valor={
-                simuladosGerados.length
-              }
-            />
-
-            <LinhaResumo
-              titulo="Banco de questões"
-              valor={bancoQuestoes.length}
-            />
-
-            <LinhaResumo
-              titulo="Total de registros"
-              valor={totalRegistros}
-            />
+            <LinhaResumo titulo="Assuntos" valor={totalAssuntos} />
+            <LinhaResumo titulo="Assuntos concluídos" valor={assuntosConcluidos} />
+            <LinhaResumo titulo="Sessões de estudo" valor={sessoes.length} />
+            <LinhaResumo titulo="Missões concluídas" valor={missoesConcluidas.length} />
+            <LinhaResumo titulo="Total de registros" valor={totalRegistros} />
           </div>
         </div>
 
         <div className="backup-card backup-danger-card">
           <h2>Zona de risco</h2>
-
           <p className="backup-card-text">
-            Utilize estas opções somente
-            quando souber exatamente o que
-            está fazendo.
+            Redefine os registros de estudo e restaura a estrutura atual do plano. Exporte um
+            backup antes de usar.
           </p>
-
-          <button
-            className="backup-button backup-restaurar"
-            onClick={restaurarMateriasPadrao}
-          >
-            Restaurar matérias padrão
-          </button>
-
-          <button
-            className="backup-button backup-limpar"
-            onClick={limparDados}
-          >
-            🗑 Apagar todos os dados
+          <button className="backup-button backup-limpar" onClick={limparDados}>
+            🗑 Redefinir dados de estudo
           </button>
         </div>
-      </div>
-
-      <div className="backup-observacao">
-        <strong>
-          Sobre os futuros PDFs
-        </strong>
-
-        <p>
-          Quando adicionarmos a biblioteca de
-          simulados em PDF, os arquivos ficarão
-          no IndexedDB. Nesta primeira versão,
-          o backup inclui somente os dados
-          armazenados no LocalStorage.
-        </p>
       </div>
     </section>
   );
@@ -557,11 +422,7 @@ type ResumoCardProps = {
   detalhe: string;
 };
 
-function ResumoCard({
-  titulo,
-  valor,
-  detalhe,
-}: ResumoCardProps) {
+function ResumoCard({ titulo, valor, detalhe }: ResumoCardProps) {
   return (
     <div className="backup-resumo-card">
       <span>{titulo}</span>
@@ -576,10 +437,7 @@ type LinhaResumoProps = {
   valor: string | number;
 };
 
-function LinhaResumo({
-  titulo,
-  valor,
-}: LinhaResumoProps) {
+function LinhaResumo({ titulo, valor }: LinhaResumoProps) {
   return (
     <div className="backup-linha-resumo">
       <span>{titulo}</span>
@@ -588,107 +446,34 @@ function LinhaResumo({
   );
 }
 
-function calcularTotalQuestoes(
-  questoes: RegistroQuestao[]
-) {
-  return questoes.reduce(
-    (total, registro) =>
-      total +
-      registro.certas +
-      registro.erradas,
-    0
-  );
+function calcularTotalQuestoes(questoes: RegistroQuestao[]) {
+  return questoes.reduce((total, registro) => total + registro.certas + registro.erradas, 0);
 }
 
-function formatarDataArquivo(
-  data: Date
-) {
-  const ano = data.getFullYear();
-
-  const mes = String(
-    data.getMonth() + 1
-  ).padStart(2, "0");
-
-  const dia = String(
-    data.getDate()
-  ).padStart(2, "0");
-
-  const horas = String(
-    data.getHours()
-  ).padStart(2, "0");
-
-  const minutos = String(
-    data.getMinutes()
-  ).padStart(2, "0");
-
-  return `${ano}-${mes}-${dia}-${horas}-${minutos}`;
+function formatarDataHora(data: string) {
+  return new Date(data).toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
-function formatarDataHora(
-  data: string
-) {
-  return new Date(data).toLocaleString(
-    "pt-BR",
-    {
-      dateStyle: "short",
-      timeStyle: "short",
-    }
-  );
+function textoStatus(status: string) {
+  if (status === "sincronizado") return "Sincronizado";
+  if (status === "salvando") return "Salvando...";
+  if (status === "carregando") return "Carregando nuvem...";
+  if (status === "offline") return "Offline — dados locais protegidos";
+  if (status === "conflito") return "Conflito protegido — escolha uma versão no topo";
+  return "Erro de sincronização";
 }
 
-function validarBackup(
-  valor: unknown
-): BackupDados {
-  if (
-    typeof valor !== "object" ||
-    valor === null
-  ) {
-    throw new Error(
-      "O arquivo selecionado não contém um backup válido."
-    );
-  }
+function rotuloMotivo(motivo: string) {
+  const rotulos: Record<string, string> = {
+    antes_migracao_schema: "Antes de migração do schema",
+    antes_reconciliacao_estrutural: "Antes de ajuste estrutural",
+    antes_rollback: "Antes de rollback",
+    antes_restauracao_manual: "Antes de restauração",
+    antes_resolucao_conflito: "Antes de resolver conflito",
+  };
 
-  const backup =
-    valor as Partial<BackupDados>;
-
-  if (
-    backup.versao !== 1 ||
-    typeof backup.exportadoEm !==
-      "string" ||
-    typeof backup.dados !==
-      "object" ||
-    backup.dados === null
-  ) {
-    throw new Error(
-      "Formato de backup incompatível."
-    );
-  }
-
-  const dados =
-    backup.dados as Partial<
-      BackupDados["dados"]
-    >;
-
-  if (
-    !Array.isArray(dados.materias) ||
-    !Array.isArray(dados.questoes) ||
-    !Array.isArray(dados.sessoes) ||
-    !Array.isArray(dados.revisoes) ||
-    !Array.isArray(dados.simulados) ||
-    !Array.isArray(
-      dados.bancoQuestoes
-    ) ||
-    !Array.isArray(
-      dados.simuladosGerados
-    ) ||
-    typeof dados.configuracoes !==
-      "object" ||
-    dados.configuracoes === null
-  ) {
-    throw new Error(
-      "O backup está incompleto ou corrompido."
-    );
-  }
-
-  return backup as BackupDados;
+  return rotulos[motivo] ?? "Backup de segurança";
 }

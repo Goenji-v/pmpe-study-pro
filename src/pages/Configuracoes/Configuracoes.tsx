@@ -59,10 +59,12 @@ export default function Configuracoes() {
     if (
       formulario.metaQuestoesDiaria < 0 ||
       formulario.metaMinutosDiaria < 0 ||
-      formulario.metaRevisoesDiaria < 0
+      formulario.metaRevisoesDiaria < 0 ||
+      (formulario.missoesPorDia ?? 1) < 1 ||
+      (formulario.missoesPorDia ?? 1) > 6
     ) {
       showToast(
-        "As metas não podem ser negativas.",
+        "Confira as metas e informe entre 1 e 6 missões por dia.",
         "error"
       );
       return;
@@ -96,6 +98,7 @@ export default function Configuracoes() {
       metaQuestoesDiaria: 100,
       metaMinutosDiaria: 120,
       metaRevisoesDiaria: 5,
+      missoesPorDia: 1,
       tema: "escuro",
     };
 
@@ -246,7 +249,7 @@ export default function Configuracoes() {
 
           <div className="configuracoes-form-group">
             <label htmlFor="metaRevisoes">
-              Revisões por dia
+              Revisões por dia (meta e limite da agenda)
             </label>
 
             <input
@@ -266,6 +269,33 @@ export default function Configuracoes() {
                 )
               }
             />
+          </div>
+
+          <div className="configuracoes-form-group configuracoes-ritmo">
+            <label htmlFor="missoesPorDia">
+              Missões por dia (segunda a sábado)
+            </label>
+
+            <select
+              id="missoesPorDia"
+              value={formulario.missoesPorDia ?? 1}
+              onChange={(evento) =>
+                atualizarCampo(
+                  "missoesPorDia",
+                  Math.max(1, Math.min(6, Number(evento.target.value)))
+                )
+              }
+            >
+              {[1, 2, 3, 4, 5, 6].map((quantidade) => (
+                <option key={quantidade} value={quantidade}>
+                  {quantidade} {quantidade === 1 ? "missão" : "missões"}
+                </option>
+              ))}
+            </select>
+
+            <small>
+              O calendário distribui somente essa quantidade por dia. Domingo continua exclusivo para Redação + Simulado.
+            </small>
           </div>
         </div>
 
@@ -363,6 +393,13 @@ export default function Configuracoes() {
               {
                 formulario.metaRevisoesDiaria
               }
+            </strong>
+          </div>
+
+          <div className="configuracoes-resumo-item">
+            <span>Ritmo do calendário</span>
+            <strong>
+              {formulario.missoesPorDia ?? 1} {(formulario.missoesPorDia ?? 1) === 1 ? "missão/dia" : "missões/dia"}
             </strong>
           </div>
         </div>
