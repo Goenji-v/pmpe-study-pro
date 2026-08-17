@@ -84,13 +84,19 @@ export function getProgressoPlano(concluidasInformadas?: string[], plano: Semana
 
 export function getProximaMissao(
   concluidasInformadas?: string[],
-  plano: SemanaPlano[] = planoPMPE
+  plano: SemanaPlano[] = planoPMPE,
+  semanaMinima = 1
 ): ProximaMissaoPlano | null {
   const concluidas = new Set(
     concluidasInformadas ?? getMissoesConcluidas()
   );
+  const inicio = Number.isFinite(semanaMinima)
+    ? Math.max(1, Math.floor(semanaMinima))
+    : 1;
 
   for (const semana of plano) {
+    if (semana.numero < inicio) continue;
+
     for (const dia of semana.dias) {
       for (const missao of dia.missoes) {
         if (!concluidas.has(missao.id)) {
@@ -144,14 +150,34 @@ export function getProgressoSemana(
   );
 }
 
-export function getSemanaAtual(concluidasInformadas?: string[], plano: SemanaPlano[] = planoPMPE): number {
-  const proxima = getProximaMissao(concluidasInformadas, plano);
+export function getSemanaAtual(
+  concluidasInformadas?: string[],
+  plano: SemanaPlano[] = planoPMPE,
+  semanaMinimaInformada?: number
+): number {
+  if (plano.length === 0) return 1;
 
-  if (!proxima) {
-    return plano.length;
-  }
+  const primeiraSemana = plano[0]?.numero ?? 1;
+  const ultimaSemana = plano.at(-1)?.numero ?? primeiraSemana;
+  const possuiPosicaoPersistida =
+    typeof semanaMinimaInformada === "number" &&
+    Number.isFinite(semanaMinimaInformada);
 
-  return proxima.semana;
+  const semanaMinima = possuiPosicaoPersistida
+    ? Math.max(
+        primeiraSemana,
+        Math.min(ultimaSemana, Math.floor(semanaMinimaInformada))
+      )
+    : primeiraSemana;
+
+  const proxima = getProximaMissao(
+    concluidasInformadas,
+    plano,
+    semanaMinima
+  );
+
+  if (proxima) return proxima.semana;
+  return ultimaSemana;
 }
 
 export function concluirMissaoPlano(
