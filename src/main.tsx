@@ -11,6 +11,7 @@ import "./styles/sidebar-organizado.css";
 import "./styles/app-premium.css";
 import "./styles/mobile-density.css";
 import "./styles/mobile-dashboard-fixes.css";
+import "./styles/visual-qa-final.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
