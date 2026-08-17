@@ -21,6 +21,8 @@ export default function BetaFeedback() {
   if (!usuarioId) return null;
 
   async function enviar() {
+    if (!usuarioId) return;
+
     try {
       setEnviando(true);
       await enviarFeedbackBeta(usuarioId, categoria, mensagem);
