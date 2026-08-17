@@ -82,17 +82,43 @@ export function getProgressoPlano(concluidasInformadas?: string[], plano: Semana
   );
 }
 
+function inferirSemanaComProgresso(
+  concluidas: Set<string>,
+  plano: SemanaPlano[]
+): number {
+  const primeiraSemana = plano[0]?.numero ?? 1;
+  let semanaMaisAvancada = primeiraSemana;
+  let encontrouProgresso = false;
+
+  for (const semana of plano) {
+    const possuiConclusao = semana.dias.some((dia) =>
+      dia.missoes.some((missao) => concluidas.has(missao.id))
+    );
+
+    if (possuiConclusao) {
+      encontrouProgresso = true;
+      semanaMaisAvancada = Math.max(semanaMaisAvancada, semana.numero);
+    }
+  }
+
+  return encontrouProgresso ? semanaMaisAvancada : primeiraSemana;
+}
+
 export function getProximaMissao(
   concluidasInformadas?: string[],
   plano: SemanaPlano[] = planoPMPE,
-  semanaMinima = 1
+  semanaMinimaInformada?: number
 ): ProximaMissaoPlano | null {
   const concluidas = new Set(
     concluidasInformadas ?? getMissoesConcluidas()
   );
-  const inicio = Number.isFinite(semanaMinima)
-    ? Math.max(1, Math.floor(semanaMinima))
-    : 1;
+
+  const semanaInferida = inferirSemanaComProgresso(concluidas, plano);
+  const inicio =
+    typeof semanaMinimaInformada === "number" &&
+    Number.isFinite(semanaMinimaInformada)
+      ? Math.max(1, Math.floor(semanaMinimaInformada))
+      : semanaInferida;
 
   for (const semana of plano) {
     if (semana.numero < inicio) continue;
@@ -157,27 +183,14 @@ export function getSemanaAtual(
 ): number {
   if (plano.length === 0) return 1;
 
-  const primeiraSemana = plano[0]?.numero ?? 1;
-  const ultimaSemana = plano.at(-1)?.numero ?? primeiraSemana;
-  const possuiPosicaoPersistida =
-    typeof semanaMinimaInformada === "number" &&
-    Number.isFinite(semanaMinimaInformada);
-
-  const semanaMinima = possuiPosicaoPersistida
-    ? Math.max(
-        primeiraSemana,
-        Math.min(ultimaSemana, Math.floor(semanaMinimaInformada))
-      )
-    : primeiraSemana;
-
   const proxima = getProximaMissao(
     concluidasInformadas,
     plano,
-    semanaMinima
+    semanaMinimaInformada
   );
 
   if (proxima) return proxima.semana;
-  return ultimaSemana;
+  return plano.at(-1)?.numero ?? 1;
 }
 
 export function concluirMissaoPlano(
