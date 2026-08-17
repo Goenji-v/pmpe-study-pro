@@ -21,13 +21,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Reconstruir e aplicar pacote
+      - name: Reconstruir e aplicar snapshot
         shell: bash
         run: |
           set -euo pipefail
           cat .sync/projeto.b64.* > /tmp/projeto.b64
-          base64 -d /tmp/projeto.b64 > /tmp/projeto.zip
-          unzip -o /tmp/projeto.zip -d .
+          base64 -d /tmp/projeto.b64 > /tmp/projeto.tar.xz
+          rm -rf src server supabase
+          rm -f package.json package-lock.json tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts vercel.json render.yaml index.html .gitignore .oxlintrc.json .env.example
+          tar -xJf /tmp/projeto.tar.xz -C .
           rm -rf .sync
           rm -f .github/workflows/aplicar-etapa-20-1.yml
           rmdir .github/workflows 2>/dev/null || true
