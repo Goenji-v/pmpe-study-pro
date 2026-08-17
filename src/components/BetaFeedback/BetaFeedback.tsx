@@ -16,13 +16,14 @@ export default function BetaFeedback() {
   const [categoria, setCategoria] = useState<CategoriaFeedbackBeta>("bug");
   const [mensagem, setMensagem] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const usuarioId = usuario?.id;
 
-  if (!usuario) return null;
+  if (!usuarioId) return null;
 
   async function enviar() {
     try {
       setEnviando(true);
-      await enviarFeedbackBeta(usuario.id, categoria, mensagem);
+      await enviarFeedbackBeta(usuarioId, categoria, mensagem);
       setMensagem("");
       setCategoria("bug");
       setAberto(false);
