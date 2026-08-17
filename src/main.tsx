@@ -9,6 +9,7 @@ import "./styles/visual-final.css";
 import "./styles/visual-3d.css";
 import "./styles/sidebar-organizado.css";
 import "./styles/app-premium.css";
+import "./styles/mobile-density.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
