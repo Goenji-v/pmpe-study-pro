@@ -1,0 +1,49 @@
+.resolver-ia-descartar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 9px;
+  background: rgba(127, 29, 29, 0.18);
+  color: #fecaca;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.resolver-ia-descartar:hover {
+  transform: translateY(-1px);
+  background: rgba(153, 27, 27, 0.28);
+  border-color: rgba(248, 113, 113, 0.58);
+}
+
+.resolver-ia-descartar svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 600px) {
+  .resolver-ia-descartar {
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  .resolver-ia-descartar span {
+    display: none;
+  }
+
+  .resolver-ia-descartar svg {
+    width: 17px;
+    height: 17px;
+  }
+}
