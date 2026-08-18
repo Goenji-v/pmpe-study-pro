@@ -7,6 +7,9 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import "./ResolverSimuladoIA.css";
+import "./ResolverSimuladoIADescartar.css";
+
+import { useApp } from "../../context/AppContext";
 
 import type {
   QuestaoIA,
@@ -74,6 +77,9 @@ type RevisaoIA = {
 const CHAVE_QUESTOES_IA =
   "pmpe_questoes_ia";
 
+const CHAVE_BANCO_IA =
+  "pmpe_banco_questoes_ia";
+
 const CHAVE_RESULTADOS_IA =
   "pmpe_resultados_simulados_ia";
 
@@ -82,6 +88,7 @@ const CHAVE_REVISOES_IA =
 
 export default function ResolverSimuladoIA() {
   const navigate = useNavigate();
+  const { setBancoQuestoes } = useApp();
 
   const [questoes, setQuestoes] =
     useState<QuestaoIA[]>([]);
@@ -476,6 +483,53 @@ export default function ResolverSimuladoIA() {
     }
 
     navigate("/materiais");
+  }
+
+  function descartarQuestaoAtual() {
+    if (finalizado || !questao) return;
+
+    const confirmar = window.confirm(
+      "Descartar esta questão? Ela será removida deste simulado e do Banco de Questões."
+    );
+
+    if (!confirmar) return;
+
+    const idDescartado = questao.id;
+    const restantes = questoes.filter(
+      (item) => item.id !== idDescartado
+    );
+
+    localStorage.setItem(
+      CHAVE_QUESTOES_IA,
+      JSON.stringify(restantes)
+    );
+
+    removerDoBancoIALegado(idDescartado);
+
+    setBancoQuestoes((anteriores) =>
+      anteriores.filter(
+        (item) => item.id !== idDescartado
+      )
+    );
+
+    setRespostas((anteriores) => {
+      const proximas = { ...anteriores };
+      delete proximas[idDescartado];
+      return proximas;
+    });
+
+    setQuestoes(restantes);
+    setQuestaoAtual((atual) =>
+      restantes.length === 0
+        ? 0
+        : Math.min(atual, restantes.length - 1)
+    );
+
+    setMensagem(
+      restantes.length === 0
+        ? "Questão descartada. Não restaram questões neste simulado."
+        : `Questão descartada. Restam ${restantes.length} questões.`
+    );
   }
 
   function excluirQuestoes() {
@@ -877,6 +931,24 @@ export default function ResolverSimuladoIA() {
               <span>
                 {questao.banca}
               </span>
+
+              {!finalizado && (
+                <button
+                  type="button"
+                  className="resolver-ia-descartar"
+                  onClick={descartarQuestaoAtual}
+                  aria-label="Descartar esta questão"
+                  title="Descartar esta questão"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="6" cy="7" r="3" />
+                    <circle cx="6" cy="17" r="3" />
+                    <path d="m8.7 8.3 10.8 10.8" />
+                    <path d="m8.7 15.7 10.8-10.8" />
+                  </svg>
+                  <span>Descartar</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1051,6 +1123,32 @@ export default function ResolverSimuladoIA() {
       </div>
     </section>
   );
+}
+
+function removerDoBancoIALegado(
+  questaoId: string
+) {
+  const salvo = localStorage.getItem(
+    CHAVE_BANCO_IA
+  );
+
+  if (!salvo) return;
+
+  try {
+    const valor: unknown = JSON.parse(salvo);
+    if (!Array.isArray(valor)) return;
+
+    const atualizadas = (valor as QuestaoIA[]).filter(
+      (item) => item.id !== questaoId
+    );
+
+    localStorage.setItem(
+      CHAVE_BANCO_IA,
+      JSON.stringify(atualizadas)
+    );
+  } catch {
+    // Banco legado inválido não deve impedir o descarte no simulado atual.
+  }
 }
 
 function calcularResultado(
