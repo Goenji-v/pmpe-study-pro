@@ -9,8 +9,6 @@ import { useNavigate } from "react-router-dom";
 import "./ResolverSimuladoIA.css";
 import "./ResolverSimuladoIADescartar.css";
 
-import { useApp } from "../../context/AppContext";
-
 import type {
   QuestaoIA,
 } from "../../types/index";
@@ -25,6 +23,11 @@ type LetraAlternativa =
 type RespostasUsuario = Record<
   string,
   LetraAlternativa
+>;
+
+type AlternativasEliminadas = Record<
+  string,
+  LetraAlternativa[]
 >;
 
 type ResultadoSimuladoIA = {
@@ -77,9 +80,6 @@ type RevisaoIA = {
 const CHAVE_QUESTOES_IA =
   "pmpe_questoes_ia";
 
-const CHAVE_BANCO_IA =
-  "pmpe_banco_questoes_ia";
-
 const CHAVE_RESULTADOS_IA =
   "pmpe_resultados_simulados_ia";
 
@@ -88,7 +88,6 @@ const CHAVE_REVISOES_IA =
 
 export default function ResolverSimuladoIA() {
   const navigate = useNavigate();
-  const { setBancoQuestoes } = useApp();
 
   const [questoes, setQuestoes] =
     useState<QuestaoIA[]>([]);
@@ -97,6 +96,11 @@ export default function ResolverSimuladoIA() {
     respostas,
     setRespostas,
   ] = useState<RespostasUsuario>({});
+
+  const [
+    alternativasEliminadas,
+    setAlternativasEliminadas,
+  ] = useState<AlternativasEliminadas>({});
 
   const [
     questaoAtual,
@@ -211,7 +215,12 @@ export default function ResolverSimuladoIA() {
     questaoId: string,
     letra: LetraAlternativa
   ) {
-    if (finalizado) {
+    if (
+      finalizado ||
+      alternativasEliminadas[
+        questaoId
+      ]?.includes(letra)
+    ) {
       return;
     }
 
@@ -221,6 +230,58 @@ export default function ResolverSimuladoIA() {
         [questaoId]: letra,
       })
     );
+  }
+
+  function alternarAlternativaEliminada(
+    questaoId: string,
+    letra: LetraAlternativa
+  ) {
+    if (finalizado) {
+      return;
+    }
+
+    setAlternativasEliminadas(
+      (anteriores) => {
+        const atuais = new Set(
+          anteriores[questaoId] ?? []
+        );
+
+        if (atuais.has(letra)) {
+          atuais.delete(letra);
+        } else {
+          atuais.add(letra);
+        }
+
+        const proximas = {
+          ...anteriores,
+        };
+
+        if (atuais.size === 0) {
+          delete proximas[questaoId];
+        } else {
+          proximas[questaoId] =
+            Array.from(atuais);
+        }
+
+        return proximas;
+      }
+    );
+
+    setRespostas((anteriores) => {
+      if (
+        anteriores[questaoId] !==
+        letra
+      ) {
+        return anteriores;
+      }
+
+      const proximas = {
+        ...anteriores,
+      };
+
+      delete proximas[questaoId];
+      return proximas;
+    });
   }
 
   function avancar() {
@@ -328,6 +389,7 @@ export default function ResolverSimuladoIA() {
 
   function refazerSimulado() {
     setRespostas({});
+    setAlternativasEliminadas({});
     setQuestaoAtual(0);
     setFinalizado(false);
     setMensagem("");
@@ -371,6 +433,7 @@ export default function ResolverSimuladoIA() {
     );
 
     setRespostas({});
+    setAlternativasEliminadas({});
     setQuestaoAtual(0);
     setFinalizado(false);
 
@@ -485,53 +548,6 @@ export default function ResolverSimuladoIA() {
     navigate("/materiais");
   }
 
-  function descartarQuestaoAtual() {
-    if (finalizado || !questao) return;
-
-    const confirmar = window.confirm(
-      "Descartar esta questão? Ela será removida deste simulado e do Banco de Questões."
-    );
-
-    if (!confirmar) return;
-
-    const idDescartado = questao.id;
-    const restantes = questoes.filter(
-      (item) => item.id !== idDescartado
-    );
-
-    localStorage.setItem(
-      CHAVE_QUESTOES_IA,
-      JSON.stringify(restantes)
-    );
-
-    removerDoBancoIALegado(idDescartado);
-
-    setBancoQuestoes((anteriores) =>
-      anteriores.filter(
-        (item) => item.id !== idDescartado
-      )
-    );
-
-    setRespostas((anteriores) => {
-      const proximas = { ...anteriores };
-      delete proximas[idDescartado];
-      return proximas;
-    });
-
-    setQuestoes(restantes);
-    setQuestaoAtual((atual) =>
-      restantes.length === 0
-        ? 0
-        : Math.min(atual, restantes.length - 1)
-    );
-
-    setMensagem(
-      restantes.length === 0
-        ? "Questão descartada. Não restaram questões neste simulado."
-        : `Questão descartada. Restam ${restantes.length} questões.`
-    );
-  }
-
   function excluirQuestoes() {
     const confirmar =
       window.confirm(
@@ -548,6 +564,7 @@ export default function ResolverSimuladoIA() {
 
     setQuestoes([]);
     setRespostas({});
+    setAlternativasEliminadas({});
     setFinalizado(false);
     setMensagem("");
   }
@@ -931,24 +948,6 @@ export default function ResolverSimuladoIA() {
               <span>
                 {questao.banca}
               </span>
-
-              {!finalizado && (
-                <button
-                  type="button"
-                  className="resolver-ia-descartar"
-                  onClick={descartarQuestaoAtual}
-                  aria-label="Descartar esta questão"
-                  title="Descartar esta questão"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="6" cy="7" r="3" />
-                    <circle cx="6" cy="17" r="3" />
-                    <path d="m8.7 8.3 10.8 10.8" />
-                    <path d="m8.7 15.7 10.8-10.8" />
-                  </svg>
-                  <span>Descartar</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -980,6 +979,14 @@ export default function ResolverSimuladoIA() {
                     questao.id
                   ] === letra;
 
+                const eliminada =
+                  !finalizado &&
+                  Boolean(
+                    alternativasEliminadas[
+                      questao.id
+                    ]?.includes(letra)
+                  );
+
                 const alternativaCorreta =
                   finalizado &&
                   letra ===
@@ -992,42 +999,105 @@ export default function ResolverSimuladoIA() {
                     questao.respostaCorreta;
 
                 return (
-                  <button
+                  <div
                     key={letra}
-                    type="button"
-                    disabled={finalizado}
                     className={[
-                      "resolver-ia-alternativa",
-
-                      selecionada
-                        ? "selecionada"
-                        : "",
-
-                      alternativaCorreta
-                        ? "alternativa-correta"
-                        : "",
-
-                      alternativaErrada
-                        ? "alternativa-errada"
+                      "resolver-ia-alternativa-linha",
+                      eliminada
+                        ? "eliminada"
                         : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    onClick={() =>
-                      responder(
-                        questao.id,
-                        letra
-                      )
-                    }
                   >
-                    <strong>
-                      {letra}
-                    </strong>
+                    {!finalizado && (
+                      <button
+                        type="button"
+                        className={[
+                          "resolver-ia-tesoura",
+                          eliminada
+                            ? "ativa"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() =>
+                          alternarAlternativaEliminada(
+                            questao.id,
+                            letra
+                          )
+                        }
+                        aria-pressed={eliminada}
+                        aria-label={
+                          eliminada
+                            ? `Restaurar alternativa ${letra}`
+                            : `Eliminar alternativa ${letra}`
+                        }
+                        title={
+                          eliminada
+                            ? "Restaurar alternativa"
+                            : "Eliminar alternativa"
+                        }
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <circle
+                            cx="6"
+                            cy="7"
+                            r="3"
+                          />
+                          <circle
+                            cx="6"
+                            cy="17"
+                            r="3"
+                          />
+                          <path d="m8.7 8.3 10.8 10.8" />
+                          <path d="m8.7 15.7 10.8-10.8" />
+                        </svg>
+                      </button>
+                    )}
 
-                    <span>
-                      {texto}
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      disabled={
+                        finalizado ||
+                        eliminada
+                      }
+                      className={[
+                        "resolver-ia-alternativa",
+
+                        selecionada
+                          ? "selecionada"
+                          : "",
+
+                        alternativaCorreta
+                          ? "alternativa-correta"
+                          : "",
+
+                        alternativaErrada
+                          ? "alternativa-errada"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      onClick={() =>
+                        responder(
+                          questao.id,
+                          letra
+                        )
+                      }
+                    >
+                      <strong>
+                        {letra}
+                      </strong>
+
+                      <span>
+                        {texto}
+                      </span>
+                    </button>
+                  </div>
                 );
               }
             )}
@@ -1123,32 +1193,6 @@ export default function ResolverSimuladoIA() {
       </div>
     </section>
   );
-}
-
-function removerDoBancoIALegado(
-  questaoId: string
-) {
-  const salvo = localStorage.getItem(
-    CHAVE_BANCO_IA
-  );
-
-  if (!salvo) return;
-
-  try {
-    const valor: unknown = JSON.parse(salvo);
-    if (!Array.isArray(valor)) return;
-
-    const atualizadas = (valor as QuestaoIA[]).filter(
-      (item) => item.id !== questaoId
-    );
-
-    localStorage.setItem(
-      CHAVE_BANCO_IA,
-      JSON.stringify(atualizadas)
-    );
-  } catch {
-    // Banco legado inválido não deve impedir o descarte no simulado atual.
-  }
 }
 
 function calcularResultado(
