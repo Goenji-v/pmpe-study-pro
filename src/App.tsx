@@ -7,6 +7,7 @@ import {
 
 import PlanoEstudos from "./pages/PlanoEstudos/PlanoEstudos";
 import ResolverSimuladoIA from "./pages/ResolverSimuladoIA/ResolverSimuladoIA";
+import MeusSimuladosIA from "./pages/MeusSimuladosIA/MeusSimuladosIA";
 import CronogramaIA from "./pages/CronogramaIA/CronogramaIA";
 import GerarSimuladoIA from "./pages/GerarSimuladoIA/GerarSimuladoIA";
 import CentroMateriais from "./pages/CentroMateriais/CentroMateriais";
@@ -42,6 +43,7 @@ import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
 import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
 import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
+import CadernoSimuladoIABridge from "./components/CadernoSimuladoIABridge/CadernoSimuladoIABridge";
 
 import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -58,6 +60,7 @@ function LayoutProtegido() {
         <RuntimeErrorGuard />
         <AppProvider>
           <QuestaoIABridge />
+          <CadernoSimuladoIABridge />
           <CronometroProvider>
             <div className="layout">
               <Sidebar />
@@ -98,7 +101,8 @@ function LayoutProtegido() {
 
                     {/* Central de Simulados */}
                     <Route path="/simulados" element={<Simulados />} />
-                    <Route path="/resolver-simulado-ia" element={<ResolverSimuladoIA />} />
+                    <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
+                    <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
                     <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
                     <Route path="/estatisticas-simulado-ia" element={<EstatisticasSimuladoIA />} />
 

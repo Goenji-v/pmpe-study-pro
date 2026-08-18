@@ -1,0 +1,314 @@
+.cadernos-ia-container {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+}
+
+.cadernos-ia-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.cadernos-ia-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.cadernos-ia-cabecalho h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.cadernos-ia-cabecalho p {
+  max-width: 720px;
+  margin: 7px 0 0;
+  color: #94a3b8;
+  line-height: 1.55;
+}
+
+.cadernos-ia-novo,
+.caderno-ia-resolver,
+.cadernos-ia-vazio button {
+  border: 1px solid rgba(96, 165, 250, 0.55);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2f93ff 0%, #1375dc 100%);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(7, 55, 105, 0.9), 0 10px 22px rgba(37, 99, 235, 0.18);
+}
+
+.cadernos-ia-novo {
+  min-height: 42px;
+  padding: 9px 16px;
+  white-space: nowrap;
+}
+
+.cadernos-ia-resumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 180px));
+  gap: 10px;
+}
+
+.cadernos-ia-resumo > div {
+  padding: 12px 14px;
+  border: 1px solid #263750;
+  border-radius: 12px;
+  background: #111d30;
+}
+
+.cadernos-ia-resumo span {
+  display: block;
+  color: #8fa2bc;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cadernos-ia-resumo strong {
+  display: block;
+  margin-top: 3px;
+  color: #f8fafc;
+  font-size: 22px;
+}
+
+.cadernos-ia-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.caderno-ia-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #2a3b55;
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgba(20, 34, 55, 0.98), rgba(12, 24, 42, 0.98));
+  box-shadow: 0 12px 28px rgba(2, 8, 23, 0.18);
+}
+
+.caderno-ia-topo {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.caderno-ia-icone {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.15);
+  font-size: 20px;
+}
+
+.caderno-ia-titulo {
+  min-width: 0;
+}
+
+.caderno-ia-titulo > span {
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.caderno-ia-titulo h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.caderno-ia-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.caderno-ia-tags span {
+  padding: 5px 8px;
+  border: 1px solid #2b405f;
+  border-radius: 999px;
+  background: #0d192a;
+  color: #b8c7db;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.caderno-ia-modulo {
+  margin: 12px 0 0;
+  color: #a8b7ca;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.caderno-ia-data {
+  margin-top: 13px;
+  color: #70839e;
+  font-size: 11px;
+}
+
+.caderno-ia-acoes {
+  display: flex;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.caderno-ia-resolver,
+.caderno-ia-excluir {
+  min-height: 38px;
+  padding: 8px 13px;
+}
+
+.caderno-ia-excluir {
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.12);
+  color: #fecaca;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.caderno-ia-excluir:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cadernos-ia-vazio,
+.cadernos-ia-erro {
+  padding: 18px;
+  border: 1px solid #2a3b55;
+  border-radius: 14px;
+  background: #111d30;
+  color: #a9b7ca;
+}
+
+.cadernos-ia-erro {
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+}
+
+.cadernos-ia-vazio-grande {
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+}
+
+.cadernos-ia-vazio-grande h2 {
+  margin: 8px 0 0;
+  color: #f8fafc;
+}
+
+.cadernos-ia-vazio-grande p {
+  max-width: 460px;
+  margin: 7px auto 15px;
+}
+
+.cadernos-ia-vazio-grande button {
+  min-height: 39px;
+  padding: 8px 14px;
+}
+
+.cadernos-ia-vazio-icone {
+  font-size: 32px;
+}
+
+@media (max-width: 760px) {
+  .cadernos-ia-container {
+    gap: 12px;
+  }
+
+  .cadernos-ia-cabecalho {
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .cadernos-ia-cabecalho h1 {
+    font-size: 23px;
+  }
+
+  .cadernos-ia-cabecalho p {
+    font-size: 13px;
+  }
+
+  .cadernos-ia-novo {
+    min-height: 38px;
+    padding: 7px 11px;
+    align-self: flex-start;
+    font-size: 12px;
+  }
+
+  .cadernos-ia-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cadernos-ia-resumo > div {
+    padding: 9px 11px;
+  }
+
+  .cadernos-ia-resumo strong {
+    font-size: 19px;
+  }
+
+  .cadernos-ia-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .caderno-ia-card {
+    padding: 13px;
+    border-radius: 12px;
+  }
+
+  .caderno-ia-icone {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    font-size: 18px;
+  }
+
+  .caderno-ia-titulo h2 {
+    font-size: 16px;
+  }
+
+  .caderno-ia-tags {
+    margin-top: 10px;
+  }
+
+  .caderno-ia-data {
+    margin-top: 10px;
+  }
+
+  .caderno-ia-acoes {
+    margin-top: 11px;
+  }
+
+  .caderno-ia-resolver,
+  .caderno-ia-excluir {
+    flex: 1;
+    min-height: 36px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .cadernos-ia-cabecalho {
+    display: grid;
+  }
+
+  .cadernos-ia-novo {
+    width: 100%;
+  }
+}
