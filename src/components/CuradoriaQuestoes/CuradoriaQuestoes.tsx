@@ -132,7 +132,10 @@ export default function CuradoriaQuestoes() {
       });
 
       setAnalise(resultado);
-      showToast(`${resultado.totalDetectadas} questões extraídas para conferência.`, "success");
+      showToast(
+        `${resultado.totalDetectadas}/${resultado.totalEsperadas} questões extraídas para conferência.`,
+        "success"
+      );
     } catch (erro) {
       showToast(mensagemErro(erro), "error");
     } finally {
@@ -272,14 +275,14 @@ export default function CuradoriaQuestoes() {
           {analise && (
             <div className="curadoria-resultado-analise">
               <div className="curadoria-resultado-cards">
-                <Indicador texto="Extraídas" valor={analise.totalDetectadas} />
+                <Indicador texto="Extraídas" valor={`${analise.totalDetectadas}/${analise.totalEsperadas}`} />
                 <Indicador texto="Com gabarito" valor={analise.totalComGabarito} />
                 <Indicador texto="Anuladas" valor={analise.anuladasDetectadas} />
                 <Indicador texto="Fora do edital" valor={analise.foraDoEdital} />
               </div>
               {analise.alertas.length > 0 && (
                 <ul>
-                  {analise.alertas.map((alerta, indice) => <li key={`${alerta}-${indice}`}>{alerta}</li>)}
+                  {deduplicarAlertas(analise.alertas).map((alerta) => <li key={alerta}>{alerta}</li>)}
                 </ul>
               )}
               <button type="button" onClick={enviarParaCuradoria} disabled={salvandoLote}>
@@ -401,8 +404,19 @@ function Campo({ texto, children }: { texto: string; children: React.ReactNode }
   );
 }
 
-function Indicador({ texto, valor }: { texto: string; valor: number }) {
+function Indicador({ texto, valor }: { texto: string; valor: number | string }) {
   return <div><span>{texto}</span><strong>{valor}</strong></div>;
+}
+
+function deduplicarAlertas(alertas: string[]) {
+  const vistos = new Set<string>();
+
+  return alertas.filter((alerta) => {
+    const chave = alerta.replace(/\s+/g, " ").trim().toLocaleLowerCase("pt-BR");
+    if (!chave || vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
 }
 
 function rotuloStatus(status: StatusEditorialQuestao) {
