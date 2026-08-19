@@ -171,9 +171,27 @@ export default function NotificationCenter() {
   const totalPendencias = naoLidas + (administrador ? feedbacksPendentes.length : 0);
 
   useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent("pmpe:notificacoes:contador", { detail: { total: totalPendencias } })
+    function clicarNoSino(evento: MouseEvent) {
+      const alvo = evento.target as Element | null;
+      const botao = alvo?.closest?.('.dashboard-pro-icon[aria-label="Notificações"]');
+      if (!botao) return;
+      evento.preventDefault();
+      setAberto(true);
+      void carregar();
+    }
+
+    document.addEventListener("click", clicarNoSino);
+    return () => document.removeEventListener("click", clicarNoSino);
+  }, [usuario?.id, administrador]);
+
+  useEffect(() => {
+    const botao = document.querySelector<HTMLButtonElement>(
+      '.dashboard-pro-icon[aria-label="Notificações"]'
     );
+    if (!botao) return;
+
+    botao.dataset.notificacoes = String(totalPendencias);
+    botao.classList.toggle("tem-notificacoes", totalPendencias > 0);
   }, [totalPendencias]);
 
   return (
