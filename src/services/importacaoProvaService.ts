@@ -54,6 +54,7 @@ export type QuestaoAnalisadaIA = {
 };
 
 export type ResultadoAnaliseProva = {
+  totalEsperadas: number;
   totalDetectadas: number;
   totalComGabarito: number;
   anuladasDetectadas: number;
@@ -145,6 +146,21 @@ export async function analisarProvaPdf({
 
   if (!Array.isArray(dados.analise.questoes)) {
     throw new Error("A IA não devolveu uma lista válida de questões.");
+  }
+
+  if (
+    !Number.isInteger(dados.analise.totalEsperadas) ||
+    dados.analise.totalEsperadas < 1
+  ) {
+    throw new Error(
+      "A API ainda não confirmou a quantidade total da prova. Aguarde a atualização e tente novamente."
+    );
+  }
+
+  if (dados.analise.totalDetectadas !== dados.analise.totalEsperadas) {
+    throw new Error(
+      `A análise ficou incompleta (${dados.analise.totalDetectadas}/${dados.analise.totalEsperadas}). Nenhuma questão foi liberada.`
+    );
   }
 
   return dados.analise;
