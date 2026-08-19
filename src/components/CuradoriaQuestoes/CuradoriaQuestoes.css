@@ -147,6 +147,37 @@
   cursor: wait;
 }
 
+.curadoria-erro-analise {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid rgba(239, 68, 68, .48);
+  border-radius: 11px;
+  background: rgba(127, 29, 29, .16);
+  color: #ffd2d7;
+}
+
+.curadoria-erro-analise strong {
+  color: #ff929c;
+  font-size: 11px;
+}
+
+.curadoria-erro-analise p,
+.curadoria-erro-analise small {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.curadoria-erro-analise p {
+  font-size: 10px;
+}
+
+.curadoria-erro-analise small {
+  color: #cfa7ac;
+  font-size: 9px;
+}
+
 .curadoria-resultado-analise {
   display: grid;
   gap: 12px;

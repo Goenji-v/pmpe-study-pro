@@ -5,6 +5,7 @@ import { useToast } from "../../context/ToastContext";
 import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
 import {
   analisarProvaPdf,
+  ErroImportacaoProva,
   type MetadadosImportacaoProva,
   type ResultadoAnaliseProva,
 } from "../../services/importacaoProvaService";
@@ -59,6 +60,10 @@ export default function CuradoriaQuestoes() {
   const [analisando, setAnalisando] = useState(false);
   const [salvandoLote, setSalvandoLote] = useState(false);
   const [analise, setAnalise] = useState<ResultadoAnaliseProva | null>(null);
+  const [erroAnalise, setErroAnalise] = useState<{
+    mensagem: string;
+    diagnosticoId: string;
+  } | null>(null);
   const [fila, setFila] = useState<QuestaoBanco[]>([]);
   const [carregandoFila, setCarregandoFila] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<StatusEditorialQuestao | "todos">("pendente");
@@ -120,6 +125,7 @@ export default function CuradoriaQuestoes() {
     try {
       setAnalisando(true);
       setAnalise(null);
+      setErroAnalise(null);
 
       const resultado = await analisarProvaPdf({
         prova,
@@ -132,12 +138,20 @@ export default function CuradoriaQuestoes() {
       });
 
       setAnalise(resultado);
+      setErroAnalise(null);
       showToast(
         `${resultado.totalDetectadas}/${resultado.totalEsperadas} questões extraídas para conferência.`,
         "success"
       );
     } catch (erro) {
-      showToast(mensagemErro(erro), "error");
+      const mensagem = mensagemErro(erro);
+      setErroAnalise({
+        mensagem,
+        diagnosticoId: erro instanceof ErroImportacaoProva
+          ? erro.diagnosticoId
+          : "erro-local",
+      });
+      showToast(mensagem, "error");
     } finally {
       setAnalisando(false);
     }
@@ -271,6 +285,16 @@ export default function CuradoriaQuestoes() {
               {analisando ? "Analisando PDFs..." : "Analisar prova com IA"}
             </button>
           </div>
+
+          {erroAnalise && (
+            <div className="curadoria-erro-analise" role="alert" aria-live="assertive">
+              <strong>A análise não foi concluída.</strong>
+              <p>{erroAnalise.mensagem}</p>
+              <small>
+                Nenhuma questão foi salva. Código de diagnóstico: <b>{erroAnalise.diagnosticoId}</b>
+              </small>
+            </div>
+          )}
 
           {analise && (
             <div className="curadoria-resultado-analise">

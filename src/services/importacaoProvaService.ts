@@ -54,6 +54,7 @@ export type QuestaoAnalisadaIA = {
 };
 
 export type ResultadoAnaliseProva = {
+  diagnosticoId: string;
   totalEsperadas: number;
   totalDetectadas: number;
   totalComGabarito: number;
@@ -66,12 +67,24 @@ export type ResultadoAnaliseProva = {
 type RespostaApi =
   | {
       sucesso: true;
-      analise: ResultadoAnaliseProva;
+      diagnosticoId: string;
+      analise: Omit<ResultadoAnaliseProva, "diagnosticoId">;
     }
   | {
       sucesso: false;
+      diagnosticoId?: string;
       erro: string;
     };
+
+export class ErroImportacaoProva extends Error {
+  diagnosticoId: string;
+
+  constructor(mensagem: string, diagnosticoId: string) {
+    super(mensagem);
+    this.name = "ErroImportacaoProva";
+    this.diagnosticoId = diagnosticoId;
+  }
+}
 
 const LIMITE_ARQUIVO_BYTES = 12 * 1024 * 1024;
 
@@ -86,6 +99,8 @@ export async function analisarProvaPdf({
   metadados: MetadadosImportacaoProva;
   mapaEdital: ItemMapaEdital[];
 }): Promise<ResultadoAnaliseProva> {
+  const diagnosticoId = crypto.randomUUID();
+
   validarArquivoPdf(prova, "prova");
   if (gabarito) validarArquivoPdf(gabarito, "gabarito");
 
@@ -110,6 +125,7 @@ export async function analisarProvaPdf({
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         "X-Supabase-Anon-Key": SUPABASE_PUBLIC_KEY,
+        "X-Importacao-Id": diagnosticoId,
       },
       body: JSON.stringify({
         prova: {
@@ -129,7 +145,10 @@ export async function analisarProvaPdf({
       }),
     });
   } catch {
-    throw new Error("Não foi possível conectar à análise de provas. Tente novamente.");
+    throw new ErroImportacaoProva(
+      "A conexão com a análise foi interrompida antes da resposta.",
+      diagnosticoId
+    );
   }
 
   let dados: RespostaApi;
@@ -137,33 +156,47 @@ export async function analisarProvaPdf({
   try {
     dados = (await resposta.json()) as RespostaApi;
   } catch {
-    throw new Error("A análise retornou uma resposta inválida.");
+    throw new ErroImportacaoProva(
+      `A API retornou uma resposta inválida (HTTP ${resposta.status}).`,
+      diagnosticoId
+    );
   }
 
   if (!resposta.ok || !dados.sucesso) {
-    throw new Error("erro" in dados ? dados.erro : `Erro HTTP ${resposta.status}`);
+    throw new ErroImportacaoProva(
+      "erro" in dados ? dados.erro : `Erro HTTP ${resposta.status}`,
+      dados.diagnosticoId || diagnosticoId
+    );
   }
 
   if (!Array.isArray(dados.analise.questoes)) {
-    throw new Error("A IA não devolveu uma lista válida de questões.");
+    throw new ErroImportacaoProva(
+      "A IA não devolveu uma lista válida de questões.",
+      dados.diagnosticoId || diagnosticoId
+    );
   }
 
   if (
     !Number.isInteger(dados.analise.totalEsperadas) ||
     dados.analise.totalEsperadas < 1
   ) {
-    throw new Error(
-      "A API ainda não confirmou a quantidade total da prova. Aguarde a atualização e tente novamente."
+    throw new ErroImportacaoProva(
+      "A API ainda não confirmou a quantidade total da prova. Aguarde a atualização e tente novamente.",
+      dados.diagnosticoId || diagnosticoId
     );
   }
 
   if (dados.analise.totalDetectadas !== dados.analise.totalEsperadas) {
-    throw new Error(
-      `A análise ficou incompleta (${dados.analise.totalDetectadas}/${dados.analise.totalEsperadas}). Nenhuma questão foi liberada.`
+    throw new ErroImportacaoProva(
+      `A análise ficou incompleta (${dados.analise.totalDetectadas}/${dados.analise.totalEsperadas}). Nenhuma questão foi liberada.`,
+      dados.diagnosticoId || diagnosticoId
     );
   }
 
-  return dados.analise;
+  return {
+    ...dados.analise,
+    diagnosticoId: dados.diagnosticoId || diagnosticoId,
+  };
 }
 
 function validarArquivoPdf(arquivo: File, rotulo: string) {

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import cors from "cors";
+import { randomUUID } from "node:crypto";
 import express, {
   type NextFunction,
   type Request,
@@ -648,19 +649,44 @@ app.post(
   "/api/analisar-prova",
   exigirAdministrador,
   async (req, res) => {
+    const diagnosticoId = obterDiagnosticoId(req);
+    const inicio = Date.now();
+
     try {
       const entrada = validarEntradaAnaliseProva(req.body);
-      const analise = await analisarProvaCompleta(entrada);
+      registrarDiagnosticoImportacao(diagnosticoId, "requisicao_iniciada", {
+        provaKb: tamanhoBase64EmKb(entrada.prova.base64),
+        gabaritoKb: entrada.gabarito
+          ? tamanhoBase64EmKb(entrada.gabarito.base64)
+          : 0,
+        assuntosEdital: entrada.mapaEdital.length,
+      });
+
+      const analise = await analisarProvaCompleta(entrada, diagnosticoId);
+
+      registrarDiagnosticoImportacao(diagnosticoId, "requisicao_concluida", {
+        duracaoMs: Date.now() - inicio,
+        totalDetectadas: analise.totalDetectadas,
+        totalEsperadas: analise.totalEsperadas,
+      });
 
       res.json({
         sucesso: true,
+        diagnosticoId,
         analise,
       });
     } catch (erro) {
-      console.error("Erro ao analisar prova:", erro);
+      console.error("[importacao-prova]", {
+        diagnosticoId,
+        etapa: "requisicao_falhou",
+        duracaoMs: Date.now() - inicio,
+        erro: erro instanceof Error ? erro.message : String(erro),
+        stack: erro instanceof Error ? erro.stack : undefined,
+      });
 
       res.status(500).json({
         sucesso: false,
+        diagnosticoId,
         erro:
           erro instanceof Error
             ? erro.message
@@ -850,19 +876,80 @@ function validarPdfAnalise(valor: unknown, rotulo: string): ArquivoPdfAnalise {
   };
 }
 
-async function analisarProvaCompleta(entrada: EntradaAnaliseProva) {
+function obterDiagnosticoId(req: Request) {
+  const recebido = req.get("X-Importacao-Id")?.trim() ?? "";
+
+  if (/^[a-zA-Z0-9-]{8,80}$/.test(recebido)) {
+    return recebido;
+  }
+
+  return randomUUID();
+}
+
+function tamanhoBase64EmKb(base64: string) {
+  return Math.round((base64.length * 3) / 4 / 1024);
+}
+
+function registrarDiagnosticoImportacao(
+  diagnosticoId: string,
+  etapa: string,
+  detalhes: Record<string, unknown> = {}
+) {
+  console.info("[importacao-prova]", {
+    diagnosticoId,
+    etapa,
+    ...detalhes,
+  });
+}
+
+async function analisarProvaCompleta(
+  entrada: EntradaAnaliseProva,
+  diagnosticoId: string
+) {
   if (!entrada.gabarito) {
     throw new Error(
       "O gabarito definitivo é obrigatório para validar a quantidade e as anulações."
     );
   }
 
+  registrarDiagnosticoImportacao(diagnosticoId, "gabarito_iniciado");
   const gabarito = await extrairGabaritoDefinitivo(entrada.gabarito);
+  registrarDiagnosticoImportacao(diagnosticoId, "gabarito_concluido", {
+    totalQuestoes: gabarito.totalQuestoes,
+    anuladas: gabarito.itens.filter((item) => item.status === "anulada").length,
+  });
   const intervalos = criarIntervalosQuestoes(gabarito.totalQuestoes);
   const resultados = await mapearComConcorrencia(
     intervalos,
     CONCORRENCIA_ANALISE_BLOCOS,
-    (intervalo) => analisarBlocoComRecuperacao(entrada, gabarito, intervalo)
+    async (intervalo) => {
+      const rotulo = `${intervalo.inicio}-${intervalo.fim}`;
+      const inicioBloco = Date.now();
+      registrarDiagnosticoImportacao(diagnosticoId, "bloco_iniciado", {
+        bloco: rotulo,
+      });
+
+      try {
+        const resultado = await analisarBlocoComRecuperacao(
+          entrada,
+          gabarito,
+          intervalo
+        );
+        registrarDiagnosticoImportacao(diagnosticoId, "bloco_concluido", {
+          bloco: rotulo,
+          duracaoMs: Date.now() - inicioBloco,
+          questoes: resultado.questoes.length,
+        });
+        return resultado;
+      } catch (erro) {
+        registrarDiagnosticoImportacao(diagnosticoId, "bloco_falhou", {
+          bloco: rotulo,
+          duracaoMs: Date.now() - inicioBloco,
+          erro: erro instanceof Error ? erro.message : String(erro),
+        });
+        throw erro;
+      }
+    }
   );
 
   const porNumero = new Map<
