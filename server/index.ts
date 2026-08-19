@@ -1006,7 +1006,6 @@ async function extrairGabaritoDefinitivo(
   const primeiraLeitura = await gerarJsonComPdf({
     prompt: montarPromptGabarito(),
     arquivo,
-    esquema: esquemaRespostaGabarito(),
     maxOutputTokens: 8192,
     rotulo: "gabarito definitivo",
   });
@@ -1021,7 +1020,6 @@ async function extrairGabaritoDefinitivo(
     const recuperacao = await gerarJsonComPdf({
       prompt: montarPromptGabarito(faltantes, gabarito.totalQuestoes),
       arquivo,
-      esquema: esquemaRespostaGabarito(faltantes.length),
       maxOutputTokens: 8192,
       rotulo: "itens ausentes do gabarito definitivo",
     });
@@ -1051,11 +1049,9 @@ async function analisarBlocoComRecuperacao(
   gabarito: GabaritoExtraido,
   intervalo: IntervaloQuestoes
 ) {
-  const quantidade = intervalo.fim - intervalo.inicio + 1;
   const primeiraLeitura = await gerarJsonComPdf({
     prompt: montarPromptAnaliseBloco(entrada, gabarito, intervalo),
     arquivo: entrada.prova,
-    esquema: esquemaRespostaBloco(quantidade),
     maxOutputTokens: 32768,
     rotulo: `questões ${intervalo.inicio} a ${intervalo.fim}`,
   });
@@ -1081,7 +1077,6 @@ async function analisarBlocoComRecuperacao(
       faltantes
     ),
     arquivo: entrada.prova,
-    esquema: esquemaRespostaBloco(faltantes.length),
     maxOutputTokens: 24576,
     rotulo: `questões ausentes ${formatarNumeros(faltantes)}`,
   });
@@ -1118,13 +1113,11 @@ async function analisarBlocoComRecuperacao(
 async function gerarJsonComPdf({
   prompt,
   arquivo,
-  esquema,
   maxOutputTokens,
   rotulo,
 }: {
   prompt: string;
   arquivo: ArquivoPdfAnalise;
-  esquema: unknown;
   maxOutputTokens: number;
   rotulo: string;
 }): Promise<unknown> {
@@ -1145,7 +1138,6 @@ async function gerarJsonComPdf({
     config: {
       temperature: 0,
       responseMimeType: "application/json",
-      responseJsonSchema: esquema,
       maxOutputTokens,
     },
   });
@@ -1188,7 +1180,15 @@ REGRAS OBRIGATÓRIAS:
 - Não transforme questão anulada em alternativa.
 - Não use conhecimento próprio para corrigir o gabarito: transcreva o documento.
 - Cada número deve aparecer uma única vez.
-- Retorne somente JSON compatível com o esquema solicitado.
+- Retorne somente JSON válido, sem markdown, neste formato exato:
+{
+  "totalQuestoes": 60,
+  "itens": [
+    { "numero": 1, "resposta": "A", "status": "valida" },
+    { "numero": 2, "resposta": "", "status": "anulada" }
+  ],
+  "alertas": []
+}
 `;
 }
 
@@ -1250,130 +1250,37 @@ Use IDs do mapa somente quando houver correspondência real. Caso contrário, de
 Não misture História ou legislação local de outro estado com Pernambuco.
 Use dificuldade somente "facil", "media" ou "dificil".
 Use confiança somente "alta", "media" ou "baixa".
-Retorne somente JSON compatível com o esquema solicitado.
+Retorne somente JSON válido, sem markdown, neste formato exato:
+{
+  "alertas": [],
+  "questoes": [
+    {
+      "numeroOriginal": 1,
+      "materiaId": "",
+      "materia": "Português",
+      "moduloId": "",
+      "modulo": "Interpretação de texto",
+      "assuntoId": "",
+      "assunto": "Compreensão textual",
+      "subassunto": "",
+      "dificuldade": "media",
+      "enunciado": "texto integral da questão",
+      "alternativas": [
+        { "id": "A", "texto": "texto integral" },
+        { "id": "B", "texto": "texto integral" }
+      ],
+      "respostaCorretaId": "A",
+      "explicacao": "explicação objetiva",
+      "compatibilidadeEdital": "direta",
+      "confiancaClassificacao": "alta",
+      "statusSugerido": "pendente",
+      "norma": "",
+      "dispositivo": "",
+      "motivoStatus": ""
+    }
+  ]
+}
 `;
-}
-
-function esquemaRespostaGabarito(quantidadeExata = 0) {
-  return {
-    type: "object",
-    additionalProperties: false,
-    required: ["totalQuestoes", "itens", "alertas"],
-    properties: {
-      totalQuestoes: { type: "integer", minimum: 1, maximum: 300 },
-      itens: {
-        type: "array",
-        minItems: quantidadeExata || 1,
-        maxItems: quantidadeExata || 300,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["numero", "resposta", "status"],
-          properties: {
-            numero: { type: "integer", minimum: 1, maximum: 300 },
-            resposta: { type: "string" },
-            status: { type: "string", enum: ["valida", "anulada"] },
-          },
-        },
-      },
-      alertas: {
-        type: "array",
-        maxItems: 10,
-        items: { type: "string" },
-      },
-    },
-  };
-}
-
-function esquemaRespostaBloco(quantidadeExata: number) {
-  return {
-    type: "object",
-    additionalProperties: false,
-    required: ["alertas", "questoes"],
-    properties: {
-      alertas: {
-        type: "array",
-        maxItems: 5,
-        items: { type: "string" },
-      },
-      questoes: {
-        type: "array",
-        minItems: quantidadeExata,
-        maxItems: quantidadeExata,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: [
-            "numeroOriginal",
-            "materiaId",
-            "materia",
-            "moduloId",
-            "modulo",
-            "assuntoId",
-            "assunto",
-            "subassunto",
-            "dificuldade",
-            "enunciado",
-            "alternativas",
-            "respostaCorretaId",
-            "explicacao",
-            "compatibilidadeEdital",
-            "confiancaClassificacao",
-            "statusSugerido",
-            "norma",
-            "dispositivo",
-            "motivoStatus",
-          ],
-          properties: {
-            numeroOriginal: { type: "integer", minimum: 1, maximum: 300 },
-            materiaId: { type: "string" },
-            materia: { type: "string" },
-            moduloId: { type: "string" },
-            modulo: { type: "string" },
-            assuntoId: { type: "string" },
-            assunto: { type: "string" },
-            subassunto: { type: "string" },
-            dificuldade: {
-              type: "string",
-              enum: ["facil", "media", "dificil"],
-            },
-            enunciado: { type: "string" },
-            alternativas: {
-              type: "array",
-              minItems: 2,
-              maxItems: 8,
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["id", "texto"],
-                properties: {
-                  id: { type: "string" },
-                  texto: { type: "string" },
-                },
-              },
-            },
-            respostaCorretaId: { type: "string" },
-            explicacao: { type: "string" },
-            compatibilidadeEdital: {
-              type: "string",
-              enum: ["direta", "implicita", "relacionada", "fora", "incerta"],
-            },
-            confiancaClassificacao: {
-              type: "string",
-              enum: ["alta", "media", "baixa"],
-            },
-            statusSugerido: {
-              type: "string",
-              enum: ["pendente", "anulada", "desatualizada", "duvidosa"],
-            },
-            norma: { type: "string" },
-            dispositivo: { type: "string" },
-            motivoStatus: { type: "string" },
-          },
-        },
-      },
-    },
-  };
 }
 
 function normalizarGabarito(
