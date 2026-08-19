@@ -1,3 +1,26 @@
+.dashboard-pro-icon[aria-label="Notificações"] {
+  position: relative;
+}
+
+.dashboard-pro-icon[aria-label="Notificações"].tem-notificacoes::after {
+  content: attr(data-notificacoes);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #0b1728;
+  border-radius: 999px;
+  background: #318bff;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .notificacao-toast {
   position: fixed;
   top: 78px;
