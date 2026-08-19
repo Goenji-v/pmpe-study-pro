@@ -42,6 +42,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
 import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
+import NotificationCenter from "./components/NotificationCenter/NotificationCenter";
 import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
 import CadernoSimuladoIABridge from "./components/CadernoSimuladoIABridge/CadernoSimuladoIABridge";
 
@@ -73,7 +74,6 @@ function LayoutProtegido() {
                     <Route path="/" element={<Dashboard />} />
 
                     <Route path="/plano" element={<PlanoEstudos />} />
-                    {/* Compatibilidade com links antigos do Dashboard */}
                     <Route path="/plano-estudos" element={<PlanoEstudos />} />
 
                     <Route path="/calendario" element={<Calendario />} />
@@ -83,41 +83,34 @@ function LayoutProtegido() {
                     <Route path="/inteligencia" element={<CentralInteligencia />} />
 
                     <Route path="/estudos" element={<Estudos />} />
-                    {/* Compatibilidade com links antigos de Conteúdos */}
                     <Route path="/conteudos" element={<Estudos />} />
-                    {/* Compatibilidade com links antigos da busca global */}
                     <Route path="/buscar" element={<Estudos />} />
                     <Route path="/pesquisa" element={<Estudos />} />
                     <Route path="/search" element={<Estudos />} />
 
                     <Route path="/revisoes" element={<Revisoes />} />
 
-                    {/* Central de Questões */}
                     <Route path="/questoes" element={<CentralQuestoes />} />
                     <Route path="/registrar-questoes" element={<Questoes />} />
                     <Route path="/historico" element={<Historico />} />
                     <Route path="/banco-questoes" element={<BancoQuestoes />} />
                     <Route path="/estatisticas" element={<Estatisticas />} />
 
-                    {/* Central de Simulados */}
                     <Route path="/simulados" element={<Simulados />} />
                     <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
                     <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
                     <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
                     <Route path="/estatisticas-simulado-ia" element={<EstatisticasSimuladoIA />} />
 
-                    {/* Central de Desempenho */}
                     <Route path="/desempenho" element={<CentralDesempenho />} />
                     <Route path="/historico-sessoes" element={<HistoricoSessoes />} />
                     <Route path="/estatisticas-sessoes" element={<EstatisticasSessoes />} />
                     <Route path="/ranking" element={<Ranking />} />
                     <Route path="/conquistas" element={<Conquistas />} />
 
-                    {/* Inteligência */}
                     <Route path="/relatorio-inteligente" element={<RelatorioInteligente />} />
                     <Route path="/ia-coach" element={<IACoach />} />
 
-                    {/* Sistema */}
                     <Route path="/backup" element={<Backup />} />
                     <Route path="/configuracoes" element={<Configuracoes />} />
                     <Route path="/admin" element={<Admin />} />
@@ -128,6 +121,7 @@ function LayoutProtegido() {
               </div>
             </div>
             <BetaFeedback />
+            <NotificationCenter />
           </CronometroProvider>
         </AppProvider>
       </ToastProvider>

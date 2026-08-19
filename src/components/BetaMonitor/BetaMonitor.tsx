@@ -1,30 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  atualizarStatusFeedbackBeta,
   listarErrosClienteBeta,
   listarFeedbackBeta,
   type ErroClienteBeta,
   type FeedbackBeta,
+  type StatusFeedbackBeta,
 } from "../../services/betaService";
+import type { UsuarioAdmin } from "../../services/adminService";
 
 import "./BetaMonitor.css";
 
-export default function BetaMonitor() {
+export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) {
   const [feedbacks, setFeedbacks] = useState<FeedbackBeta[]>([]);
   const [erros, setErros] = useState<ErroClienteBeta[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [atualizandoId, setAtualizandoId] = useState<string | null>(null);
+  const [respostas, setRespostas] = useState<Record<string, string>>({});
 
   async function carregar() {
     try {
       setCarregando(true);
       setErro("");
       const [novosFeedbacks, novosErros] = await Promise.all([
-        listarFeedbackBeta(40),
+        listarFeedbackBeta(60),
         listarErrosClienteBeta(40),
       ]);
       setFeedbacks(novosFeedbacks);
       setErros(novosErros);
+      setRespostas((atuais) => {
+        const proximas = { ...atuais };
+        novosFeedbacks.forEach((item) => {
+          if (proximas[item.id] === undefined) proximas[item.id] = item.resposta_admin ?? "";
+        });
+        return proximas;
+      });
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao carregar dados do beta.");
     } finally {
@@ -36,10 +48,46 @@ export default function BetaMonitor() {
     void carregar();
   }, []);
 
+  const usuariosPorId = useMemo(
+    () => new Map(usuarios.map((usuario) => [usuario.userId, usuario])),
+    [usuarios]
+  );
+
   const bugs = useMemo(
     () => feedbacks.filter((item) => item.categoria === "bug").length,
     [feedbacks]
   );
+
+  const pendentes = useMemo(
+    () => feedbacks.filter((item) => item.status === "em_analise").length,
+    [feedbacks]
+  );
+
+  async function mudarStatus(item: FeedbackBeta, status: StatusFeedbackBeta) {
+    try {
+      setAtualizandoId(item.id);
+      setErro("");
+      await atualizarStatusFeedbackBeta(item, status, respostas[item.id] ?? "");
+      const agora = new Date().toISOString();
+      setFeedbacks((atuais) =>
+        atuais.map((feedback) =>
+          feedback.id === item.id
+            ? {
+                ...feedback,
+                status,
+                resposta_admin: (respostas[item.id] ?? "").trim() || null,
+                atualizado_em: agora,
+                resolvido_em: status === "concluido" || status === "rejeitado" ? agora : null,
+              }
+            : feedback
+        )
+      );
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Não foi possível atualizar o feedback.");
+    } finally {
+      setAtualizandoId(null);
+    }
+  }
 
   return (
     <section className="beta-monitor">
@@ -47,7 +95,7 @@ export default function BetaMonitor() {
         <div>
           <span>BETA / PRÉ-LANÇAMENTO</span>
           <h2>Feedback e erros reais</h2>
-          <p>Últimos registros enviados pelos testadores e falhas capturadas automaticamente.</p>
+          <p>Identifique o testador, acompanhe o status e avise quando a solicitação for tratada.</p>
         </div>
         <button type="button" onClick={() => void carregar()} disabled={carregando}>
           {carregando ? "Atualizando..." : "Atualizar"}
@@ -56,6 +104,7 @@ export default function BetaMonitor() {
 
       <div className="beta-monitor-resumo">
         <article><strong>{feedbacks.length}</strong><span>feedbacks</span></article>
+        <article><strong>{pendentes}</strong><span>em análise</span></article>
         <article><strong>{bugs}</strong><span>bugs relatados</span></article>
         <article><strong>{erros.length}</strong><span>erros capturados</span></article>
       </div>
@@ -64,21 +113,66 @@ export default function BetaMonitor() {
 
       <div className="beta-monitor-grid">
         <section>
-          <h3>Feedback recente</h3>
+          <h3>Solicitações dos testadores</h3>
           {feedbacks.length === 0 ? (
             <div className="beta-monitor-vazio">Nenhum feedback recebido ainda.</div>
           ) : (
             <div className="beta-monitor-lista">
-              {feedbacks.slice(0, 12).map((item) => (
-                <article key={item.id}>
-                  <div className="beta-monitor-item-topo">
-                    <span className={`beta-monitor-tag ${item.categoria}`}>{rotuloCategoria(item.categoria)}</span>
-                    <small>{formatarData(item.created_at)}</small>
-                  </div>
-                  <p>{item.mensagem}</p>
-                  <footer>{item.pagina || "rota não informada"} · {item.viewport || "viewport desconhecida"}</footer>
-                </article>
-              ))}
+              {feedbacks.slice(0, 20).map((item) => {
+                const usuario = usuariosPorId.get(item.user_id);
+                const fechado = item.status === "concluido" || item.status === "rejeitado";
+                return (
+                  <article key={item.id} className={`beta-monitor-feedback ${item.status}`}>
+                    <div className="beta-monitor-item-topo">
+                      <div className="beta-monitor-tags">
+                        <span className={`beta-monitor-tag ${item.categoria}`}>{rotuloCategoria(item.categoria)}</span>
+                        <span className={`beta-monitor-status ${item.status}`}>{rotuloStatus(item.status)}</span>
+                      </div>
+                      <small>{formatarData(item.created_at)}</small>
+                    </div>
+
+                    <div className="beta-monitor-autor">
+                      <strong>{usuario?.nome || "Usuário"}</strong>
+                      <span>{usuario?.email || item.user_id}</span>
+                    </div>
+
+                    <p>{item.mensagem}</p>
+                    <footer>{item.pagina || "rota não informada"} · {item.viewport || "viewport desconhecida"}</footer>
+
+                    <label className="beta-monitor-resposta">
+                      <span>Resposta para o testador</span>
+                      <textarea
+                        rows={2}
+                        maxLength={1500}
+                        value={respostas[item.id] ?? ""}
+                        disabled={fechado || atualizandoId === item.id}
+                        onChange={(evento) =>
+                          setRespostas((atuais) => ({ ...atuais, [item.id]: evento.target.value }))
+                        }
+                        placeholder="Opcional: explique o que foi feito ou por que não será aplicado."
+                      />
+                    </label>
+
+                    <div className="beta-monitor-acoes">
+                      {item.status === "em_analise" && (
+                        <>
+                          <button type="button" className="aprovar" disabled={atualizandoId === item.id} onClick={() => void mudarStatus(item, "aprovado")}>Aprovar</button>
+                          <button type="button" className="rejeitar" disabled={atualizandoId === item.id} onClick={() => void mudarStatus(item, "rejeitado")}>Rejeitar</button>
+                        </>
+                      )}
+                      {item.status === "aprovado" && (
+                        <>
+                          <button type="button" className="concluir" disabled={atualizandoId === item.id} onClick={() => void mudarStatus(item, "concluido")}>Concluir</button>
+                          <button type="button" className="rejeitar" disabled={atualizandoId === item.id} onClick={() => void mudarStatus(item, "rejeitado")}>Rejeitar</button>
+                        </>
+                      )}
+                      {fechado && (
+                        <span className="beta-monitor-finalizado">{item.status === "concluido" ? "Solicitação concluída" : "Solicitação rejeitada"}</span>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
@@ -89,17 +183,24 @@ export default function BetaMonitor() {
             <div className="beta-monitor-vazio">Nenhuma falha capturada.</div>
           ) : (
             <div className="beta-monitor-lista">
-              {erros.slice(0, 12).map((item) => (
-                <article key={item.id}>
-                  <div className="beta-monitor-item-topo">
-                    <span className="beta-monitor-tag erro">{item.origem}</span>
-                    <small>{formatarData(item.created_at)}</small>
-                  </div>
-                  <p>{item.mensagem}</p>
-                  <footer>{item.rota || "rota não informada"} · {item.viewport || "viewport desconhecida"}</footer>
-                  <code>{item.incident_id}</code>
-                </article>
-              ))}
+              {erros.slice(0, 12).map((item) => {
+                const usuario = usuariosPorId.get(item.user_id);
+                return (
+                  <article key={item.id}>
+                    <div className="beta-monitor-item-topo">
+                      <span className="beta-monitor-tag erro">{item.origem}</span>
+                      <small>{formatarData(item.created_at)}</small>
+                    </div>
+                    <div className="beta-monitor-autor">
+                      <strong>{usuario?.nome || "Usuário"}</strong>
+                      <span>{usuario?.email || item.user_id}</span>
+                    </div>
+                    <p>{item.mensagem}</p>
+                    <footer>{item.rota || "rota não informada"} · {item.viewport || "viewport desconhecida"}</footer>
+                    <code>{item.incident_id}</code>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
@@ -113,6 +214,13 @@ function rotuloCategoria(categoria: FeedbackBeta["categoria"]) {
   if (categoria === "visual") return "Visual";
   if (categoria === "ideia") return "Sugestão";
   return "Outro";
+}
+
+function rotuloStatus(status: StatusFeedbackBeta) {
+  if (status === "aprovado") return "Aprovado";
+  if (status === "concluido") return "Concluído";
+  if (status === "rejeitado") return "Rejeitado";
+  return "Em análise";
 }
 
 function formatarData(valor: string) {

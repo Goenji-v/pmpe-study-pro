@@ -158,7 +158,7 @@ export default function Admin() {
         )}
       </section>
 
-      <BetaMonitor />
+      <BetaMonitor usuarios={usuarios} />
     </section>
   );
 }

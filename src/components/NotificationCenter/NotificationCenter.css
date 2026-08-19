@@ -1,0 +1,203 @@
+.dashboard-pro-icon[aria-label="Notificações"] {
+  position: relative;
+}
+
+.dashboard-pro-icon[aria-label="Notificações"].tem-notificacoes::after {
+  content: attr(data-notificacoes);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #0b1728;
+  border-radius: 999px;
+  background: #318bff;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.notificacao-toast {
+  position: fixed;
+  top: 78px;
+  right: 22px;
+  z-index: 1600;
+  width: min(390px, calc(100vw - 32px));
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(76, 155, 255, .38);
+  border-radius: 16px;
+  background: linear-gradient(155deg, rgba(18, 42, 73, .98), rgba(9, 22, 39, .98));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .36), inset 0 1px 0 rgba(255,255,255,.06);
+  color: #f4f8ff;
+  text-align: left;
+  cursor: pointer;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 2s ease, transform .25s ease;
+}
+
+.notificacao-toast.sumindo {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.notificacao-toast-icone {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  background: rgba(55, 143, 255, .15);
+}
+
+.notificacao-toast span:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.notificacao-toast strong { font-size: 14px; }
+.notificacao-toast small { color: #aabbd1; font-size: 12px; line-height: 1.4; }
+
+.notificacoes-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1550;
+  background: rgba(2, 8, 16, .52);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.notificacoes-painel {
+  width: min(430px, 94vw);
+  height: 100%;
+  overflow-y: auto;
+  padding: 18px;
+  background: linear-gradient(180deg, #0b1728 0%, #081320 100%);
+  border-left: 1px solid rgba(95, 143, 197, .24);
+  box-shadow: -24px 0 60px rgba(0,0,0,.34);
+}
+
+.notificacoes-painel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.notificacoes-painel > header span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #62aaff;
+}
+
+.notificacoes-painel > header h2 {
+  margin: 3px 0 0;
+  color: #f6f9ff;
+  font-size: 22px;
+}
+
+.notificacoes-painel > header > button {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(123, 156, 192, .2);
+  background: rgba(255,255,255,.04);
+  color: #c9d6e7;
+  font-size: 22px;
+}
+
+.notificacoes-lista {
+  display: grid;
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.notificacao-item {
+  width: 100%;
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid rgba(103, 139, 181, .17);
+  border-radius: 13px;
+  background: rgba(255,255,255,.025);
+  color: #eef5ff;
+  text-align: left;
+}
+
+.notificacao-item.destaque {
+  border-color: rgba(52, 145, 255, .42);
+  background: linear-gradient(135deg, rgba(31, 109, 204, .18), rgba(18, 46, 78, .25));
+}
+
+.notificacao-item.admin {
+  margin-top: 9px;
+  border-color: rgba(242, 177, 66, .34);
+  background: rgba(117, 77, 15, .12);
+}
+
+.notificacao-item.nao-lida::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #3f9cff;
+  box-shadow: 0 0 10px rgba(63,156,255,.65);
+}
+
+.notificacao-item.lida { opacity: .72; }
+.notificacao-item strong { font-size: 13px; }
+.notificacao-item span { color: #b6c4d7; font-size: 12px; line-height: 1.45; }
+.notificacao-item small { color: #6f829a; font-size: 10px; }
+
+.notificacoes-vazio {
+  padding: 22px 14px;
+  border: 1px dashed rgba(117, 151, 190, .2);
+  border-radius: 13px;
+  color: #8395aa;
+  text-align: center;
+  font-size: 12px;
+}
+
+.notificacoes-painel > footer {
+  padding-top: 12px;
+}
+
+.notificacoes-painel > footer button {
+  width: 100%;
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(75, 145, 228, .28);
+  background: rgba(35, 99, 174, .12);
+  color: #7db8ff;
+}
+
+@media (max-width: 600px) {
+  .notificacao-toast {
+    top: 62px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    padding: 12px 13px;
+  }
+
+  .notificacoes-painel {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px 13px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notificacao-toast { transition: none; }
+}
