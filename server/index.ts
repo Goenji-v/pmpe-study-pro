@@ -7,6 +7,10 @@ import express, {
   type Response,
 } from "express";
 import { GoogleGenAI } from "@google/genai";
+import {
+  ErroJsonInvalidoIA,
+  parsearJsonDaIA,
+} from "./jsonIa.ts";
 
 const app = express();
 
@@ -933,7 +937,8 @@ async function analisarProvaCompleta(
         const resultado = await analisarBlocoComRecuperacao(
           entrada,
           gabarito,
-          intervalo
+          intervalo,
+          diagnosticoId
         );
         registrarDiagnosticoImportacao(diagnosticoId, "bloco_concluido", {
           bloco: rotulo,
@@ -1047,6 +1052,50 @@ async function extrairGabaritoDefinitivo(
 async function analisarBlocoComRecuperacao(
   entrada: EntradaAnaliseProva,
   gabarito: GabaritoExtraido,
+  intervalo: IntervaloQuestoes,
+  diagnosticoId: string
+) {
+  try {
+    return await analisarBlocoUmaVez(entrada, gabarito, intervalo);
+  } catch (erro) {
+    if (
+      !(erro instanceof ErroJsonInvalidoIA) ||
+      intervalo.inicio >= intervalo.fim
+    ) {
+      throw erro;
+    }
+
+    const meio = Math.floor((intervalo.inicio + intervalo.fim) / 2);
+    const partes = [
+      { inicio: intervalo.inicio, fim: meio },
+      { inicio: meio + 1, fim: intervalo.fim },
+    ];
+
+    registrarDiagnosticoImportacao(diagnosticoId, "bloco_subdividido", {
+      bloco: `${intervalo.inicio}-${intervalo.fim}`,
+      motivo: "json_invalido",
+      novosBlocos: partes.map((parte) => `${parte.inicio}-${parte.fim}`),
+    });
+
+    const resultados = await mapearComConcorrencia(
+      partes,
+      1,
+      (parte) =>
+        analisarBlocoComRecuperacao(
+          entrada,
+          gabarito,
+          parte,
+          diagnosticoId
+        )
+    );
+
+    return mesclarAnalisesDeBlocos(resultados);
+  }
+}
+
+async function analisarBlocoUmaVez(
+  entrada: EntradaAnaliseProva,
+  gabarito: GabaritoExtraido,
   intervalo: IntervaloQuestoes
 ) {
   const primeiraLeitura = await gerarJsonComPdf({
@@ -1110,6 +1159,31 @@ async function analisarBlocoComRecuperacao(
   };
 }
 
+function mesclarAnalisesDeBlocos(
+  resultados: ReturnType<typeof normalizarAnaliseProva>[]
+) {
+  const porNumero = new Map(
+    resultados
+      .flatMap((resultado) => resultado.questoes)
+      .map((questao) => [questao.numeroOriginal, questao] as const)
+  );
+
+  return {
+    totalDetectadas: porNumero.size,
+    totalComGabarito: Array.from(porNumero.values())
+      .filter((questao) => Boolean(questao.respostaCorretaId)).length,
+    anuladasDetectadas: Array.from(porNumero.values())
+      .filter((questao) => questao.statusSugerido === "anulada").length,
+    foraDoEdital: Array.from(porNumero.values())
+      .filter((questao) => questao.compatibilidadeEdital === "fora").length,
+    alertas: deduplicarTextos(
+      resultados.flatMap((resultado) => resultado.alertas)
+    ),
+    questoes: Array.from(porNumero.values())
+      .sort((a, b) => a.numeroOriginal - b.numeroOriginal),
+  };
+}
+
 async function gerarJsonComPdf({
   prompt,
   arquivo,
@@ -1152,11 +1226,7 @@ async function gerarJsonComPdf({
     throw new Error(`A IA não retornou a leitura de ${rotulo}.`);
   }
 
-  try {
-    return JSON.parse(limparJson(resposta.text)) as unknown;
-  } catch {
-    throw new Error(`A IA retornou JSON inválido ao ler ${rotulo}.`);
-  }
+  return parsearJsonDaIA(resposta.text, rotulo);
 }
 
 function montarPromptGabarito(
