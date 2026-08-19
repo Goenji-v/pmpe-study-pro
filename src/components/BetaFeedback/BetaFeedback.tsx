@@ -29,7 +29,7 @@ export default function BetaFeedback() {
       setMensagem("");
       setCategoria("bug");
       setAberto(false);
-      showToast("Feedback enviado. Obrigado por testar o Study Pro.", "success");
+      showToast("Feedback enviado. Status: Em análise.", "success");
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Não foi possível enviar o feedback.",
@@ -65,7 +65,7 @@ export default function BetaFeedback() {
               <div>
                 <span>BETA</span>
                 <h2 id="beta-feedback-titulo">Reportar problema</h2>
-                <p>A página e o tamanho da tela são enviados automaticamente.</p>
+                <p>A página e o tamanho da tela são enviados automaticamente. O relato entra como Em análise.</p>
               </div>
               <button type="button" className="beta-feedback-fechar" onClick={() => setAberto(false)} aria-label="Fechar">
                 ×
