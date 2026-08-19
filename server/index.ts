@@ -650,55 +650,7 @@ app.post(
   async (req, res) => {
     try {
       const entrada = validarEntradaAnaliseProva(req.body);
-      const partes: Array<
-        | { text: string }
-        | { inlineData: { mimeType: string; data: string } }
-      > = [
-        {
-          text: montarPromptAnaliseProva(entrada),
-        },
-        {
-          inlineData: {
-            mimeType: "application/pdf",
-            data: entrada.prova.base64,
-          },
-        },
-      ];
-
-      if (entrada.gabarito) {
-        partes.push({
-          inlineData: {
-            mimeType: "application/pdf",
-            data: entrada.gabarito.base64,
-          },
-        });
-      }
-
-      const resposta = await ai.models.generateContent({
-        model: modelo,
-        contents: [
-          {
-            role: "user",
-            parts: partes,
-          },
-        ],
-        config: {
-          temperature: 0.1,
-          responseMimeType: "application/json",
-          maxOutputTokens: 65536,
-        },
-      });
-
-      if (!resposta.text) {
-        throw new Error("A IA não retornou a análise da prova.");
-      }
-
-      const analiseBruta = JSON.parse(limparJson(resposta.text)) as unknown;
-      const analise = normalizarAnaliseProva(analiseBruta);
-
-      if (analise.questoes.length === 0) {
-        throw new Error("Nenhuma questão foi identificada no PDF enviado.");
-      }
+      const analise = await analisarProvaCompleta(entrada);
 
       res.json({
         sucesso: true,
@@ -760,6 +712,28 @@ type EntradaAnaliseProva = {
   };
   mapaEdital: ItemMapaEditalAnalise[];
 };
+
+type StatusItemGabarito = "valida" | "anulada";
+
+type ItemGabaritoExtraido = {
+  numero: number;
+  resposta: string;
+  status: StatusItemGabarito;
+};
+
+type GabaritoExtraido = {
+  totalQuestoes: number;
+  itens: ItemGabaritoExtraido[];
+  alertas: string[];
+};
+
+type IntervaloQuestoes = {
+  inicio: number;
+  fim: number;
+};
+
+const TAMANHO_BLOCO_QUESTOES = 10;
+const CONCORRENCIA_ANALISE_BLOCOS = 2;
 
 async function exigirAdministrador(
   req: Request,
@@ -876,19 +850,295 @@ function validarPdfAnalise(valor: unknown, rotulo: string): ArquivoPdfAnalise {
   };
 }
 
-function montarPromptAnaliseProva(entrada: EntradaAnaliseProva) {
+async function analisarProvaCompleta(entrada: EntradaAnaliseProva) {
+  if (!entrada.gabarito) {
+    throw new Error(
+      "O gabarito definitivo é obrigatório para validar a quantidade e as anulações."
+    );
+  }
+
+  const gabarito = await extrairGabaritoDefinitivo(entrada.gabarito);
+  const intervalos = criarIntervalosQuestoes(gabarito.totalQuestoes);
+  const resultados = await mapearComConcorrencia(
+    intervalos,
+    CONCORRENCIA_ANALISE_BLOCOS,
+    (intervalo) => analisarBlocoComRecuperacao(entrada, gabarito, intervalo)
+  );
+
+  const porNumero = new Map<
+    number,
+    ReturnType<typeof normalizarAnaliseProva>["questoes"][number]
+  >();
+
+  for (const resultado of resultados) {
+    for (const questao of resultado.questoes) {
+      if (!porNumero.has(questao.numeroOriginal)) {
+        porNumero.set(questao.numeroOriginal, questao);
+      }
+    }
+  }
+
+  const faltantes = numerosFaltantes(
+    porNumero.keys(),
+    gabarito.totalQuestoes
+  );
+
+  if (faltantes.length > 0) {
+    throw new Error(
+      `A análise ficou incompleta: faltaram as questões ${formatarNumeros(faltantes)}. Nada foi liberado para a fila editorial.`
+    );
+  }
+
+  const mapaGabarito = new Map(
+    gabarito.itens.map((item) => [item.numero, item] as const)
+  );
+  const questoes = Array.from(porNumero.values())
+    .sort((a, b) => a.numeroOriginal - b.numeroOriginal)
+    .map((questao) => aplicarGabaritoDefinitivo(
+      questao,
+      mapaGabarito.get(questao.numeroOriginal)
+    ));
+
+  const alertas = deduplicarTextos([
+    `Gabarito definitivo conferido: ${gabarito.totalQuestoes} questões, ${gabarito.itens.filter((item) => item.status === "anulada").length} anuladas.`,
+    ...gabarito.alertas,
+    ...resultados.flatMap((resultado) => resultado.alertas),
+  ]);
+
+  const analise = normalizarAnaliseProva({ alertas, questoes });
+
+  return {
+    ...analise,
+    totalEsperadas: gabarito.totalQuestoes,
+  };
+}
+
+async function extrairGabaritoDefinitivo(
+  arquivo: ArquivoPdfAnalise
+): Promise<GabaritoExtraido> {
+  const primeiraLeitura = await gerarJsonComPdf({
+    prompt: montarPromptGabarito(),
+    arquivo,
+    esquema: esquemaRespostaGabarito(),
+    maxOutputTokens: 8192,
+    rotulo: "gabarito definitivo",
+  });
+  let gabarito = normalizarGabarito(primeiraLeitura);
+
+  const faltantes = numerosFaltantes(
+    gabarito.itens.map((item) => item.numero),
+    gabarito.totalQuestoes
+  );
+
+  if (faltantes.length > 0) {
+    const recuperacao = await gerarJsonComPdf({
+      prompt: montarPromptGabarito(faltantes, gabarito.totalQuestoes),
+      arquivo,
+      esquema: esquemaRespostaGabarito(faltantes.length),
+      maxOutputTokens: 8192,
+      rotulo: "itens ausentes do gabarito definitivo",
+    });
+    const complemento = normalizarGabarito(
+      recuperacao,
+      gabarito.totalQuestoes
+    );
+    gabarito = mesclarGabaritos(gabarito, complemento);
+  }
+
+  const aindaFaltantes = numerosFaltantes(
+    gabarito.itens.map((item) => item.numero),
+    gabarito.totalQuestoes
+  );
+
+  if (aindaFaltantes.length > 0) {
+    throw new Error(
+      `Não foi possível ler o gabarito completo. Faltaram os itens ${formatarNumeros(aindaFaltantes)}.`
+    );
+  }
+
+  return gabarito;
+}
+
+async function analisarBlocoComRecuperacao(
+  entrada: EntradaAnaliseProva,
+  gabarito: GabaritoExtraido,
+  intervalo: IntervaloQuestoes
+) {
+  const quantidade = intervalo.fim - intervalo.inicio + 1;
+  const primeiraLeitura = await gerarJsonComPdf({
+    prompt: montarPromptAnaliseBloco(entrada, gabarito, intervalo),
+    arquivo: entrada.prova,
+    esquema: esquemaRespostaBloco(quantidade),
+    maxOutputTokens: 32768,
+    rotulo: `questões ${intervalo.inicio} a ${intervalo.fim}`,
+  });
+  const primeiraAnalise = filtrarAnaliseDoBloco(
+    normalizarAnaliseProva(primeiraLeitura),
+    intervalo
+  );
+
+  const faltantes = numerosFaltantesNoIntervalo(
+    primeiraAnalise.questoes.map((questao) => questao.numeroOriginal),
+    intervalo
+  );
+
+  if (faltantes.length === 0) {
+    return primeiraAnalise;
+  }
+
+  const recuperacao = await gerarJsonComPdf({
+    prompt: montarPromptAnaliseBloco(
+      entrada,
+      gabarito,
+      intervalo,
+      faltantes
+    ),
+    arquivo: entrada.prova,
+    esquema: esquemaRespostaBloco(faltantes.length),
+    maxOutputTokens: 24576,
+    rotulo: `questões ausentes ${formatarNumeros(faltantes)}`,
+  });
+  const segundaAnalise = filtrarAnaliseDoBloco(
+    normalizarAnaliseProva(recuperacao),
+    intervalo
+  );
+  const porNumero = new Map(
+    [...primeiraAnalise.questoes, ...segundaAnalise.questoes]
+      .map((questao) => [questao.numeroOriginal, questao] as const)
+  );
+  const aindaFaltantes = numerosFaltantesNoIntervalo(
+    porNumero.keys(),
+    intervalo
+  );
+
+  if (aindaFaltantes.length > 0) {
+    throw new Error(
+      `O PDF não permitiu extrair integralmente as questões ${formatarNumeros(aindaFaltantes)}.`
+    );
+  }
+
+  return {
+    ...primeiraAnalise,
+    questoes: Array.from(porNumero.values())
+      .sort((a, b) => a.numeroOriginal - b.numeroOriginal),
+    alertas: deduplicarTextos([
+      ...primeiraAnalise.alertas,
+      ...segundaAnalise.alertas,
+    ]),
+  };
+}
+
+async function gerarJsonComPdf({
+  prompt,
+  arquivo,
+  esquema,
+  maxOutputTokens,
+  rotulo,
+}: {
+  prompt: string;
+  arquivo: ArquivoPdfAnalise;
+  esquema: unknown;
+  maxOutputTokens: number;
+  rotulo: string;
+}): Promise<unknown> {
+  const resposta = await ai.models.generateContent({
+    model: modelo,
+    contents: [{
+      role: "user",
+      parts: [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: arquivo.mimeType,
+            data: arquivo.base64,
+          },
+        },
+      ],
+    }],
+    config: {
+      temperature: 0,
+      responseMimeType: "application/json",
+      responseJsonSchema: esquema,
+      maxOutputTokens,
+    },
+  });
+
+  const motivoTermino = resposta.candidates?.[0]?.finishReason;
+
+  if (motivoTermino === "MAX_TOKENS") {
+    throw new Error(`A leitura de ${rotulo} atingiu o limite de resposta.`);
+  }
+
+  if (!resposta.text) {
+    throw new Error(`A IA não retornou a leitura de ${rotulo}.`);
+  }
+
+  try {
+    return JSON.parse(limparJson(resposta.text)) as unknown;
+  } catch {
+    throw new Error(`A IA retornou JSON inválido ao ler ${rotulo}.`);
+  }
+}
+
+function montarPromptGabarito(
+  numerosEspecificos: number[] = [],
+  totalConhecido = 0
+) {
+  const escopo = numerosEspecificos.length > 0
+    ? `Extraia SOMENTE estes números que faltaram: ${numerosEspecificos.join(", ")}. O total conhecido da prova é ${totalConhecido}.`
+    : "Extraia todos os itens, do primeiro ao último, sem pular números.";
+
+  return `
+Você está lendo exclusivamente o GABARITO DEFINITIVO de uma prova de concurso.
+O PDF pode ser um documento nativo, uma digitalização ou uma captura de tela com uma tabela lateral.
+
+${escopo}
+
+REGRAS OBRIGATÓRIAS:
+- Informe o total real de questões da prova.
+- Para resposta válida, use somente A, B, C, D ou E.
+- Marca X, círculo vermelho com X, asterisco, traço no lugar da letra, "ANULADA" ou "NULA" significa status "anulada" e resposta vazia.
+- Não transforme questão anulada em alternativa.
+- Não use conhecimento próprio para corrigir o gabarito: transcreva o documento.
+- Cada número deve aparecer uma única vez.
+- Retorne somente JSON compatível com o esquema solicitado.
+`;
+}
+
+function montarPromptAnaliseBloco(
+  entrada: EntradaAnaliseProva,
+  gabarito: GabaritoExtraido,
+  intervalo: IntervaloQuestoes,
+  numerosEspecificos: number[] = []
+) {
+  const numeros = numerosEspecificos.length > 0
+    ? numerosEspecificos
+    : Array.from(
+        { length: intervalo.fim - intervalo.inicio + 1 },
+        (_, indice) => intervalo.inicio + indice
+      );
+  const itensGabarito = gabarito.itens.filter((item) =>
+    numeros.includes(item.numero)
+  );
+
   return `
 Você é um revisor editorial de questões de concursos públicos brasileiros.
 
-O primeiro PDF anexado é a prova. ${entrada.gabarito ? "O segundo PDF é o gabarito oficial, que pode conter alterações e anulações." : "Não foi anexado gabarito oficial."}
+O PDF anexado é o caderno completo da prova. Trabalhe apenas com as questões ${numeros.join(", ")}.
 
 OBJETIVO:
-1. Extraia todas as questões da prova, preservando literalmente enunciados e alternativas.
-2. Relacione cada questão ao mapa do edital-alvo.
-3. Identifique matéria, módulo, assunto, subassunto, norma e dispositivo.
-4. Detecte anulações somente quando estiverem indicadas no gabarito oficial.
-5. Sinalize possível desatualização ou controvérsia, mas não trate sua memória como fonte oficial.
-6. Nunca aprove uma questão. Toda questão aparentemente válida deve voltar como "pendente" para revisão humana.
+1. Extraia exatamente ${numeros.length} questões: ${numeros.join(", ")}.
+2. Preserve literalmente o enunciado e todas as alternativas exibidas no PDF.
+3. Não resuma, não complete trechos e não misture texto de questões vizinhas.
+4. Relacione cada questão ao mapa do edital-alvo.
+5. Identifique matéria, módulo, assunto, subassunto, norma e dispositivo.
+6. Sinalize possível desatualização ou controvérsia, mas não trate sua memória como fonte oficial.
+7. Nunca aprove uma questão. Toda questão aparentemente válida deve voltar como "pendente" para revisão humana.
+
+GABARITO DEFINITIVO JÁ CONFERIDO PARA ESTE BLOCO:
+${JSON.stringify(itensGabarito, null, 2)}
+
+O gabarito acima é a única fonte para respostaCorretaId e anulação. Se o item estiver anulado, use respostaCorretaId vazia e statusSugerido "anulada".
 
 METADADOS:
 ${JSON.stringify(entrada.metadados, null, 2)}
@@ -904,50 +1154,335 @@ REGRAS DE COMPATIBILIDADE:
 - "incerta": o enquadramento exige decisão humana.
 
 REGRAS DE STATUS:
-- "anulada": apenas quando o gabarito oficial anular;
-- "desatualizada": apenas quando houver forte evidência de norma superada; explique o risco;
-- "duvidosa": gabarito ausente, ambiguidade, mais de uma resposta, erro de extração ou controvérsia;
+- "anulada": somente quando o gabarito definitivo acima indicar anulação;
+- "desatualizada": somente quando houver forte evidência de norma superada; explique o risco;
+- "duvidosa": ambiguidade, mais de uma resposta, erro de extração ou controvérsia;
 - "pendente": todos os demais casos, pois ainda aguardam aprovação humana.
 
-Se não houver gabarito oficial, não invente uma resposta oficial: deixe respostaCorretaId vazia e marque "duvidosa".
 Use IDs do mapa somente quando houver correspondência real. Caso contrário, deixe os IDs vazios.
 Não misture História ou legislação local de outro estado com Pernambuco.
-
-Retorne SOMENTE JSON válido neste formato:
-{
-  "alertas": ["alerta objetivo"],
-  "questoes": [
-    {
-      "numeroOriginal": 1,
-      "materiaId": "id exato do mapa ou vazio",
-      "materia": "Português",
-      "moduloId": "id exato do mapa ou vazio",
-      "modulo": "nome",
-      "assuntoId": "id exato do mapa ou vazio",
-      "assunto": "nome",
-      "subassunto": "nome específico",
-      "dificuldade": "facil",
-      "enunciado": "texto literal",
-      "alternativas": [
-        {"id": "A", "texto": "texto literal"},
-        {"id": "B", "texto": "texto literal"}
-      ],
-      "respostaCorretaId": "A",
-      "explicacao": "justificativa concisa; deixe vazia se não houver segurança",
-      "compatibilidadeEdital": "direta",
-      "confiancaClassificacao": "alta",
-      "statusSugerido": "pendente",
-      "norma": "Constituição Federal",
-      "dispositivo": "art. 5º, XVI",
-      "motivoStatus": "justificativa da classificação ou do risco"
-    }
-  ]
-}
-
 Use dificuldade somente "facil", "media" ou "dificil".
 Use confiança somente "alta", "media" ou "baixa".
-Não escreva markdown nem texto fora do JSON.
+Retorne somente JSON compatível com o esquema solicitado.
 `;
+}
+
+function esquemaRespostaGabarito(quantidadeExata = 0) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["totalQuestoes", "itens", "alertas"],
+    properties: {
+      totalQuestoes: { type: "integer", minimum: 1, maximum: 300 },
+      itens: {
+        type: "array",
+        minItems: quantidadeExata || 1,
+        maxItems: quantidadeExata || 300,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["numero", "resposta", "status"],
+          properties: {
+            numero: { type: "integer", minimum: 1, maximum: 300 },
+            resposta: { type: "string" },
+            status: { type: "string", enum: ["valida", "anulada"] },
+          },
+        },
+      },
+      alertas: {
+        type: "array",
+        maxItems: 10,
+        items: { type: "string" },
+      },
+    },
+  };
+}
+
+function esquemaRespostaBloco(quantidadeExata: number) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["alertas", "questoes"],
+    properties: {
+      alertas: {
+        type: "array",
+        maxItems: 5,
+        items: { type: "string" },
+      },
+      questoes: {
+        type: "array",
+        minItems: quantidadeExata,
+        maxItems: quantidadeExata,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "numeroOriginal",
+            "materiaId",
+            "materia",
+            "moduloId",
+            "modulo",
+            "assuntoId",
+            "assunto",
+            "subassunto",
+            "dificuldade",
+            "enunciado",
+            "alternativas",
+            "respostaCorretaId",
+            "explicacao",
+            "compatibilidadeEdital",
+            "confiancaClassificacao",
+            "statusSugerido",
+            "norma",
+            "dispositivo",
+            "motivoStatus",
+          ],
+          properties: {
+            numeroOriginal: { type: "integer", minimum: 1, maximum: 300 },
+            materiaId: { type: "string" },
+            materia: { type: "string" },
+            moduloId: { type: "string" },
+            modulo: { type: "string" },
+            assuntoId: { type: "string" },
+            assunto: { type: "string" },
+            subassunto: { type: "string" },
+            dificuldade: {
+              type: "string",
+              enum: ["facil", "media", "dificil"],
+            },
+            enunciado: { type: "string" },
+            alternativas: {
+              type: "array",
+              minItems: 2,
+              maxItems: 8,
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["id", "texto"],
+                properties: {
+                  id: { type: "string" },
+                  texto: { type: "string" },
+                },
+              },
+            },
+            respostaCorretaId: { type: "string" },
+            explicacao: { type: "string" },
+            compatibilidadeEdital: {
+              type: "string",
+              enum: ["direta", "implicita", "relacionada", "fora", "incerta"],
+            },
+            confiancaClassificacao: {
+              type: "string",
+              enum: ["alta", "media", "baixa"],
+            },
+            statusSugerido: {
+              type: "string",
+              enum: ["pendente", "anulada", "desatualizada", "duvidosa"],
+            },
+            norma: { type: "string" },
+            dispositivo: { type: "string" },
+            motivoStatus: { type: "string" },
+          },
+        },
+      },
+    },
+  };
+}
+
+function normalizarGabarito(
+  valor: unknown,
+  totalPadrao = 0
+): GabaritoExtraido {
+  const raiz = objetoSeguro(valor);
+  const itensBrutos = Array.isArray(raiz.itens) ? raiz.itens : [];
+  const porNumero = new Map<number, ItemGabaritoExtraido>();
+
+  for (const itemBruto of itensBrutos) {
+    const item = objetoSeguro(itemBruto);
+    const numero = Math.round(numeroSeguro(item.numero));
+    const respostaBruta = textoSeguro(item.resposta, "").toUpperCase();
+    const statusBruto = textoSeguro(item.status, "valida").toLowerCase();
+    const anulada = statusBruto === "anulada" ||
+      ["X", "*", "ANULADA", "NULA"].includes(respostaBruta);
+
+    if (numero < 1 || numero > 300 || porNumero.has(numero)) continue;
+
+    const resposta = anulada ? "" : respostaBruta.charAt(0);
+    if (!anulada && !/[A-E]/.test(resposta)) continue;
+
+    porNumero.set(numero, {
+      numero,
+      resposta,
+      status: anulada ? "anulada" : "valida",
+    });
+  }
+
+  const maiorNumero = Math.max(0, ...porNumero.keys());
+  const totalDeclarado = Math.round(numeroSeguro(raiz.totalQuestoes));
+  const totalQuestoes = Math.max(
+    1,
+    Math.min(300, totalPadrao || totalDeclarado || maiorNumero)
+  );
+  const alertas = Array.isArray(raiz.alertas)
+    ? deduplicarTextos(
+        raiz.alertas.map((item) => textoSeguro(item, "")).filter(Boolean)
+      )
+    : [];
+
+  return {
+    totalQuestoes,
+    itens: Array.from(porNumero.values())
+      .filter((item) => item.numero <= totalQuestoes)
+      .sort((a, b) => a.numero - b.numero),
+    alertas,
+  };
+}
+
+function mesclarGabaritos(
+  principal: GabaritoExtraido,
+  complemento: GabaritoExtraido
+): GabaritoExtraido {
+  const porNumero = new Map(
+    [...principal.itens, ...complemento.itens]
+      .map((item) => [item.numero, item] as const)
+  );
+
+  return {
+    totalQuestoes: principal.totalQuestoes,
+    itens: Array.from(porNumero.values())
+      .filter((item) => item.numero <= principal.totalQuestoes)
+      .sort((a, b) => a.numero - b.numero),
+    alertas: deduplicarTextos([
+      ...principal.alertas,
+      ...complemento.alertas,
+    ]),
+  };
+}
+
+function aplicarGabaritoDefinitivo(
+  questao: ReturnType<typeof normalizarAnaliseProva>["questoes"][number],
+  gabarito?: ItemGabaritoExtraido
+): ReturnType<typeof normalizarAnaliseProva>["questoes"][number] {
+  if (!gabarito) return questao;
+
+  if (gabarito.status === "anulada") {
+    return {
+      ...questao,
+      respostaCorretaId: "",
+      statusSugerido: "anulada",
+      motivoStatus: "Questão anulada no gabarito definitivo.",
+    };
+  }
+
+  return {
+    ...questao,
+    respostaCorretaId: gabarito.resposta,
+    statusSugerido: questao.statusSugerido === "anulada"
+      ? "pendente"
+      : questao.statusSugerido,
+  };
+}
+
+function filtrarAnaliseDoBloco(
+  analise: ReturnType<typeof normalizarAnaliseProva>,
+  intervalo: IntervaloQuestoes
+) {
+  const porNumero = new Map(
+    analise.questoes
+      .filter((questao) =>
+        questao.numeroOriginal >= intervalo.inicio &&
+        questao.numeroOriginal <= intervalo.fim
+      )
+      .map((questao) => [questao.numeroOriginal, questao] as const)
+  );
+
+  return {
+    ...analise,
+    questoes: Array.from(porNumero.values())
+      .sort((a, b) => a.numeroOriginal - b.numeroOriginal),
+    alertas: deduplicarTextos(analise.alertas),
+  };
+}
+
+function criarIntervalosQuestoes(total: number): IntervaloQuestoes[] {
+  const intervalos: IntervaloQuestoes[] = [];
+
+  for (let inicio = 1; inicio <= total; inicio += TAMANHO_BLOCO_QUESTOES) {
+    intervalos.push({
+      inicio,
+      fim: Math.min(total, inicio + TAMANHO_BLOCO_QUESTOES - 1),
+    });
+  }
+
+  return intervalos;
+}
+
+function numerosFaltantes(
+  numerosPresentes: Iterable<number>,
+  total: number
+) {
+  return numerosFaltantesNoIntervalo(numerosPresentes, {
+    inicio: 1,
+    fim: total,
+  });
+}
+
+function numerosFaltantesNoIntervalo(
+  numerosPresentes: Iterable<number>,
+  intervalo: IntervaloQuestoes
+) {
+  const presentes = new Set(numerosPresentes);
+  const faltantes: number[] = [];
+
+  for (let numero = intervalo.inicio; numero <= intervalo.fim; numero += 1) {
+    if (!presentes.has(numero)) faltantes.push(numero);
+  }
+
+  return faltantes;
+}
+
+function formatarNumeros(numeros: number[]) {
+  return numeros.slice(0, 20).join(", ") +
+    (numeros.length > 20 ? ` e mais ${numeros.length - 20}` : "");
+}
+
+function deduplicarTextos(textos: string[]) {
+  const vistos = new Set<string>();
+
+  return textos.filter((texto) => {
+    const normalizado = texto.replace(/\s+/g, " ").trim().toLocaleLowerCase("pt-BR");
+    if (!normalizado || vistos.has(normalizado)) return false;
+    vistos.add(normalizado);
+    return true;
+  });
+}
+
+async function mapearComConcorrencia<T, R>(
+  itens: T[],
+  limite: number,
+  executar: (item: T, indice: number) => Promise<R>
+): Promise<R[]> {
+  const resultados = new Array<R>(itens.length);
+  let proximoIndice = 0;
+
+  async function trabalhador() {
+    while (proximoIndice < itens.length) {
+      const indice = proximoIndice;
+      proximoIndice += 1;
+      resultados[indice] = await executar(itens[indice], indice);
+    }
+  }
+
+  const quantidadeTrabalhadores = Math.min(
+    Math.max(1, limite),
+    itens.length
+  );
+
+  await Promise.all(
+    Array.from({ length: quantidadeTrabalhadores }, () => trabalhador())
+  );
+
+  return resultados;
 }
 
 function normalizarAnaliseProva(valor: unknown) {
@@ -1015,7 +1550,12 @@ function normalizarAnaliseProva(valor: unknown) {
   }).filter((questao) => questao.enunciado && questao.alternativas.length >= 2);
 
   const alertas = Array.isArray(raiz.alertas)
-    ? raiz.alertas.slice(0, 20).map((item) => textoSeguro(item, "")).filter(Boolean)
+    ? deduplicarTextos(
+        raiz.alertas
+          .slice(0, 20)
+          .map((item) => textoSeguro(item, ""))
+          .filter(Boolean)
+      )
     : [];
 
   return {
