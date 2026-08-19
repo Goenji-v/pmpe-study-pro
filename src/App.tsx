@@ -17,7 +17,7 @@ import Questoes from "./pages/Questoes/Questoes";
 import Historico from "./pages/Historico/Historico";
 import Estatisticas from "./pages/Estatisticas/Estatisticas";
 import Revisoes from "./pages/Revisoes/Revisoes";
-import CentralEstudos from "./pages/CentralEstudos/CentralEstudos";
+import CentralEstudosGateway from "./pages/CentralEstudos/CentralEstudosGateway";
 import HistoricoSessoes from "./pages/HistoricoSessoes/HistoricoSessoes";
 import Simulados from "./pages/Simulados/Simulados";
 import Backup from "./pages/Backup/Backup";
@@ -78,7 +78,7 @@ function LayoutProtegido() {
 
                     <Route path="/calendario" element={<Calendario />} />
                     <Route path="/cronograma-ia" element={<CronogramaIA />} />
-                    <Route path="/central-estudos" element={<CentralEstudos />} />
+                    <Route path="/central-estudos" element={<CentralEstudosGateway />} />
                     <Route path="/materiais" element={<CentroMateriais />} />
                     <Route path="/inteligencia" element={<CentralInteligencia />} />
 
