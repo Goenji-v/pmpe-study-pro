@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./BancoQuestoes.css";
 import "./BancoQuestoesBiblioteca.css";
 
 import { useApp } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { listarQuestoesPublicadas } from "../../services/catalogoQuestoesService";
 import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
 
 import type {
@@ -28,6 +30,13 @@ type FiltroStatus =
   | "nao_resolvidas"
   | "favoritas"
   | "revisar";
+
+type FiltroOrigem = "todas" | "oficiais" | "pessoais";
+
+type PreferenciaQuestaoGlobal = {
+  favoritada?: boolean;
+  revisarDepois?: boolean;
+};
 
 type ResultadoIAHistorico = {
   data?: string;
@@ -58,17 +67,39 @@ const estatisticaVazia: EstatisticaQuestao = {
 
 export default function BancoQuestoes() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
   const {
     materias,
     bancoQuestoes,
     setBancoQuestoes,
+    configuracoes,
   } = useApp();
 
   const { showToast } = useToast();
 
-  const questoesBiblioteca = bancoQuestoes as QuestaoBiblioteca[];
+  const [questoesGlobais, setQuestoesGlobais] = useState<QuestaoBanco[]>([]);
+  const [carregandoGlobais, setCarregandoGlobais] = useState(true);
+  const [preferenciasGlobais, setPreferenciasGlobais] = useState<Record<string, PreferenciaQuestaoGlobal>>({});
+
+  const chavePreferencias = `pmpe_questoes_globais_preferencias_${usuario?.id ?? "anonimo"}`;
+
+  const questoesBiblioteca = useMemo<QuestaoBiblioteca[]>(() => {
+    const globais = questoesGlobais.map((questao) => ({
+      ...questao,
+      ...preferenciasGlobais[questao.id],
+      global: true,
+    }));
+
+    const idsGlobais = new Set(globais.map((questao) => questao.id));
+    const pessoais = (bancoQuestoes as QuestaoBiblioteca[]).filter(
+      (questao) => !idsGlobais.has(questao.id)
+    );
+
+    return [...globais, ...pessoais];
+  }, [bancoQuestoes, preferenciasGlobais, questoesGlobais]);
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todas");
+  const [filtroOrigem, setFiltroOrigem] = useState<FiltroOrigem>("todas");
   const [filtroMateria, setFiltroMateria] = useState("");
   const [filtroDificuldade, setFiltroDificuldade] = useState("");
   const [busca, setBusca] = useState("");
@@ -87,6 +118,46 @@ export default function BancoQuestoes() {
   const [alternativaE, setAlternativaE] = useState("");
   const [respostaCorretaId, setRespostaCorretaId] = useState("A");
   const [explicacao, setExplicacao] = useState("");
+
+  useEffect(() => {
+    try {
+      const salvo = localStorage.getItem(chavePreferencias);
+      setPreferenciasGlobais(
+        salvo ? JSON.parse(salvo) as Record<string, PreferenciaQuestaoGlobal> : {}
+      );
+    } catch {
+      setPreferenciasGlobais({});
+    }
+  }, [chavePreferencias]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregar() {
+      try {
+        setCarregandoGlobais(true);
+        const publicadas = await listarQuestoesPublicadas(
+          configuracoes.concurso || "PMPE"
+        );
+        if (ativo) setQuestoesGlobais(publicadas);
+      } catch (erro) {
+        if (ativo) {
+          setQuestoesGlobais([]);
+          showToast(
+            erro instanceof Error ? erro.message : "Não foi possível carregar o banco oficial.",
+            "warning"
+          );
+        }
+      } finally {
+        if (ativo) setCarregandoGlobais(false);
+      }
+    }
+
+    void carregar();
+    return () => {
+      ativo = false;
+    };
+  }, [configuracoes.concurso]);
 
   const materiaSelecionada = materias.find(
     (materia: Materia) => materia.id === materiaId
@@ -114,6 +185,7 @@ export default function BancoQuestoes() {
     let naoResolvidas = 0;
     let favoritas = 0;
     let revisar = 0;
+    let oficiais = 0;
 
     questoesBiblioteca.forEach((questao) => {
       const estatistica = estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;
@@ -122,6 +194,7 @@ export default function BancoQuestoes() {
       if (estatistica.ultima === "acerto") acertadas += 1;
       if (questao.favoritada) favoritas += 1;
       if (questao.revisarDepois) revisar += 1;
+      if (questao.global) oficiais += 1;
     });
 
     return {
@@ -131,6 +204,7 @@ export default function BancoQuestoes() {
       naoResolvidas,
       favoritas,
       revisar,
+      oficiais,
     };
   }, [estatisticasPorQuestao, questoesBiblioteca]);
 
@@ -147,6 +221,8 @@ export default function BancoQuestoes() {
 
       if (filtroMateria && questao.materia !== filtroMateria) return false;
       if (filtroDificuldade && questao.dificuldade !== filtroDificuldade) return false;
+      if (filtroOrigem === "oficiais" && !questao.global) return false;
+      if (filtroOrigem === "pessoais" && questao.global) return false;
 
       if (filtroStatus === "erradas" && estatistica.ultima !== "erro") return false;
       if (filtroStatus === "acertadas" && estatistica.ultima !== "acerto") return false;
@@ -165,6 +241,7 @@ export default function BancoQuestoes() {
     estatisticasPorQuestao,
     filtroDificuldade,
     filtroMateria,
+    filtroOrigem,
     filtroStatus,
     questoesBiblioteca,
   ]);
@@ -224,6 +301,11 @@ export default function BancoQuestoes() {
       respostaCorretaId,
       explicacao: explicacao.trim(),
       dataCriacao: new Date().toISOString(),
+      statusEditorial: "ativa",
+      compatibilidadeEdital: "direta",
+      confiancaClassificacao: "alta",
+      origem: "pessoal",
+      global: false,
       favoritada: false,
       revisarDepois: false,
     };
@@ -234,6 +316,12 @@ export default function BancoQuestoes() {
   }
 
   function excluirQuestao(id: string) {
+    const questao = questoesBiblioteca.find((item) => item.id === id);
+    if (questao?.global) {
+      showToast("Questões oficiais só podem ser arquivadas pela curadoria.", "warning");
+      return;
+    }
+
     if (!window.confirm("Deseja excluir esta questão da biblioteca?")) return;
 
     setBancoQuestoes((anteriores) =>
@@ -247,6 +335,23 @@ export default function BancoQuestoes() {
     id: string,
     campo: "favoritada" | "revisarDepois"
   ) {
+    const questaoGlobal = questoesBiblioteca.find((questao) => questao.id === id)?.global;
+
+    if (questaoGlobal) {
+      setPreferenciasGlobais((anteriores) => {
+        const proximas = {
+          ...anteriores,
+          [id]: {
+            ...anteriores[id],
+            [campo]: !anteriores[id]?.[campo],
+          },
+        };
+        localStorage.setItem(chavePreferencias, JSON.stringify(proximas));
+        return proximas;
+      });
+      return;
+    }
+
     setBancoQuestoes((anteriores) =>
       anteriores.map((questao) => {
         if (questao.id !== id) return questao;
@@ -260,13 +365,15 @@ export default function BancoQuestoes() {
   }
 
   function iniciarTreino(lista: QuestaoBiblioteca[]) {
-    if (lista.length === 0) {
+    const treinaveis = lista.filter(ehQuestaoTreinavel);
+
+    if (treinaveis.length === 0) {
       showToast("Nenhuma questão disponível neste filtro.", "warning");
       return;
     }
 
-    const quantidade = Math.min(Math.max(1, quantidadeTreino), lista.length);
-    const sorteadas = embaralhar(lista).slice(0, quantidade);
+    const quantidade = Math.min(Math.max(1, quantidadeTreino), treinaveis.length);
+    const sorteadas = embaralhar(treinaveis).slice(0, quantidade);
     const questoesIA = sorteadas.map(converterParaQuestaoIA);
 
     localStorage.setItem(CHAVE_QUESTOES_IA, JSON.stringify(questoesIA));
@@ -311,6 +418,7 @@ export default function BancoQuestoes() {
 
       <div className="banco-biblioteca-resumo">
         <Resumo titulo="Total" valor={contagens.todas} />
+        <Resumo titulo="Oficiais" valor={contagens.oficiais} classe="oficial" />
         <Resumo titulo="Erradas" valor={contagens.erradas} classe="erro" />
         <Resumo titulo="Nunca respondidas" valor={contagens.naoResolvidas} classe="neutro" />
         <Resumo titulo="Favoritas" valor={contagens.favoritas} classe="favorita" />
@@ -349,6 +457,12 @@ export default function BancoQuestoes() {
             <option value="dificil">Difícil</option>
           </select>
 
+          <select value={filtroOrigem} onChange={(evento) => setFiltroOrigem(evento.target.value as FiltroOrigem)}>
+            <option value="todas">Todas as origens</option>
+            <option value="oficiais">Somente oficiais</option>
+            <option value="pessoais">Minhas questões</option>
+          </select>
+
           <label className="banco-quantidade-treino">
             Treino
             <select
@@ -364,7 +478,11 @@ export default function BancoQuestoes() {
       </section>
 
       <div className="banco-biblioteca-contagem">
-        <strong>{questoesFiltradas.length}</strong> questão{questoesFiltradas.length === 1 ? "" : "ões"} neste filtro
+        {carregandoGlobais ? (
+          <span>Carregando catálogo oficial...</span>
+        ) : (
+          <><strong>{questoesFiltradas.length}</strong> questão{questoesFiltradas.length === 1 ? "" : "ões"} neste filtro</>
+        )}
       </div>
 
       {questoesFiltradas.length === 0 ? (
@@ -382,9 +500,13 @@ export default function BancoQuestoes() {
                   <div>
                     <span>{questao.materia}</span>
                     <strong>{questao.assunto}</strong>
-                    <small>{questao.banca} · {rotuloDificuldade(questao.dificuldade)}</small>
+                    <small>
+                      {questao.banca} · {rotuloDificuldade(questao.dificuldade)}
+                      {questao.global ? ` · ${questao.concursoOrigem ?? "Prova oficial"} ${questao.anoOrigem ?? ""}` : " · Questão pessoal"}
+                    </small>
                   </div>
                   <div className="banco-biblioteca-tags">
+                    {questao.global && <span className="oficial">✓ Oficial validada</span>}
                     {estatistica.tentativas === 0 ? (
                       <span className="nunca">Nunca respondida</span>
                     ) : (
@@ -447,9 +569,11 @@ export default function BancoQuestoes() {
                   <button type="button" className="treinar" onClick={() => iniciarTreino([questao])}>
                     ▶ Treinar esta
                   </button>
-                  <button type="button" className="excluir" onClick={() => excluirQuestao(questao.id)}>
-                    Excluir
-                  </button>
+                  {!questao.global && (
+                    <button type="button" className="excluir" onClick={() => excluirQuestao(questao.id)}>
+                      Excluir
+                    </button>
+                  )}
                 </div>
               </article>
             );
@@ -514,7 +638,7 @@ export default function BancoQuestoes() {
             <div className="banco-form-group">
               <label>Banca</label>
               <select value={banca} onChange={(evento) => setBanca(evento.target.value)}>
-                {['AOCP', 'CEBRASPE', 'FGV', 'FCC', 'VUNESP', 'IBFC', 'IDECAN', 'Outra'].map((item) => (
+                {['AOCP', 'CEBRASPE', 'IAUPE', 'FGV', 'FCC', 'VUNESP', 'IBFC', 'IDECAN', 'Outra'].map((item) => (
                   <option key={item} value={item}>{item}</option>
                 ))}
               </select>
@@ -700,6 +824,24 @@ function rotuloDificuldade(dificuldade: Dificuldade) {
   if (dificuldade === "facil") return "Fácil";
   if (dificuldade === "dificil") return "Difícil";
   return "Média";
+}
+
+function ehQuestaoTreinavel(questao: QuestaoBiblioteca) {
+  const statusValido =
+    !questao.statusEditorial ||
+    questao.statusEditorial === "ativa";
+
+  const compatibilidadeValida =
+    !questao.compatibilidadeEdital ||
+    questao.compatibilidadeEdital === "direta" ||
+    questao.compatibilidadeEdital === "implicita";
+
+  return (
+    statusValido &&
+    compatibilidadeValida &&
+    Boolean(questao.respostaCorretaId) &&
+    questao.alternativas.length >= 2
+  );
 }
 
 function embaralhar<T>(lista: T[]) {

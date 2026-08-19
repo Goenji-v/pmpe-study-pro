@@ -1,0 +1,328 @@
+.curadoria-questoes {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(78, 106, 143, .34);
+}
+
+.curadoria-cabecalho,
+.curadoria-fila-topo,
+.curadoria-item-topo,
+.curadoria-importar-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.curadoria-cabecalho > div:first-child > span {
+  color: #68adff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.curadoria-cabecalho h2,
+.curadoria-fila h3 {
+  margin: 4px 0;
+  color: #f1f7ff;
+}
+
+.curadoria-cabecalho p,
+.curadoria-fila-topo p {
+  margin: 0;
+  color: #8599b2;
+  font-size: 11px;
+}
+
+.curadoria-regra {
+  min-width: 90px;
+  padding: 11px 14px;
+  border: 1px solid rgba(54, 205, 128, .3);
+  border-radius: 12px;
+  background: rgba(20, 125, 74, .1);
+  text-align: center;
+}
+
+.curadoria-regra strong,
+.curadoria-regra span {
+  display: block;
+}
+
+.curadoria-regra strong {
+  color: #6ce3a3;
+  font-size: 22px;
+}
+
+.curadoria-regra span {
+  color: #83a494;
+  font-size: 9px;
+}
+
+.curadoria-importador,
+.curadoria-fila {
+  border: 1px solid rgba(76, 105, 143, .4);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(15, 29, 48, .95), rgba(8, 19, 34, .98));
+}
+
+.curadoria-importador > summary {
+  padding: 14px 16px;
+  color: #a7bdd7;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.curadoria-importador-conteudo,
+.curadoria-fila {
+  padding: 15px;
+}
+
+.curadoria-grade-metadados,
+.curadoria-arquivos,
+.curadoria-edicao {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.curadoria-arquivos {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.curadoria-campo {
+  display: grid;
+  gap: 5px;
+  color: #8fa3bc;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.curadoria-campo input,
+.curadoria-campo select,
+.curadoria-campo textarea,
+.curadoria-fila-topo select {
+  width: 100%;
+  min-height: 39px;
+  padding: 8px 10px;
+  border: 1px solid #31465f;
+  border-radius: 9px;
+  background: #0d1b2d;
+  color: #dce8f7;
+  font: inherit;
+}
+
+.curadoria-campo textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.curadoria-importar-rodape {
+  margin-top: 13px;
+  color: #8195ad;
+  font-size: 10px;
+}
+
+.curadoria-importar-rodape button,
+.curadoria-resultado-analise > button,
+.curadoria-acoes button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #347fd9;
+  border-radius: 9px;
+  background: rgba(33, 115, 215, .16);
+  color: #83c1ff;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.curadoria-importar-rodape button:disabled,
+.curadoria-resultado-analise > button:disabled,
+.curadoria-acoes button:disabled {
+  opacity: .45;
+  cursor: wait;
+}
+
+.curadoria-resultado-analise {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid rgba(53, 139, 240, .32);
+  border-radius: 12px;
+  background: rgba(15, 61, 112, .1);
+}
+
+.curadoria-resultado-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.curadoria-resultado-cards > div {
+  padding: 9px 10px;
+  border: 1px solid rgba(80, 111, 151, .34);
+  border-radius: 9px;
+  background: rgba(7, 19, 34, .55);
+}
+
+.curadoria-resultado-cards span,
+.curadoria-resultado-cards strong {
+  display: block;
+}
+
+.curadoria-resultado-cards span {
+  color: #8196af;
+  font-size: 9px;
+}
+
+.curadoria-resultado-cards strong {
+  margin-top: 3px;
+  color: #e7f2ff;
+  font-size: 19px;
+}
+
+.curadoria-resultado-analise ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #d7b873;
+  font-size: 10px;
+}
+
+.curadoria-fila-topo {
+  margin-bottom: 12px;
+}
+
+.curadoria-fila-topo select {
+  width: min(220px, 45vw);
+}
+
+.curadoria-lista {
+  display: grid;
+  gap: 10px;
+}
+
+.curadoria-item {
+  padding: 13px;
+  border: 1px solid rgba(79, 106, 142, .35);
+  border-radius: 12px;
+  background: rgba(7, 17, 31, .58);
+}
+
+.curadoria-item-topo > div > span,
+.curadoria-item-topo > div > strong,
+.curadoria-item-topo > div > small {
+  display: block;
+}
+
+.curadoria-item-topo > div > span {
+  color: #6faeff;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.curadoria-item-topo > div > strong {
+  margin-top: 3px;
+  color: #edf5ff;
+  font-size: 13px;
+}
+
+.curadoria-item-topo > div > small {
+  margin-top: 3px;
+  color: #71869f;
+  font-size: 8px;
+}
+
+.curadoria-status {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, .14);
+  color: #a4b1c1;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.curadoria-status.status-ativa { background: rgba(34, 197, 94, .12); color: #72e6a4; }
+.curadoria-status.status-anulada,
+.curadoria-status.status-desatualizada { background: rgba(239, 68, 68, .12); color: #ff929c; }
+.curadoria-status.status-duvidosa { background: rgba(245, 158, 11, .12); color: #f5c362; }
+
+.curadoria-enunciado {
+  margin: 11px 0;
+  color: #dce7f3;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.curadoria-item details {
+  padding-top: 9px;
+  border-top: 1px solid rgba(80, 107, 142, .24);
+}
+
+.curadoria-item summary {
+  color: #78b8ff;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.curadoria-alternativas {
+  margin: 10px 0;
+  color: #a7b8cd;
+  font-size: 10px;
+}
+
+.curadoria-alternativas p {
+  margin: 5px 0;
+}
+
+.curadoria-edicao {
+  margin: 10px 0;
+}
+
+.curadoria-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.curadoria-acoes button.publicar { border-color: rgba(34, 197, 94, .46); background: rgba(34, 197, 94, .1); color: #72e5a4; }
+.curadoria-acoes button.anular,
+.curadoria-acoes button.bloquear { border-color: rgba(239, 68, 68, .4); background: rgba(239, 68, 68, .08); color: #ff929c; }
+
+.curadoria-vazio {
+  padding: 28px;
+  color: #8194ab;
+  text-align: center;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .curadoria-cabecalho,
+  .curadoria-fila-topo,
+  .curadoria-importar-rodape {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .curadoria-regra {
+    width: 100%;
+  }
+
+  .curadoria-grade-metadados,
+  .curadoria-arquivos,
+  .curadoria-edicao,
+  .curadoria-resultado-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .curadoria-fila-topo select {
+    width: 100%;
+  }
+}

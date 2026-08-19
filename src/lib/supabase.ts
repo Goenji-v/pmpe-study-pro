@@ -2,17 +2,17 @@ import {
   createClient,
 } from "@supabase/supabase-js";
 
-const supabaseUrl =
+export const SUPABASE_PUBLIC_URL =
   import.meta.env
     .VITE_SUPABASE_URL;
 
-const supabaseKey =
+export const SUPABASE_PUBLIC_KEY =
   import.meta.env
     .VITE_SUPABASE_ANON_KEY;
 
 if (
-  !supabaseUrl ||
-  !supabaseKey
+  !SUPABASE_PUBLIC_URL ||
+  !SUPABASE_PUBLIC_KEY
 ) {
   throw new Error(
     "As variáveis do Supabase não foram configuradas no arquivo .env."
@@ -21,8 +21,8 @@ if (
 
 export const supabase =
   createClient(
-    supabaseUrl,
-    supabaseKey,
+    SUPABASE_PUBLIC_URL,
+    SUPABASE_PUBLIC_KEY,
     {
       auth: {
         persistSession: true,

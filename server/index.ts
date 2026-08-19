@@ -1,6 +1,10 @@
 import "dotenv/config";
 import cors from "cors";
-import express from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
@@ -15,6 +19,10 @@ const modelo =
 
 const apiKey =
   process.env.GEMINI_API_KEY;
+
+const supabaseUrl =
+  process.env.SUPABASE_URL ||
+  "https://kibnmdwabpiwyprkrhvq.supabase.co";
 
 if (!apiKey) {
   throw new Error(
@@ -35,7 +43,7 @@ app.use(
 
 app.use(
   express.json({
-    limit: "2mb",
+    limit: "40mb",
   })
 );
 
@@ -636,6 +644,80 @@ Regras:
   }
 );
 
+app.post(
+  "/api/analisar-prova",
+  exigirAdministrador,
+  async (req, res) => {
+    try {
+      const entrada = validarEntradaAnaliseProva(req.body);
+      const partes: Array<
+        | { text: string }
+        | { inlineData: { mimeType: string; data: string } }
+      > = [
+        {
+          text: montarPromptAnaliseProva(entrada),
+        },
+        {
+          inlineData: {
+            mimeType: "application/pdf",
+            data: entrada.prova.base64,
+          },
+        },
+      ];
+
+      if (entrada.gabarito) {
+        partes.push({
+          inlineData: {
+            mimeType: "application/pdf",
+            data: entrada.gabarito.base64,
+          },
+        });
+      }
+
+      const resposta = await ai.models.generateContent({
+        model: modelo,
+        contents: [
+          {
+            role: "user",
+            parts: partes,
+          },
+        ],
+        config: {
+          temperature: 0.1,
+          responseMimeType: "application/json",
+          maxOutputTokens: 65536,
+        },
+      });
+
+      if (!resposta.text) {
+        throw new Error("A IA não retornou a análise da prova.");
+      }
+
+      const analiseBruta = JSON.parse(limparJson(resposta.text)) as unknown;
+      const analise = normalizarAnaliseProva(analiseBruta);
+
+      if (analise.questoes.length === 0) {
+        throw new Error("Nenhuma questão foi identificada no PDF enviado.");
+      }
+
+      res.json({
+        sucesso: true,
+        analise,
+      });
+    } catch (erro) {
+      console.error("Erro ao analisar prova:", erro);
+
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Erro ao analisar a prova.",
+      });
+    }
+  }
+);
+
 app.listen(
   PORT,
   "0.0.0.0",
@@ -649,6 +731,318 @@ app.listen(
     );
   }
 );
+
+type ArquivoPdfAnalise = {
+  nome: string;
+  mimeType: "application/pdf";
+  base64: string;
+};
+
+type ItemMapaEditalAnalise = {
+  materiaId: string;
+  materia: string;
+  moduloId: string;
+  modulo: string;
+  assuntoId: string;
+  assunto: string;
+};
+
+type EntradaAnaliseProva = {
+  prova: ArquivoPdfAnalise;
+  gabarito: ArquivoPdfAnalise | null;
+  metadados: {
+    concursoAlvo: string;
+    editalAlvo: string;
+    concursoOrigem: string;
+    cargoOrigem: string;
+    anoOrigem: number;
+    banca: string;
+  };
+  mapaEdital: ItemMapaEditalAnalise[];
+};
+
+async function exigirAdministrador(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const autorizacao = req.header("authorization") ?? "";
+    const chavePublica = req.header("x-supabase-anon-key") ?? "";
+
+    if (!autorizacao.startsWith("Bearer ") || chavePublica.length < 20) {
+      res.status(401).json({
+        sucesso: false,
+        erro: "Sessão administrativa não informada.",
+      });
+      return;
+    }
+
+    const cabecalhos = {
+      apikey: chavePublica,
+      Authorization: autorizacao,
+      "Content-Type": "application/json",
+    };
+
+    const usuarioResposta = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: cabecalhos,
+    });
+
+    if (!usuarioResposta.ok) {
+      res.status(401).json({
+        sucesso: false,
+        erro: "Sessão expirada ou inválida.",
+      });
+      return;
+    }
+
+    const adminResposta = await fetch(`${supabaseUrl}/rest/v1/rpc/sou_admin`, {
+      method: "POST",
+      headers: cabecalhos,
+      body: "{}",
+    });
+
+    const ehAdministrador = adminResposta.ok
+      ? (await adminResposta.json()) === true
+      : false;
+
+    if (!ehAdministrador) {
+      res.status(403).json({
+        sucesso: false,
+        erro: "A importação de provas é restrita ao administrador.",
+      });
+      return;
+    }
+
+    next();
+  } catch (erro) {
+    console.error("Falha ao validar administrador:", erro);
+    res.status(503).json({
+      sucesso: false,
+      erro: "Não foi possível validar a permissão administrativa.",
+    });
+  }
+}
+
+function validarEntradaAnaliseProva(valor: unknown): EntradaAnaliseProva {
+  const entrada = objetoSeguro(valor);
+  const metadados = objetoSeguro(entrada.metadados);
+  const mapaBruto = Array.isArray(entrada.mapaEdital) ? entrada.mapaEdital : [];
+
+  return {
+    prova: validarPdfAnalise(entrada.prova, "prova"),
+    gabarito: entrada.gabarito
+      ? validarPdfAnalise(entrada.gabarito, "gabarito")
+      : null,
+    metadados: {
+      concursoAlvo: textoSeguro(metadados.concursoAlvo, "PMPE"),
+      editalAlvo: textoSeguro(metadados.editalAlvo, "PMPE 2024"),
+      concursoOrigem: textoSeguro(metadados.concursoOrigem, "Concurso não informado"),
+      cargoOrigem: textoSeguro(metadados.cargoOrigem, "Cargo não informado"),
+      anoOrigem: Math.max(1980, Math.min(2100, Math.round(numeroSeguro(metadados.anoOrigem)))),
+      banca: textoSeguro(metadados.banca, "Não informada"),
+    },
+    mapaEdital: mapaBruto.slice(0, 600).map((item) => {
+      const mapa = objetoSeguro(item);
+      return {
+        materiaId: textoSeguro(mapa.materiaId, ""),
+        materia: textoSeguro(mapa.materia, ""),
+        moduloId: textoSeguro(mapa.moduloId, ""),
+        modulo: textoSeguro(mapa.modulo, ""),
+        assuntoId: textoSeguro(mapa.assuntoId, ""),
+        assunto: textoSeguro(mapa.assunto, ""),
+      };
+    }),
+  };
+}
+
+function validarPdfAnalise(valor: unknown, rotulo: string): ArquivoPdfAnalise {
+  const arquivo = objetoSeguro(valor);
+  const nome = textoSeguro(arquivo.nome, `${rotulo}.pdf`);
+  const base64 = textoSeguro(arquivo.base64, "");
+
+  if (!base64) {
+    throw new Error(`O PDF de ${rotulo} não foi enviado.`);
+  }
+
+  if (base64.length > 17_000_000) {
+    throw new Error(`O PDF de ${rotulo} ultrapassa o limite permitido.`);
+  }
+
+  return {
+    nome,
+    mimeType: "application/pdf",
+    base64,
+  };
+}
+
+function montarPromptAnaliseProva(entrada: EntradaAnaliseProva) {
+  return `
+Você é um revisor editorial de questões de concursos públicos brasileiros.
+
+O primeiro PDF anexado é a prova. ${entrada.gabarito ? "O segundo PDF é o gabarito oficial, que pode conter alterações e anulações." : "Não foi anexado gabarito oficial."}
+
+OBJETIVO:
+1. Extraia todas as questões da prova, preservando literalmente enunciados e alternativas.
+2. Relacione cada questão ao mapa do edital-alvo.
+3. Identifique matéria, módulo, assunto, subassunto, norma e dispositivo.
+4. Detecte anulações somente quando estiverem indicadas no gabarito oficial.
+5. Sinalize possível desatualização ou controvérsia, mas não trate sua memória como fonte oficial.
+6. Nunca aprove uma questão. Toda questão aparentemente válida deve voltar como "pendente" para revisão humana.
+
+METADADOS:
+${JSON.stringify(entrada.metadados, null, 2)}
+
+MAPA CANÔNICO DO EDITAL-ALVO:
+${JSON.stringify(entrada.mapaEdital, null, 2)}
+
+REGRAS DE COMPATIBILIDADE:
+- "direta": o assunto aparece expressamente no mapa;
+- "implicita": está inequivocamente abrangido por um item mais amplo;
+- "relacionada": ajuda no tema, mas excede o conteúdo exigido;
+- "fora": pertence a história, geografia, legislação ou conteúdo específico de outro estado/cargo;
+- "incerta": o enquadramento exige decisão humana.
+
+REGRAS DE STATUS:
+- "anulada": apenas quando o gabarito oficial anular;
+- "desatualizada": apenas quando houver forte evidência de norma superada; explique o risco;
+- "duvidosa": gabarito ausente, ambiguidade, mais de uma resposta, erro de extração ou controvérsia;
+- "pendente": todos os demais casos, pois ainda aguardam aprovação humana.
+
+Se não houver gabarito oficial, não invente uma resposta oficial: deixe respostaCorretaId vazia e marque "duvidosa".
+Use IDs do mapa somente quando houver correspondência real. Caso contrário, deixe os IDs vazios.
+Não misture História ou legislação local de outro estado com Pernambuco.
+
+Retorne SOMENTE JSON válido neste formato:
+{
+  "alertas": ["alerta objetivo"],
+  "questoes": [
+    {
+      "numeroOriginal": 1,
+      "materiaId": "id exato do mapa ou vazio",
+      "materia": "Português",
+      "moduloId": "id exato do mapa ou vazio",
+      "modulo": "nome",
+      "assuntoId": "id exato do mapa ou vazio",
+      "assunto": "nome",
+      "subassunto": "nome específico",
+      "dificuldade": "facil",
+      "enunciado": "texto literal",
+      "alternativas": [
+        {"id": "A", "texto": "texto literal"},
+        {"id": "B", "texto": "texto literal"}
+      ],
+      "respostaCorretaId": "A",
+      "explicacao": "justificativa concisa; deixe vazia se não houver segurança",
+      "compatibilidadeEdital": "direta",
+      "confiancaClassificacao": "alta",
+      "statusSugerido": "pendente",
+      "norma": "Constituição Federal",
+      "dispositivo": "art. 5º, XVI",
+      "motivoStatus": "justificativa da classificação ou do risco"
+    }
+  ]
+}
+
+Use dificuldade somente "facil", "media" ou "dificil".
+Use confiança somente "alta", "media" ou "baixa".
+Não escreva markdown nem texto fora do JSON.
+`;
+}
+
+function normalizarAnaliseProva(valor: unknown) {
+  const raiz = objetoSeguro(valor);
+  const questoesBrutas = Array.isArray(raiz.questoes) ? raiz.questoes : [];
+
+  const questoes = questoesBrutas.slice(0, 150).map((item, indice) => {
+    const questao = objetoSeguro(item);
+    const alternativasBrutas = Array.isArray(questao.alternativas)
+      ? questao.alternativas
+      : [];
+
+    const alternativas = alternativasBrutas.slice(0, 8).map((alternativa, alternativaIndice) => {
+      const itemAlternativa = objetoSeguro(alternativa);
+      return {
+        id: textoSeguro(
+          itemAlternativa.id,
+          String.fromCharCode(65 + alternativaIndice)
+        ).toUpperCase(),
+        texto: textoSeguro(itemAlternativa.texto, ""),
+      };
+    }).filter((alternativa) => alternativa.texto);
+
+    const statusSugerido = normalizarOpcao(
+      questao.statusSugerido,
+      ["pendente", "anulada", "desatualizada", "duvidosa"] as const,
+      "duvidosa"
+    );
+
+    return {
+      numeroOriginal: Math.max(1, Math.round(numeroSeguro(questao.numeroOriginal) || indice + 1)),
+      materiaId: textoSeguro(questao.materiaId, ""),
+      materia: textoSeguro(questao.materia, "Não classificada"),
+      moduloId: textoSeguro(questao.moduloId, ""),
+      modulo: textoSeguro(questao.modulo, ""),
+      assuntoId: textoSeguro(questao.assuntoId, ""),
+      assunto: textoSeguro(questao.assunto, "Não classificado"),
+      subassunto: textoSeguro(questao.subassunto, ""),
+      dificuldade: normalizarOpcao(
+        questao.dificuldade,
+        ["facil", "media", "dificil"] as const,
+        "media"
+      ),
+      enunciado: textoSeguro(questao.enunciado, `Questão ${indice + 1}`),
+      alternativas,
+      respostaCorretaId: statusSugerido === "anulada"
+        ? ""
+        : textoSeguro(questao.respostaCorretaId, "").toUpperCase().charAt(0),
+      explicacao: textoSeguro(questao.explicacao, ""),
+      compatibilidadeEdital: normalizarOpcao(
+        questao.compatibilidadeEdital,
+        ["direta", "implicita", "relacionada", "fora", "incerta"] as const,
+        "incerta"
+      ),
+      confiancaClassificacao: normalizarOpcao(
+        questao.confiancaClassificacao,
+        ["alta", "media", "baixa"] as const,
+        "baixa"
+      ),
+      statusSugerido,
+      norma: textoSeguro(questao.norma, ""),
+      dispositivo: textoSeguro(questao.dispositivo, ""),
+      motivoStatus: textoSeguro(questao.motivoStatus, ""),
+    };
+  }).filter((questao) => questao.enunciado && questao.alternativas.length >= 2);
+
+  const alertas = Array.isArray(raiz.alertas)
+    ? raiz.alertas.slice(0, 20).map((item) => textoSeguro(item, "")).filter(Boolean)
+    : [];
+
+  return {
+    totalDetectadas: questoes.length,
+    totalComGabarito: questoes.filter((questao) => questao.respostaCorretaId).length,
+    anuladasDetectadas: questoes.filter((questao) => questao.statusSugerido === "anulada").length,
+    foraDoEdital: questoes.filter((questao) => questao.compatibilidadeEdital === "fora").length,
+    alertas,
+    questoes,
+  };
+}
+
+function objetoSeguro(valor: unknown): Record<string, unknown> {
+  return valor && typeof valor === "object"
+    ? valor as Record<string, unknown>
+    : {};
+}
+
+function normalizarOpcao<const T extends readonly string[]>(
+  valor: unknown,
+  opcoes: T,
+  padrao: T[number]
+): T[number] {
+  return typeof valor === "string" && opcoes.includes(valor)
+    ? valor as T[number]
+    : padrao;
+}
 
 type PrioridadeCoach =
   | "alta"

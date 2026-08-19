@@ -177,6 +177,31 @@ export type AlternativaQuestao = {
   texto: string;
 };
 
+export type StatusEditorialQuestao =
+  | "pendente"
+  | "ativa"
+  | "anulada"
+  | "desatualizada"
+  | "duvidosa"
+  | "arquivada";
+
+export type CompatibilidadeEdital =
+  | "direta"
+  | "implicita"
+  | "relacionada"
+  | "fora"
+  | "incerta";
+
+export type ConfiancaClassificacao =
+  | "alta"
+  | "media"
+  | "baixa";
+
+export type OrigemQuestao =
+  | "pessoal"
+  | "prova_oficial"
+  | "ia";
+
 export type QuestaoBanco = {
   id: string;
   materiaId: string;
@@ -192,6 +217,25 @@ export type QuestaoBanco = {
   respostaCorretaId: string;
   explicacao?: string;
   dataCriacao: string;
+  subassunto?: string;
+  concursoAlvo?: string;
+  editalAlvo?: string;
+  concursoOrigem?: string;
+  cargoOrigem?: string;
+  anoOrigem?: number;
+  numeroOriginal?: number;
+  fonteNome?: string;
+  norma?: string;
+  dispositivo?: string;
+  motivoStatus?: string;
+  statusEditorial?: StatusEditorialQuestao;
+  compatibilidadeEdital?: CompatibilidadeEdital;
+  confiancaClassificacao?: ConfiancaClassificacao;
+  origem?: OrigemQuestao;
+  global?: boolean;
+  revisadaEm?: string;
+  favoritada?: boolean;
+  revisarDepois?: boolean;
 };
 
 export type RespostaSimulado = {

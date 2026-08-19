@@ -49,7 +49,7 @@
 
 .banco-biblioteca-resumo {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 9px;
 }
 
@@ -78,6 +78,8 @@
 
 .banco-biblioteca-resumo-card.erro { border-color: rgba(239,91,103,.35); }
 .banco-biblioteca-resumo-card.erro strong { color: #ff8d98; }
+.banco-biblioteca-resumo-card.oficial { border-color: rgba(48, 184, 123, .35); }
+.banco-biblioteca-resumo-card.oficial strong { color: #69dfa1; }
 .banco-biblioteca-resumo-card.favorita { border-color: rgba(245,183,55,.33); }
 .banco-biblioteca-resumo-card.favorita strong { color: #f7c55d; }
 .banco-biblioteca-resumo-card.revisar { border-color: rgba(168,104,255,.34); }
@@ -117,7 +119,7 @@
 
 .banco-filtros-linha {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(150px, .55fr) minmax(150px, .45fr) minmax(145px, .4fr);
+  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(135px, .48fr)) minmax(145px, .4fr);
   gap: 8px;
 }
 
@@ -216,6 +218,7 @@
 .banco-biblioteca-tags .nunca { color:#9fb0c4; background:rgba(100,116,139,.13); }
 .banco-biblioteca-tags .favorita { color:#f7c967; background:rgba(245,158,11,.11); }
 .banco-biblioteca-tags .revisar { color:#c89dff; background:rgba(139,92,246,.11); }
+.banco-biblioteca-tags .oficial { color:#6ce1a1; background:rgba(34,197,94,.11); }
 
 .banco-biblioteca-enunciado {
   margin: 13px 0 11px;
