@@ -11,7 +11,7 @@ import {
   ErroJsonInvalidoIA,
   parsearJsonDaIA,
 } from "./jsonIa.ts";
-import { executarComRetryGemini } from "./retryGemini.ts";
+import { executarComFallbackGemini } from "./retryGemini.ts";
 
 const app = express();
 
@@ -22,6 +22,10 @@ const PORT = Number(
 const modelo =
   process.env.GEMINI_MODEL ||
   "gemini-3.1-flash-lite";
+
+const modeloFallback =
+  process.env.GEMINI_FALLBACK_MODEL ||
+  "gemini-2.5-flash";
 
 const apiKey =
   process.env.GEMINI_API_KEY;
@@ -59,6 +63,7 @@ app.get(
     res.json({
       ok: true,
       modelo,
+      modeloFallback,
       chaveCarregada:
         Boolean(apiKey),
     });
@@ -1196,9 +1201,9 @@ async function gerarJsonComPdf({
   maxOutputTokens: number;
   rotulo: string;
 }): Promise<unknown> {
-  const resposta = await executarComRetryGemini(
-    () => ai.models.generateContent({
-      model: modelo,
+  const resposta = await executarComFallbackGemini(
+    (modeloAtual) => ai.models.generateContent({
+      model: modeloAtual,
       contents: [{
         role: "user",
         parts: [
@@ -1219,8 +1224,13 @@ async function gerarJsonComPdf({
     }),
     {
       rotulo,
+      modelos: [modelo, modeloFallback],
+      tentativasPorModelo: [2, 3],
       aoTentarNovamente: (dados) => {
         console.warn("[gemini-retry]", dados);
+      },
+      aoTrocarModelo: (dados) => {
+        console.warn("[gemini-fallback]", dados);
       },
     }
   );

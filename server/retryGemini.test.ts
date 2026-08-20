@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  executarComFallbackGemini,
   executarComRetryGemini,
   obterStatusErro,
 } from "./retryGemini.ts";
@@ -79,4 +80,52 @@ test("explica alta demanda depois de esgotar as tentativas", async () => {
   );
 
   assert.equal(chamadas, 3);
+});
+
+test("troca para o modelo reserva depois de erro 503", async () => {
+  const chamadas: string[] = [];
+  const trocas: string[] = [];
+
+  const resultado = await executarComFallbackGemini(
+    async (modelo) => {
+      chamadas.push(modelo);
+      if (modelo === "primario") throw erroComStatus(503);
+      return "ok";
+    },
+    {
+      rotulo: "questões 1 a 10",
+      modelos: ["primario", "reserva"],
+      tentativasPorModelo: [2, 3],
+      atrasosMs: [0],
+      esperar: async () => undefined,
+      aoTrocarModelo: ({ modeloAnterior, modeloSeguinte }) => {
+        trocas.push(`${modeloAnterior}->${modeloSeguinte}`);
+      },
+    }
+  );
+
+  assert.equal(resultado, "ok");
+  assert.deepEqual(chamadas, ["primario", "primario", "reserva"]);
+  assert.deepEqual(trocas, ["primario->reserva"]);
+});
+
+test("não usa o modelo reserva quando o erro é de limite", async () => {
+  const chamadas: string[] = [];
+
+  await assert.rejects(
+    executarComFallbackGemini(
+      async (modelo) => {
+        chamadas.push(modelo);
+        throw erroComStatus(429);
+      },
+      {
+        rotulo: "gabarito",
+        modelos: ["primario", "reserva"],
+        esperar: async () => undefined,
+      }
+    ),
+    /limite de uso do Gemini/
+  );
+
+  assert.deepEqual(chamadas, ["primario"]);
 });
