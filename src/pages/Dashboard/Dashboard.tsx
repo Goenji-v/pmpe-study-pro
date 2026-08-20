@@ -43,7 +43,7 @@ import type {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { sessaoAtiva, segundosDecorridos, cronometroAtivo, iniciar, pausar, continuar } = useCronometro();
+  const { sessaoAtiva, segundosDecorridos, cronometroAtivo, pausar, continuar } = useCronometro();
 
   const {
     materias,
@@ -517,16 +517,16 @@ function iniciarProximaAulaPortugues() {
       dia
     );
 
-    // Evita que um prefill antigo da Central sobrescreva a sessão recém-iniciada.
-    sessionStorage.removeItem("pmpe:central-estudos:prefill");
-
-    const iniciada = iniciar(dadosSessao);
-    if (!iniciada) {
-      return;
-    }
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify(dadosSessao)
+    );
 
     navigate("/central-estudos", {
-      state: { origem: "dashboard" },
+      state: {
+        origem: "dashboard",
+        prefillSessao: dadosSessao,
+      },
     });
   }
 

@@ -181,7 +181,7 @@ export default function PlanoEstudos() {
   }
 
   const {
-    iniciar,
+    cronometroAtivo,
   } = useCronometro();
 
   const missoesPorDia = normalizarMissoesPorDia(
@@ -372,6 +372,13 @@ export default function PlanoEstudos() {
   function iniciarEstudo(
     missao: MissaoPlano
   ) {
+    if (cronometroAtivo) {
+      navigate(
+        "/central-estudos"
+      );
+      return;
+    }
+
     const dadosSessao = criarDadosSessaoDaMissao(
       materias,
       missao,
@@ -379,13 +386,20 @@ export default function PlanoEstudos() {
       diaSelecionado
     );
 
-    const iniciada = iniciar(dadosSessao);
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify(dadosSessao)
+    );
 
-    if (iniciada) {
-      navigate(
-        "/central-estudos"
-      );
-    }
+    navigate(
+      "/central-estudos",
+      {
+        state: {
+          origem: "plano",
+          prefillSessao: dadosSessao,
+        },
+      }
+    );
   }
 
   return (
