@@ -71,6 +71,18 @@ create index if not exists questoes_catalogo_criado_por_idx
 create index if not exists questoes_catalogo_revisado_por_idx
   on public.questoes_catalogo (revisado_por);
 
+create unique index if not exists questoes_catalogo_prova_oficial_unica_idx
+  on public.questoes_catalogo (
+    lower(btrim(concurso_alvo)),
+    lower(btrim(edital_alvo)),
+    lower(btrim(coalesce(concurso_origem, ''))),
+    lower(btrim(coalesce(cargo_origem, ''))),
+    coalesce(ano_origem, 0),
+    lower(btrim(banca)),
+    numero_original
+  )
+  where origem = 'prova_oficial' and numero_original is not null;
+
 alter table public.questoes_catalogo enable row level security;
 
 grant select, insert, update, delete on table public.questoes_catalogo to authenticated;

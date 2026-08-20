@@ -1,6 +1,8 @@
 import {
+  useCallback,
   createContext,
   useContext,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -28,10 +30,16 @@ export function ToastProvider({
 }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  function showToast(
+  const removerToast = useCallback((id: string) => {
+    setToasts((old) =>
+      old.filter((toast) => toast.id !== id)
+    );
+  }, []);
+
+  const showToast = useCallback((
     message: string,
     type: ToastType = "success"
-  ) {
+  ) => {
     const id = crypto.randomUUID();
 
     setToasts((old) => [
@@ -46,16 +54,12 @@ export function ToastProvider({
     window.setTimeout(() => {
       removerToast(id);
     }, 3500);
-  }
+  }, [removerToast]);
 
-  function removerToast(id: string) {
-    setToasts((old) =>
-      old.filter((toast) => toast.id !== id)
-    );
-  }
+  const valorContexto = useMemo(() => ({ showToast }), [showToast]);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={valorContexto}>
       {children}
 
       <div className="toast-container">

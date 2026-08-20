@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -12,8 +12,13 @@ import {
 import {
   atualizarQuestaoCuradoria,
   listarQuestoesCuradoria,
+  publicarQuestoesCuradoriaEmLote,
   salvarLoteNaCuradoria,
 } from "../../services/catalogoQuestoesService";
+import {
+  motivosImpedimentoPublicacao,
+  questaoElegivelParaPublicacao,
+} from "../../services/curadoriaQuestoesUtils";
 
 import type {
   CompatibilidadeEdital,
@@ -68,6 +73,10 @@ export default function CuradoriaQuestoes() {
   const [carregandoFila, setCarregandoFila] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<StatusEditorialQuestao | "todos">("pendente");
   const [salvandoId, setSalvandoId] = useState("");
+  const [idsAlterados, setIdsAlterados] = useState<Set<string>>(new Set());
+  const [idsSelecionados, setIdsSelecionados] = useState<Set<string>>(new Set());
+  const [confirmandoLote, setConfirmandoLote] = useState(false);
+  const [publicandoLote, setPublicandoLote] = useState(false);
 
   const mapaEdital = useMemo(
     () => materias.flatMap((materia) =>
@@ -101,20 +110,39 @@ export default function CuradoriaQuestoes() {
     ) as Record<StatusEditorialQuestao, number>;
   }, [fila]);
 
-  useEffect(() => {
-    void carregarFila();
-  }, []);
+  const questoesElegiveisVisiveis = useMemo(
+    () => filaFiltrada.filter((questao) =>
+      !idsAlterados.has(questao.id)
+      && questaoElegivelParaPublicacao(questao, true, true)
+    ),
+    [filaFiltrada, idsAlterados]
+  );
 
-  async function carregarFila() {
+  const questoesSelecionadas = useMemo(
+    () => fila.filter((questao) => idsSelecionados.has(questao.id)),
+    [fila, idsSelecionados]
+  );
+
+  const todasElegiveisSelecionadas = questoesElegiveisVisiveis.length > 0
+    && questoesElegiveisVisiveis.every((questao) => idsSelecionados.has(questao.id));
+
+  const carregarFila = useCallback(async () => {
     try {
       setCarregandoFila(true);
       setFila(await listarQuestoesCuradoria());
+      setIdsAlterados(new Set());
+      setIdsSelecionados(new Set());
+      setConfirmandoLote(false);
     } catch (erro) {
       showToast(mensagemErro(erro), "error");
     } finally {
       setCarregandoFila(false);
     }
-  }
+  }, [showToast]);
+
+  useEffect(() => {
+    void carregarFila();
+  }, [carregarFila]);
 
   async function executarAnalise() {
     if (!prova || !gabarito) {
@@ -184,6 +212,13 @@ export default function CuradoriaQuestoes() {
     setFila((atual) => atual.map((questao) =>
       questao.id === id ? { ...questao, ...alteracoes } : questao
     ));
+    setIdsAlterados((atuais) => new Set(atuais).add(id));
+    setIdsSelecionados((atuais) => {
+      const proximos = new Set(atuais);
+      proximos.delete(id);
+      return proximos;
+    });
+    setConfirmandoLote(false);
   }
 
   async function salvarQuestao(
@@ -191,13 +226,9 @@ export default function CuradoriaQuestoes() {
     statusEditorial = questao.statusEditorial ?? "pendente"
   ) {
     if (statusEditorial === "ativa") {
-      if (!questao.respostaCorretaId || !/[A-E]/.test(questao.respostaCorretaId)) {
-        showToast("Informe um gabarito entre A e E antes de ativar.", "warning");
-        return;
-      }
-
-      if (!questao.compatibilidadeEdital || !["direta", "implicita"].includes(questao.compatibilidadeEdital)) {
-        showToast("Somente questões direta ou implicitamente previstas podem ser ativadas.", "warning");
+      const motivos = motivosImpedimentoPublicacao(questao);
+      if (motivos.length > 0) {
+        showToast(`Não é possível publicar: ${motivos.join("; ")}.`, "warning");
         return;
       }
     }
@@ -224,11 +255,117 @@ export default function CuradoriaQuestoes() {
       });
 
       setFila((atual) => atual.map((item) => item.id === atualizada.id ? atualizada : item));
+      setIdsAlterados((atuais) => {
+        const proximos = new Set(atuais);
+        proximos.delete(questao.id);
+        return proximos;
+      });
+      setIdsSelecionados((atuais) => {
+        const proximos = new Set(atuais);
+        proximos.delete(questao.id);
+        return proximos;
+      });
       showToast(statusEditorial === "ativa" ? "Questão publicada no banco oficial." : "Revisão salva.", "success");
     } catch (erro) {
       showToast(mensagemErro(erro), "error");
     } finally {
       setSalvandoId("");
+    }
+  }
+
+  function alternarSelecaoQuestao(questao: QuestaoBanco) {
+    if (
+      idsAlterados.has(questao.id)
+      || !questaoElegivelParaPublicacao(questao, true, true)
+    ) return;
+
+    setIdsSelecionados((atuais) => {
+      const proximos = new Set(atuais);
+      if (proximos.has(questao.id)) {
+        proximos.delete(questao.id);
+      } else {
+        proximos.add(questao.id);
+      }
+      return proximos;
+    });
+    setConfirmandoLote(false);
+  }
+
+  function alternarTodasElegiveis() {
+    setIdsSelecionados((atuais) => {
+      const proximos = new Set(atuais);
+      for (const questao of questoesElegiveisVisiveis) {
+        if (todasElegiveisSelecionadas) {
+          proximos.delete(questao.id);
+        } else {
+          proximos.add(questao.id);
+        }
+      }
+      return proximos;
+    });
+    setConfirmandoLote(false);
+  }
+
+  function solicitarPublicacaoLote() {
+    if (questoesSelecionadas.length === 0) {
+      showToast("Selecione ao menos uma questão elegível.", "warning");
+      return;
+    }
+
+    setConfirmandoLote(true);
+  }
+
+  function alterarFiltroStatus(valor: StatusEditorialQuestao | "todos") {
+    setFiltroStatus(valor);
+    setIdsSelecionados(new Set());
+    setConfirmandoLote(false);
+  }
+
+  async function confirmarPublicacaoLote() {
+    const elegiveis = questoesSelecionadas.filter((questao) =>
+      !idsAlterados.has(questao.id)
+      && questaoElegivelParaPublicacao(questao, true, true)
+    );
+
+    if (elegiveis.length !== questoesSelecionadas.length) {
+      setConfirmandoLote(false);
+      showToast(
+        "O lote mudou durante a revisão. Confira novamente as questões selecionadas.",
+        "warning"
+      );
+      return;
+    }
+
+    try {
+      setPublicandoLote(true);
+      const resultado = await publicarQuestoesCuradoriaEmLote(
+        elegiveis.map((questao) => questao.id)
+      );
+      const publicadasPorId = new Map(
+        resultado.publicadas.map((questao) => [questao.id, questao])
+      );
+
+      setFila((atual) => atual.map((questao) =>
+        publicadasPorId.get(questao.id) ?? questao
+      ));
+      setIdsSelecionados(new Set());
+      setConfirmandoLote(false);
+
+      if (resultado.ignoradas > 0) {
+        showToast(
+          `${resultado.publicadas.length} questões publicadas; ${resultado.ignoradas} foram ignoradas porque não atendiam mais aos critérios de segurança.`,
+          "warning"
+        );
+      } else {
+        showToast(
+          `${resultado.publicadas.length} questões publicadas no banco oficial.`,
+          "success"
+        );
+      }
+    } catch (erro) {
+      showToast(mensagemErro(erro), "error");
+    } finally {
+      setPublicandoLote(false);
     }
   }
 
@@ -323,7 +460,7 @@ export default function CuradoriaQuestoes() {
             <h3>Fila editorial</h3>
             <p>Anuladas, desatualizadas e fora do edital permanecem arquivadas e nunca pontuam.</p>
           </div>
-          <select value={filtroStatus} onChange={(evento) => setFiltroStatus(evento.target.value as StatusEditorialQuestao | "todos")}>
+          <select value={filtroStatus} onChange={(evento) => alterarFiltroStatus(evento.target.value as StatusEditorialQuestao | "todos")}>
             <option value="todos">Todos ({fila.length})</option>
             {statusDisponiveis.map((status) => (
               <option key={status} value={status}>{rotuloStatus(status)} ({contagemStatus[status]})</option>
@@ -331,16 +468,82 @@ export default function CuradoriaQuestoes() {
           </select>
         </div>
 
+        {!carregandoFila && filaFiltrada.length > 0 && (
+          <div className="curadoria-lote">
+            <div className="curadoria-lote-resumo">
+              <div>
+                <strong>Publicação segura em lote</strong>
+                <span>
+                  {questoesElegiveisVisiveis.length} elegíveis nesta visualização · {questoesSelecionadas.length} selecionadas
+                </span>
+              </div>
+              <div className="curadoria-lote-acoes">
+                <button
+                  type="button"
+                  onClick={alternarTodasElegiveis}
+                  disabled={questoesElegiveisVisiveis.length === 0 || publicandoLote}
+                >
+                  {todasElegiveisSelecionadas ? "Desmarcar elegíveis" : "Selecionar elegíveis"}
+                </button>
+                <button
+                  type="button"
+                  className="publicar"
+                  onClick={solicitarPublicacaoLote}
+                  disabled={questoesSelecionadas.length === 0 || publicandoLote}
+                >
+                  Publicar selecionadas ({questoesSelecionadas.length})
+                </button>
+              </div>
+            </div>
+
+            {confirmandoLote && (
+              <div className="curadoria-confirmacao-lote" role="alert" aria-live="assertive">
+                <div>
+                  <strong>Confirme a publicação de {questoesSelecionadas.length} questões</strong>
+                  <p>
+                    Somente itens pendentes, com confiança alta, gabarito A–E e compatibilidade direta ou implícita serão publicados. A ação disponibiliza as questões para os alunos.
+                  </p>
+                </div>
+                <div>
+                  <button type="button" onClick={() => setConfirmandoLote(false)} disabled={publicandoLote}>
+                    Cancelar
+                  </button>
+                  <button type="button" className="publicar" onClick={confirmarPublicacaoLote} disabled={publicandoLote}>
+                    {publicandoLote ? "Publicando..." : `Confirmar ${questoesSelecionadas.length}`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {carregandoFila ? (
           <div className="curadoria-vazio">Carregando fila editorial...</div>
         ) : filaFiltrada.length === 0 ? (
           <div className="curadoria-vazio">Nenhuma questão neste estado.</div>
         ) : (
           <div className="curadoria-lista">
-            {filaFiltrada.map((questao) => (
-              <article className="curadoria-item" key={questao.id}>
+            {filaFiltrada.map((questao) => {
+              const alterada = idsAlterados.has(questao.id);
+              const motivosBloqueio = motivosImpedimentoPublicacao(questao, true, true);
+              const elegivel = !alterada && motivosBloqueio.length === 0;
+              const explicacaoBloqueio = alterada
+                ? "Salve as alterações antes de selecionar."
+                : motivosBloqueio.join("; ");
+
+              return (
+                <article className={`curadoria-item${idsSelecionados.has(questao.id) ? " selecionada" : ""}`} key={questao.id}>
                 <div className="curadoria-item-topo">
                   <div>
+                    <label className="curadoria-selecao" title={explicacaoBloqueio || "Selecionar para publicação"}>
+                      <input
+                        type="checkbox"
+                        checked={idsSelecionados.has(questao.id)}
+                        disabled={!elegivel || publicandoLote}
+                        onChange={() => alternarSelecaoQuestao(questao)}
+                      />
+                      <span>{alterada ? "Alteração não salva" : elegivel ? "Selecionar para publicar" : "Não elegível para lote"}</span>
+                    </label>
                     <span>Questão {questao.numeroOriginal ?? "—"} · {questao.concursoOrigem} {questao.anoOrigem}</span>
                     <strong>{questao.materia} — {questao.assunto}</strong>
                     <small>{questao.banca} · confiança {questao.confiancaClassificacao ?? "baixa"}</small>
@@ -410,8 +613,9 @@ export default function CuradoriaQuestoes() {
                   <button type="button" className="bloquear" onClick={() => salvarQuestao(questao, "desatualizada")} disabled={salvandoId === questao.id}>Desatualizada</button>
                   <button type="button" onClick={() => salvarQuestao(questao, "arquivada")} disabled={salvandoId === questao.id}>Arquivar</button>
                 </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
