@@ -68,13 +68,14 @@ export function diagnosticarRevisaoAdaptativa(
     return null;
   }
 
-  const percentual = calcularAproveitamentoQuestoes(certas, erradas);
+  const percentualExato = (certas / total) * 100;
+  const percentual = Math.round(percentualExato);
 
-  if (percentual >= 75) {
+  if (percentualExato >= 75) {
     return null;
   }
 
-  if (percentual < 40) {
+  if (percentualExato < 40) {
     return {
       percentual,
       total,
@@ -83,7 +84,7 @@ export function diagnosticarRevisaoAdaptativa(
     };
   }
 
-  if (percentual < 60) {
+  if (percentualExato < 60) {
     return {
       percentual,
       total,
