@@ -13,6 +13,10 @@ import type {
   MetadadosImportacaoProva,
   QuestaoAnalisadaIA,
 } from "./importacaoProvaService";
+import {
+  encontrarNumerosDuplicados,
+  type IdentidadeProvaOficial,
+} from "./curadoriaQuestoesUtils";
 
 type LinhaQuestaoCatalogo = {
   id: string;
@@ -66,6 +70,11 @@ export type AtualizacaoCuradoria = {
   motivoStatus?: string;
 };
 
+export type ResultadoPublicacaoLote = {
+  publicadas: QuestaoBanco[];
+  ignoradas: number;
+};
+
 export async function listarQuestoesPublicadas(
   concursoAlvo: string
 ): Promise<QuestaoBanco[]> {
@@ -105,6 +114,8 @@ export async function salvarLoteNaCuradoria(
 ): Promise<number> {
   if (questoes.length === 0) return 0;
 
+  await impedirImportacaoDuplicada(questoes, metadados);
+
   const linhas = questoes.map((questao) => ({
     concurso_alvo: metadados.concursoAlvo.trim(),
     edital_alvo: metadados.editalAlvo.trim(),
@@ -141,10 +152,58 @@ export async function salvarLoteNaCuradoria(
     .select("id");
 
   if (error) {
+    if (error.code === "23505") {
+      throw new Error(
+        "Importação cancelada: esta prova já existe na fila editorial. Nenhuma questão foi duplicada."
+      );
+    }
+
     throw new Error(`Erro ao salvar a prova para curadoria: ${error.message}`);
   }
 
   return data?.length ?? 0;
+}
+
+export async function publicarQuestoesCuradoriaEmLote(
+  ids: string[]
+): Promise<ResultadoPublicacaoLote> {
+  const idsUnicos = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (idsUnicos.length === 0) {
+    return { publicadas: [], ignoradas: 0 };
+  }
+
+  if (idsUnicos.length > 500) {
+    throw new Error("O lote não pode ultrapassar 500 questões.");
+  }
+
+  const agora = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("questoes_catalogo")
+    .update({
+      status: "ativa",
+      revisada_em: agora,
+      updated_at: agora,
+    })
+    .in("id", idsUnicos)
+    .eq("status", "pendente")
+    .eq("confianca_classificacao", "alta")
+    .in("compatibilidade_edital", ["direta", "implicita"])
+    .in("resposta_correta_id", ["A", "B", "C", "D", "E"])
+    .select("*");
+
+  if (error) {
+    throw new Error(
+      `Nenhuma questão foi publicada. Revise o lote: ${error.message}`
+    );
+  }
+
+  const publicadas = ((data ?? []) as LinhaQuestaoCatalogo[])
+    .map(converterLinhaQuestao);
+
+  return {
+    publicadas,
+    ignoradas: Math.max(0, idsUnicos.length - publicadas.length),
+  };
 }
 
 export async function atualizarQuestaoCuradoria(
@@ -254,6 +313,75 @@ function normalizarStatusInicial(
   }
 
   return "pendente";
+}
+
+async function impedirImportacaoDuplicada(
+  questoes: QuestaoAnalisadaIA[],
+  metadados: MetadadosImportacaoProva
+) {
+  const numerosImportados = [...new Set(
+    questoes
+      .map((questao) => questao.numeroOriginal)
+      .filter((numero): numero is number => Number.isInteger(numero))
+  )];
+
+  if (numerosImportados.length === 0) return;
+
+  const { data, error } = await supabase
+    .from("questoes_catalogo")
+    .select("concurso_alvo,edital_alvo,concurso_origem,cargo_origem,ano_origem,banca,numero_original")
+    .eq("origem", "prova_oficial")
+    .eq("ano_origem", metadados.anoOrigem)
+    .in("numero_original", numerosImportados)
+    .limit(500);
+
+  if (error) {
+    throw new Error(
+      `Não foi possível verificar duplicidade antes da importação: ${error.message}`
+    );
+  }
+
+  const identidade: IdentidadeProvaOficial = {
+    concursoAlvo: metadados.concursoAlvo,
+    editalAlvo: metadados.editalAlvo,
+    concursoOrigem: metadados.concursoOrigem,
+    cargoOrigem: metadados.cargoOrigem,
+    anoOrigem: metadados.anoOrigem,
+    banca: metadados.banca,
+  };
+  const registros = ((data ?? []) as Array<{
+    concurso_alvo: string;
+    edital_alvo: string;
+    concurso_origem: string | null;
+    cargo_origem: string | null;
+    ano_origem: number | null;
+    banca: string;
+    numero_original: number | null;
+  }>).map((linha) => ({
+    concursoAlvo: linha.concurso_alvo,
+    editalAlvo: linha.edital_alvo,
+    concursoOrigem: linha.concurso_origem ?? "",
+    cargoOrigem: linha.cargo_origem ?? "",
+    anoOrigem: linha.ano_origem ?? undefined,
+    banca: linha.banca,
+    numeroOriginal: linha.numero_original,
+  }));
+  const duplicados = encontrarNumerosDuplicados(
+    registros,
+    identidade,
+    numerosImportados
+  );
+
+  if (duplicados.length === 0) return;
+
+  const amostra = duplicados.slice(0, 12).join(", ");
+  const restante = duplicados.length > 12
+    ? ` e mais ${duplicados.length - 12}`
+    : "";
+
+  throw new Error(
+    `Importação cancelada: ${duplicados.length} questão${duplicados.length === 1 ? "" : "ões"} desta prova já existe${duplicados.length === 1 ? "" : "m"} na fila (${amostra}${restante}). Nenhuma questão foi duplicada.`
+  );
 }
 
 function vazioParaNulo(valor?: string) {
