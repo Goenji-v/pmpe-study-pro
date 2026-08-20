@@ -4,6 +4,11 @@ import "./Questoes.css";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
+import {
+  aplicarRevisaoAdaptativa,
+  diagnosticarRevisaoAdaptativa,
+  rotuloPrioridadeRevisaoAdaptativa,
+} from "../../utils/revisaoAdaptativa";
 
 import type {
   Assunto,
@@ -12,7 +17,12 @@ import type {
 } from "../../types";
 
 export default function Questoes() {
-  const { materias, questoes, setQuestoes } = useApp();
+  const {
+    materias,
+    questoes,
+    setQuestoes,
+    setRevisoes,
+  } = useApp();
   const { showToast } = useToast();
 
   const [materia, setMateria] = useState("");
@@ -106,9 +116,52 @@ export default function Questoes() {
       ...registrosAnteriores,
     ]);
 
+    const diagnostico = diagnosticarRevisaoAdaptativa(
+      certas,
+      erradas
+    );
+
+    let mensagemSalvamento = "Registro salvo com sucesso.";
+    let tipoToast: "success" | "warning" = "success";
+
+    if (
+      diagnostico &&
+      materiaSelecionada?.id &&
+      assuntoSelecionado?.id
+    ) {
+      setRevisoes((revisoesAnteriores) =>
+        aplicarRevisaoAdaptativa({
+          revisoes: revisoesAnteriores,
+          materiaId: materiaSelecionada.id,
+          moduloId: moduloSelecionado?.id,
+          assuntoId: assuntoSelecionado.id,
+          materia,
+          modulo,
+          assunto,
+          certas,
+          erradas,
+        }).revisoes
+      );
+
+      const quando =
+        diagnostico.diasParaRevisao === 0
+          ? "para hoje"
+          : diagnostico.diasParaRevisao === 1
+            ? "para amanhã"
+            : `para daqui a ${diagnostico.diasParaRevisao} dias`;
+
+      mensagemSalvamento = `${rotuloPrioridadeRevisaoAdaptativa(
+        diagnostico.prioridade
+      )} de ${assunto} criada ${quando} (${diagnostico.percentual}% de acerto).`;
+    } else if (diagnostico) {
+      mensagemSalvamento =
+        "Registro salvo, mas não foi possível localizar o assunto para criar a revisão automática.";
+      tipoToast = "warning";
+    }
+
     limparFormulario();
 
-    showToast("Registro salvo com sucesso.", "success");
+    showToast(mensagemSalvamento, tipoToast);
   }
 
   function limparFormulario() {
@@ -131,6 +184,13 @@ export default function Questoes() {
     if (total === 0) return 0;
 
     return Math.round((quantidadeCertas / total) * 100);
+  }
+
+  function corDoAproveitamento(percentual: number) {
+    if (percentual >= 75) return "#22c55e";
+    if (percentual >= 60) return "#eab308";
+    if (percentual >= 40) return "#f97316";
+    return "#ef4444";
   }
 
   function formatarData(data: string) {
@@ -369,6 +429,11 @@ export default function Questoes() {
                       registro.certas,
                       registro.erradas
                     );
+                  const diagnostico =
+                    diagnosticarRevisaoAdaptativa(
+                      registro.certas,
+                      registro.erradas
+                    );
 
                   return (
                     <div
@@ -383,12 +448,7 @@ export default function Questoes() {
                         <span
                           className="historico-percentual"
                           style={{
-                            color:
-                              percentual >= 80
-                                ? "#22c55e"
-                                : percentual >= 60
-                                  ? "#f59e0b"
-                                  : "#ef4444",
+                            color: corDoAproveitamento(percentual),
                           }}
                         >
                           {percentual}%
@@ -403,6 +463,21 @@ export default function Questoes() {
                         {registro.erradas} erradas •{" "}
                         {registro.minutos} min
                       </p>
+
+                      {diagnostico && (
+                        <p
+                          className="historico-info"
+                          style={{
+                            marginTop: 6,
+                            fontWeight: 700,
+                            color: corDoAproveitamento(percentual),
+                          }}
+                        >
+                          {rotuloPrioridadeRevisaoAdaptativa(
+                            diagnostico.prioridade
+                          )} automática
+                        </p>
+                      )}
 
                       <p
                         className="historico-info"
