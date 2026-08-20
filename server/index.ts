@@ -11,6 +11,7 @@ import {
   ErroJsonInvalidoIA,
   parsearJsonDaIA,
 } from "./jsonIa.ts";
+import { executarComRetryGemini } from "./retryGemini.ts";
 
 const app = express();
 
@@ -1195,26 +1196,34 @@ async function gerarJsonComPdf({
   maxOutputTokens: number;
   rotulo: string;
 }): Promise<unknown> {
-  const resposta = await ai.models.generateContent({
-    model: modelo,
-    contents: [{
-      role: "user",
-      parts: [
-        { text: prompt },
-        {
-          inlineData: {
-            mimeType: arquivo.mimeType,
-            data: arquivo.base64,
+  const resposta = await executarComRetryGemini(
+    () => ai.models.generateContent({
+      model: modelo,
+      contents: [{
+        role: "user",
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: arquivo.mimeType,
+              data: arquivo.base64,
+            },
           },
-        },
-      ],
-    }],
-    config: {
-      temperature: 0,
-      responseMimeType: "application/json",
-      maxOutputTokens,
-    },
-  });
+        ],
+      }],
+      config: {
+        temperature: 0,
+        responseMimeType: "application/json",
+        maxOutputTokens,
+      },
+    }),
+    {
+      rotulo,
+      aoTentarNovamente: (dados) => {
+        console.warn("[gemini-retry]", dados);
+      },
+    }
+  );
 
   const motivoTermino = resposta.candidates?.[0]?.finishReason;
 
