@@ -157,6 +157,36 @@
   font-size: 11px;
 }
 
+.caderno-ia-estatisticas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.caderno-ia-estatisticas > div {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #263b59;
+  border-radius: 10px;
+  background: rgba(8, 19, 34, 0.7);
+}
+
+.caderno-ia-estatisticas span {
+  display: block;
+  color: #7f93af;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.caderno-ia-estatisticas strong {
+  display: block;
+  margin-top: 4px;
+  color: #f8fafc;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
 .caderno-ia-acoes {
   display: flex;
   gap: 9px;
@@ -269,6 +299,10 @@
   .caderno-ia-card {
     padding: 13px;
     border-radius: 12px;
+  }
+
+  .caderno-ia-estatisticas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .caderno-ia-icone {
