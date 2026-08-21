@@ -8,7 +8,22 @@ import {
   excluirCadernoSimuladoIA,
   listarCadernosSimuladosIA,
   type CadernoSimuladoIA,
+  type EstatisticasCadernoIA,
 } from "../../services/cadernosSimuladosIAService";
+import { assinaturaCadernoIA } from "../../services/catalogoQuestoesIAUtils";
+import type { QuestaoIA } from "../../types";
+
+type ResultadoLegadoIA = {
+  cadernoId?: string;
+  data: string;
+  certas: number;
+  erradas: number;
+  emBranco: number;
+  percentual: number;
+  questoes: QuestaoIA[];
+};
+
+const CHAVE_RESULTADOS_IA = "pmpe_resultados_simulados_ia";
 
 export default function MeusSimuladosIA() {
   const navigate = useNavigate();
@@ -67,6 +82,11 @@ export default function MeusSimuladosIA() {
     [cadernos]
   );
 
+  const estatisticasPorCaderno = useMemo(
+    () => obterEstatisticasPorCaderno(cadernos),
+    [cadernos]
+  );
+
   if (carregando) {
     return (
       <section className="cadernos-ia-container">
@@ -119,7 +139,10 @@ export default function MeusSimuladosIA() {
         </div>
       ) : (
         <div className="cadernos-ia-grid">
-          {cadernos.map((caderno) => (
+          {cadernos.map((caderno) => {
+            const estatisticas = estatisticasPorCaderno.get(caderno.id);
+
+            return (
             <article key={caderno.id} className="caderno-ia-card">
               <div className="caderno-ia-topo">
                 <div className="caderno-ia-icone">🤖</div>
@@ -138,6 +161,27 @@ export default function MeusSimuladosIA() {
               {caderno.modulo && (
                 <p className="caderno-ia-modulo">{caderno.modulo}</p>
               )}
+
+              <div className="caderno-ia-estatisticas">
+                <div>
+                  <span>Questões</span>
+                  <strong>{caderno.questoes.length}</strong>
+                </div>
+                <div>
+                  <span>Acertos</span>
+                  <strong>{estatisticas?.acertos ?? "—"}</strong>
+                </div>
+                <div>
+                  <span>Erros</span>
+                  <strong>{estatisticas?.erros ?? "—"}</strong>
+                </div>
+                <div>
+                  <span>Aproveitamento</span>
+                  <strong>
+                    {estatisticas ? `${estatisticas.aproveitamento}%` : "Não resolvido"}
+                  </strong>
+                </div>
+              </div>
 
               <div className="caderno-ia-data">
                 Criado em {formatarData(caderno.criadoEm)}
@@ -162,11 +206,61 @@ export default function MeusSimuladosIA() {
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
   );
+}
+
+function obterEstatisticasPorCaderno(cadernos: CadernoSimuladoIA[]) {
+  const mapa = new Map<string, EstatisticasCadernoIA>();
+  const resultados = carregarResultadosLegados();
+
+  cadernos.forEach((caderno) => {
+    if (caderno.estatisticas) {
+      mapa.set(caderno.id, caderno.estatisticas);
+      return;
+    }
+
+    const assinatura = assinaturaCadernoIA(caderno.questoes);
+    const compatíveis = resultados
+      .filter(
+        (resultado) =>
+          resultado.cadernoId === caderno.id ||
+          assinaturaCadernoIA(resultado.questoes) === assinatura
+      )
+      .sort(
+        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
+      );
+
+    if (compatíveis.length === 0) return;
+
+    const ultima = compatíveis[0];
+    mapa.set(caderno.id, {
+      tentativas: compatíveis.length,
+      acertos: ultima.certas,
+      erros: ultima.erradas,
+      emBranco: ultima.emBranco,
+      aproveitamento: ultima.percentual,
+      ultimaTentativaEm: ultima.data,
+    });
+  });
+
+  return mapa;
+}
+
+function carregarResultadosLegados(): ResultadoLegadoIA[] {
+  const salvo = localStorage.getItem(CHAVE_RESULTADOS_IA);
+  if (!salvo) return [];
+
+  try {
+    const valor: unknown = JSON.parse(salvo);
+    return Array.isArray(valor) ? (valor as ResultadoLegadoIA[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 function formatarData(data: string) {

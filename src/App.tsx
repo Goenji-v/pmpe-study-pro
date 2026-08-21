@@ -1,5 +1,6 @@
 import {
   BrowserRouter,
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -24,16 +25,14 @@ import Backup from "./pages/Backup/Backup";
 import CentralQuestoes from "./pages/CentralQuestoes/CentralQuestoes";
 import Configuracoes from "./pages/Configuracoes/Configuracoes";
 import BancoQuestoes from "./pages/BancoQuestoes/BancoQuestoes";
-import CentralInteligencia from "./pages/CentralInteligencia/CentralInteligencia";
+import InteligenciaHub from "./pages/InteligenciaHub/InteligenciaHub";
 import EstatisticasSimuladoIA from "./pages/EstatisticasSimuladoIA/EstatisticasSimuladoIA";
 import EstatisticasSessoes from "./pages/EstatisticasSessoes/EstatisticasSessoes";
 import CentralDesempenho from "./pages/CentralDesempenho/CentralDesempenho";
-import IACoach from "./pages/IACoach/IACoach";
 import Calendario from "./pages/Calendario/Calendario";
 import Auth from "./pages/Auth/Auth";
 import NotFound from "./pages/NotFound/NotFound";
 import Ranking from "./pages/Ranking/Ranking";
-import RelatorioInteligente from "./pages/RelatorioInteligente/RelatorioInteligente";
 import Admin from "./pages/Admin/Admin";
 import Conquistas from "./pages/Conquistas/Conquistas";
 import Sidebar from "./components/Sidebar/Sidebar";
@@ -79,7 +78,7 @@ function LayoutProtegido() {
                     <Route path="/cronograma-ia" element={<CronogramaIA />} />
                     <Route path="/central-estudos" element={<CentralEstudosGateway />} />
                     <Route path="/materiais" element={<CentroMateriais />} />
-                    <Route path="/inteligencia" element={<CentralInteligencia />} />
+                    <Route path="/inteligencia" element={<InteligenciaHub />} />
 
                     <Route path="/estudos" element={<Estudos />} />
                     <Route path="/conteudos" element={<Estudos />} />
@@ -107,8 +106,14 @@ function LayoutProtegido() {
                     <Route path="/ranking" element={<Ranking />} />
                     <Route path="/conquistas" element={<Conquistas />} />
 
-                    <Route path="/relatorio-inteligente" element={<RelatorioInteligente />} />
-                    <Route path="/ia-coach" element={<IACoach />} />
+                    <Route
+                      path="/relatorio-inteligente"
+                      element={<Navigate to="/inteligencia?aba=relatorio" replace />}
+                    />
+                    <Route
+                      path="/ia-coach"
+                      element={<Navigate to="/inteligencia?aba=coach" replace />}
+                    />
 
                     <Route path="/backup" element={<Backup />} />
                     <Route path="/configuracoes" element={<Configuracoes />} />

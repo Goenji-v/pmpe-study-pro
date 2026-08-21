@@ -11,6 +11,7 @@ import { useToast } from "../../context/ToastContext";
 
 import {
   calcularDiasDiferenca,
+  criarPrimeiraRevisao,
   criarProximaRevisao,
   formatarDataRevisao,
   statusDaRevisao,
@@ -103,43 +104,41 @@ export default function Revisoes() {
       return;
     }
 
-    const chavesExistentes =
-      new Set(
-        revisoes.map(
-          (revisao) =>
-            normalizar(
-              `${revisao.materia}::${revisao.assunto}`
-            )
-        )
+    const pendentesPorChave = new Map(
+      revisoes
+        .filter((revisao) => !revisao.concluida)
+        .map((revisao) => [
+          normalizar(`${revisao.materia}::${revisao.assunto}`),
+          revisao,
+        ])
+    );
+
+    const novasRevisoes: Revisao[] = [];
+    const jaAgendadas: Revisao[] = [];
+    let revisoesParaDistribuicao = [...revisoes];
+
+    revisoesIA.forEach((revisaoIA) => {
+      const chave = normalizar(
+        `${revisaoIA.materia}::${revisaoIA.assunto}`
+      );
+      const existente = pendentesPorChave.get(chave);
+
+      if (existente) {
+        jaAgendadas.push(existente);
+        return;
+      }
+
+      const novaRevisao = criarRevisaoInicialIA(
+        revisaoIA,
+        materias,
+        revisoesParaDistribuicao,
+        configuracoes.metaRevisoesDiaria
       );
 
-    const novasRevisoes =
-      revisoesIA
-        .filter(
-          (revisaoIA) => {
-            const chave =
-              normalizar(
-                `${revisaoIA.materia}::${revisaoIA.assunto}`
-              );
-
-            if (
-              chavesExistentes.has(
-                chave
-              )
-            ) {
-              return false;
-            }
-
-            chavesExistentes.add(
-              chave
-            );
-
-            return true;
-          }
-        )
-        .map((revisaoIA) =>
-          criarRevisaoInicialIA(revisaoIA, materias)
-        );
+      novasRevisoes.push(novaRevisao);
+      revisoesParaDistribuicao = [novaRevisao, ...revisoesParaDistribuicao];
+      pendentesPorChave.set(chave, novaRevisao);
+    });
 
     /*
      * A fila do Simulado IA é consumida após a importação.
@@ -150,9 +149,14 @@ export default function Revisoes() {
       usuario.id
     );
 
-    if (
-      novasRevisoes.length === 0
-    ) {
+    if (novasRevisoes.length === 0) {
+      if (jaAgendadas.length > 0) {
+        const primeira = jaAgendadas[0];
+        showToast(
+          `A revisão já estava agendada para ${formatarDataRevisao(primeira.dataPrevista)}.`,
+          "info"
+        );
+      }
       return;
     }
 
@@ -163,6 +167,10 @@ export default function Revisoes() {
       ]
     );
 
+    const primeiraData = novasRevisoes
+      .map((revisao) => revisao.dataPrevista)
+      .sort()[0];
+
     showToast(
       `${novasRevisoes.length} revisão${
         novasRevisoes.length === 1
@@ -172,7 +180,11 @@ export default function Revisoes() {
         novasRevisoes.length === 1
           ? ""
           : "s"
-      }.`,
+      } para ${formatarDataRevisao(primeiraData)}.${
+        jaAgendadas.length > 0
+          ? ` ${jaAgendadas.length} já estava${jaAgendadas.length === 1 ? "" : "m"} agendada${jaAgendadas.length === 1 ? "" : "s"}.`
+          : ""
+      }`,
       "success"
     );
   }
@@ -380,10 +392,29 @@ export default function Revisoes() {
       return;
     }
 
-    setRevisoes((anteriores) =>
-      redistribuirRevisoesPendentes(anteriores, limite)
+    const reorganizadas = redistribuirRevisoesPendentes(revisoes, limite);
+    const datasAnteriores = new Map(
+      revisoes.map((revisao) => [revisao.id, dataCalendario(revisao.dataPrevista)])
     );
-    showToast(`Agenda reorganizada com limite de ${limite} revisões por dia.`, "success");
+    const alteradas = reorganizadas.filter(
+      (revisao) =>
+        !revisao.concluida &&
+        datasAnteriores.get(revisao.id) !== dataCalendario(revisao.dataPrevista)
+    ).length;
+
+    if (alteradas === 0) {
+      showToast(
+        `Nenhuma mudança necessária: a agenda já respeita o limite de ${limite} revisões por dia.`,
+        "info"
+      );
+      return;
+    }
+
+    setRevisoes(reorganizadas);
+    showToast(
+      `${alteradas} revisão${alteradas === 1 ? " foi reorganizada" : "ões foram reorganizadas"}.`,
+      "success"
+    );
   }
 
   return (
@@ -861,29 +892,36 @@ function removerDaFilaRevisoesIA(
 
 function criarRevisaoInicialIA(
   revisaoIA: RevisaoIA,
-  materias: Materia[]
+  materias: Materia[],
+  revisoesExistentes: Revisao[],
+  limiteDiario: number
 ): Revisao {
-  const dataBase = new Date();
-  dataBase.setHours(0, 0, 0, 0);
-
   const referencia = localizarReferenciaCanonica(materias, {
     materia: revisaoIA.materia,
     assunto: revisaoIA.assunto,
   });
 
-  return {
-    id: `ia-${revisaoIA.id}`,
+  const revisao = criarPrimeiraRevisao({
     materiaId: referencia?.materia.id ?? `legado-${normalizar(revisaoIA.materia)}`,
     moduloId: referencia?.modulo.id,
     assuntoId: referencia?.assunto.id ?? `legado-${normalizar(revisaoIA.materia)}-${normalizar(revisaoIA.assunto)}`,
     materia: referencia?.materia.nome ?? revisaoIA.materia,
     modulo: referencia?.modulo.nome,
     assunto: referencia?.assunto.nome ?? revisaoIA.assunto,
-    etapa: 1,
-    dataCriacao: revisaoIA.criadaEm || new Date().toISOString(),
-    dataPrevista: dataBase.toISOString(),
-    concluida: false,
+    revisoesExistentes,
+    limiteDiario,
+  });
+
+  return {
+    ...revisao,
+    id: `ia-${revisaoIA.id}`,
+    dataCriacao: revisaoIA.criadaEm || revisao.dataCriacao,
   };
+}
+
+function dataCalendario(data: string) {
+  const valor = new Date(data);
+  return `${valor.getFullYear()}-${valor.getMonth() + 1}-${valor.getDate()}`;
 }
 
 function normalizar(

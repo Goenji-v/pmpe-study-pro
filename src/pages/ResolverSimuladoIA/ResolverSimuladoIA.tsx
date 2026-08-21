@@ -16,6 +16,11 @@ import type {
 import {
   registrarRespostasQuestoesIA,
 } from "../../services/catalogoQuestoesIAService";
+import {
+  limparCadernoSimuladoIAAtivo,
+  obterCadernoSimuladoIAAtivoId,
+  registrarResultadoCadernoSimuladoIA,
+} from "../../services/cadernosSimuladosIAService";
 
 type LetraAlternativa =
   | "A"
@@ -47,6 +52,7 @@ type ResultadoSimuladoIA = {
 
   respostas: RespostasUsuario;
   questoes: QuestaoIA[];
+  cadernoId?: string;
 };
 
 type DiagnosticoAssunto = {
@@ -337,7 +343,8 @@ export default function ResolverSimuladoIA() {
     const novoResultado =
       montarResultadoSalvo(
         questoes,
-        respostas
+        respostas,
+        obterCadernoSimuladoIAAtivoId() ?? undefined
       );
 
     let avisoSincronizacao = "";
@@ -404,6 +411,19 @@ export default function ResolverSimuladoIA() {
       questoes,
       respostas
     );
+
+    if (novoResultado.cadernoId) {
+      await registrarResultadoCadernoSimuladoIA(
+        novoResultado.cadernoId,
+        {
+          acertos: novoResultado.certas,
+          erros: novoResultado.erradas,
+          emBranco: novoResultado.emBranco,
+          aproveitamento: novoResultado.percentual,
+          ultimaTentativaEm: novoResultado.data,
+        }
+      );
+    }
   }
 
   function refazerSimulado() {
@@ -431,6 +451,8 @@ export default function ResolverSimuladoIA() {
 
       return;
     }
+
+    limparCadernoSimuladoIAAtivo();
 
     const novasQuestoes =
       questoesParaTreino.map(
@@ -1255,7 +1277,8 @@ function calcularResultado(
 
 function montarResultadoSalvo(
   questoes: QuestaoIA[],
-  respostas: RespostasUsuario
+  respostas: RespostasUsuario,
+  cadernoId?: string
 ): ResultadoSimuladoIA {
   const resultado =
     calcularResultado(
@@ -1279,6 +1302,7 @@ function montarResultadoSalvo(
       resultado.percentual,
     respostas,
     questoes,
+    cadernoId,
   };
 }
 

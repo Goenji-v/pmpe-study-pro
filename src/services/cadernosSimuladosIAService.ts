@@ -13,6 +13,16 @@ export type CadernoSimuladoIA = {
   questoes: QuestaoIA[];
   criadoEm: string;
   atualizadoEm: string;
+  estatisticas?: EstatisticasCadernoIA;
+};
+
+export type EstatisticasCadernoIA = {
+  tentativas: number;
+  acertos: number;
+  erros: number;
+  emBranco: number;
+  aproveitamento: number;
+  ultimaTentativaEm: string;
 };
 
 type RegistroBanco = {
@@ -151,6 +161,34 @@ export function ativarCadernoSimuladoIA(caderno: CadernoSimuladoIA) {
     JSON.stringify(caderno.questoes)
   );
   sessionStorage.setItem("pmpe:caderno-simulado-ia:ativo", caderno.id);
+}
+
+export function obterCadernoSimuladoIAAtivoId() {
+  return sessionStorage.getItem("pmpe:caderno-simulado-ia:ativo");
+}
+
+export function limparCadernoSimuladoIAAtivo() {
+  sessionStorage.removeItem("pmpe:caderno-simulado-ia:ativo");
+}
+
+export async function registrarResultadoCadernoSimuladoIA(
+  cadernoId: string,
+  resultado: Omit<EstatisticasCadernoIA, "tentativas">
+): Promise<void> {
+  const caderno = (await listarCadernosSimuladosIA()).find(
+    (item) => item.id === cadernoId
+  );
+
+  if (!caderno) return;
+
+  await salvarCadernoSimuladoIA({
+    ...caderno,
+    atualizadoEm: new Date().toISOString(),
+    estatisticas: {
+      tentativas: (caderno.estatisticas?.tentativas ?? 0) + 1,
+      ...resultado,
+    },
+  });
 }
 
 function carregarQuestoesAtuais(): QuestaoIA[] {
