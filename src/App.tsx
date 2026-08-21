@@ -45,7 +45,6 @@ import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
 import NotificationCenter from "./components/NotificationCenter/NotificationCenter";
 import NotificationButtonBridge from "./components/NotificationButtonBridge/NotificationButtonBridge";
 import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
-import CadernoSimuladoIABridge from "./components/CadernoSimuladoIABridge/CadernoSimuladoIABridge";
 
 import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -62,7 +61,6 @@ function LayoutProtegido() {
         <RuntimeErrorGuard />
         <AppProvider>
           <QuestaoIABridge />
-          <CadernoSimuladoIABridge />
           <CronometroProvider>
             <div className="layout">
               <Sidebar />

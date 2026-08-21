@@ -7,7 +7,6 @@ import {
   ativarCadernoSimuladoIA,
   excluirCadernoSimuladoIA,
   listarCadernosSimuladosIA,
-  registrarQuestoesAtuaisComoCaderno,
   type CadernoSimuladoIA,
 } from "../../services/cadernosSimuladosIAService";
 
@@ -27,7 +26,6 @@ export default function MeusSimuladosIA() {
     setErro("");
 
     try {
-      await registrarQuestoesAtuaisComoCaderno();
       const encontrados = await listarCadernosSimuladosIA();
       setCadernos(encontrados);
     } catch (error) {

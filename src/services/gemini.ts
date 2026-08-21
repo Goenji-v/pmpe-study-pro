@@ -31,6 +31,7 @@ export type ParametrosGeracaoIA = {
   banca: string;
   dificuldade: DificuldadeIA;
   quantidade: number;
+  enunciadosEvitar?: string[];
 };
 
 type RespostaSucesso = {
@@ -70,6 +71,8 @@ export async function gerarQuestoesIA(
           quantidade:
             parametros.quantidade,
           banca: parametros.banca,
+          enunciadosEvitar:
+            parametros.enunciadosEvitar ?? [],
         }),
       }
     );
@@ -179,32 +182,29 @@ function normalizarQuestoes(
       ...questao,
 
       id:
-        questao.id ||
         crypto.randomUUID(),
 
       materia:
-        questao.materia ||
-        parametros.materia ||
-        "Conteúdo da semana",
+        parametros.origem === "assunto"
+          ? parametros.materia || "Conteúdo selecionado"
+          : questao.materia || "Conteúdo da semana",
 
       modulo:
-        questao.modulo ||
-        parametros.modulo ||
-        (parametros.origem === "assunto"
-          ? "Geral"
-          : undefined),
+        parametros.origem === "assunto"
+          ? parametros.modulo || "Geral"
+          : questao.modulo,
 
       moduloId:
-        questao.moduloId ||
-        parametros.moduloId,
+        parametros.origem === "assunto"
+          ? parametros.moduloId
+          : questao.moduloId,
 
       assunto:
-        questao.assunto ||
-        parametros.assunto ||
-        `Semana ${parametros.semana}`,
+        parametros.origem === "assunto"
+          ? parametros.assunto || "Assunto selecionado"
+          : questao.assunto || `Semana ${parametros.semana}`,
 
       banca:
-        questao.banca ||
         parametros.banca,
 
       dificuldade:

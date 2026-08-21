@@ -78,20 +78,35 @@ export type ResultadoPublicacaoLote = {
 export async function listarQuestoesPublicadas(
   concursoAlvo: string
 ): Promise<QuestaoBanco[]> {
-  const { data, error } = await supabase
-    .from("questoes_catalogo")
-    .select("*")
-    .eq("status", "ativa")
-    .eq("concurso_alvo", concursoAlvo)
-    .in("compatibilidade_edital", ["direta", "implicita"])
-    .order("created_at", { ascending: false })
-    .limit(1000);
+  const [oficiais, geradasIA] = await Promise.all([
+    supabase
+      .from("questoes_catalogo")
+      .select("*")
+      .eq("status", "ativa")
+      .eq("origem", "prova_oficial")
+      .eq("concurso_alvo", concursoAlvo)
+      .in("compatibilidade_edital", ["direta", "implicita"])
+      .order("created_at", { ascending: false })
+      .limit(1000),
+    supabase
+      .from("questoes_catalogo")
+      .select("*")
+      .eq("status", "ativa")
+      .eq("origem", "ia")
+      .eq("compatibilidade_edital", "direta")
+      .order("created_at", { ascending: false })
+      .limit(1000),
+  ]);
 
-  if (error) {
-    throw new Error(`Erro ao carregar questões oficiais: ${error.message}`);
+  const erro = oficiais.error ?? geradasIA.error;
+  if (erro) {
+    throw new Error(`Erro ao carregar o catálogo de questões: ${erro.message}`);
   }
 
-  return ((data ?? []) as LinhaQuestaoCatalogo[]).map(converterLinhaQuestao);
+  return [
+    ...((oficiais.data ?? []) as LinhaQuestaoCatalogo[]),
+    ...((geradasIA.data ?? []) as LinhaQuestaoCatalogo[]),
+  ].map(converterLinhaQuestao);
 }
 
 export async function listarQuestoesCuradoria(): Promise<QuestaoBanco[]> {

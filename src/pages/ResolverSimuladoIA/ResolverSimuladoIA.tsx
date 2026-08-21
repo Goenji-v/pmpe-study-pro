@@ -13,6 +13,10 @@ import type {
   QuestaoIA,
 } from "../../types/index";
 
+import {
+  registrarRespostasQuestoesIA,
+} from "../../services/catalogoQuestoesIAService";
+
 type LetraAlternativa =
   | "A"
   | "B"
@@ -309,7 +313,7 @@ export default function ResolverSimuladoIA() {
     setQuestaoAtual(indice);
   }
 
-  function finalizarSimulado() {
+  async function finalizarSimulado() {
     if (
       totalRespondidas <
       questoes.length
@@ -336,17 +340,27 @@ export default function ResolverSimuladoIA() {
         respostas
       );
 
-    salvarResultado(
-      novoResultado
-    );
+    let avisoSincronizacao = "";
+
+    try {
+      await salvarResultado(
+        novoResultado
+      );
+    } catch (erroSalvamento) {
+      avisoSincronizacao =
+        erroSalvamento instanceof Error
+          ? erroSalvamento.message
+          : "O histórico online não pôde ser atualizado.";
+    }
 
     setFinalizado(true);
     setMensagem(
-      "Simulado finalizado e salvo nas Estatísticas IA."
+      avisoSincronizacao ||
+        "Simulado finalizado e salvo nas Estatísticas IA."
     );
   }
 
-  function salvarResultado(
+  async function salvarResultado(
     novoResultado:
       ResultadoSimuladoIA
   ) {
@@ -384,6 +398,11 @@ export default function ResolverSimuladoIA() {
       new Event(
         "pmpe-simulado-ia-finalizado"
       )
+    );
+
+    await registrarRespostasQuestoesIA(
+      questoes,
+      respostas
     );
   }
 

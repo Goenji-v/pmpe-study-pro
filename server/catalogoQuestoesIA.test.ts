@@ -1,0 +1,114 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import type { QuestaoIA } from "../src/types/index.ts";
+import {
+  assinaturaCadernoIA,
+  fingerprintQuestaoIA,
+  selecionarQuestoesParaReuso,
+} from "../src/services/catalogoQuestoesIAUtils.ts";
+
+function questao(
+  id: string,
+  materia: string,
+  assunto: string,
+  enunciado: string
+): QuestaoIA {
+  return {
+    id,
+    materia,
+    modulo: "Geral",
+    assunto,
+    banca: "AOCP",
+    dificuldade: "Média",
+    enunciado,
+    alternativas: {
+      A: "Alternativa A",
+      B: "Alternativa B",
+      C: "Alternativa C",
+      D: "Alternativa D",
+      E: "Alternativa E",
+    },
+    respostaCorreta: "A",
+    explicacao: "Explicação",
+  };
+}
+
+test("cadernos diferentes não colidem quando a IA repete IDs numéricos", () => {
+  const direitosHumanos = Array.from(
+    { length: 10 },
+    (_, indice) => questao(
+      String(indice + 1),
+      "Direitos Humanos",
+      "Teoria geral",
+      `Direitos humanos ${indice + 1}`
+    )
+  );
+
+  const portugues = Array.from(
+    { length: 10 },
+    (_, indice) => questao(
+      String(indice + 1),
+      "Português",
+      "Subordinação",
+      `Subordinação ${indice + 1}`
+    )
+  );
+
+  assert.notEqual(
+    assinaturaCadernoIA(direitosHumanos),
+    assinaturaCadernoIA(portugues)
+  );
+});
+
+test("modo não respondidas reutiliza inéditas e calcula apenas o déficit", () => {
+  const catalogo = [
+    questao("1", "Português", "Verbos", "Questão 1"),
+    questao("2", "Português", "Verbos", "Questão 2"),
+    questao("3", "Português", "Verbos", "Questão 3"),
+  ];
+
+  const selecao = selecionarQuestoesParaReuso(
+    catalogo,
+    new Set(["1", "2"]),
+    4,
+    "nao_respondidas",
+    () => 0.5
+  );
+
+  assert.deepEqual(selecao.reutilizadas.map((item) => item.id), ["3"]);
+  assert.equal(selecao.quantidadeGerar, 3);
+});
+
+test("modo misturar evita chamada à IA quando o catálogo já cobre o pedido", () => {
+  const catalogo = Array.from(
+    { length: 10 },
+    (_, indice) => questao(
+      String(indice + 1),
+      "Português",
+      "Verbos",
+      `Questão ${indice + 1}`
+    )
+  );
+
+  const selecao = selecionarQuestoesParaReuso(
+    catalogo,
+    new Set(catalogo.map((item) => item.id)),
+    10,
+    "misturar",
+    () => 0.5
+  );
+
+  assert.equal(selecao.reutilizadas.length, 10);
+  assert.equal(selecao.quantidadeGerar, 0);
+});
+
+test("fingerprint ignora diferenças cosméticas de caixa e acento", async () => {
+  const primeira = questao("1", "Português", "Subordinação", "Analise a oração.");
+  const segunda = questao("2", "PORTUGUES", "subordinacao", "  Analise   a oração. ");
+
+  assert.equal(
+    await fingerprintQuestaoIA(primeira),
+    await fingerprintQuestaoIA(segunda)
+  );
+});
