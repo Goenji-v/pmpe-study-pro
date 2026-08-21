@@ -288,8 +288,38 @@ const [
     [modulosDisponiveis, estado.moduloId]
   );
 
-  const assuntosDisponiveis =
-    moduloSelecionado?.assuntos ?? [];
+  const assuntosDisponiveis = useMemo(
+    () => moduloSelecionado?.assuntos ?? [],
+    [moduloSelecionado]
+  );
+
+  const assuntoSelecionado = useMemo(
+    () =>
+      assuntosDisponiveis.find(
+        (assunto) =>
+          assunto.id === estado.assuntoId ||
+          assunto.nome === estado.assunto
+      ),
+    [assuntosDisponiveis, estado.assunto, estado.assuntoId]
+  );
+
+  const aulasDisponiveis = useMemo(
+    () =>
+      [...(assuntoSelecionado?.aulas ?? [])]
+        .sort((aulaA, aulaB) => aulaA.ordem - aulaB.ordem),
+    [assuntoSelecionado]
+  );
+
+  const aulaSelecionada = useMemo(
+    () =>
+      aulasDisponiveis.find(
+        (aula) => aula.id === estado.aulaId
+      ) ??
+      (assuntoSelecionado
+        ? localizarProximaAula(assuntoSelecionado)
+        : undefined),
+    [aulasDisponiveis, assuntoSelecionado, estado.aulaId]
+  );
 
   const materiaObrigatoria =
     estado.tipo === "aula" ||
@@ -327,24 +357,30 @@ const [
 
     setMensagem("");
 
+    if (tipo !== "simulado") {
+      atualizarDados({
+        tipo,
+        formatoRevisao:
+          tipo === "revisao"
+            ? estado.formatoRevisao ?? "teoria"
+            : undefined,
+      });
+
+      return;
+    }
+
     atualizarDados({
       tipo,
-      formatoRevisao: tipo === "revisao" ? "teoria" : undefined,
-
-      materia:
-        tipo === "simulado"
-          ? ""
-          : estado.materia,
-
-      materiaId:
-        tipo === "simulado"
-          ? undefined
-          : estado.materiaId,
+      formatoRevisao: undefined,
+      materia: "",
+      materiaId: undefined,
       modulo: undefined,
       moduloId: undefined,
       assunto: "",
       assuntoId: undefined,
       aulaId: undefined,
+      urlAula: undefined,
+      urlQuestoes: undefined,
     });
   }
 
@@ -411,6 +447,19 @@ const [
       aulaId: assunto ? localizarProximaAula(assunto)?.id : undefined,
       urlAula: assunto ? (localizarProximaAula(assunto)?.url ?? assunto.aula) : undefined,
       urlQuestoes: assunto?.questoes,
+    });
+  }
+
+  function selecionarAula(
+    aulaId: string
+  ) {
+    const aula = aulasDisponiveis.find(
+      (item) => item.id === aulaId
+    );
+
+    atualizarDados({
+      aulaId: aula?.id,
+      urlAula: aula?.url ?? assuntoSelecionado?.aula,
     });
   }
 
@@ -929,6 +978,29 @@ const [
                 </>
               )}
             </div>
+
+            {estado.tipo === "aula" &&
+              assuntoSelecionado &&
+              aulasDisponiveis.length > 0 && (
+                <div className="central-estudos-campo">
+                  <label>Aula</label>
+
+                  <select
+                    value={aulaSelecionada?.id ?? ""}
+                    onChange={(evento) =>
+                      selecionarAula(evento.target.value)
+                    }
+                    disabled={estado.ativo}
+                  >
+                    {aulasDisponiveis.map((aula) => (
+                      <option key={aula.id} value={aula.id}>
+                        {aula.concluida ? "✓ " : ""}
+                        {aula.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
             {estado.tipo === "revisao" && (
               <div className="central-estudos-campo central-estudos-revisao-formato">
