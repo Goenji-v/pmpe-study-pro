@@ -653,7 +653,7 @@ export default function CentralInteligencia() {
           type="button"
           className="inteligencia-botao-ia"
           onClick={() =>
-            navigate("/ia-coach")
+            navigate("/inteligencia?aba=coach")
           }
         >
           🤖 Abrir análise completa da IA

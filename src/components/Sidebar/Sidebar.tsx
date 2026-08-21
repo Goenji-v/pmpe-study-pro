@@ -19,7 +19,6 @@ type GrupoId =
   | "planejamento"
   | "estudos"
   | "pratica"
-  | "inteligencia"
   | "sistema";
 
 type IconeMenu =
@@ -67,11 +66,6 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/desempenho",
     "/historico",
     "/estatisticas",
-  ],
-  inteligencia: [
-    "/inteligencia",
-    "/relatorio-inteligente",
-    "/ia-coach",
   ],
   sistema: [
     "/conquistas",
@@ -215,18 +209,11 @@ export default function Sidebar() {
             <ItemMenu to="/desempenho" texto="Desempenho" />
           </GrupoMenu>
 
-          <GrupoMenu
-            id="inteligencia"
-            titulo="Inteligência"
+          <ItemMenu
+            to="/inteligencia"
             icone="sparkles"
-            ativo={rotaPertenceAoGrupo(location.pathname, "inteligencia")}
-            aberto={grupoAberto === "inteligencia"}
-            onToggle={alternarGrupo}
-          >
-            <ItemMenu to="/inteligencia" texto="Central de Inteligência" />
-            <ItemMenu to="/relatorio-inteligente" texto="Relatório Inteligente" />
-            <ItemMenu to="/ia-coach" texto="IA Coach" />
-          </GrupoMenu>
+            texto="Inteligência"
+          />
 
           <GrupoMenu
             id="sistema"
