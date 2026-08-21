@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import type { QuestaoIA } from "../types/index";
+import { assinaturaCadernoIA } from "./catalogoQuestoesIAUtils";
 
 export type CadernoSimuladoIA = {
   id: string;
@@ -195,11 +196,7 @@ function ordenar(cadernos: CadernoSimuladoIA[]) {
 }
 
 function assinatura(questoes: QuestaoIA[]) {
-  return questoes
-    .map((questao) => questao.id)
-    .filter(Boolean)
-    .sort()
-    .join("|");
+  return assinaturaCadernoIA(questoes);
 }
 
 function obterDificuldade(questoes: QuestaoIA[]) {

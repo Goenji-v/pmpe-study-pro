@@ -31,7 +31,11 @@ type FiltroStatus =
   | "favoritas"
   | "revisar";
 
-type FiltroOrigem = "todas" | "oficiais" | "pessoais";
+type FiltroOrigem =
+  | "todas"
+  | "oficiais"
+  | "ia"
+  | "pessoais";
 
 type PreferenciaQuestaoGlobal = {
   favoritada?: boolean;
@@ -186,6 +190,7 @@ export default function BancoQuestoes() {
     let favoritas = 0;
     let revisar = 0;
     let oficiais = 0;
+    let ia = 0;
 
     questoesBiblioteca.forEach((questao) => {
       const estatistica = estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;
@@ -194,7 +199,8 @@ export default function BancoQuestoes() {
       if (estatistica.ultima === "acerto") acertadas += 1;
       if (questao.favoritada) favoritas += 1;
       if (questao.revisarDepois) revisar += 1;
-      if (questao.global) oficiais += 1;
+      if (questao.origem === "prova_oficial") oficiais += 1;
+      if (questao.origem === "ia" && questao.global) ia += 1;
     });
 
     return {
@@ -205,6 +211,7 @@ export default function BancoQuestoes() {
       favoritas,
       revisar,
       oficiais,
+      ia,
     };
   }, [estatisticasPorQuestao, questoesBiblioteca]);
 
@@ -221,7 +228,8 @@ export default function BancoQuestoes() {
 
       if (filtroMateria && questao.materia !== filtroMateria) return false;
       if (filtroDificuldade && questao.dificuldade !== filtroDificuldade) return false;
-      if (filtroOrigem === "oficiais" && !questao.global) return false;
+      if (filtroOrigem === "oficiais" && questao.origem !== "prova_oficial") return false;
+      if (filtroOrigem === "ia" && questao.origem !== "ia") return false;
       if (filtroOrigem === "pessoais" && questao.global) return false;
 
       if (filtroStatus === "erradas" && estatistica.ultima !== "erro") return false;
@@ -419,6 +427,7 @@ export default function BancoQuestoes() {
       <div className="banco-biblioteca-resumo">
         <Resumo titulo="Total" valor={contagens.todas} />
         <Resumo titulo="Oficiais" valor={contagens.oficiais} classe="oficial" />
+        <Resumo titulo="Geradas por IA" valor={contagens.ia} classe="neutro" />
         <Resumo titulo="Erradas" valor={contagens.erradas} classe="erro" />
         <Resumo titulo="Nunca respondidas" valor={contagens.naoResolvidas} classe="neutro" />
         <Resumo titulo="Favoritas" valor={contagens.favoritas} classe="favorita" />
@@ -460,6 +469,7 @@ export default function BancoQuestoes() {
           <select value={filtroOrigem} onChange={(evento) => setFiltroOrigem(evento.target.value as FiltroOrigem)}>
             <option value="todas">Todas as origens</option>
             <option value="oficiais">Somente oficiais</option>
+            <option value="ia">Catálogo compartilhado IA</option>
             <option value="pessoais">Minhas questões</option>
           </select>
 
@@ -502,11 +512,19 @@ export default function BancoQuestoes() {
                     <strong>{questao.assunto}</strong>
                     <small>
                       {questao.banca} · {rotuloDificuldade(questao.dificuldade)}
-                      {questao.global ? ` · ${questao.concursoOrigem ?? "Prova oficial"} ${questao.anoOrigem ?? ""}` : " · Questão pessoal"}
+                      {questao.origem === "ia"
+                        ? " · Catálogo compartilhado IA"
+                        : questao.global
+                          ? ` · ${questao.concursoOrigem ?? "Prova oficial"} ${questao.anoOrigem ?? ""}`
+                          : " · Questão pessoal"}
                     </small>
                   </div>
                   <div className="banco-biblioteca-tags">
-                    {questao.global && <span className="oficial">✓ Oficial validada</span>}
+                    {questao.origem === "ia" ? (
+                      <span className="nunca">🤖 Gerada por IA</span>
+                    ) : (
+                      questao.global && <span className="oficial">✓ Oficial validada</span>
+                    )}
                     {estatistica.tentativas === 0 ? (
                       <span className="nunca">Nunca respondida</span>
                     ) : (

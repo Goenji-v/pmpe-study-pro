@@ -24,6 +24,20 @@ import {
   pegarAssuntosDaSemana,
 } from "../../utils/conteudosSemana";
 
+import {
+  registrarQuestoesAtuaisComoCaderno,
+} from "../../services/cadernosSimuladosIAService";
+
+import {
+  salvarQuestoesGeradasNoCatalogo,
+  selecionarDoCatalogoIA,
+} from "../../services/catalogoQuestoesIAService";
+
+import {
+  embaralhar,
+  type PreferenciaReusoIA,
+} from "../../services/catalogoQuestoesIAUtils";
+
 import type {
   QuestaoIA,
 } from "../../types/index";
@@ -41,7 +55,7 @@ const CHAVE_BANCO_IA =
 export default function GerarSimuladoIA() {
   const navigate = useNavigate();
 
-  const { materias } = useApp();
+  const { materias, configuracoes } = useApp();
 
   const [
     origem,
@@ -91,6 +105,13 @@ export default function GerarSimuladoIA() {
     salvarNoBanco,
     setSalvarNoBanco,
   ] = useState(true);
+
+  const [
+    preferenciaReuso,
+    setPreferenciaReuso,
+  ] = useState<PreferenciaReusoIA>(
+    "nao_respondidas"
+  );
 
   const [gerando, setGerando] =
     useState(false);
@@ -157,6 +178,13 @@ export default function GerarSimuladoIA() {
 
   const assuntosDisponiveis =
     moduloAtual?.assuntos ?? [];
+
+  const assuntoAtual =
+    assuntosDisponiveis.find(
+      (assunto) =>
+        assunto.nome ===
+        assuntoSelecionado
+    );
 
   const conteudosSemana =
     useMemo(
@@ -301,67 +329,126 @@ export default function GerarSimuladoIA() {
       setGerando(true);
       setQuestoesGeradas([]);
 
-      const resposta =
-        await gerarQuestoesIA({
-          origem,
+      const parametrosGeracao = {
+        origem,
+        materia:
+          origem === "assunto"
+            ? materiaSelecionada
+            : undefined,
+        modulo:
+          origem === "assunto"
+            ? moduloSelecionado
+            : undefined,
+        moduloId:
+          origem === "assunto"
+            ? moduloAtual?.id
+            : undefined,
+        assunto:
+          origem === "assunto"
+            ? assuntoSelecionado
+            : undefined,
+        semana:
+          origem === "semana"
+            ? semanaSelecionada
+            : undefined,
+        conteudosSemana:
+          origem === "semana"
+            ? conteudosSemana
+            : undefined,
+        banca: banca.trim(),
+        dificuldade,
+        quantidade,
+      };
 
-          materia:
-            origem === "assunto"
-              ? materiaSelecionada
-              : undefined,
+      const selecaoCatalogo =
+        origem === "assunto"
+          ? await selecionarDoCatalogoIA({
+              materia: materiaSelecionada,
+              materiaId: materiaAtual?.id,
+              modulo: moduloSelecionado,
+              moduloId: moduloAtual?.id,
+              assunto: assuntoSelecionado,
+              assuntoId: assuntoAtual?.id,
+              banca: banca.trim(),
+              dificuldade,
+              quantidade,
+              preferencia: preferenciaReuso,
+            })
+          : {
+              reutilizadas: [] as QuestaoIA[],
+              quantidadeGerar: quantidade,
+            };
 
-          modulo:
-            origem === "assunto"
-              ? moduloSelecionado
-              : undefined,
+      let novasQuestoes: QuestaoIA[] = [];
 
-          moduloId:
-            origem === "assunto"
-              ? moduloAtual?.id
-              : undefined,
+      if (
+        selecaoCatalogo.quantidadeGerar > 0
+      ) {
+        const resposta =
+          await gerarQuestoesIA({
+            ...parametrosGeracao,
+            quantidade:
+              selecaoCatalogo.quantidadeGerar,
+            enunciadosEvitar:
+              selecaoCatalogo.reutilizadas.map(
+                (questao) =>
+                  questao.enunciado
+              ),
+          });
 
-          assunto:
-            origem === "assunto"
-              ? assuntoSelecionado
-              : undefined,
+        novasQuestoes =
+          resposta.questoes;
+      }
 
-          semana:
-            origem === "semana"
-              ? semanaSelecionada
-              : undefined,
+      if (
+        salvarNoBanco &&
+        novasQuestoes.length > 0
+      ) {
+        novasQuestoes =
+          await salvarQuestoesGeradasNoCatalogo(
+            novasQuestoes,
+            {
+              concursoAlvo:
+                configuracoes.concurso ||
+                "Geral",
+              editalAlvo:
+                configuracoes.concurso ||
+                "Geral",
+              materiaId:
+                materiaAtual?.id,
+              assuntoId:
+                assuntoAtual?.id,
+            }
+          );
+      }
 
-          conteudosSemana:
-            origem === "semana"
-              ? conteudosSemana
-              : undefined,
-
-          banca:
-            banca.trim(),
-
-          dificuldade,
-
-          quantidade,
-        });
+      const questoesFinais =
+        embaralhar([
+          ...selecaoCatalogo.reutilizadas,
+          ...novasQuestoes,
+        ]).slice(0, quantidade);
 
       localStorage.setItem(
         CHAVE_QUESTOES_IA,
         JSON.stringify(
-          resposta.questoes
+          questoesFinais
         )
       );
 
       if (salvarNoBanco) {
         salvarQuestoesNoBanco(
-          resposta.questoes
+          questoesFinais
         );
       }
 
+      await registrarQuestoesAtuaisComoCaderno();
+
       setQuestoesGeradas(
-        resposta.questoes
+        questoesFinais
       );
 
       setSucesso(
-        `${resposta.questoes.length} questões geradas e salvas com sucesso.`
+        `${questoesFinais.length} questões prontas: ${selecaoCatalogo.reutilizadas.length} reutilizadas do banco e ${novasQuestoes.length} novas geradas por IA.`
       );
 
       window.dispatchEvent(
@@ -416,6 +503,9 @@ export default function GerarSimuladoIA() {
     setDificuldade("Mista");
     setQuantidade(5);
     setSalvarNoBanco(true);
+    setPreferenciaReuso(
+      "nao_respondidas"
+    );
     setErro("");
     setSucesso("");
     setQuestoesGeradas([]);
@@ -840,6 +930,32 @@ export default function GerarSimuladoIA() {
               )}
             </select>
           </div>
+
+          <div className="gerar-ia-campo">
+            <label>
+              Seleção do banco
+            </label>
+
+            <select
+              value={preferenciaReuso}
+              onChange={(evento) =>
+                setPreferenciaReuso(
+                  evento.target.value as PreferenciaReusoIA
+                )
+              }
+              disabled={
+                gerando ||
+                origem === "semana"
+              }
+            >
+              <option value="nao_respondidas">
+                Somente não respondidas
+              </option>
+              <option value="misturar">
+                Misturar com já respondidas
+              </option>
+            </select>
+          </div>
         </div>
 
         <label className="gerar-ia-checkbox">
@@ -857,7 +973,7 @@ export default function GerarSimuladoIA() {
 
           <span>
             Salvar automaticamente
-            no Banco de Questões IA
+            no banco compartilhado de questões IA
           </span>
         </label>
 

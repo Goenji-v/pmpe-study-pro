@@ -123,7 +123,22 @@ app.post(
         assunto = "Crase",
         quantidade = 5,
         banca = "AOCP",
+        enunciadosEvitar = [],
       } = req.body;
+
+      const listaEvitar = Array.isArray(enunciadosEvitar)
+        ? enunciadosEvitar
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.trim().slice(0, 500))
+            .filter(Boolean)
+            .slice(0, 120)
+        : [];
+
+      const restricaoRepeticao = listaEvitar.length > 0
+        ? `\nNão repita nem parafraseie estas questões já selecionadas:\n${listaEvitar
+            .map((item, indice) => `${indice + 1}. ${item}`)
+            .join("\n")}\n`
+        : "";
 
       const resposta =
         await ai.models.generateContent({
@@ -139,6 +154,8 @@ ${assunto}
 
 Banca:
 ${banca}
+
+${restricaoRepeticao}
 
 Retorne SOMENTE um JSON válido.
 
