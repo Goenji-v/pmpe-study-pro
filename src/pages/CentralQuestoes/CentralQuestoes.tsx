@@ -2,6 +2,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 
 import Questoes from "../Questoes/Questoes";
 import Historico from "../Historico/Historico";
@@ -45,6 +46,8 @@ type AtividadeDia = {
 };
 
 export default function CentralQuestoes() {
+  const navigate = useNavigate();
+
   const {
     questoes,
   } = useApp();
@@ -132,6 +135,11 @@ export default function CentralQuestoes() {
       [questoes]
     );
 
+  function abrirGeradorIA() {
+    sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
+    navigate("/gerar-simulado-ia");
+  }
+
   return (
     <section className="central-questoes">
       <header className="central-questoes-topo">
@@ -146,6 +154,19 @@ export default function CentralQuestoes() {
             identifique seus principais
             pontos fracos.
           </p>
+        </div>
+
+        <div className="central-questoes-topo-acoes">
+          <button type="button" onClick={abrirGeradorIA}>
+            ✨ Gerar questões com IA
+          </button>
+          <button
+            type="button"
+            className="secundario"
+            onClick={() => navigate("/resolver-simulado-ia")}
+          >
+            Meus cadernos IA
+          </button>
         </div>
       </header>
 

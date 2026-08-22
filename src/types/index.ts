@@ -106,6 +106,12 @@ export type RegistroQuestao = {
   minutos: number;
   data: string;
   observacao?: string;
+  /** Permite separar registros manuais de tentativas feitas dentro do app. */
+  origem?: "manual" | "questoes-ia" | "simulado-ia";
+  /** Liga os registros por assunto ao resultado único que os originou. */
+  tentativaId?: string;
+  /** Mantido fora da meta de questões respondidas, mas disponível para diagnóstico. */
+  emBranco?: number;
 };
 
 export type TipoSessao =
@@ -170,6 +176,9 @@ export type Simulado = {
   totalQuestoes?: number;
   cadernoUrl?: string;
   comentadoUrl?: string;
+  emBranco?: number;
+  origem?: "manual" | "ia";
+  tentativaId?: string;
 };
 
 export type AlternativaQuestao = {
@@ -292,9 +301,11 @@ export type Revisao = {
 export interface QuestaoIA {
   id: string;
   materia: string;
+  materiaId?: string;
   modulo?: string;
   moduloId?: string;
   assunto: string;
+  assuntoId?: string;
   banca: string;
   dificuldade:
     | "Fácil"
@@ -320,3 +331,7 @@ export interface QuestaoIA {
 
   explicacao: string;
 }
+
+export type TipoSessaoQuestoesIA =
+  | "questoes"
+  | "simulado";

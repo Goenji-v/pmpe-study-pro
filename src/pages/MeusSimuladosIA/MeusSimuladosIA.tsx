@@ -11,6 +11,7 @@ import {
   type EstatisticasCadernoIA,
 } from "../../services/cadernosSimuladosIAService";
 import { assinaturaCadernoIA } from "../../services/catalogoQuestoesIAUtils";
+import { inferirTipoSessaoQuestoesIA } from "../../utils/resultadoQuestoesIA";
 import type { QuestaoIA } from "../../types";
 
 type ResultadoLegadoIA = {
@@ -90,7 +91,7 @@ export default function MeusSimuladosIA() {
   if (carregando) {
     return (
       <section className="cadernos-ia-container">
-        <div className="cadernos-ia-vazio">Carregando seus simulados IA...</div>
+        <div className="cadernos-ia-vazio">Carregando seus cadernos IA...</div>
       </section>
     );
   }
@@ -99,8 +100,8 @@ export default function MeusSimuladosIA() {
     <section className="cadernos-ia-container">
       <header className="cadernos-ia-cabecalho">
         <div>
-          <span className="cadernos-ia-kicker">SIMULADOS IA</span>
-          <h1>Meus Simulados IA</h1>
+          <span className="cadernos-ia-kicker">QUESTÕES E SIMULADOS IA</span>
+          <h1>Meus Cadernos IA</h1>
           <p>
             Cada geração fica salva como um caderno separado. Escolha qual matéria e assunto quer resolver.
           </p>
@@ -131,16 +132,18 @@ export default function MeusSimuladosIA() {
       {cadernos.length === 0 ? (
         <div className="cadernos-ia-vazio cadernos-ia-vazio-grande">
           <div className="cadernos-ia-vazio-icone">🤖</div>
-          <h2>Nenhum simulado IA salvo</h2>
+          <h2>Nenhum caderno IA salvo</h2>
           <p>Gere seu primeiro conjunto de questões. Ele aparecerá aqui automaticamente.</p>
           <button type="button" onClick={() => navigate("/gerar-simulado-ia")}>
-            Gerar Simulado IA
+            Gerar questões ou simulado
           </button>
         </div>
       ) : (
         <div className="cadernos-ia-grid">
           {cadernos.map((caderno) => {
             const estatisticas = estatisticasPorCaderno.get(caderno.id);
+            const tipo =
+              caderno.tipo ?? inferirTipoSessaoQuestoesIA(caderno.questoes);
 
             return (
             <article key={caderno.id} className="caderno-ia-card">
@@ -153,6 +156,7 @@ export default function MeusSimuladosIA() {
               </div>
 
               <div className="caderno-ia-tags">
+                <span>{tipo === "simulado" ? "Simulado" : "Questões"}</span>
                 <span>{caderno.questoes.length} questões</span>
                 <span>{caderno.dificuldade}</span>
                 <span>{caderno.banca}</span>

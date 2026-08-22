@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -11,28 +12,34 @@ import "./ResolverSimuladoIADescartar.css";
 
 import type {
   QuestaoIA,
+  TipoSessaoQuestoesIA,
 } from "../../types/index";
+import { useApp } from "../../context/AppContext";
 
 import {
   registrarRespostasQuestoesIA,
 } from "../../services/catalogoQuestoesIAService";
 import {
+  definirTipoSessaoQuestoesIAAtiva,
   limparCadernoSimuladoIAAtivo,
   obterCadernoSimuladoIAAtivoId,
+  obterTipoSessaoQuestoesIAAtiva,
   registrarResultadoCadernoSimuladoIA,
 } from "../../services/cadernosSimuladosIAService";
+import {
+  aplicarRevisoesDoResultadoIA,
+  calcularDiagnosticoQuestoesIA,
+  calcularResultadoQuestoesIA,
+  criarRegistrosQuestoesIA,
+  criarSimuladoIA,
+  type DiagnosticoAssuntoIA,
+  type LetraAlternativaIA,
+  type RespostasQuestoesIA,
+  type ResumoRevisoesResultadoIA,
+} from "../../utils/resultadoQuestoesIA";
 
-type LetraAlternativa =
-  | "A"
-  | "B"
-  | "C"
-  | "D"
-  | "E";
-
-type RespostasUsuario = Record<
-  string,
-  LetraAlternativa
->;
+type LetraAlternativa = LetraAlternativaIA;
+type RespostasUsuario = RespostasQuestoesIA;
 
 type AlternativasEliminadas = Record<
   string,
@@ -53,38 +60,7 @@ type ResultadoSimuladoIA = {
   respostas: RespostasUsuario;
   questoes: QuestaoIA[];
   cadernoId?: string;
-};
-
-type DiagnosticoAssunto = {
-  chave: string;
-
-  materia: string;
-
-  modulo?: string;
-  moduloId?: string;
-
-  assunto: string;
-
-  total: number;
-  certas: number;
-  erradas: number;
-  emBranco: number;
-  percentual: number;
-};
-
-type RevisaoIA = {
-  id: string;
-
-  materia: string;
-
-  modulo?: string;
-  moduloId?: string;
-
-  assunto: string;
-
-  origem: "simulado-ia";
-  criadaEm: string;
-  concluida: boolean;
+  tipo: TipoSessaoQuestoesIA;
 };
 
 const CHAVE_QUESTOES_IA =
@@ -93,11 +69,15 @@ const CHAVE_QUESTOES_IA =
 const CHAVE_RESULTADOS_IA =
   "pmpe_resultados_simulados_ia";
 
-const CHAVE_REVISOES_IA =
-  "pmpe_revisoes_ia";
-
 export default function ResolverSimuladoIA() {
   const navigate = useNavigate();
+  const {
+    materias,
+    revisoes,
+    setQuestoes: setRegistrosQuestoes,
+    setRevisoes,
+    setSimulados,
+  } = useApp();
 
   const [questoes, setQuestoes] =
     useState<QuestaoIA[]>([]);
@@ -127,6 +107,16 @@ export default function ResolverSimuladoIA() {
     setCarregando,
   ] = useState(true);
 
+  const [finalizando, setFinalizando] =
+    useState(false);
+  const finalizandoRef = useRef(false);
+
+  const [tipoSessao, setTipoSessao] =
+    useState<TipoSessaoQuestoesIA>("questoes");
+
+  const [resumoRevisaoFinal, setResumoRevisaoFinal] =
+    useState<ResumoRevisoesResultadoIA | null>(null);
+
   const [
     mensagem,
     setMensagem,
@@ -146,7 +136,7 @@ export default function ResolverSimuladoIA() {
       };
     }
 
-    return calcularResultado(
+    return calcularResultadoQuestoesIA(
       questoes,
       respostas
     );
@@ -159,7 +149,7 @@ export default function ResolverSimuladoIA() {
   const diagnostico = useMemo(
     () =>
       finalizado
-        ? calcularDiagnostico(
+        ? calcularDiagnosticoQuestoesIA(
             questoes,
             respostas
           )
@@ -171,12 +161,38 @@ export default function ResolverSimuladoIA() {
     ]
   );
 
-  const assuntosCriticos =
-    diagnostico.filter(
-      (item) =>
-        item.erradas > 0 ||
-        item.emBranco > 0
-    );
+  const statusRevisaoAutomatica = useMemo(() => {
+    if (!finalizado || diagnostico.length === 0) return null;
+
+    if (
+      resumoRevisaoFinal &&
+      resumoRevisaoFinal.criadas + resumoRevisaoFinal.atualizadas > 0
+    ) {
+      return {
+        classe: "agendada",
+        texto: "🔁 Revisão adaptativa aplicada automaticamente",
+      };
+    }
+
+    if (resumoRevisaoFinal?.semReferencia) {
+      return {
+        classe: "amostra",
+        texto: "⚠️ Resultado salvo, mas o assunto não foi localizado no edital",
+      };
+    }
+
+    if (diagnostico.some((item) => item.total >= 5)) {
+      return {
+        classe: "dispensada",
+        texto: "✅ Bom desempenho — revisão automática não necessária",
+      };
+    }
+
+    return {
+      classe: "amostra",
+      texto: "ℹ️ São necessárias 5 questões do mesmo assunto para criar revisão",
+    };
+  }, [diagnostico, finalizado, resumoRevisaoFinal]);
 
   const questao =
     questoes[questaoAtual];
@@ -209,10 +225,13 @@ export default function ResolverSimuladoIA() {
       const valor: unknown =
         JSON.parse(salvo);
 
-      setQuestoes(
-        Array.isArray(valor)
-          ? (valor as QuestaoIA[])
-          : []
+      const carregadas = Array.isArray(valor)
+        ? (valor as QuestaoIA[])
+        : [];
+
+      setQuestoes(carregadas);
+      setTipoSessao(
+        obterTipoSessaoQuestoesIAAtiva(carregadas)
       );
     } catch {
       setQuestoes([]);
@@ -320,6 +339,8 @@ export default function ResolverSimuladoIA() {
   }
 
   async function finalizarSimulado() {
+    if (finalizandoRef.current || finalizado) return;
+
     if (
       totalRespondidas <
       questoes.length
@@ -340,31 +361,124 @@ export default function ResolverSimuladoIA() {
       }
     }
 
-    const novoResultado =
-      montarResultadoSalvo(
-        questoes,
-        respostas,
-        obterCadernoSimuladoIAAtivoId() ?? undefined
-      );
-
-    let avisoSincronizacao = "";
+    finalizandoRef.current = true;
+    setFinalizando(true);
 
     try {
-      await salvarResultado(
-        novoResultado
+      const novoResultado =
+        montarResultadoSalvo(
+          questoes,
+          respostas,
+          tipoSessao,
+          obterCadernoSimuladoIAAtivoId() ?? undefined
+        );
+
+      let avisoSincronizacao = "";
+      const resumoRevisoes = registrarDesempenhoNoApp(novoResultado);
+      setResumoRevisaoFinal(resumoRevisoes);
+
+      try {
+        await salvarResultado(
+          novoResultado
+        );
+      } catch (erroSalvamento) {
+        avisoSincronizacao =
+          erroSalvamento instanceof Error
+            ? erroSalvamento.message
+            : "O histórico online não pôde ser atualizado.";
+      }
+
+      setFinalizado(true);
+
+      const respondidas = novoResultado.certas + novoResultado.erradas;
+      const registroSimulado =
+        tipoSessao === "simulado" ? " e 1 simulado registrado" : "";
+      const revisaoAutomatica = montarMensagemRevisaoAutomatica(
+        resumoRevisoes
       );
-    } catch (erroSalvamento) {
-      avisoSincronizacao =
-        erroSalvamento instanceof Error
-          ? erroSalvamento.message
-          : "O histórico online não pôde ser atualizado.";
+
+      setMensagem(
+        `${respondidas} questão${respondidas === 1 ? "" : "ões"} contabilizada${
+          respondidas === 1 ? "" : "s"
+        } na meta diária${registroSimulado}.${revisaoAutomatica}${
+          avisoSincronizacao ? ` ${avisoSincronizacao}` : ""
+        }`
+      );
+    } catch {
+      setMensagem(
+        "Não foi possível registrar o resultado. Tente finalizar novamente."
+      );
+    } finally {
+      setFinalizando(false);
+      finalizandoRef.current = false;
+    }
+  }
+
+  function registrarDesempenhoNoApp(
+    novoResultado: ResultadoSimuladoIA
+  ) {
+    const registros = criarRegistrosQuestoesIA({
+      tentativaId: novoResultado.id,
+      tipo: novoResultado.tipo,
+      questoes: novoResultado.questoes,
+      respostas: novoResultado.respostas,
+      materias,
+      data: novoResultado.data,
+    });
+
+    setRegistrosQuestoes((anteriores) => {
+      if (
+        anteriores.some(
+          (registro) => registro.tentativaId === novoResultado.id
+        )
+      ) {
+        return anteriores;
+      }
+
+      return [...registros, ...anteriores];
+    });
+
+    if (novoResultado.tipo === "simulado") {
+      const simulado = criarSimuladoIA({
+        tentativaId: novoResultado.id,
+        nome: novoResultado.nome,
+        data: novoResultado.data,
+        resultado: novoResultado,
+        totalQuestoes: novoResultado.total,
+        banca:
+          novoResultado.questoes[0]?.banca || "Não informada",
+      });
+
+      setSimulados((anteriores) =>
+        anteriores.some(
+          (item) =>
+            item.id === novoResultado.id ||
+            item.tentativaId === novoResultado.id
+        )
+          ? anteriores
+          : [simulado, ...anteriores]
+      );
     }
 
-    setFinalizado(true);
-    setMensagem(
-      avisoSincronizacao ||
-        "Simulado finalizado e salvo nas Estatísticas IA."
+    const diagnosticoAtual = calcularDiagnosticoQuestoesIA(
+      novoResultado.questoes,
+      novoResultado.respostas
     );
+    const resumo = aplicarRevisoesDoResultadoIA({
+      revisoes,
+      diagnostico: diagnosticoAtual,
+      materias,
+    });
+
+    setRevisoes((anteriores) =>
+      aplicarRevisoesDoResultadoIA({
+        revisoes: anteriores,
+        diagnostico: diagnosticoAtual,
+        materias,
+      }).revisoes
+    );
+
+    return resumo;
   }
 
   async function salvarResultado(
@@ -397,7 +511,9 @@ export default function ResolverSimuladoIA() {
       CHAVE_RESULTADOS_IA,
       JSON.stringify([
         novoResultado,
-        ...resultados,
+        ...resultados.filter(
+          (resultado) => resultado.id !== novoResultado.id
+        ),
       ])
     );
 
@@ -432,6 +548,7 @@ export default function ResolverSimuladoIA() {
     setQuestaoAtual(0);
     setFinalizado(false);
     setMensagem("");
+    setResumoRevisaoFinal(null);
   }
 
   function treinarErros() {
@@ -453,6 +570,8 @@ export default function ResolverSimuladoIA() {
     }
 
     limparCadernoSimuladoIAAtivo();
+    definirTipoSessaoQuestoesIAAtiva("questoes");
+    setTipoSessao("questoes");
 
     const novasQuestoes =
       questoesParaTreino.map(
@@ -477,6 +596,7 @@ export default function ResolverSimuladoIA() {
     setAlternativasEliminadas({});
     setQuestaoAtual(0);
     setFinalizado(false);
+    setResumoRevisaoFinal(null);
 
     setMensagem(
       `Treino criado com ${novasQuestoes.length} questão${
@@ -487,93 +607,8 @@ export default function ResolverSimuladoIA() {
     );
   }
 
-  function criarRevisoes() {
-    if (
-      assuntosCriticos.length === 0
-    ) {
-      setMensagem(
-        "Não há assuntos com erro para revisar."
-      );
-
-      return;
-    }
-
-    const revisoesAtuais =
-      carregarRevisoesIA();
-
-    const chavesAtuais =
-      new Set(
-        revisoesAtuais.map(
-          (revisao) =>
-            normalizar(
-              `${revisao.materia}::${revisao.modulo || "Geral"}::${revisao.assunto}`
-            )
-        )
-      );
-
-    const novasRevisoes:
-      RevisaoIA[] = [];
-
-    assuntosCriticos.forEach(
-      (item) => {
-        const chave =
-          normalizar(
-            `${item.materia}::${item.modulo || "Geral"}::${item.assunto}`
-          );
-
-        if (
-          chavesAtuais.has(chave)
-        ) {
-          return;
-        }
-
-        novasRevisoes.push({
-          id: crypto.randomUUID(),
-          materia: item.materia,
-          modulo: item.modulo,
-          moduloId: item.moduloId,
-          assunto: item.assunto,
-          origem: "simulado-ia",
-          criadaEm:
-            new Date().toISOString(),
-          concluida: false,
-        });
-
-        chavesAtuais.add(chave);
-      }
-    );
-
-    localStorage.setItem(
-      CHAVE_REVISOES_IA,
-      JSON.stringify([
-        ...novasRevisoes,
-        ...revisoesAtuais,
-      ])
-    );
-
-    window.dispatchEvent(
-      new Event(
-        "pmpe-revisoes-ia-atualizadas"
-      )
-    );
-
-    setMensagem(
-      novasRevisoes.length > 0
-        ? `${novasRevisoes.length} revisão${
-            novasRevisoes.length === 1
-              ? ""
-              : "ões"
-          } criada${
-            novasRevisoes.length === 1
-              ? ""
-              : "s"
-          }.`
-        : "Esses assuntos já estavam na fila de revisões."
-    );
-  }
-
   function abrirMateriais(
-    item?: DiagnosticoAssunto
+    item?: DiagnosticoAssuntoIA
   ) {
     if (item) {
       localStorage.setItem(
@@ -608,6 +643,7 @@ export default function ResolverSimuladoIA() {
     setAlternativasEliminadas({});
     setFinalizado(false);
     setMensagem("");
+    setResumoRevisaoFinal(null);
   }
 
   if (carregando) {
@@ -653,12 +689,15 @@ export default function ResolverSimuladoIA() {
       <div className="resolver-ia-cabecalho">
         <div>
           <h1>
-            🤖 Simulado Inteligente
+            {tipoSessao === "simulado"
+              ? "🎯 Simulado Inteligente"
+              : "📝 Questões por assunto"}
           </h1>
 
           <p>
-            Questões inéditas geradas
-            pelo Gemini.
+            {tipoSessao === "simulado"
+              ? "Prova com conteúdos variados e nota geral."
+              : "Prática direcionada que conta na meta diária."}
           </p>
         </div>
 
@@ -764,15 +803,13 @@ export default function ResolverSimuladoIA() {
               </div>
 
               <div className="resolver-ia-diagnostico-acoes">
-                <button
-                  type="button"
-                  className="resolver-ia-revisar"
-                  onClick={
-                    criarRevisoes
-                  }
-                >
-                  🔁 Criar revisões
-                </button>
+                {statusRevisaoAutomatica && (
+                  <div
+                    className={`resolver-ia-revisao-status ${statusRevisaoAutomatica.classe}`}
+                  >
+                    {statusRevisaoAutomatica.texto}
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -1193,8 +1230,13 @@ export default function ResolverSimuladoIA() {
                   finalizarSimulado
                 }
                 className="resolver-ia-finalizar"
+                disabled={finalizando}
               >
-                Finalizar simulado
+                {finalizando
+                  ? "Salvando..."
+                  : tipoSessao === "simulado"
+                    ? "Finalizar simulado"
+                    : "Finalizar questões"}
               </button>
             ) : (
               <button
@@ -1217,8 +1259,9 @@ export default function ResolverSimuladoIA() {
               finalizarSimulado
             }
             className="resolver-ia-finalizar"
+            disabled={finalizando}
           >
-            Finalizar agora
+            {finalizando ? "Salvando..." : "Finalizar agora"}
           </button>
         )}
 
@@ -1236,59 +1279,24 @@ export default function ResolverSimuladoIA() {
   );
 }
 
-function calcularResultado(
-  questoes: QuestaoIA[],
-  respostas: RespostasUsuario
-) {
-  const certas =
-    questoes.filter(
-      (questao) =>
-        respostas[questao.id] ===
-        questao.respostaCorreta
-    ).length;
-
-  const emBranco =
-    questoes.filter(
-      (questao) =>
-        !respostas[questao.id]
-    ).length;
-
-  const erradas =
-    questoes.length -
-    certas -
-    emBranco;
-
-  const percentual =
-    questoes.length === 0
-      ? 0
-      : Math.round(
-          (certas /
-            questoes.length) *
-            100
-        );
-
-  return {
-    certas,
-    erradas,
-    emBranco,
-    percentual,
-  };
-}
-
 function montarResultadoSalvo(
   questoes: QuestaoIA[],
   respostas: RespostasUsuario,
+  tipo: TipoSessaoQuestoesIA,
   cadernoId?: string
 ): ResultadoSimuladoIA {
   const resultado =
-    calcularResultado(
+    calcularResultadoQuestoesIA(
       questoes,
       respostas
     );
 
   return {
     id: crypto.randomUUID(),
-    nome: "Simulado gerado por IA",
+    nome:
+      tipo === "simulado"
+        ? "Simulado gerado por IA"
+        : "Questões por assunto geradas por IA",
     data:
       new Date().toISOString(),
     total: questoes.length,
@@ -1303,145 +1311,32 @@ function montarResultadoSalvo(
     respostas,
     questoes,
     cadernoId,
+    tipo,
   };
 }
 
-function calcularDiagnostico(
-  questoes: QuestaoIA[],
-  respostas: RespostasUsuario
-): DiagnosticoAssunto[] {
-  const mapa =
-    new Map<
-      string,
-      Omit<
-        DiagnosticoAssunto,
-        "percentual"
-      >
-    >();
-
-  questoes.forEach(
-    (questao) => {
-      const materia =
-        questao.materia ||
-        "Sem matéria";
-
-      const modulo =
-        questao.modulo ||
-        "Geral";
-
-      const moduloId =
-        questao.moduloId;
-
-      const assunto =
-        questao.assunto ||
-        "Sem assunto";
-
-      const chave =
-        normalizar(
-          `${materia}::${modulo}::${assunto}`
-        );
-
-      const atual =
-        mapa.get(chave) ?? {
-          chave,
-          materia,
-          modulo,
-          moduloId,
-          assunto,
-          total: 0,
-          certas: 0,
-          erradas: 0,
-          emBranco: 0,
-        };
-
-      const resposta =
-        respostas[questao.id];
-
-      const acertou =
-        resposta ===
-        questao.respostaCorreta;
-
-      mapa.set(chave, {
-        ...atual,
-
-        total:
-          atual.total + 1,
-
-        certas:
-          atual.certas +
-          (acertou ? 1 : 0),
-
-        erradas:
-          atual.erradas +
-          (
-            resposta &&
-            !acertou
-              ? 1
-              : 0
-          ),
-
-        emBranco:
-          atual.emBranco +
-          (!resposta ? 1 : 0),
-      });
-    }
-  );
-
-  return Array.from(
-    mapa.values()
-  )
-    .map((item) => ({
-      ...item,
-
-      percentual:
-        item.total === 0
-          ? 0
-          : Math.round(
-              (item.certas /
-                item.total) *
-                100
-            ),
-    }))
-    .sort(
-      (a, b) =>
-        a.percentual -
-        b.percentual
-    );
-}
-
-function carregarRevisoesIA():
-  RevisaoIA[] {
-  const salvo =
-    localStorage.getItem(
-      CHAVE_REVISOES_IA
-    );
-
-  if (!salvo) {
-    return [];
-  }
-
-  try {
-    const valor: unknown =
-      JSON.parse(salvo);
-
-    return Array.isArray(valor)
-      ? (valor as RevisaoIA[])
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function normalizar(
-  texto: string
+function montarMensagemRevisaoAutomatica(
+  resumo: ResumoRevisoesResultadoIA
 ) {
-  return texto
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      ""
-    )
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
+  if (resumo.criadas > 0) {
+    return ` ${resumo.criadas} revisão${
+      resumo.criadas === 1 ? "" : "ões"
+    } automática${resumo.criadas === 1 ? "" : "s"} agendada${
+      resumo.criadas === 1 ? "" : "s"
+    }.`;
+  }
+
+  if (resumo.atualizadas > 0) {
+    return ` ${resumo.atualizadas} revisão${
+      resumo.atualizadas === 1 ? "" : "ões"
+    } pendente${resumo.atualizadas === 1 ? "" : "s"} antecipada${
+      resumo.atualizadas === 1 ? "" : "s"
+    }.`;
+  }
+
+  if (resumo.semReferencia > 0) {
+    return " O assunto não foi localizado no edital para agendar revisão.";
+  }
+
+  return " Nenhuma revisão automática foi necessária.";
 }

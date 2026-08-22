@@ -1,5 +1,9 @@
 import { supabase } from "../lib/supabase";
-import type { QuestaoIA } from "../types/index";
+import type {
+  QuestaoIA,
+  TipoSessaoQuestoesIA,
+} from "../types/index";
+import { inferirTipoSessaoQuestoesIA } from "../utils/resultadoQuestoesIA";
 import { assinaturaCadernoIA } from "./catalogoQuestoesIAUtils";
 
 export type CadernoSimuladoIA = {
@@ -14,6 +18,7 @@ export type CadernoSimuladoIA = {
   criadoEm: string;
   atualizadoEm: string;
   estatisticas?: EstatisticasCadernoIA;
+  tipo?: TipoSessaoQuestoesIA;
 };
 
 export type EstatisticasCadernoIA = {
@@ -34,6 +39,7 @@ type RegistroBanco = {
 
 const CHAVE_LOCAL = "pmpe_cadernos_simulados_ia";
 const CHAVE_QUESTOES_ATIVAS = "pmpe_questoes_ia";
+const CHAVE_TIPO_SESSAO_ATIVA = "pmpe:sessao-questoes-ia:tipo";
 
 export async function listarCadernosSimuladosIA(): Promise<CadernoSimuladoIA[]> {
   const locais = carregarLocais();
@@ -113,7 +119,9 @@ export async function excluirCadernoSimuladoIA(id: string): Promise<void> {
   }
 }
 
-export async function registrarQuestoesAtuaisComoCaderno(): Promise<CadernoSimuladoIA | null> {
+export async function registrarQuestoesAtuaisComoCaderno(
+  tipo?: TipoSessaoQuestoesIA
+): Promise<CadernoSimuladoIA | null> {
   const questoes = carregarQuestoesAtuais();
   if (questoes.length === 0) return null;
 
@@ -123,7 +131,19 @@ export async function registrarQuestoesAtuaisComoCaderno(): Promise<CadernoSimul
     (caderno) => assinatura(caderno.questoes) === assinaturaAtual
   );
 
-  if (jaExiste) return jaExiste;
+  if (jaExiste) {
+    if (tipo && jaExiste.tipo !== tipo) {
+      const atualizado = {
+        ...jaExiste,
+        tipo,
+        atualizadoEm: new Date().toISOString(),
+      };
+      await salvarCadernoSimuladoIA(atualizado);
+      return atualizado;
+    }
+
+    return jaExiste;
+  }
 
   const agora = new Date().toISOString();
   const primeira = questoes[0];
@@ -149,6 +169,7 @@ export async function registrarQuestoesAtuaisComoCaderno(): Promise<CadernoSimul
     questoes,
     criadoEm: agora,
     atualizadoEm: agora,
+    tipo: tipo ?? inferirTipoSessaoQuestoesIA(questoes),
   };
 
   await salvarCadernoSimuladoIA(caderno);
@@ -161,6 +182,9 @@ export function ativarCadernoSimuladoIA(caderno: CadernoSimuladoIA) {
     JSON.stringify(caderno.questoes)
   );
   sessionStorage.setItem("pmpe:caderno-simulado-ia:ativo", caderno.id);
+  definirTipoSessaoQuestoesIAAtiva(
+    caderno.tipo ?? inferirTipoSessaoQuestoesIA(caderno.questoes)
+  );
 }
 
 export function obterCadernoSimuladoIAAtivoId() {
@@ -169,6 +193,21 @@ export function obterCadernoSimuladoIAAtivoId() {
 
 export function limparCadernoSimuladoIAAtivo() {
   sessionStorage.removeItem("pmpe:caderno-simulado-ia:ativo");
+}
+
+export function definirTipoSessaoQuestoesIAAtiva(
+  tipo: TipoSessaoQuestoesIA
+) {
+  sessionStorage.setItem(CHAVE_TIPO_SESSAO_ATIVA, tipo);
+}
+
+export function obterTipoSessaoQuestoesIAAtiva(
+  questoes: QuestaoIA[] = []
+): TipoSessaoQuestoesIA {
+  const tipo = sessionStorage.getItem(CHAVE_TIPO_SESSAO_ATIVA);
+  return tipo === "questoes" || tipo === "simulado"
+    ? tipo
+    : inferirTipoSessaoQuestoesIA(questoes);
 }
 
 export async function registrarResultadoCadernoSimuladoIA(

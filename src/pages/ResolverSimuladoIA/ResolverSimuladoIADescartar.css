@@ -3,10 +3,13 @@
   grid-template-columns: 38px minmax(0, 1fr);
   align-items: stretch;
   gap: 9px;
+  width: 100%;
+  min-width: 0;
 }
 
 .resolver-ia-alternativa-linha .resolver-ia-alternativa {
   width: 100%;
+  min-width: 0;
 }
 
 .resolver-ia-tesoura {

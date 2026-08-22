@@ -20,6 +20,8 @@ import {
 } from "../../services/iaCoachService";
 
 type ResultadoIA = {
+  id?: string;
+  tipo?: "questoes" | "simulado";
   data?: string;
   certas?: number;
   erradas?: number;
@@ -905,6 +907,17 @@ function calcularCoach({
   const resultadosIA =
     carregarResultadosIA();
 
+  const idsSimuladosRegistrados = new Set(
+    simulados.flatMap((simulado) =>
+      [simulado.id, simulado.tentativaId].filter(Boolean)
+    )
+  );
+  const simuladosIAAindaNaoMigrados = resultadosIA.filter(
+    (resultado) =>
+      resultado.tipo !== "questoes" &&
+      (!resultado.id || !idsSimuladosRegistrados.has(resultado.id))
+  ).length;
+
   const assuntosCriticos =
     calcularAssuntosCriticos(
       resultadosIA
@@ -1057,8 +1070,7 @@ function calcularCoach({
     recomendacoes,
 
     totalSimulados:
-      simulados.length +
-      resultadosIA.length,
+      simulados.length + simuladosIAAindaNaoMigrados,
   };
 }
 

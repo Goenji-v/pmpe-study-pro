@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { definirTipoSessaoQuestoesIAAtiva } from "../../services/cadernosSimuladosIAService";
 
 import "./BancoQuestoes.css";
 import "./BancoQuestoesBiblioteca.css";
@@ -385,6 +386,7 @@ export default function BancoQuestoes() {
     const questoesIA = sorteadas.map(converterParaQuestaoIA);
 
     localStorage.setItem(CHAVE_QUESTOES_IA, JSON.stringify(questoesIA));
+    definirTipoSessaoQuestoesIAAtiva("questoes");
     navigate("/resolver-simulado-ia/prova");
   }
 

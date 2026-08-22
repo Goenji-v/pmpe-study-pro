@@ -34,6 +34,7 @@ type ResultadoSimuladoIA = {
 
   respostas: RespostasUsuario;
   questoes: QuestaoIA[];
+  tipo?: "questoes" | "simulado";
 };
 
 type EstatisticaMateria = {
@@ -190,9 +191,7 @@ export default function EstatisticasSimuladoIA() {
       return;
     }
 
-    localStorage.removeItem(
-      CHAVE_RESULTADOS
-    );
+    salvarResultados([]);
 
     setResultados([]);
   }
@@ -487,6 +486,12 @@ function LinhaDiagnostico({
 
 function carregarResultados():
   ResultadoSimuladoIA[] {
+  return carregarTodosResultados().filter(
+    (resultado) => resultado.tipo !== "questoes"
+  );
+}
+
+function carregarTodosResultados(): ResultadoSimuladoIA[] {
   const salvo =
     localStorage.getItem(
       CHAVE_RESULTADOS
@@ -513,9 +518,13 @@ function carregarResultados():
 function salvarResultados(
   resultados: ResultadoSimuladoIA[]
 ) {
+  const sessoesDeQuestoes = carregarTodosResultados().filter(
+    (resultado) => resultado.tipo === "questoes"
+  );
+
   localStorage.setItem(
     CHAVE_RESULTADOS,
-    JSON.stringify(resultados)
+    JSON.stringify([...resultados, ...sessoesDeQuestoes])
   );
 }
 

@@ -25,6 +25,7 @@ import {
 } from "../../utils/conteudosSemana";
 
 import {
+  definirTipoSessaoQuestoesIAAtiva,
   registrarQuestoesAtuaisComoCaderno,
 } from "../../services/cadernosSimuladosIAService";
 
@@ -123,6 +124,11 @@ export default function GerarSimuladoIA() {
     useState("");
 
   useEffect(() => {
+    const modoSolicitado = sessionStorage.getItem("pmpe:gerar-ia:modo");
+    if (modoSolicitado === "simulado") setOrigem("semana");
+    if (modoSolicitado === "questoes") setOrigem("assunto");
+    sessionStorage.removeItem("pmpe:gerar-ia:modo");
+
     const salvo = sessionStorage.getItem("pmpe:gerar-ia:prefill");
     if (!salvo) return;
     try {
@@ -422,11 +428,30 @@ export default function GerarSimuladoIA() {
           );
       }
 
+      const tipoSessao =
+        origem === "assunto" ? "questoes" : "simulado";
+
       const questoesFinais =
         embaralhar([
           ...selecaoCatalogo.reutilizadas,
           ...novasQuestoes,
-        ]).slice(0, quantidade);
+        ])
+          .slice(0, quantidade)
+          .map((questao) => ({
+            ...questao,
+            materiaId:
+              origem === "assunto"
+                ? materiaAtual?.id ?? questao.materiaId
+                : questao.materiaId,
+            moduloId:
+              origem === "assunto"
+                ? moduloAtual?.id ?? questao.moduloId
+                : questao.moduloId,
+            assuntoId:
+              origem === "assunto"
+                ? assuntoAtual?.id ?? questao.assuntoId
+                : questao.assuntoId,
+          }));
 
       localStorage.setItem(
         CHAVE_QUESTOES_IA,
@@ -441,7 +466,8 @@ export default function GerarSimuladoIA() {
         );
       }
 
-      await registrarQuestoesAtuaisComoCaderno();
+      definirTipoSessaoQuestoesIAAtiva(tipoSessao);
+      await registrarQuestoesAtuaisComoCaderno(tipoSessao);
 
       setQuestoesGeradas(
         questoesFinais
@@ -516,13 +542,13 @@ export default function GerarSimuladoIA() {
       <div className="gerar-ia-cabecalho">
         <div>
           <h1>
-            🤖 Gerar Simulado IA
+            🤖 Questões e Simulados IA
           </h1>
 
           <p>
-            Gere por matéria e assunto
-            ou pelos conteúdos de uma
-            semana do plano.
+            Pratique um assunto específico
+            ou monte um simulado com os
+            conteúdos da semana.
           </p>
         </div>
 
@@ -556,7 +582,7 @@ export default function GerarSimuladoIA() {
       <div className="gerar-ia-card">
         <div className="gerar-ia-origem">
           <h2>
-            Origem das questões
+            Modo de treino
           </h2>
 
           <div>
@@ -574,7 +600,7 @@ export default function GerarSimuladoIA() {
               }
               disabled={gerando}
             >
-              📚 Matéria e assunto
+              📝 Questões por assunto
             </button>
 
             <button
@@ -591,7 +617,7 @@ export default function GerarSimuladoIA() {
               }
               disabled={gerando}
             >
-              📅 Semana do plano
+              🎯 Simulado da semana
             </button>
           </div>
         </div>
@@ -1015,7 +1041,9 @@ export default function GerarSimuladoIA() {
           >
             {gerando
               ? "Gerando..."
-              : "✨ Gerar simulado"}
+              : origem === "assunto"
+                ? "✨ Gerar questões"
+                : "✨ Gerar simulado"}
           </button>
         </div>
       </div>
@@ -1025,7 +1053,9 @@ export default function GerarSimuladoIA() {
         <div className="gerar-ia-resultado">
           <div>
             <h2>
-              Simulado pronto
+              {origem === "assunto"
+                ? "Questões prontas"
+                : "Simulado pronto"}
             </h2>
 
             <p>

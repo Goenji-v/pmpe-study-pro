@@ -324,11 +324,10 @@ export default function Simulados() {
         <button
           type="button"
           className="simulados-central-acao"
-          onClick={() =>
-            navigate(
-              "/gerar-simulado-ia"
-            )
-          }
+          onClick={() => {
+            sessionStorage.setItem("pmpe:gerar-ia:modo", "simulado");
+            navigate("/gerar-simulado-ia");
+          }}
         >
           <span className="simulados-central-icone">
             ✨
@@ -336,12 +335,12 @@ export default function Simulados() {
 
           <div>
             <strong>
-              Gerar com IA
+              Gerar simulado com IA
             </strong>
 
             <small>
-              Crie um novo simulado por matéria,
-              assunto, banca e dificuldade.
+              Misture os conteúdos da semana e
+              acompanhe a nota geral da prova.
             </small>
           </div>
         </button>

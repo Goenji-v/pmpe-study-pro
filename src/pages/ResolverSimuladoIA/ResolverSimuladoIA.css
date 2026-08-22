@@ -159,8 +159,29 @@
   cursor: pointer;
 }
 
-.resolver-ia-revisar {
-  background: #7c3aed;
+.resolver-ia-revisao-status {
+  display: flex;
+  align-items: center;
+  min-height: 39px;
+  padding: 9px 12px;
+  color: #e9d5ff;
+  background: rgba(124, 58, 237, 0.18);
+  border: 1px solid rgba(167, 139, 250, 0.48);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.resolver-ia-revisao-status.dispensada {
+  color: #bbf7d0;
+  background: rgba(22, 163, 74, 0.15);
+  border-color: rgba(34, 197, 94, 0.42);
+}
+
+.resolver-ia-revisao-status.amostra {
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.13);
+  border-color: rgba(96, 165, 250, 0.38);
 }
 
 .resolver-ia-treinar {
@@ -448,7 +469,11 @@
 }
 
 .resolver-ia-alternativa span {
+  min-width: 0;
+  flex: 1;
   line-height: 1.55;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .resolver-ia-alternativa.selecionada {
@@ -515,7 +540,8 @@
   cursor: pointer;
 }
 
-.resolver-ia-acoes button:disabled {
+.resolver-ia-acoes button:disabled,
+.resolver-ia-rodape button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
@@ -591,7 +617,21 @@
 
   .resolver-ia-resultado,
   .resolver-ia-resultado-cinco {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .resolver-ia-resultado > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .resolver-ia-resultado div {
+    min-width: 0;
+    padding: 12px 8px;
+  }
+
+  .resolver-ia-resultado strong {
+    font-size: 22px;
   }
 
   .resolver-ia-acoes button,
@@ -602,6 +642,26 @@
 
   .resolver-ia-diagnostico-acoes {
     flex-direction: column;
+  }
+
+  .resolver-ia-revisao-status {
+    width: 100%;
+  }
+
+  .resolver-ia-questao-card {
+    min-width: 0;
+    padding: 14px 11px;
+  }
+
+  .resolver-ia-alternativas,
+  .resolver-ia-alternativa {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .resolver-ia-alternativa {
+    gap: 9px;
+    padding: 12px 10px;
   }
 
   .resolver-ia-diagnostico-numeros {
