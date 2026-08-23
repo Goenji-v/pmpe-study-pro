@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { Materia, QuestaoIA } from "../src/types";
+import type {
+  Materia,
+  QuestaoIA,
+  ResultadoQuestoesIAPersistido,
+} from "../src/types";
 import {
   aplicarRevisoesDoResultadoIA,
   calcularDiagnosticoQuestoesIA,
   criarRegistrosQuestoesIA,
   inferirTipoSessaoQuestoesIA,
+  mesclarResultadosQuestoesIANoHistorico,
   type RespostasQuestoesIA,
 } from "../src/utils/resultadoQuestoesIA";
 
@@ -96,6 +101,108 @@ test("registra apenas questões efetivamente respondidas e mantém o ID da tenta
   assert.equal(registros[0].certas + registros[0].erradas, 8);
   assert.equal(registros[0].tentativaId, "tentativa-1");
   assert.equal(registros[0].origem, "simulado-ia");
+});
+
+test("reconcilia tentativa persistida no histórico sem contabilizar duas vezes", () => {
+  const questoes = Array.from({ length: 10 }, (_, indice) => criarQuestao(indice));
+  const registros = criarRegistrosQuestoesIA({
+    tentativaId: "tentativa-1",
+    tipo: "questoes",
+    questoes,
+    respostas: responder(questoes, 9),
+    materias,
+    data: "2026-08-23T18:34:32.000Z",
+  });
+  const resultado: ResultadoQuestoesIAPersistido = {
+    id: "tentativa-1",
+    nome: "Questões por assunto geradas por IA",
+    data: "2026-08-23T18:34:32.000Z",
+    tipo: "questoes",
+    total: 10,
+    certas: 9,
+    erradas: 1,
+    emBranco: 0,
+    percentual: 90,
+    registros,
+  };
+
+  const primeiraMesclagem = mesclarResultadosQuestoesIANoHistorico({
+    questoes: [],
+    simulados: [],
+    resultados: [resultado],
+  });
+  const segundaMesclagem = mesclarResultadosQuestoesIANoHistorico({
+    questoes: primeiraMesclagem.questoes,
+    simulados: primeiraMesclagem.simulados,
+    resultados: [resultado],
+  });
+
+  assert.equal(primeiraMesclagem.questoes.length, 1);
+  assert.equal(primeiraMesclagem.questoes[0].certas, 9);
+  assert.equal(primeiraMesclagem.questoes[0].erradas, 1);
+  assert.equal(segundaMesclagem.questoes.length, 1);
+  assert.equal(segundaMesclagem.questoes, primeiraMesclagem.questoes);
+});
+
+test("simulado persistido soma as questões e apenas um simulado", () => {
+  const questoes = [
+    ...Array.from({ length: 5 }, (_, indice) => criarQuestao(indice)),
+    ...Array.from({ length: 5 }, (_, indice) =>
+      criarQuestao(indice + 5, "Direito à liberdade")
+    ),
+  ];
+  const respostas = responder(questoes, 8);
+  const registros = criarRegistrosQuestoesIA({
+    tentativaId: "simulado-1",
+    tipo: "simulado",
+    questoes,
+    respostas,
+    materias,
+    data: "2026-08-23T19:00:00.000Z",
+  });
+  const resultado: ResultadoQuestoesIAPersistido = {
+    id: "simulado-1",
+    nome: "Simulado gerado por IA",
+    data: "2026-08-23T19:00:00.000Z",
+    tipo: "simulado",
+    total: 10,
+    certas: 8,
+    erradas: 2,
+    emBranco: 0,
+    percentual: 80,
+    registros,
+    simulado: {
+      id: "simulado-1",
+      tentativaId: "simulado-1",
+      nome: "Simulado gerado por IA",
+      banca: "AOCP",
+      certas: 8,
+      erradas: 2,
+      emBranco: 0,
+      anuladas: 0,
+      minutos: 0,
+      data: "2026-08-23T19:00:00.000Z",
+      totalQuestoes: 10,
+      origem: "ia",
+    },
+  };
+
+  const mesclado = mesclarResultadosQuestoesIANoHistorico({
+    questoes: [],
+    simulados: [],
+    resultados: [resultado],
+  });
+
+  assert.equal(
+    mesclado.questoes.reduce(
+      (total, registro) => total + registro.certas + registro.erradas,
+      0
+    ),
+    10
+  );
+  assert.equal(mesclado.simulados.length, 1);
+  assert.equal(mesclado.simulados[0].certas, 8);
+  assert.equal(mesclado.simulados[0].erradas, 2);
 });
 
 test("80% não cria revisão automática", () => {

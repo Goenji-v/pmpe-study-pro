@@ -3,6 +3,7 @@ import type {
   Materia,
   QuestaoIA,
   RegistroQuestao,
+  ResultadoQuestoesIAPersistido,
   Revisao,
   Simulado,
   TipoSessaoQuestoesIA,
@@ -58,6 +59,68 @@ export type ResumoRevisoesResultadoIA = {
   atualizadas: number;
   semReferencia: number;
 };
+
+export function mesclarResultadosQuestoesIANoHistorico({
+  questoes,
+  simulados,
+  resultados,
+}: {
+  questoes: RegistroQuestao[];
+  simulados: Simulado[];
+  resultados: ResultadoQuestoesIAPersistido[];
+}) {
+  const tentativasRegistradas = new Set(
+    questoes
+      .map((registro) => registro.tentativaId)
+      .filter((id): id is string => Boolean(id))
+  );
+  const novasQuestoes: RegistroQuestao[] = [];
+
+  resultados.forEach((resultado) => {
+    if (tentativasRegistradas.has(resultado.id)) return;
+
+    const registros = resultado.registros.filter(
+      (registro) => registro.certas + registro.erradas > 0
+    );
+    if (registros.length === 0) return;
+
+    novasQuestoes.push(...registros);
+    tentativasRegistradas.add(resultado.id);
+  });
+
+  const simuladosRegistrados = new Set(
+    simulados.flatMap((simulado) =>
+      [simulado.id, simulado.tentativaId].filter(
+        (id): id is string => Boolean(id)
+      )
+    )
+  );
+  const novosSimulados: Simulado[] = [];
+
+  resultados.forEach((resultado) => {
+    if (
+      resultado.tipo !== "simulado" ||
+      !resultado.simulado ||
+      simuladosRegistrados.has(resultado.id)
+    ) {
+      return;
+    }
+
+    novosSimulados.push(resultado.simulado);
+    simuladosRegistrados.add(resultado.id);
+  });
+
+  return {
+    questoes:
+      novasQuestoes.length === 0
+        ? questoes
+        : [...novasQuestoes, ...questoes],
+    simulados:
+      novosSimulados.length === 0
+        ? simulados
+        : [...novosSimulados, ...simulados],
+  };
+}
 
 export function inferirTipoSessaoQuestoesIA(
   questoes: QuestaoIA[]

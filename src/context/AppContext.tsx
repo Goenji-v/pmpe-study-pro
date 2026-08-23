@@ -63,6 +63,14 @@ import {
 } from "../services/seguranca/backupAutomaticoService";
 
 import {
+  listarResultadosQuestoesIA,
+} from "../services/resultadosQuestoesIAService";
+
+import {
+  mesclarResultadosQuestoesIANoHistorico,
+} from "../utils/resultadoQuestoesIA";
+
+import {
   limparEstadoPendenteSincronizacao,
   navegadorEstaOnline,
   obterEstadoPendenteSincronizacao,
@@ -1033,6 +1041,65 @@ export function AppProvider({
     simuladosGerados,
     configuracoes,
     missoesConcluidas,
+  ]);
+
+  useEffect(() => {
+    if (userId === "sem-usuario" || statusNuvem !== "sincronizado") {
+      return;
+    }
+
+    let ativo = true;
+
+    async function importarTentativasIA() {
+      try {
+        const resultados = await listarResultadosQuestoesIA();
+        if (!ativo) return;
+
+        setQuestoes((anteriores) =>
+          mesclarResultadosQuestoesIANoHistorico({
+            questoes: anteriores,
+            simulados: [],
+            resultados,
+          }).questoes
+        );
+
+        setSimulados((anteriores) =>
+          mesclarResultadosQuestoesIANoHistorico({
+            questoes: [],
+            simulados: anteriores,
+            resultados,
+          }).simulados
+        );
+      } catch (erro) {
+        console.error(
+          "Erro ao reconciliar tentativas de questões IA:",
+          erro
+        );
+      }
+    }
+
+    function aoSalvarResultadoIA() {
+      void importarTentativasIA();
+    }
+
+    void importarTentativasIA();
+    window.addEventListener(
+      "pmpe-resultado-questoes-ia-salvo",
+      aoSalvarResultadoIA
+    );
+
+    return () => {
+      ativo = false;
+      window.removeEventListener(
+        "pmpe-resultado-questoes-ia-salvo",
+        aoSalvarResultadoIA
+      );
+    };
+  }, [
+    userId,
+    statusNuvem,
+    setQuestoes,
+    setSimulados,
   ]);
 
   const aplicarEstadoDaNuvem =

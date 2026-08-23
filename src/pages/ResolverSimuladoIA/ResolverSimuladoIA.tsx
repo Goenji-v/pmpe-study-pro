@@ -12,6 +12,8 @@ import "./ResolverSimuladoIADescartar.css";
 
 import type {
   QuestaoIA,
+  RegistroQuestao,
+  Simulado,
   TipoSessaoQuestoesIA,
 } from "../../types/index";
 import { useApp } from "../../context/AppContext";
@@ -26,6 +28,9 @@ import {
   obterTipoSessaoQuestoesIAAtiva,
   registrarResultadoCadernoSimuladoIA,
 } from "../../services/cadernosSimuladosIAService";
+import {
+  salvarResultadoQuestoesIA,
+} from "../../services/resultadosQuestoesIAService";
 import {
   aplicarRevisoesDoResultadoIA,
   calcularDiagnosticoQuestoesIA,
@@ -374,12 +379,15 @@ export default function ResolverSimuladoIA() {
         );
 
       let avisoSincronizacao = "";
-      const resumoRevisoes = registrarDesempenhoNoApp(novoResultado);
+      const registroApp = registrarDesempenhoNoApp(novoResultado);
+      const resumoRevisoes = registroApp.resumo;
       setResumoRevisaoFinal(resumoRevisoes);
 
       try {
         await salvarResultado(
-          novoResultado
+          novoResultado,
+          registroApp.registros,
+          registroApp.simulado
         );
       } catch (erroSalvamento) {
         avisoSincronizacao =
@@ -438,8 +446,10 @@ export default function ResolverSimuladoIA() {
       return [...registros, ...anteriores];
     });
 
+    let simulado: Simulado | undefined;
+
     if (novoResultado.tipo === "simulado") {
-      const simulado = criarSimuladoIA({
+      const simuladoCriado = criarSimuladoIA({
         tentativaId: novoResultado.id,
         nome: novoResultado.nome,
         data: novoResultado.data,
@@ -448,6 +458,7 @@ export default function ResolverSimuladoIA() {
         banca:
           novoResultado.questoes[0]?.banca || "Não informada",
       });
+      simulado = simuladoCriado;
 
       setSimulados((anteriores) =>
         anteriores.some(
@@ -456,7 +467,7 @@ export default function ResolverSimuladoIA() {
             item.tentativaId === novoResultado.id
         )
           ? anteriores
-          : [simulado, ...anteriores]
+          : [simuladoCriado, ...anteriores]
       );
     }
 
@@ -478,19 +489,25 @@ export default function ResolverSimuladoIA() {
       }).revisoes
     );
 
-    return resumo;
+    return {
+      resumo,
+      registros,
+      simulado,
+    };
   }
 
   async function salvarResultado(
     novoResultado:
-      ResultadoSimuladoIA
+      ResultadoSimuladoIA,
+    registros: RegistroQuestao[],
+    simulado?: Simulado
   ) {
     const salvo =
       localStorage.getItem(
         CHAVE_RESULTADOS_IA
       );
 
-    let resultados:
+    let historicoLocal:
       ResultadoSimuladoIA[] = [];
 
     if (salvo) {
@@ -499,11 +516,11 @@ export default function ResolverSimuladoIA() {
           JSON.parse(salvo);
 
         if (Array.isArray(valor)) {
-          resultados =
+          historicoLocal =
             valor as ResultadoSimuladoIA[];
         }
       } catch {
-        resultados = [];
+        historicoLocal = [];
       }
     }
 
@@ -511,7 +528,7 @@ export default function ResolverSimuladoIA() {
       CHAVE_RESULTADOS_IA,
       JSON.stringify([
         novoResultado,
-        ...resultados.filter(
+        ...historicoLocal.filter(
           (resultado) => resultado.id !== novoResultado.id
         ),
       ])
@@ -523,22 +540,61 @@ export default function ResolverSimuladoIA() {
       )
     );
 
-    await registrarRespostasQuestoesIA(
-      questoes,
-      respostas
-    );
+    const gravacoes: Promise<unknown>[] = [
+      salvarResultadoQuestoesIA({
+        id: novoResultado.id,
+        nome: novoResultado.nome,
+        data: novoResultado.data,
+        tipo: novoResultado.tipo,
+        total: novoResultado.total,
+        certas: novoResultado.certas,
+        erradas: novoResultado.erradas,
+        emBranco: novoResultado.emBranco,
+        percentual: novoResultado.percentual,
+        registros,
+        simulado,
+      }),
+      registrarRespostasQuestoesIA(
+        questoes,
+        respostas
+      ),
+    ];
 
     if (novoResultado.cadernoId) {
-      await registrarResultadoCadernoSimuladoIA(
-        novoResultado.cadernoId,
-        {
-          acertos: novoResultado.certas,
-          erros: novoResultado.erradas,
-          emBranco: novoResultado.emBranco,
-          aproveitamento: novoResultado.percentual,
-          ultimaTentativaEm: novoResultado.data,
-        }
+      gravacoes.push(
+        registrarResultadoCadernoSimuladoIA(
+          novoResultado.cadernoId,
+          {
+            acertos: novoResultado.certas,
+            erros: novoResultado.erradas,
+            emBranco: novoResultado.emBranco,
+            aproveitamento: novoResultado.percentual,
+            ultimaTentativaEm: novoResultado.data,
+          }
+        )
       );
+    }
+
+    const gravacoesConcluidas = await Promise.allSettled(gravacoes);
+    const falhas = gravacoesConcluidas.filter(
+      (resultado): resultado is PromiseRejectedResult =>
+        resultado.status === "rejected"
+    );
+
+    if (gravacoesConcluidas[0]?.status === "fulfilled") {
+      window.dispatchEvent(
+        new Event("pmpe-resultado-questoes-ia-salvo")
+      );
+    }
+
+    if (falhas.length > 0) {
+      const mensagens = falhas.map((falha) =>
+        falha.reason instanceof Error
+          ? falha.reason.message
+          : "Uma parte do histórico online não pôde ser atualizada."
+      );
+
+      throw new Error(Array.from(new Set(mensagens)).join(" "));
     }
   }
 
