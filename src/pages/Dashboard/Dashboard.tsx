@@ -38,6 +38,7 @@ import type {
   RegistroQuestao,
   Revisao,
   SessaoEstudo,
+  Simulado,
 } from "../../types/index";
 
 
@@ -202,6 +203,14 @@ export default function Dashboard() {
 
   const hoje = obterDataLocal();
 
+  // Simulados gerados por IA já criam registros em `questoes`.
+  // Só somamos aqui os simulados que ainda não possuem esse espelho,
+  // evitando contar a mesma tentativa duas vezes.
+  const simuladosContabilizaveis = useMemo(
+    () => filtrarSimuladosSemEspelhoQuestoes(simulados, questoes),
+    [simulados, questoes]
+  );
+
   const totalQuestoes =
     questoes.reduce(
       (
@@ -211,6 +220,11 @@ export default function Dashboard() {
         total +
         registro.certas +
         registro.erradas,
+      0
+    ) +
+    simuladosContabilizaveis.reduce(
+      (total, simulado) =>
+        total + obterQuestoesRespondidasSimulado(simulado),
       0
     );
 
@@ -222,6 +236,10 @@ export default function Dashboard() {
       ) =>
         total +
         registro.certas,
+      0
+    ) +
+    simuladosContabilizaveis.reduce(
+      (total, simulado) => total + (Number(simulado.certas) || 0),
       0
     );
 
@@ -260,7 +278,14 @@ export default function Dashboard() {
       0
     );
 
-  const minutosTotais = minutosSessoes + minutosQuestoes;
+  const minutosSimulados =
+    simuladosContabilizaveis.reduce(
+      (total, simulado) => total + Math.max(0, Number(simulado.minutos) || 0),
+      0
+    );
+
+  const minutosTotais =
+    minutosSessoes + minutosQuestoes + minutosSimulados;
 
   const assuntosTotais =
     materias.reduce(
@@ -316,12 +341,22 @@ export default function Dashboard() {
         ) === hoje
     );
 
+  const simuladosHoje =
+    simuladosContabilizaveis.filter(
+      (simulado) => obterDataLocalSeguro(simulado.data) === hoje
+    );
+
   const questoesHoje =
     registrosQuestoesHoje.reduce(
       (total, registro) =>
         total +
         registro.certas +
         registro.erradas,
+      0
+    ) +
+    simuladosHoje.reduce(
+      (total, simulado) =>
+        total + obterQuestoesRespondidasSimulado(simulado),
       0
     );
 
@@ -354,9 +389,16 @@ export default function Dashboard() {
       0
     );
 
+  const minutosSimuladosHoje =
+    simuladosHoje.reduce(
+      (total, simulado) => total + Math.max(0, Number(simulado.minutos) || 0),
+      0
+    );
+
   const minutosHoje =
     minutosQuestoesHoje +
-    minutosSessoesHoje;
+    minutosSessoesHoje +
+    minutosSimuladosHoje;
 
   const revisoesConcluidasHoje =
     revisoes.filter(
@@ -394,7 +436,8 @@ export default function Dashboard() {
     calcularSequencia(
       questoes,
       sessoes,
-      revisoes
+      revisoes,
+      simuladosContabilizaveis
     );
 
   const resumoMaterias =
@@ -453,8 +496,16 @@ export default function Dashboard() {
     sequencia, assuntosConcluidos, assuntosTotais,
   });
 
-  const estatisticasPeriodos = montarEstatisticasPeriodos(questoes, sessoes);
-  const desempenhoSemanal = montarDesempenhoSemanal(questoes, sessoes);
+  const estatisticasPeriodos = montarEstatisticasPeriodos(
+    questoes,
+    sessoes,
+    simuladosContabilizaveis
+  );
+  const desempenhoSemanal = montarDesempenhoSemanal(
+    questoes,
+    sessoes,
+    simuladosContabilizaveis
+  );
   const revisoesDashboard = montarRevisoesDashboard(revisoes);
 
   const recomendacaoCoach = montarRecomendacaoCoach({
@@ -1047,7 +1098,8 @@ function calcularPercentualMeta(
 function calcularSequencia(
   questoes: RegistroQuestao[],
   sessoes: SessaoEstudo[],
-  revisoes: Revisao[]
+  revisoes: Revisao[],
+  simulados: Simulado[]
 ): number {
   const MINUTOS_MINIMOS_POR_DIA = 30;
 
@@ -1085,6 +1137,16 @@ function calcularSequencia(
       (minutosPorDia.get(
         dataLocal
       ) || 0) + minutos
+    );
+  });
+
+  simulados.forEach((simulado) => {
+    const dataLocal = obterDataLocalSeguro(simulado.data);
+    const minutos = Math.max(0, Number(simulado.minutos) || 0);
+
+    minutosPorDia.set(
+      dataLocal,
+      (minutosPorDia.get(dataLocal) || 0) + minutos
     );
   });
 
@@ -1348,6 +1410,30 @@ function obterDataLocalSeguro(
   return obterDataLocal(data);
 }
 
+function filtrarSimuladosSemEspelhoQuestoes(
+  simulados: Simulado[],
+  questoes: RegistroQuestao[]
+): Simulado[] {
+  const tentativasJaContabilizadas = new Set(
+    questoes
+      .map((registro) => registro.tentativaId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0)
+  );
+
+  return simulados.filter(
+    (simulado) =>
+      !simulado.tentativaId ||
+      !tentativasJaContabilizadas.has(simulado.tentativaId)
+  );
+}
+
+function obterQuestoesRespondidasSimulado(simulado: Simulado): number {
+  return (
+    Math.max(0, Number(simulado.certas) || 0) +
+    Math.max(0, Number(simulado.erradas) || 0)
+  );
+}
+
 function adicionarDias(
   data: Date,
   quantidade: number
@@ -1383,7 +1469,11 @@ function montarConquistasDashboard(d: { minutosTotais:number; totalQuestoes:numb
   ];
 }
 
-function montarEstatisticasPeriodos(questoes: RegistroQuestao[], sessoes: SessaoEstudo[]) {
+function montarEstatisticasPeriodos(
+  questoes: RegistroQuestao[],
+  sessoes: SessaoEstudo[],
+  simulados: Simulado[]
+) {
   const agora = new Date();
   const inicioHoje = inicioDoDia(agora).getTime();
   const diaSemana = (agora.getDay()+6)%7;
@@ -1396,18 +1486,25 @@ function montarEstatisticasPeriodos(questoes: RegistroQuestao[], sessoes: Sessao
   return periodos.map((p) => {
     const ss=sessoes.filter(x=>new Date(x.data).getTime()>=p.inicio);
     const qs=questoes.filter(x=>new Date(x.data).getTime()>=p.inicio);
+    const sims=simulados.filter(x=>new Date(x.data).getTime()>=p.inicio);
     const minutosSessao=ss.reduce((t,x)=>t+x.minutos,0);
     const minutosQuestao=qs.reduce((t,x)=>{
       const dup=ss.some(se=>se.tipo==="questoes" && se.materia===x.materia && se.assunto===x.assunto && Math.abs(new Date(se.data).getTime()-new Date(x.data).getTime())<5000);
       return t+(dup?0:x.minutos);
     },0);
-    return { rotulo:p.rotulo, minutos:minutosSessao+minutosQuestao, questoes:qs.reduce((t,x)=>t+x.certas+x.erradas,0) };
+    const minutosSimulado=sims.reduce((t,x)=>t+Math.max(0,Number(x.minutos)||0),0);
+    return {
+      rotulo:p.rotulo,
+      minutos:minutosSessao+minutosQuestao+minutosSimulado,
+      questoes:qs.reduce((t,x)=>t+x.certas+x.erradas,0)+sims.reduce((t,x)=>t+obterQuestoesRespondidasSimulado(x),0),
+    };
   });
 }
 
 function montarDesempenhoSemanal(
   questoes: RegistroQuestao[],
-  sessoes: SessaoEstudo[]
+  sessoes: SessaoEstudo[],
+  simulados: Simulado[]
 ): DesempenhoDia[] {
   const hoje = inicioDoDia(new Date());
   const diaSemana = hoje.getDay();
@@ -1420,6 +1517,7 @@ function montarDesempenhoSemanal(
     const chave = obterDataLocal(data);
     const sessoesDia = sessoes.filter((sessao) => obterDataLocalSeguro(sessao.data) === chave);
     const questoesDia = questoes.filter((registro) => obterDataLocalSeguro(registro.data) === chave);
+    const simuladosDia = simulados.filter((simulado) => obterDataLocalSeguro(simulado.data) === chave);
 
     const minutosSessoes = sessoesDia.reduce((total, sessao) => total + (Number(sessao.minutos) || 0), 0);
     const minutosQuestoes = questoesDia.reduce((total, registro) => {
@@ -1432,11 +1530,24 @@ function montarDesempenhoSemanal(
       return total + (duplicado ? 0 : (Number(registro.minutos) || 0));
     }, 0);
 
-    const certas = questoesDia.reduce((total, registro) => total + registro.certas, 0);
-    const totalQuestoesDia = questoesDia.reduce((total, registro) => total + registro.certas + registro.erradas, 0);
+    const minutosSimulados = simuladosDia.reduce(
+      (total, simulado) => total + Math.max(0, Number(simulado.minutos) || 0),
+      0
+    );
+    const certas =
+      questoesDia.reduce((total, registro) => total + registro.certas, 0) +
+      simuladosDia.reduce((total, simulado) => total + (Number(simulado.certas) || 0), 0);
+    const totalQuestoesDia =
+      questoesDia.reduce((total, registro) => total + registro.certas + registro.erradas, 0) +
+      simuladosDia.reduce((total, simulado) => total + obterQuestoesRespondidasSimulado(simulado), 0);
     const percentual = totalQuestoesDia === 0 ? 0 : Math.round((certas / totalQuestoesDia) * 100);
 
-    return { chave, rotulo, minutos: minutosSessoes + minutosQuestoes, percentual };
+    return {
+      chave,
+      rotulo,
+      minutos: minutosSessoes + minutosQuestoes + minutosSimulados,
+      percentual,
+    };
   });
 }
 
