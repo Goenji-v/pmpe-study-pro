@@ -1,0 +1,669 @@
+name: Apply simulado PDF upload
+
+on:
+  push:
+    branches:
+      - fix/simulado-upload-pdf
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: fix/simulado-upload-pdf
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Aplicar alteração
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              arquivo = Path(path)
+              texto = arquivo.read_text(encoding="utf-8")
+              if old not in texto:
+                  raise SystemExit(f"Trecho não encontrado em {path}: {old[:120]!r}")
+              arquivo.write_text(texto.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "src/pages/PlanoEstudos/PlanoEstudos.tsx",
+              '''import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
+          import {
+            getProgressoPlano,''',
+              '''import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
+          import {
+            enviarPdfSimulado,
+            removerPdfSimulado,
+          } from "../../services/simuladoService";
+          import {
+            getProgressoPlano,'''
+          )
+
+          replace_once(
+              "src/pages/PlanoEstudos/PlanoEstudos.tsx",
+              '''  const [minutosSimulado, setMinutosSimulado] = useState("");
+            const [cadernoUrl, setCadernoUrl] = useState("");
+            const [comentadoUrl, setComentadoUrl] = useState("");
+            const [mensagemDomingo, setMensagemDomingo] = useState("");''',
+              '''  const [minutosSimulado, setMinutosSimulado] = useState("");
+            const [cadernoPdf, setCadernoPdf] = useState<File | null>(null);
+            const [comentadoPdf, setComentadoPdf] = useState<File | null>(null);
+            const [salvandoSimulado, setSalvandoSimulado] = useState(false);
+            const [mensagemDomingo, setMensagemDomingo] = useState("");'''
+          )
+
+          replace_once(
+              "src/pages/PlanoEstudos/PlanoEstudos.tsx",
+              '''  function salvarSimuladoDomingo() {
+            const nome = nomeSimulado.trim();
+            const total = Number(totalSimulado);
+            const acertos = Number(acertosSimulado);
+            const minutosSim = Number(minutosSimulado);
+            const domingoAtual = planoCalendario
+              .find((semana) => semana.numero === semanaSelecionada)
+              ?.dias.find((itemDia) => itemDia.numero === 7);
+            const missaoSimulado = domingoAtual?.missoes.find((item) => item.tipo === "simulado");
+
+            if (missaoSimulado && concluidas.includes(missaoSimulado.id)) {
+              setMensagemDomingo("O simulado deste domingo já foi salvo.");
+              return;
+            }
+
+            if (!nome || !Number.isInteger(total) || total < 1 || !Number.isInteger(acertos) || acertos < 0 || acertos > total || !Number.isFinite(minutosSim) || minutosSim < 1) {
+              setMensagemDomingo("Preencha corretamente o nome, total, acertos e tempo do simulado.");
+              return;
+            }
+
+            const agora = new Date().toISOString();
+            setSimulados((anteriores) => [{
+              id: crypto.randomUUID(),
+              nome,
+              banca: "Misto",
+              certas: acertos,
+              erradas: total - acertos,
+              anuladas: 0,
+              totalQuestoes: total,
+              minutos: Math.round(minutosSim),
+              data: agora,
+              cadernoUrl: cadernoUrl.trim() || undefined,
+              comentadoUrl: comentadoUrl.trim() || undefined,
+            }, ...anteriores]);
+
+            marcarMissaoDomingoConcluida("simulado");
+            setNomeSimulado("");
+            setTotalSimulado("");
+            setAcertosSimulado("");
+            setMinutosSimulado("");
+            setCadernoUrl("");
+            setComentadoUrl("");
+            setMensagemDomingo(`Simulado salvo: ${acertos}/${total} questões (${Math.round(acertos / total * 100)}%).`);
+          }''',
+              '''  async function salvarSimuladoDomingo() {
+            const nome = nomeSimulado.trim();
+            const total = Number(totalSimulado);
+            const acertos = Number(acertosSimulado);
+            const minutosSim = Number(minutosSimulado);
+            const domingoAtual = planoCalendario
+              .find((semana) => semana.numero === semanaSelecionada)
+              ?.dias.find((itemDia) => itemDia.numero === 7);
+            const missaoSimulado = domingoAtual?.missoes.find((item) => item.tipo === "simulado");
+
+            if (missaoSimulado && concluidas.includes(missaoSimulado.id)) {
+              setMensagemDomingo("O simulado deste domingo já foi salvo.");
+              return;
+            }
+
+            if (salvandoSimulado) return;
+
+            if (!nome || !Number.isInteger(total) || total < 1 || !Number.isInteger(acertos) || acertos < 0 || acertos > total || !Number.isFinite(minutosSim) || minutosSim < 1) {
+              setMensagemDomingo("Preencha corretamente o nome, total, acertos e tempo do simulado.");
+              return;
+            }
+
+            const simuladoId = crypto.randomUUID();
+            let cadernoEnviado: Awaited<ReturnType<typeof enviarPdfSimulado>> | undefined;
+            let comentadoEnviado: Awaited<ReturnType<typeof enviarPdfSimulado>> | undefined;
+
+            setSalvandoSimulado(true);
+            setMensagemDomingo(
+              cadernoPdf || comentadoPdf
+                ? "Enviando os PDFs e salvando o simulado..."
+                : "Salvando simulado..."
+            );
+
+            try {
+              if (cadernoPdf) {
+                cadernoEnviado = await enviarPdfSimulado(
+                  cadernoPdf,
+                  simuladoId,
+                  "caderno"
+                );
+              }
+
+              if (comentadoPdf) {
+                comentadoEnviado = await enviarPdfSimulado(
+                  comentadoPdf,
+                  simuladoId,
+                  "comentado"
+                );
+              }
+
+              const agora = new Date().toISOString();
+              setSimulados((anteriores) => [{
+                id: simuladoId,
+                nome,
+                banca: "Misto",
+                certas: acertos,
+                erradas: total - acertos,
+                anuladas: 0,
+                totalQuestoes: total,
+                minutos: Math.round(minutosSim),
+                data: agora,
+                cadernoStoragePath: cadernoEnviado?.storagePath,
+                cadernoNomeArquivo: cadernoEnviado?.nomeArquivo,
+                comentadoStoragePath: comentadoEnviado?.storagePath,
+                comentadoNomeArquivo: comentadoEnviado?.nomeArquivo,
+              }, ...anteriores]);
+
+              marcarMissaoDomingoConcluida("simulado");
+              setNomeSimulado("");
+              setTotalSimulado("");
+              setAcertosSimulado("");
+              setMinutosSimulado("");
+              setCadernoPdf(null);
+              setComentadoPdf(null);
+              setMensagemDomingo(`Simulado salvo: ${acertos}/${total} questões (${Math.round(acertos / total * 100)}%).`);
+            } catch (erro) {
+              await Promise.all([
+                removerPdfSimulado(cadernoEnviado?.storagePath),
+                removerPdfSimulado(comentadoEnviado?.storagePath),
+              ]);
+
+              setMensagemDomingo(
+                erro instanceof Error
+                  ? erro.message
+                  : "Não foi possível salvar o simulado com os PDFs."
+              );
+            } finally {
+              setSalvandoSimulado(false);
+            }
+          }'''
+          )
+
+          replace_once(
+              "src/pages/PlanoEstudos/PlanoEstudos.tsx",
+              '''                    <input disabled={simuladoDomingoConcluido} value={cadernoUrl} onChange={(e) => setCadernoUrl(e.target.value)} placeholder="Link do caderno de questões/PDF" />
+                              <input disabled={simuladoDomingoConcluido} value={comentadoUrl} onChange={(e) => setComentadoUrl(e.target.value)} placeholder="Link do simulado comentado/PDF" />''',
+              '''                    <div className="plano-domingo-arquivo">
+                              <span>Caderno de questões (PDF)</span>
+                              <label className={`plano-domingo-upload ${simuladoDomingoConcluido || salvandoSimulado ? "plano-domingo-upload-desabilitado" : ""}`}>
+                                <input
+                                  key={cadernoPdf ? `caderno-${cadernoPdf.name}-${cadernoPdf.lastModified}` : "caderno-vazio"}
+                                  hidden
+                                  type="file"
+                                  accept="application/pdf,.pdf"
+                                  disabled={simuladoDomingoConcluido || salvandoSimulado}
+                                  onChange={(e) => setCadernoPdf(e.target.files?.[0] ?? null)}
+                                />
+                                <strong>📎 {cadernoPdf ? "Substituir PDF" : "Selecionar PDF"}</strong>
+                                <small>{cadernoPdf?.name ?? "Nenhum PDF selecionado · máximo 50 MB"}</small>
+                              </label>
+                            </div>
+                            <div className="plano-domingo-arquivo">
+                              <span>Simulado comentado (PDF)</span>
+                              <label className={`plano-domingo-upload ${simuladoDomingoConcluido || salvandoSimulado ? "plano-domingo-upload-desabilitado" : ""}`}>
+                                <input
+                                  key={comentadoPdf ? `comentado-${comentadoPdf.name}-${comentadoPdf.lastModified}` : "comentado-vazio"}
+                                  hidden
+                                  type="file"
+                                  accept="application/pdf,.pdf"
+                                  disabled={simuladoDomingoConcluido || salvandoSimulado}
+                                  onChange={(e) => setComentadoPdf(e.target.files?.[0] ?? null)}
+                                />
+                                <strong>📎 {comentadoPdf ? "Substituir PDF" : "Selecionar PDF"}</strong>
+                                <small>{comentadoPdf?.name ?? "Nenhum PDF selecionado · máximo 50 MB"}</small>
+                              </label>
+                            </div>'''
+          )
+
+          replace_once(
+              "src/pages/PlanoEstudos/PlanoEstudos.tsx",
+              '''                    <button type="button" onClick={salvarSimuladoDomingo} disabled={simuladoDomingoConcluido}>
+                              {simuladoDomingoConcluido ? "Simulado salvo" : "Salvar simulado"}
+                            </button>''',
+              '''                    <button type="button" onClick={salvarSimuladoDomingo} disabled={simuladoDomingoConcluido || salvandoSimulado}>
+                              {salvandoSimulado ? "Enviando PDFs..." : simuladoDomingoConcluido ? "Simulado salvo" : "Salvar simulado"}
+                            </button>'''
+          )
+
+          replace_once(
+              "src/types/index.ts",
+              '''  cadernoUrl?: string;
+            comentadoUrl?: string;
+            emBranco?: number;''',
+              '''  cadernoUrl?: string;
+            comentadoUrl?: string;
+            cadernoStoragePath?: string;
+            cadernoNomeArquivo?: string;
+            comentadoStoragePath?: string;
+            comentadoNomeArquivo?: string;
+            emBranco?: number;'''
+          )
+
+          Path("src/services/simuladoService.ts").write_text('''import {
+            supabase,
+          } from "../lib/supabase";
+
+          const BUCKET_SIMULADOS = "materiais";
+          const LIMITE_PDF_BYTES = 50 * 1024 * 1024;
+
+          export type PdfSimuladoArmazenado = {
+            storagePath: string;
+            nomeArquivo: string;
+          };
+
+          export async function enviarPdfSimulado(
+            arquivo: File,
+            simuladoId: string,
+            tipo: "caderno" | "comentado"
+          ): Promise<PdfSimuladoArmazenado> {
+            await validarPdf(arquivo);
+
+            const {
+              data: { user },
+              error: erroUsuario,
+            } = await supabase.auth.getUser();
+
+            if (erroUsuario || !user) {
+              throw new Error(
+                "Sua sessão expirou. Entre novamente para enviar o PDF."
+              );
+            }
+
+            const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
+            const storagePath = [
+              user.id,
+              "simulados",
+              simuladoId,
+              tipo,
+              `${crypto.randomUUID()}-${nomeSeguro}`,
+            ].join("/");
+
+            const { error } = await supabase.storage
+              .from(BUCKET_SIMULADOS)
+              .upload(storagePath, arquivo, {
+                cacheControl: "3600",
+                contentType: "application/pdf",
+                upsert: false,
+              });
+
+            if (error) {
+              throw new Error(
+                `Não foi possível enviar ${tipo === "caderno" ? "o caderno" : "o simulado comentado"}: ${error.message}`
+              );
+            }
+
+            return {
+              storagePath,
+              nomeArquivo: arquivo.name,
+            };
+          }
+
+          export async function removerPdfSimulado(
+            storagePath?: string
+          ): Promise<void> {
+            if (!storagePath) return;
+
+            const { error } = await supabase.storage
+              .from(BUCKET_SIMULADOS)
+              .remove([storagePath]);
+
+            if (error) {
+              console.warn(
+                "Não foi possível remover um PDF órfão do simulado:",
+                error
+              );
+            }
+          }
+
+          export async function abrirPdfSimulado(
+            storagePath: string
+          ): Promise<void> {
+            const novaAba = window.open("about:blank", "_blank");
+
+            if (novaAba) {
+              novaAba.opener = null;
+              novaAba.document.title = "Abrindo PDF...";
+              novaAba.document.body.textContent = "Abrindo PDF...";
+            }
+
+            try {
+              const { data, error } = await supabase.storage
+                .from(BUCKET_SIMULADOS)
+                .createSignedUrl(storagePath, 300);
+
+              if (error || !data?.signedUrl) {
+                throw new Error(
+                  `Não foi possível abrir o PDF: ${error?.message ?? "URL indisponível"}`
+                );
+              }
+
+              if (novaAba) {
+                novaAba.location.replace(data.signedUrl);
+                return;
+              }
+
+              window.open(
+                data.signedUrl,
+                "_blank",
+                "noopener,noreferrer"
+              );
+            } catch (erro) {
+              novaAba?.close();
+              throw erro;
+            }
+          }
+
+          async function validarPdf(
+            arquivo: File
+          ): Promise<void> {
+            if (!arquivo.name.toLowerCase().endsWith(".pdf")) {
+              throw new Error("Selecione um arquivo PDF válido.");
+            }
+
+            if (arquivo.size <= 0) {
+              throw new Error("O PDF selecionado está vazio.");
+            }
+
+            if (arquivo.size > LIMITE_PDF_BYTES) {
+              throw new Error("O PDF deve ter no máximo 50 MB.");
+            }
+
+            const cabecalho = new TextDecoder("ascii").decode(
+              await arquivo.slice(0, 5).arrayBuffer()
+            );
+
+            if (cabecalho !== "%PDF-") {
+              throw new Error("O arquivo selecionado não é um PDF válido.");
+            }
+          }
+
+          function sanitizarNomeArquivo(
+            nome: string
+          ): string {
+            const seguro = nome
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-zA-Z0-9._-]+/g, "-")
+              .replace(/-+/g, "-")
+              .replace(/^-|-$/g, "");
+
+            return seguro || "simulado.pdf";
+          }
+          ''', encoding="utf-8")
+
+          css_plano = Path("src/pages/PlanoEstudos/PlanoEstudos.css")
+          css_plano.write_text(css_plano.read_text(encoding="utf-8") + '''
+
+          .plano-domingo-arquivo {
+            display: grid !important;
+            gap: 6px !important;
+          }
+
+          .plano-domingo-arquivo > span {
+            color: #94a3b8;
+            font-size: 0.78rem;
+            font-weight: 700;
+          }
+
+          .plano-domingo-upload {
+            display: grid;
+            gap: 4px;
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px dashed #53647d;
+            border-radius: 9px;
+            background: #111827;
+            cursor: pointer;
+            transition: border-color 160ms ease, background 160ms ease;
+          }
+
+          .plano-domingo-upload:hover {
+            border-color: #8b5cf6;
+            background: #151d2e;
+          }
+
+          .plano-domingo-upload strong {
+            color: #f8fafc;
+            font-size: 0.9rem;
+          }
+
+          .plano-domingo-upload small {
+            min-width: 0;
+            overflow: hidden;
+            color: #94a3b8;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .plano-domingo-upload-desabilitado {
+            opacity: 0.62;
+            cursor: not-allowed;
+          }
+
+          .plano-domingo-upload-desabilitado:hover {
+            border-color: #53647d;
+            background: #111827;
+          }
+          ''', encoding="utf-8")
+
+          replace_once(
+              "src/pages/Simulados/Simulados.tsx",
+              '''import { useToast } from "../../context/ToastContext";
+
+          import type { Simulado } from "../../types/index";''',
+              '''import { useToast } from "../../context/ToastContext";
+          import {
+            abrirPdfSimulado,
+            removerPdfSimulado,
+          } from "../../services/simuladoService";
+
+          import type { Simulado } from "../../types/index";'''
+          )
+
+          replace_once(
+              "src/pages/Simulados/Simulados.tsx",
+              '''  function excluirSimulado(id: string) {
+            const confirmar = window.confirm(
+              "Deseja excluir este simulado?"
+            );
+
+            if (!confirmar) return;
+
+            setSimulados((anteriores) =>
+              anteriores.filter(
+                (simulado) => simulado.id !== id
+              )
+            );
+
+            showToast(
+              "Simulado excluído.",
+              "info"
+            );
+          }
+
+          function duplicarSimulado(''',
+              '''  async function abrirAnexoSimulado(
+            storagePath?: string,
+            urlLegada?: string
+          ) {
+            if (storagePath) {
+              try {
+                await abrirPdfSimulado(storagePath);
+              } catch (erro) {
+                showToast(
+                  erro instanceof Error
+                    ? erro.message
+                    : "Não foi possível abrir o PDF.",
+                  "error"
+                );
+              }
+              return;
+            }
+
+            if (urlLegada) {
+              window.open(
+                urlLegada,
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }
+          }
+
+          async function excluirSimulado(id: string) {
+            const confirmar = window.confirm(
+              "Deseja excluir este simulado?"
+            );
+
+            if (!confirmar) return;
+
+            const simuladoExcluido = simulados.find(
+              (simulado) => simulado.id === id
+            );
+
+            setSimulados((anteriores) =>
+              anteriores.filter(
+                (simulado) => simulado.id !== id
+              )
+            );
+
+            await Promise.all([
+              removerPdfSimulado(simuladoExcluido?.cadernoStoragePath),
+              removerPdfSimulado(simuladoExcluido?.comentadoStoragePath),
+            ]);
+
+            showToast(
+              "Simulado excluído.",
+              "info"
+            );
+          }
+
+          function duplicarSimulado('''
+          )
+
+          replace_once(
+              "src/pages/Simulados/Simulados.tsx",
+              '''    const copia: Simulado = {
+              ...simulado,
+              id: crypto.randomUUID(),
+              nome: `${simulado.nome} - cópia`,
+              data: new Date().toISOString(),
+            };''',
+              '''    const copia: Simulado = {
+              ...simulado,
+              id: crypto.randomUUID(),
+              nome: `${simulado.nome} - cópia`,
+              data: new Date().toISOString(),
+              cadernoUrl: undefined,
+              comentadoUrl: undefined,
+              cadernoStoragePath: undefined,
+              cadernoNomeArquivo: undefined,
+              comentadoStoragePath: undefined,
+              comentadoNomeArquivo: undefined,
+            };'''
+          )
+
+          replace_once(
+              "src/pages/Simulados/Simulados.tsx",
+              '''                      {simulado.observacao && (
+                                <p className="simulado-observacao">
+                                  {simulado.observacao}
+                                </p>
+                              )}
+                            </div>''',
+              '''                      {simulado.observacao && (
+                                <p className="simulado-observacao">
+                                  {simulado.observacao}
+                                </p>
+                              )}
+
+                              {(simulado.cadernoStoragePath || simulado.cadernoUrl || simulado.comentadoStoragePath || simulado.comentadoUrl) && (
+                                <div className="simulado-anexos">
+                                  {(simulado.cadernoStoragePath || simulado.cadernoUrl) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirAnexoSimulado(simulado.cadernoStoragePath, simulado.cadernoUrl)}
+                                    >
+                                      📄 Caderno PDF
+                                    </button>
+                                  )}
+                                  {(simulado.comentadoStoragePath || simulado.comentadoUrl) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirAnexoSimulado(simulado.comentadoStoragePath, simulado.comentadoUrl)}
+                                    >
+                                      📝 Comentado PDF
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>'''
+          )
+
+          css_simulados = Path("src/pages/Simulados/Simulados.css")
+          css_simulados.write_text(css_simulados.read_text(encoding="utf-8") + '''
+
+          .simulado-anexos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+          }
+
+          .simulado-anexos button {
+            padding: 7px 10px;
+            color: #e2e8f0;
+            background: #111827;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+          }
+
+          .simulado-anexos button:hover {
+            border-color: #8b5cf6;
+            background: #172033;
+          }
+          ''', encoding="utf-8")
+          PY
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar lint
+        run: npm run lint
+
+      - name: Validar build
+        run: npm run build
+
+      - name: Commitar alteração validada
+        shell: bash
+        run: |
+          rm -f .github/workflows/apply-simulado-pdf-upload.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/PlanoEstudos/PlanoEstudos.tsx src/pages/PlanoEstudos/PlanoEstudos.css src/pages/Simulados/Simulados.tsx src/pages/Simulados/Simulados.css src/services/simuladoService.ts src/types/index.ts .github/workflows/apply-simulado-pdf-upload.yml
+          git commit -m "feat: permitir PDFs nos simulados de domingo"
+          git push origin HEAD:fix/simulado-upload-pdf
