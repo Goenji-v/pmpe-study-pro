@@ -1,0 +1,52 @@
+.plano-domingo-arquivo {
+  display: grid !important;
+  gap: 6px !important;
+}
+
+.plano-domingo-arquivo > span {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.plano-domingo-upload {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px dashed #53647d;
+  border-radius: 9px;
+  background: #111827;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.plano-domingo-upload:hover {
+  border-color: #8b5cf6;
+  background: #151d2e;
+}
+
+.plano-domingo-upload strong {
+  color: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.plano-domingo-upload small {
+  min-width: 0;
+  overflow: hidden;
+  color: #94a3b8;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plano-domingo-upload-desabilitado {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.plano-domingo-upload-desabilitado:hover {
+  border-color: #53647d;
+  background: #111827;
+}

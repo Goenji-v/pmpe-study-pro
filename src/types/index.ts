@@ -176,6 +176,10 @@ export type Simulado = {
   totalQuestoes?: number;
   cadernoUrl?: string;
   comentadoUrl?: string;
+  cadernoStoragePath?: string;
+  cadernoNomeArquivo?: string;
+  comentadoStoragePath?: string;
+  comentadoNomeArquivo?: string;
   emBranco?: number;
   origem?: "manual" | "ia";
   tentativaId?: string;
