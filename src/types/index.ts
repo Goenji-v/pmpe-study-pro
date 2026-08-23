@@ -181,6 +181,20 @@ export type Simulado = {
   tentativaId?: string;
 };
 
+export type ResultadoQuestoesIAPersistido = {
+  id: string;
+  nome: string;
+  data: string;
+  tipo: TipoSessaoQuestoesIA;
+  total: number;
+  certas: number;
+  erradas: number;
+  emBranco: number;
+  percentual: number;
+  registros: RegistroQuestao[];
+  simulado?: Simulado;
+};
+
 export type AlternativaQuestao = {
   id: string;
   texto: string;
