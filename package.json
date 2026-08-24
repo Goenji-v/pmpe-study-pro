@@ -4,14 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite --host 0.0.0.0\" \"tsx watch server/index.ts\"",
+    "dev": "concurrently \"vite --host 0.0.0.0\" \"tsx watch server/secureEntry.ts\"",
     "dev:web": "vite --host 0.0.0.0",
-    "dev:api": "tsx watch server/index.ts",
-    "start:api": "tsx server/index.ts",
+    "dev:api": "tsx watch server/secureEntry.ts",
+    "start:api": "tsx server/secureEntry.ts",
     "test": "node --import tsx --test server/*.test.ts",
     "lint": "oxlint src server",
     "build": "tsc -b && vite build",
-    "check": "npm run lint && npm run build",
+    "check": "npm run lint && npm test && npm run build",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
