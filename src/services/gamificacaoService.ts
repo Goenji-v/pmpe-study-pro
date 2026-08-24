@@ -4,6 +4,10 @@ import type {
   SessaoEstudo,
   Simulado,
 } from "../types";
+import {
+  calcularAproveitamentoSimulado,
+  calcularMetricasConsolidadas,
+} from "../utils/metricasConsolidadas";
 
 export type ResumoGamificacao = {
   mes: string;
@@ -33,20 +37,30 @@ export function calcularGamificacao(params: {
 }): ResumoGamificacao {
   const agora = params.agora ?? new Date();
   const mes = chaveMes(agora);
+  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0);
+  const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  const sessoesMes = params.sessoes.filter((item) => chaveMes(dataSegura(item.data)) === mes);
-  const questoesMes = params.questoes.filter((item) => chaveMes(dataSegura(item.data)) === mes);
+  const metricas = calcularMetricasConsolidadas({
+    sessoes: params.sessoes,
+    questoes: params.questoes,
+    simulados: params.simulados,
+    inicio: inicioMes,
+    fim: fimMes,
+  });
+
   const revisoesMes = params.revisoes.filter(
-    (item) => item.concluida && item.dataConclusao && chaveMes(dataSegura(item.dataConclusao)) === mes
+    (item) =>
+      item.concluida &&
+      item.dataConclusao &&
+      estaNoMes(item.dataConclusao, mes)
   );
-  const simuladosMes = params.simulados.filter((item) => chaveMes(dataSegura(item.data)) === mes);
+  const simuladosMes = params.simulados.filter((item) =>
+    estaNoMes(item.data, mes)
+  );
 
-  const minutos = sessoesMes.reduce((total, item) => total + numeroSeguro(item.minutos), 0);
-  const questoes = questoesMes.reduce(
-    (total, item) => total + numeroSeguro(item.certas) + numeroSeguro(item.erradas),
-    0
-  );
-  const acertos = questoesMes.reduce((total, item) => total + numeroSeguro(item.certas), 0);
+  const minutos = metricas.minutos;
+  const questoes = metricas.questoesRespondidas;
+  const acertos = metricas.certas;
   const revisoes = revisoesMes.length;
   const simulados = simuladosMes.length;
 
@@ -55,8 +69,7 @@ export function calcularGamificacao(params: {
   const xpAcertos = Math.floor(acertos / 10) * 2;
   const xpRevisoes = revisoes * 5;
   const xpSimulados = simuladosMes.reduce((total, simulado) => {
-    const totalValidas = numeroSeguro(simulado.certas) + numeroSeguro(simulado.erradas);
-    const percentual = totalValidas === 0 ? 0 : (numeroSeguro(simulado.certas) / totalValidas) * 100;
+    const percentual = calcularAproveitamentoSimulado(simulado);
     return total + 10 + (percentual >= 80 ? 10 : percentual >= 60 ? 5 : 0);
   }, 0);
 
@@ -89,11 +102,7 @@ function chaveMes(data: Date) {
   return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function dataSegura(valor: string) {
+function estaNoMes(valor: string, mes: string) {
   const data = new Date(valor);
-  return Number.isNaN(data.getTime()) ? new Date(0) : data;
-}
-
-function numeroSeguro(valor: number) {
-  return Number.isFinite(valor) ? valor : 0;
+  return !Number.isNaN(data.getTime()) && chaveMes(data) === mes;
 }
