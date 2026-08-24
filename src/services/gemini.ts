@@ -3,7 +3,10 @@ import type {
 } from "../types/index";
 
 import { criarUrlApi } from "../config/api";
-import { supabase } from "../lib/supabase";
+import {
+  SUPABASE_PUBLIC_KEY,
+  supabase,
+} from "../lib/supabase";
 
 export type DificuldadeIA =
   | "Fácil"
@@ -57,6 +60,10 @@ export async function gerarQuestoesIA(
   const { data: sessao } = await supabase.auth.getSession();
   const token = sessao.session?.access_token;
 
+  if (!token) {
+    throw new Error("Sua sessão expirou. Entre novamente para gerar questões.");
+  }
+
   let resposta: Response;
 
   try {
@@ -68,9 +75,8 @@ export async function gerarQuestoesIA(
         headers: {
           "Content-Type":
             "application/json",
-          ...(token
-            ? { Authorization: `Bearer ${token}` }
-            : {}),
+          Authorization: `Bearer ${token}`,
+          "X-Supabase-Anon-Key": SUPABASE_PUBLIC_KEY,
         },
 
         body: JSON.stringify({
