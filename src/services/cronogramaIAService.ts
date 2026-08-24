@@ -1,7 +1,6 @@
 import { API_BASE_URL } from "../config/api";
-import {
-  supabase,
-} from "../lib/supabase";
+import { supabase } from "../lib/supabase";
+import { fetchApiAutenticada } from "./apiAutenticada";
 
 export type PeriodoCronogramaIA =
   | "hoje"
@@ -46,7 +45,6 @@ export type DadosCronogramaIA = {
   banca: string;
   periodo: PeriodoCronogramaIA;
   tempoDisponivelMinutos: number;
-
   perfilEstudo?: {
     diasPorSemana: number;
     materiaMaiorDificuldade: string;
@@ -57,13 +55,11 @@ export type DadosCronogramaIA = {
     modo: "assistido";
     prioridadeAutomatica?: string;
   };
-
   metas: {
     minutosDia: number;
     questoesDia: number;
     revisoesDia: number;
   };
-
   questoes: Array<{
     materia: string;
     assunto: string;
@@ -72,7 +68,6 @@ export type DadosCronogramaIA = {
     minutos: number;
     data: string;
   }>;
-
   sessoes: Array<{
     materia: string;
     assunto: string;
@@ -80,7 +75,6 @@ export type DadosCronogramaIA = {
     minutos: number;
     data: string;
   }>;
-
   revisoes: Array<{
     id: string;
     materia: string;
@@ -89,7 +83,6 @@ export type DadosCronogramaIA = {
     dataPrevista: string;
     concluida: boolean;
   }>;
-
   simulados: Array<{
     nome: string;
     banca: string;
@@ -99,7 +92,6 @@ export type DadosCronogramaIA = {
     minutos: number;
     data: string;
   }>;
-
   missoesPendentes: Array<{
     id: string;
     semana: number;
@@ -130,41 +122,29 @@ type LinhaCronograma = {
   created_at: string;
 };
 
-
-
 export async function gerarCronogramaIA(
   dados: DadosCronogramaIA
 ): Promise<CronogramaGeradoIA> {
-  const resposta =
-    await fetch(
-      `${API_BASE_URL}/api/cronograma`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-        body: JSON.stringify(dados),
-      }
-    );
+  const resposta = await fetchApiAutenticada(
+    `${API_BASE_URL}/api/cronograma`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dados),
+    }
+  );
 
-  let corpo:
-    | RespostaSucesso
-    | RespostaErro;
+  let corpo: RespostaSucesso | RespostaErro;
 
   try {
-    corpo =
-      await resposta.json();
+    corpo = await resposta.json();
   } catch {
-    throw new Error(
-      "A API retornou uma resposta inválida."
-    );
+    throw new Error("A API retornou uma resposta inválida.");
   }
 
-  if (
-    !resposta.ok ||
-    !corpo.sucesso
-  ) {
+  if (!resposta.ok || !corpo.sucesso) {
     throw new Error(
       "erro" in corpo
         ? corpo.erro
@@ -172,150 +152,183 @@ export async function gerarCronogramaIA(
     );
   }
 
-  const salvo =
-    await salvarCronograma(
-      corpo.cronograma,
-      dados.tempoDisponivelMinutos
-    );
+  const cronogramaValidado = validarCronogramaGerado(
+    corpo.cronograma,
+    dados
+  );
 
-  return salvo;
+  return salvarCronograma(
+    cronogramaValidado,
+    dados.tempoDisponivelMinutos
+  );
 }
 
-export async function listarCronogramasIA():
-  Promise<CronogramaGeradoIA[]> {
-  const usuario =
-    await exigirUsuario();
+export async function listarCronogramasIA(): Promise<CronogramaGeradoIA[]> {
+  const usuario = await exigirUsuario();
 
-  const {
-    data,
-    error,
-  } = await supabase
+  const { data, error } = await supabase
     .from("cronogramas_ia")
-    .select(
-      "id, titulo, periodo, tempo_disponivel_minutos, dados, created_at"
-    )
-    .eq(
-      "user_id",
-      usuario.id
-    )
-    .order(
-      "created_at",
-      {
-        ascending: false,
-      }
-    )
+    .select("id, titulo, periodo, tempo_disponivel_minutos, dados, created_at")
+    .eq("user_id", usuario.id)
+    .order("created_at", { ascending: false })
     .limit(20);
 
   if (error) {
-    throw new Error(
-      `Não foi possível carregar os cronogramas: ${error.message}`
-    );
+    throw new Error(`Não foi possível carregar os cronogramas: ${error.message}`);
   }
 
-  return (
-    (data ?? []) as LinhaCronograma[]
-  ).map(
-    (linha) => ({
-      ...linha.dados,
-      id: linha.id,
-      titulo: linha.titulo,
-      periodo: linha.periodo,
-      geradoEm:
-        linha.created_at,
-    })
-  );
+  return ((data ?? []) as LinhaCronograma[]).map((linha) => ({
+    ...linha.dados,
+    id: linha.id,
+    titulo: linha.titulo,
+    periodo: linha.periodo,
+    geradoEm: linha.created_at,
+  }));
 }
 
 export async function excluirCronogramaIA(
   id: string
 ): Promise<void> {
-  const usuario =
-    await exigirUsuario();
+  const usuario = await exigirUsuario();
 
-  const {
-    error,
-  } = await supabase
+  const { error } = await supabase
     .from("cronogramas_ia")
     .delete()
     .eq("id", id)
-    .eq(
-      "user_id",
-      usuario.id
-    );
+    .eq("user_id", usuario.id);
 
   if (error) {
-    throw new Error(
-      `Não foi possível excluir o cronograma: ${error.message}`
-    );
+    throw new Error(`Não foi possível excluir o cronograma: ${error.message}`);
   }
+}
+
+function validarCronogramaGerado(
+  cronograma: CronogramaGeradoIA,
+  entrada: DadosCronogramaIA
+): CronogramaGeradoIA {
+  if (!cronograma || !Array.isArray(cronograma.tarefas)) {
+    throw new Error("A IA retornou um cronograma sem tarefas válidas.");
+  }
+
+  const diasPermitidos = entrada.periodo === "7-dias" ? 7 : 1;
+  const limiteDiario = Math.max(20, Math.min(600, entrada.tempoDisponivelMinutos));
+  const idsMissoes = new Set(entrada.missoesPendentes.map((missao) => missao.id));
+  const tipos: TipoTarefaCronogramaIA[] = [
+    "teoria",
+    "questoes",
+    "revisao",
+    "simulado",
+    "redacao",
+    "misto",
+  ];
+
+  const tarefas = cronograma.tarefas.map((tarefa, indice) => {
+    const dia = Math.round(Number(tarefa.dia));
+    const duracao = Math.round(Number(tarefa.duracaoMinutos));
+    const quantidadeQuestoes = Math.max(0, Math.round(Number(tarefa.quantidadeQuestoes) || 0));
+
+    if (!Number.isFinite(dia) || dia < 1 || dia > diasPermitidos) {
+      throw new Error(`A IA criou uma tarefa fora do período permitido: tarefa ${indice + 1}.`);
+    }
+    if (!Number.isFinite(duracao) || duracao < 5 || duracao > limiteDiario) {
+      throw new Error(`A tarefa ${indice + 1} possui duração inválida.`);
+    }
+    if (!tipos.includes(tarefa.tipo)) {
+      throw new Error(`A tarefa ${indice + 1} possui um tipo não permitido.`);
+    }
+    if (tarefa.missaoId && !idsMissoes.has(tarefa.missaoId)) {
+      throw new Error(`A IA inventou uma referência de missão inexistente na tarefa ${indice + 1}.`);
+    }
+
+    return {
+      ...tarefa,
+      id: String(tarefa.id || crypto.randomUUID()),
+      ordem: indice + 1,
+      dia,
+      titulo: String(tarefa.titulo || `Tarefa ${indice + 1}`).trim(),
+      materia: String(tarefa.materia || "Estudo").trim(),
+      assunto: String(tarefa.assunto || "Conteúdo prioritário").trim(),
+      duracaoMinutos: duracao,
+      quantidadeQuestoes,
+      justificativa: String(
+        tarefa.justificativa || "Tarefa recomendada com base nos dados atuais."
+      ).trim(),
+    };
+  });
+
+  for (let dia = 1; dia <= diasPermitidos; dia += 1) {
+    const tarefasDia = tarefas.filter((tarefa) => tarefa.dia === dia);
+    if (tarefasDia.length > 5) {
+      throw new Error(`A IA ultrapassou o limite de 5 tarefas no dia ${dia}.`);
+    }
+
+    const minutosDia = tarefasDia.reduce(
+      (total, tarefa) => total + tarefa.duracaoMinutos,
+      0
+    );
+    if (minutosDia > limiteDiario) {
+      throw new Error(
+        `O plano do dia ${dia} exige ${minutosDia} minutos, acima dos ${limiteDiario} minutos disponíveis.`
+      );
+    }
+  }
+
+  const tempoTotalMinutos = tarefas.reduce(
+    (total, tarefa) => total + tarefa.duracaoMinutos,
+    0
+  );
+
+  return {
+    ...cronograma,
+    periodo: entrada.periodo,
+    tarefas,
+    tempoTotalMinutos,
+    geradoEm: cronograma.geradoEm || new Date().toISOString(),
+  };
 }
 
 async function salvarCronograma(
   cronograma: CronogramaGeradoIA,
   tempoDisponivelMinutos: number
 ): Promise<CronogramaGeradoIA> {
-  const usuario =
-    await exigirUsuario();
+  const usuario = await exigirUsuario();
 
-  const {
-    data,
-    error,
-  } = await supabase
+  const { data, error } = await supabase
     .from("cronogramas_ia")
     .insert({
-      user_id:
-        usuario.id,
-      titulo:
-        cronograma.titulo,
-      periodo:
-        cronograma.periodo,
-      tempo_disponivel_minutos:
-        tempoDisponivelMinutos,
-      dados:
-        cronograma,
+      user_id: usuario.id,
+      titulo: cronograma.titulo,
+      periodo: cronograma.periodo,
+      tempo_disponivel_minutos: tempoDisponivelMinutos,
+      dados: cronograma,
     })
-    .select(
-      "id, titulo, periodo, tempo_disponivel_minutos, dados, created_at"
-    )
+    .select("id, titulo, periodo, tempo_disponivel_minutos, dados, created_at")
     .single();
 
   if (error) {
-    throw new Error(
-      `O cronograma foi gerado, mas não pôde ser salvo: ${error.message}`
-    );
+    throw new Error(`O cronograma foi gerado, mas não pôde ser salvo: ${error.message}`);
   }
 
-  const linha =
-    data as LinhaCronograma;
+  const linha = data as LinhaCronograma;
 
   return {
     ...linha.dados,
     id: linha.id,
     titulo: linha.titulo,
     periodo: linha.periodo,
-    geradoEm:
-      linha.created_at,
+    geradoEm: linha.created_at,
   };
 }
 
 async function exigirUsuario() {
-  const {
-    data,
-    error,
-  } =
-    await supabase.auth
-      .getUser();
+  const { data, error } = await supabase.auth.getUser();
 
   if (error) {
-    throw new Error(
-      `Não foi possível identificar o usuário: ${error.message}`
-    );
+    throw new Error(`Não foi possível identificar o usuário: ${error.message}`);
   }
 
   if (!data.user) {
-    throw new Error(
-      "Faça login para usar o cronograma."
-    );
+    throw new Error("Faça login para usar o cronograma.");
   }
 
   return data.user;
