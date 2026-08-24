@@ -130,11 +130,21 @@ type LinhaCronograma = {
   created_at: string;
 };
 
-
+const TIPOS_TAREFA = new Set<TipoTarefaCronogramaIA>([
+  "teoria",
+  "questoes",
+  "revisao",
+  "simulado",
+  "redacao",
+  "misto",
+]);
 
 export async function gerarCronogramaIA(
   dados: DadosCronogramaIA
 ): Promise<CronogramaGeradoIA> {
+  const { data: sessao } = await supabase.auth.getSession();
+  const token = sessao.session?.access_token;
+
   const resposta =
     await fetch(
       `${API_BASE_URL}/api/cronograma`,
@@ -143,6 +153,9 @@ export async function gerarCronogramaIA(
         headers: {
           "Content-Type":
             "application/json",
+          ...(token
+            ? { Authorization: `Bearer ${token}` }
+            : {}),
         },
         body: JSON.stringify(dados),
       }
@@ -172,13 +185,15 @@ export async function gerarCronogramaIA(
     );
   }
 
-  const salvo =
-    await salvarCronograma(
-      corpo.cronograma,
-      dados.tempoDisponivelMinutos
-    );
+  const validado = validarCronogramaGerado(
+    corpo.cronograma,
+    dados
+  );
 
-  return salvo;
+  return salvarCronograma(
+    validado,
+    dados.tempoDisponivelMinutos
+  );
 }
 
 export async function listarCronogramasIA():
@@ -250,6 +265,95 @@ export async function excluirCronogramaIA(
   }
 }
 
+function validarCronogramaGerado(
+  cronograma: CronogramaGeradoIA,
+  entrada: DadosCronogramaIA
+): CronogramaGeradoIA {
+  if (!cronograma || typeof cronograma !== "object") {
+    throw new Error("A IA retornou um cronograma inválido.");
+  }
+
+  if (cronograma.periodo !== entrada.periodo) {
+    throw new Error("A IA retornou um período diferente do solicitado.");
+  }
+
+  if (!Array.isArray(cronograma.tarefas) || cronograma.tarefas.length === 0) {
+    throw new Error("A IA não retornou tarefas executáveis para o cronograma.");
+  }
+
+  const diasPermitidos = entrada.periodo === "7-dias" ? 7 : 1;
+  const limiteDiario = Math.max(20, Math.min(600, Number(entrada.tempoDisponivelMinutos) || 0));
+  const minutosPorDia = new Map<number, number>();
+
+  const tarefas = cronograma.tarefas.map((tarefa, indice) => {
+    const dia = inteiroSeguro(tarefa.dia);
+    const duracaoMinutos = inteiroSeguro(tarefa.duracaoMinutos);
+    const quantidadeQuestoes = Math.max(0, inteiroSeguro(tarefa.quantidadeQuestoes));
+
+    if (dia < 1 || dia > diasPermitidos) {
+      throw new Error(`A IA colocou a tarefa ${indice + 1} fora do período solicitado.`);
+    }
+
+    if (duracaoMinutos < 1 || duracaoMinutos > limiteDiario) {
+      throw new Error(`A IA retornou duração inválida na tarefa ${indice + 1}.`);
+    }
+
+    if (!TIPOS_TAREFA.has(tarefa.tipo)) {
+      throw new Error(`A IA retornou tipo inválido na tarefa ${indice + 1}.`);
+    }
+
+    const materia = textoObrigatorio(tarefa.materia, `matéria da tarefa ${indice + 1}`);
+    const assunto = textoObrigatorio(tarefa.assunto, `assunto da tarefa ${indice + 1}`);
+    const titulo = textoObrigatorio(tarefa.titulo, `título da tarefa ${indice + 1}`);
+    const justificativa = textoObrigatorio(
+      tarefa.justificativa,
+      `justificativa da tarefa ${indice + 1}`
+    );
+
+    const totalDia = (minutosPorDia.get(dia) ?? 0) + duracaoMinutos;
+    if (totalDia > limiteDiario) {
+      throw new Error(
+        `A IA excedeu o limite de ${limiteDiario} minutos no dia ${dia}. O plano não foi salvo.`
+      );
+    }
+    minutosPorDia.set(dia, totalDia);
+
+    return {
+      ...tarefa,
+      id: tarefa.id?.trim() || crypto.randomUUID(),
+      ordem: Math.max(1, inteiroSeguro(tarefa.ordem) || indice + 1),
+      dia,
+      duracaoMinutos,
+      quantidadeQuestoes,
+      materia,
+      assunto,
+      titulo,
+      justificativa,
+    };
+  });
+
+  const tempoTotalMinutos = tarefas.reduce(
+    (total, tarefa) => total + tarefa.duracaoMinutos,
+    0
+  );
+
+  return {
+    ...cronograma,
+    titulo: textoObrigatorio(cronograma.titulo, "título do cronograma"),
+    resumo: textoObrigatorio(cronograma.resumo, "resumo do cronograma"),
+    objetivoPrincipal: textoObrigatorio(
+      cronograma.objetivoPrincipal,
+      "objetivo principal do cronograma"
+    ),
+    tarefas,
+    tempoTotalMinutos,
+    geradoEm:
+      dataValida(cronograma.geradoEm)
+        ? cronograma.geradoEm
+        : new Date().toISOString(),
+  };
+}
+
 async function salvarCronograma(
   cronograma: CronogramaGeradoIA,
   tempoDisponivelMinutos: number
@@ -319,4 +423,22 @@ async function exigirUsuario() {
   }
 
   return data.user;
+}
+
+function inteiroSeguro(valor: unknown) {
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? Math.round(numero) : 0;
+}
+
+function textoObrigatorio(valor: unknown, campo: string) {
+  const texto = String(valor ?? "").trim();
+  if (!texto) {
+    throw new Error(`A IA retornou ${campo} vazio.`);
+  }
+  return texto;
+}
+
+function dataValida(valor: unknown) {
+  if (typeof valor !== "string" || !valor.trim()) return false;
+  return !Number.isNaN(new Date(valor).getTime());
 }
