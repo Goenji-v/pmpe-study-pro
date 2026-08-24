@@ -1,0 +1,84 @@
+name: Apply calendar simulado question metrics
+
+on:
+  push:
+    branches:
+      - fix/calendario-contar-questoes-simulado
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/calendario-contar-questoes-simulado
+          fetch-depth: 0
+
+      - name: Patch Calendario
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/pages/Calendario/Calendario.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          if 'quantidadeQuestoes?: number;' in text:
+              print('Patch already applied')
+              raise SystemExit(0)
+
+          old = '  status?: "concluida" | "pendente" | "atrasada";\n};'
+          new = '  status?: "concluida" | "pendente" | "atrasada";\n  quantidadeQuestoes?: number;\n};'
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = '          detalhe="Sessões + questões"'
+          new = '          detalhe="Sessões + questões + simulados"'
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = '  const eventos:\n    EventoCalendario[] = [];\n\n  sessoes.forEach('
+          new = '''  const eventos:\n    EventoCalendario[] = [];\n\n  const tentativasJaContabilizadas = new Set(\n    questoes\n      .map((registro) => registro.tentativaId)\n      .filter(\n        (id) =>\n          typeof id === "string" &&\n          id.length > 0\n      )\n  );\n\n  sessoes.forEach('''
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = '''        minutos:\n          Number(\n            registro.minutos\n          ) || 0,\n        data:\n          registro.data,'''
+          new = '''        minutos:\n          Number(\n            registro.minutos\n          ) || 0,\n        quantidadeQuestoes:\n          total,\n        data:\n          registro.data,'''
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = '''      const total =\n        (Number(\n          simulado.certas\n        ) || 0) +\n        (Number(\n          simulado.erradas\n        ) || 0) +\n        (Number(\n          simulado.anuladas\n        ) || 0);\n\n      eventos.push({'''
+          new = '''      const total =\n        (Number(\n          simulado.certas\n        ) || 0) +\n        (Number(\n          simulado.erradas\n        ) || 0) +\n        (Number(\n          simulado.anuladas\n        ) || 0);\n\n      const espelhadoEmQuestoes =\n        typeof simulado.tentativaId === "string" &&\n        tentativasJaContabilizadas.has(\n          simulado.tentativaId\n        );\n\n      eventos.push({'''
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = '''        minutos:\n          Number(\n            simulado.minutos\n          ) || 0,\n        data:\n          simulado.data,'''
+          new = '''        minutos:\n          Number(\n            simulado.minutos\n          ) || 0,\n        quantidadeQuestoes:\n          espelhadoEmQuestoes\n            ? 0\n            : total,\n        data:\n          simulado.data,'''
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          pattern = re.compile(
+              r'''        questoes:\n          eventosAtivos\n            \.filter\(.*?\n            \),\n\n        sessoes:''',
+              re.S,
+          )
+          replacement = '''        questoes:\n          eventosAtivos.reduce(\n            (total, evento) =>\n              total +\n              (evento.quantidadeQuestoes ?? 0),\n            0\n          ),\n\n        sessoes:'''
+          text, count = pattern.subn(replacement, text, count=1)
+          assert count == 1, count
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Calendario/Calendario.tsx
+          git commit -m "fix: contar questões de simulados no calendário"
+          git push origin HEAD:fix/calendario-contar-questoes-simulado
