@@ -72,87 +72,53 @@ export async function salvarQuestoesGeradasNoCatalogo(
     validarQuestaoAntesDePublicar(questao, indice + 1)
   );
 
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData.user) {
-    throw new Error(
-      "Sua sessão expirou. Entre novamente para salvar as questões no banco compartilhado."
-    );
-  }
-
-  const preparadas = await Promise.all(
-    questoes.map(async (questao) => ({
-      id: questao.id,
-      concurso_alvo: contexto.concursoAlvo.trim() || "PMPE",
-      edital_alvo:
-        contexto.editalAlvo.trim() ||
-        contexto.concursoAlvo.trim() ||
-        "PMPE",
-      banca: questao.banca.trim(),
-      materia_id: contexto.materiaId || null,
-      materia: questao.materia.trim(),
-      materia_chave: normalizarChaveIA(questao.materia),
-      modulo_id: questao.moduloId || null,
-      modulo: questao.modulo?.trim() || null,
-      assunto_id: contexto.assuntoId || null,
-      assunto: questao.assunto.trim(),
-      assunto_chave: normalizarChaveIA(questao.assunto),
-      dificuldade: converterDificuldade(questao.dificuldade),
-      enunciado: questao.enunciado.trim(),
-      alternativas: Object.entries(questao.alternativas).map(([id, texto]) => ({
-        id,
-        texto: texto.trim(),
-      })),
-      resposta_correta_id: questao.respostaCorreta,
-      explicacao: questao.explicacao.trim(),
-      status: "ativa",
-      compatibilidade_edital: "direta",
-      confianca_classificacao: "alta",
-      fonte_nome: "Gerada pela IA do Study Pro",
-      origem: "ia",
-      banca_chave: normalizarChaveIA(questao.banca),
-      criado_por: authData.user.id,
-      fingerprint: await fingerprintQuestaoIA(questao),
-    }))
+  const fingerprints = await Promise.all(
+    questoes.map((questao) => fingerprintQuestaoIA(questao))
   );
 
-  const { error } = await supabase
-    .from("questoes_catalogo")
-    .upsert(preparadas, {
-      onConflict: "fingerprint",
-      ignoreDuplicates: true,
-    });
+  const { data, error } = await supabase.functions.invoke(
+    "publicar-questoes-ia",
+    {
+      body: {
+        questoes,
+        contexto: {
+          concursoAlvo: contexto.concursoAlvo.trim() || "PMPE",
+          editalAlvo:
+            contexto.editalAlvo.trim() ||
+            contexto.concursoAlvo.trim() ||
+            "PMPE",
+          materiaId: contexto.materiaId,
+          assuntoId: contexto.assuntoId,
+        },
+      },
+    }
+  );
 
   if (error) {
     throw new Error(
-      `Não foi possível salvar as questões no banco compartilhado: ${error.message}`
+      `Não foi possível publicar as questões no catálogo seguro: ${error.message}`
     );
   }
 
-  const fingerprints = preparadas.map((item) => item.fingerprint);
-  const { data, error: erroLeitura } = await supabase
-    .from("questoes_catalogo")
-    .select(
-      "id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint"
-    )
-    .eq("origem", "ia")
-    .in("fingerprint", fingerprints);
+  const linhas =
+    data && typeof data === "object" && Array.isArray(data.questoes)
+      ? (data.questoes as LinhaCatalogoIA[])
+      : [];
 
-  if (erroLeitura) {
-    throw new Error(
-      `As questões foram salvas, mas não puderam ser recarregadas: ${erroLeitura.message}`
-    );
-  }
-
+  const validas = linhas.filter(ehQuestaoValida);
   const porFingerprint = new Map(
-    ((data ?? []) as LinhaCatalogoIA[]).map((linha) => [
-      linha.fingerprint,
-      converterLinha(linha),
-    ])
+    validas.map((linha) => [linha.fingerprint, converterLinha(linha)])
   );
 
-  return preparadas.map(
-    (item, indice) => porFingerprint.get(item.fingerprint) ?? questoes[indice]
-  );
+  return fingerprints.map((fingerprint, indice) => {
+    const publicada = porFingerprint.get(fingerprint);
+    if (!publicada) {
+      throw new Error(
+        `A questão ${indice + 1} não pôde ser confirmada no catálogo após a publicação.`
+      );
+    }
+    return publicada;
+  });
 }
 
 export async function registrarRespostasQuestoesIA(
