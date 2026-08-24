@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   quality:
-    name: Lint e Build
+    name: Lint, Testes e Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,5 +24,7 @@ jobs:
         run: npm ci
       - name: Executar lint
         run: npm run lint
+      - name: Executar testes
+        run: npm test
       - name: Executar TypeScript e build
         run: npm run build
