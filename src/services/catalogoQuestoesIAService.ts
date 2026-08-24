@@ -35,6 +35,7 @@ export type FiltrosCatalogoIA = {
   dificuldade: "Fácil" | "Média" | "Difícil" | "Mista";
   quantidade: number;
   preferencia: PreferenciaReusoIA;
+  concursoAlvo?: string;
 };
 
 export type ContextoPublicacaoIA = {
@@ -73,9 +74,8 @@ export async function salvarQuestoesGeradasNoCatalogo(
 
   const preparadas = await Promise.all(
     questoes.map(async (questao) => ({
-      id: questao.id,
-      concurso_alvo: contexto.concursoAlvo.trim() || "Geral",
-      edital_alvo: contexto.editalAlvo.trim() || contexto.concursoAlvo.trim() || "Geral",
+      concurso_alvo: contexto.concursoAlvo.trim() || "PMPE",
+      edital_alvo: contexto.editalAlvo.trim() || contexto.concursoAlvo.trim() || "PMPE",
       banca: questao.banca.trim(),
       materia_id: contexto.materiaId || null,
       materia: questao.materia.trim(),
@@ -92,24 +92,15 @@ export async function salvarQuestoesGeradasNoCatalogo(
         texto: texto.trim(),
       })),
       resposta_correta_id: questao.respostaCorreta,
-      explicacao: questao.explicacao.trim() || null,
-      status: "ativa",
-      compatibilidade_edital: "direta",
-      confianca_classificacao: "alta",
-      fonte_nome: "Gerada pela IA do Study Pro",
-      origem: "ia",
+      explicacao: questao.explicacao.trim(),
       banca_chave: normalizarChaveIA(questao.banca),
-      criado_por: authData.user.id,
       fingerprint: await fingerprintQuestaoIA(questao),
     }))
   );
 
-  const { error } = await supabase
-    .from("questoes_catalogo")
-    .upsert(preparadas, {
-      onConflict: "fingerprint",
-      ignoreDuplicates: true,
-    });
+  const { error } = await supabase.rpc("publicar_questoes_ia", {
+    p_questoes: preparadas,
+  });
 
   if (error) {
     throw new Error(`Não foi possível salvar as questões no banco compartilhado: ${error.message}`);
@@ -171,12 +162,17 @@ async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
     .eq("origem", "ia")
     .eq("status", "ativa")
     .eq("compatibilidade_edital", "direta")
+    .eq("concurso_alvo", filtros.concursoAlvo?.trim() || "PMPE")
     .limit(1000);
 
   consulta = consulta
     .eq("materia_chave", normalizarChaveIA(filtros.materia))
     .eq("assunto_chave", normalizarChaveIA(filtros.assunto))
     .eq("banca_chave", normalizarChaveIA(filtros.banca));
+
+  if (filtros.moduloId) {
+    consulta = consulta.eq("modulo_id", filtros.moduloId);
+  }
 
   if (filtros.dificuldade !== "Mista") {
     consulta = consulta.eq("dificuldade", converterDificuldade(filtros.dificuldade));
@@ -239,10 +235,19 @@ function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
 }
 
 function ehQuestaoValida(linha: LinhaCatalogoIA) {
+  const alternativas = Array.isArray(linha.alternativas)
+    ? linha.alternativas
+    : [];
+  const letras = new Set(alternativas.map((item) => item.id));
+
   return (
     ["A", "B", "C", "D", "E"].includes(linha.resposta_correta_id ?? "")
-    && Array.isArray(linha.alternativas)
-    && linha.alternativas.length === 5
+    && alternativas.length === 5
+    && letras.size === 5
+    && ["A", "B", "C", "D", "E"].every((letra) => letras.has(letra))
+    && alternativas.every((item) => item.texto.trim().length > 0)
+    && linha.enunciado.trim().length > 0
+    && (linha.explicacao?.trim().length ?? 0) > 0
   );
 }
 

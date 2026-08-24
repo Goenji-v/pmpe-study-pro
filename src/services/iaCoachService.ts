@@ -1,4 +1,9 @@
 import { API_BASE_URL } from "../config/api";
+import {
+  SUPABASE_PUBLIC_KEY,
+  supabase,
+} from "../lib/supabase";
+
 export type PrioridadeCoachIA =
   | "alta"
   | "media"
@@ -84,14 +89,19 @@ type RespostaCoachErro = {
   erro: string;
 };
 
-
-
 const CHAVE_ULTIMO_COACH =
   "pmpe_ultimo_diagnostico_coach";
 
 export async function gerarDiagnosticoCoach(
   dados: DadosCoachIA
 ): Promise<DiagnosticoCoachIA> {
+  const { data: sessao } = await supabase.auth.getSession();
+  const token = sessao.session?.access_token;
+
+  if (!token) {
+    throw new Error("Sua sessão expirou. Entre novamente para usar o IA Coach.");
+  }
+
   const resposta =
     await fetch(
       `${API_BASE_URL}/api/coach`,
@@ -101,6 +111,8 @@ export async function gerarDiagnosticoCoach(
         headers: {
           "Content-Type":
             "application/json",
+          Authorization: `Bearer ${token}`,
+          "X-Supabase-Anon-Key": SUPABASE_PUBLIC_KEY,
         },
 
         body:
