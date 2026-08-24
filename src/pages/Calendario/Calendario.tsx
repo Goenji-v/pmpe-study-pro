@@ -21,6 +21,7 @@ type EventoCalendario = {
   minutos: number;
   data: string;
   status?: "concluida" | "pendente" | "atrasada";
+  quantidadeQuestoes?: number;
 };
 
 type ResumoDia = {
@@ -258,7 +259,7 @@ export default function Calendario() {
           valor={formatarMinutos(
             resumoMes.minutos
           )}
-          detalhe="Sessões + questões"
+          detalhe="Sessões + questões + simulados"
         />
 
         <ResumoCard
@@ -617,6 +618,16 @@ function montarEventos({
   const eventos:
     EventoCalendario[] = [];
 
+  const tentativasJaContabilizadas = new Set(
+    questoes
+      .map((registro) => registro.tentativaId)
+      .filter(
+        (id) =>
+          typeof id === "string" &&
+          id.length > 0
+      )
+  );
+
   sessoes.forEach(
     (sessao) => {
       eventos.push({
@@ -665,6 +676,8 @@ function montarEventos({
           Number(
             registro.minutos
           ) || 0,
+        quantidadeQuestoes:
+          total,
         data:
           registro.data,
       });
@@ -728,6 +741,12 @@ function montarEventos({
           simulado.anuladas
         ) || 0);
 
+      const espelhadoEmQuestoes =
+        typeof simulado.tentativaId === "string" &&
+        tentativasJaContabilizadas.has(
+          simulado.tentativaId
+        );
+
       eventos.push({
         id:
           `simulado-${simulado.id}`,
@@ -742,6 +761,10 @@ function montarEventos({
           Number(
             simulado.minutos
           ) || 0,
+        quantidadeQuestoes:
+          espelhadoEmQuestoes
+            ? 0
+            : total,
         data:
           simulado.data,
       });
@@ -850,32 +873,12 @@ function montarDiasCalendario(
           ),
 
         questoes:
-          eventosAtivos
-            .filter(
-              (evento) =>
-                evento.tipo ===
-                "questoes"
-            )
-            .reduce(
-              (
-                total,
-                evento
-              ) => {
-                const correspondencia =
-                  evento.detalhe.match(
-                    /(\d+)\s+questões/
-                  );
-
-                return (
-                  total +
-                  Number(
-                    correspondencia?.[1] ||
-                    0
-                  )
-                );
-              },
-              0
-            ),
+          eventosAtivos.reduce(
+            (total, evento) =>
+              total +
+              (evento.quantidadeQuestoes ?? 0),
+            0
+          ),
 
         sessoes:
           eventosAtivos.filter(
