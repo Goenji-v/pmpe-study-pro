@@ -4,6 +4,7 @@ import type {
   SessaoEstudo,
   Simulado,
 } from "../../types";
+import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
 
 export type Tendencia = "subindo" | "caindo" | "estavel";
 
@@ -82,8 +83,8 @@ export function gerarRelatorioInteligente({
 }: EntradaRelatorio): RelatorioInteligente {
   const hoje = inicioDoDia(new Date());
   const inicioSemanaAtual = adicionarDias(hoje, -6);
-  const fimSemanaAnterior = adicionarDias(inicioSemanaAtual, -1);
-  const inicioSemanaAnterior = adicionarDias(fimSemanaAnterior, -6);
+  const fimSemanaAnterior = fimDoDia(adicionarDias(inicioSemanaAtual, -1));
+  const inicioSemanaAnterior = inicioDoDia(adicionarDias(fimSemanaAnterior, -6));
 
   const semanaAtual = resumirPeriodo({
     inicio: inicioSemanaAtual,
@@ -93,10 +94,9 @@ export function gerarRelatorioInteligente({
     revisoes,
     simulados,
   });
-
   const semanaAnterior = resumirPeriodo({
     inicio: inicioSemanaAnterior,
-    fim: fimDoDia(fimSemanaAnterior),
+    fim: fimSemanaAnterior,
     questoes,
     sessoes,
     revisoes,
@@ -105,60 +105,31 @@ export function gerarRelatorioInteligente({
 
   const materias = calcularMaterias(questoes, sessoes);
   const materiasComBase = materias.filter((item) => item.questoes >= 5);
-
   const melhorMateria =
-    [...materiasComBase].sort(
-      (a, b) => b.aproveitamento - a.aproveitamento
-    )[0] ?? null;
-
+    [...materiasComBase].sort((a, b) => b.aproveitamento - a.aproveitamento)[0] ?? null;
   const materiaCritica =
-    [...materiasComBase].sort(
-      (a, b) => a.aproveitamento - b.aproveitamento
-    )[0] ?? null;
-
+    [...materiasComBase].sort((a, b) => a.aproveitamento - b.aproveitamento)[0] ?? null;
   const materiaEsquecida =
     [...materias]
       .filter((item) => item.diasSemEstudar !== null)
-      .sort(
-        (a, b) =>
-          (b.diasSemEstudar ?? 0) - (a.diasSemEstudar ?? 0)
-      )[0] ?? null;
+      .sort((a, b) => (b.diasSemEstudar ?? 0) - (a.diasSemEstudar ?? 0))[0] ?? null;
 
   const revisoesAtrasadas = revisoes.filter(
-    (revisao) =>
-      !revisao.concluida &&
-      dataSegura(revisao.dataPrevista) < hoje
+    (revisao) => !revisao.concluida && dataSegura(revisao.dataPrevista) < hoje
   ).length;
 
   const comparacoes = {
     minutos: comparar(semanaAtual.minutos, semanaAnterior.minutos),
     questoes: comparar(semanaAtual.questoes, semanaAnterior.questoes),
-    aproveitamento: comparar(
-      semanaAtual.aproveitamento,
-      semanaAnterior.aproveitamento
-    ),
-    diasAtivos: comparar(
-      semanaAtual.diasAtivos,
-      semanaAnterior.diasAtivos
-    ),
+    aproveitamento: comparar(semanaAtual.aproveitamento, semanaAnterior.aproveitamento),
+    diasAtivos: comparar(semanaAtual.diasAtivos, semanaAnterior.diasAtivos),
   };
 
   const metaSemanal = Math.max(metaMinutosDiaria * 6, 1);
-  const notaTempo = limitar(
-    Math.round((semanaAtual.minutos / metaSemanal) * 100),
-    0,
-    100
-  );
-  const notaFrequencia = limitar(
-    Math.round((semanaAtual.diasAtivos / 6) * 100),
-    0,
-    100
-  );
-  const notaQuestoes = semanaAtual.questoes > 0
-    ? semanaAtual.aproveitamento
-    : 0;
+  const notaTempo = limitar(Math.round((semanaAtual.minutos / metaSemanal) * 100), 0, 100);
+  const notaFrequencia = limitar(Math.round((semanaAtual.diasAtivos / 6) * 100), 0, 100);
+  const notaQuestoes = semanaAtual.questoes > 0 ? semanaAtual.aproveitamento : 0;
   const penalidadeRevisoes = Math.min(revisoesAtrasadas * 3, 25);
-
   const indiceConsistencia = limitar(
     Math.round(
       notaTempo * 0.35 +
@@ -214,50 +185,25 @@ function resumirPeriodo({
   revisoes: Revisao[];
   simulados: Simulado[];
 }): ResumoPeriodo {
-  const sessoesPeriodo = sessoes.filter((sessao) =>
-    estaNoPeriodo(sessao.data, inicio, fim)
-  );
-  const questoesPeriodo = questoes.filter((registro) =>
-    estaNoPeriodo(registro.data, inicio, fim)
-  );
-  const simuladosPeriodo = simulados.filter((simulado) =>
-    estaNoPeriodo(simulado.data, inicio, fim)
-  );
-  const revisoesConcluidas = revisoes.filter(
-    (revisao) =>
-      revisao.concluida &&
-      revisao.dataConclusao &&
-      estaNoPeriodo(revisao.dataConclusao, inicio, fim)
-  ).length;
-
-  const certas = questoesPeriodo.reduce(
-    (total, registro) => total + numeroSeguro(registro.certas),
-    0
-  );
-  const erradas = questoesPeriodo.reduce(
-    (total, registro) => total + numeroSeguro(registro.erradas),
-    0
-  );
-  const totalQuestoes = certas + erradas;
+  const metricas = calcularMetricasConsolidadas({
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    inicio,
+    fim,
+  });
 
   return {
-    minutos: sessoesPeriodo.reduce(
-      (total, sessao) => total + numeroSeguro(sessao.minutos),
-      0
-    ),
-    sessoes: sessoesPeriodo.length,
-    diasAtivos: new Set(
-      sessoesPeriodo.map((sessao) => chaveData(sessao.data))
-    ).size,
-    questoes: totalQuestoes,
-    certas,
-    erradas,
-    aproveitamento:
-      totalQuestoes === 0
-        ? 0
-        : Math.round((certas / totalQuestoes) * 100),
-    revisoesConcluidas,
-    simulados: simuladosPeriodo.length,
+    minutos: metricas.minutos,
+    sessoes: metricas.sessoes,
+    diasAtivos: metricas.diasAtivos,
+    questoes: metricas.questoes,
+    certas: metricas.certas,
+    erradas: metricas.erradas + metricas.emBranco,
+    aproveitamento: metricas.aproveitamento,
+    revisoesConcluidas: metricas.revisoesConcluidas,
+    simulados: metricas.simulados,
   };
 }
 
@@ -287,11 +233,10 @@ function calcularMaterias(
   questoes.forEach((registro) => {
     const atual = obter(registro.materia);
     atual.certas += numeroSeguro(registro.certas);
-    atual.erradas += numeroSeguro(registro.erradas);
+    atual.erradas += numeroSeguro(registro.erradas) + numeroSeguro(registro.emBranco ?? 0);
     atual.questoes = atual.certas + atual.erradas;
-    atual.aproveitamento = atual.questoes === 0
-      ? 0
-      : Math.round((atual.certas / atual.questoes) * 100);
+    atual.aproveitamento =
+      atual.questoes === 0 ? 0 : Math.round((atual.certas / atual.questoes) * 100);
     atual.minutos += numeroSeguro(registro.minutos);
     atualizarUltimaAtividade(atual, registro.data);
   });
@@ -305,9 +250,7 @@ function calcularMaterias(
   return Array.from(mapa.values())
     .map((item) => ({
       ...item,
-      diasSemEstudar: item.ultimaAtividade
-        ? diasDesde(item.ultimaAtividade)
-        : null,
+      diasSemEstudar: item.ultimaAtividade ? diasDesde(item.ultimaAtividade) : null,
     }))
     .sort((a, b) => b.questoes - a.questoes || b.minutos - a.minutos);
 }
@@ -316,33 +259,17 @@ function atualizarUltimaAtividade(
   item: DesempenhoMateriaInteligente,
   data: string
 ) {
-  if (
-    !item.ultimaAtividade ||
-    dataSegura(data) > dataSegura(item.ultimaAtividade)
-  ) {
+  if (!item.ultimaAtividade || dataSegura(data) > dataSegura(item.ultimaAtividade)) {
     item.ultimaAtividade = data;
   }
 }
 
 function comparar(atual: number, anterior: number): ComparacaoIndicador {
   const diferenca = atual - anterior;
-  const variacaoPercentual = anterior === 0
-    ? atual === 0
-      ? 0
-      : 100
-    : Math.round((diferenca / anterior) * 100);
-
-  let tendencia: Tendencia = "estavel";
-  if (diferenca > 0) tendencia = "subindo";
-  if (diferenca < 0) tendencia = "caindo";
-
-  return {
-    atual,
-    anterior,
-    diferenca,
-    variacaoPercentual,
-    tendencia,
-  };
+  const variacaoPercentual =
+    anterior === 0 ? (atual === 0 ? 0 : 100) : Math.round((diferenca / anterior) * 100);
+  const tendencia: Tendencia = diferenca > 0 ? "subindo" : diferenca < 0 ? "caindo" : "estavel";
+  return { atual, anterior, diferenca, variacaoPercentual, tendencia };
 }
 
 function montarRecomendacoes({
@@ -367,12 +294,10 @@ function montarRecomendacoes({
       id: "revisoes-atrasadas",
       prioridade: "alta",
       titulo: `Regularizar ${revisoesAtrasadas} revisão(ões) atrasada(s)`,
-      descricao:
-        "Revisões vencidas reduzem retenção e também penalizam seu índice de consistência.",
+      descricao: "Revisões vencidas reduzem retenção e penalizam seu índice de consistência.",
       rota: "/revisoes",
     });
   }
-
   if (materiaCritica && materiaCritica.aproveitamento < 70) {
     recomendacoes.push({
       id: `materia-critica-${normalizar(materiaCritica.materia)}`,
@@ -382,11 +307,7 @@ function montarRecomendacoes({
       rota: "/questoes",
     });
   }
-
-  if (
-    materiaEsquecida &&
-    (materiaEsquecida.diasSemEstudar ?? 0) >= 7
-  ) {
+  if (materiaEsquecida && (materiaEsquecida.diasSemEstudar ?? 0) >= 7) {
     recomendacoes.push({
       id: `materia-esquecida-${normalizar(materiaEsquecida.materia)}`,
       prioridade: "media",
@@ -395,7 +316,6 @@ function montarRecomendacoes({
       rota: "/central-estudos",
     });
   }
-
   const metaSemanal = metaMinutosDiaria * 6;
   if (semanaAtual.minutos < metaSemanal * 0.7) {
     recomendacoes.push({
@@ -406,7 +326,6 @@ function montarRecomendacoes({
       rota: "/central-estudos",
     });
   }
-
   if (comparacoes.aproveitamento.tendencia === "caindo") {
     recomendacoes.push({
       id: "queda-aproveitamento",
@@ -416,18 +335,15 @@ function montarRecomendacoes({
       rota: "/historico",
     });
   }
-
   if (recomendacoes.length === 0) {
     recomendacoes.push({
       id: "manter-ritmo",
       prioridade: "baixa",
       titulo: "Manter o ritmo atual",
-      descricao:
-        "Não há alerta crítico. Continue registrando atividades e preserve a frequência semanal.",
+      descricao: "Não há alerta crítico. Continue registrando atividades e preserve a frequência semanal.",
       rota: "/plano",
     });
   }
-
   return recomendacoes.slice(0, 5);
 }
 
@@ -443,36 +359,19 @@ function gerarResumoExecutivo({
   indiceConsistencia: number;
 }) {
   const partes: string[] = [];
-
   if (comparacoes.minutos.tendencia === "subindo") {
-    partes.push(
-      `Seu tempo de estudo aumentou ${comparacoes.minutos.variacaoPercentual}% em relação à semana anterior.`
-    );
+    partes.push(`Seu tempo de estudo aumentou ${comparacoes.minutos.variacaoPercentual}% em relação à semana anterior.`);
   } else if (comparacoes.minutos.tendencia === "caindo") {
-    partes.push(
-      `Seu tempo de estudo caiu ${Math.abs(comparacoes.minutos.variacaoPercentual)}% em relação à semana anterior.`
-    );
+    partes.push(`Seu tempo de estudo caiu ${Math.abs(comparacoes.minutos.variacaoPercentual)}% em relação à semana anterior.`);
   } else {
     partes.push("Seu volume de estudo permaneceu estável.");
   }
-
   if (materiaCritica) {
-    partes.push(
-      `A principal fragilidade atual é ${materiaCritica.materia}, com ${materiaCritica.aproveitamento}% de aproveitamento.`
-    );
+    partes.push(`A principal fragilidade atual é ${materiaCritica.materia}, com ${materiaCritica.aproveitamento}% de aproveitamento.`);
   }
-
-  if (revisoesAtrasadas > 0) {
-    partes.push(`Existem ${revisoesAtrasadas} revisões atrasadas.`);
-  }
-
+  if (revisoesAtrasadas > 0) partes.push(`Existem ${revisoesAtrasadas} revisões atrasadas.`);
   partes.push(`Seu índice de consistência está em ${indiceConsistencia}%.`);
   return partes.join(" ");
-}
-
-function estaNoPeriodo(valor: string, inicio: Date, fim: Date) {
-  const data = dataSegura(valor);
-  return data >= inicio && data <= fim;
 }
 
 function dataSegura(valor?: string) {
@@ -480,49 +379,32 @@ function dataSegura(valor?: string) {
   const data = new Date(valor);
   return Number.isNaN(data.getTime()) ? new Date(0) : data;
 }
-
 function inicioDoDia(data: Date) {
   const copia = new Date(data);
   copia.setHours(0, 0, 0, 0);
   return copia;
 }
-
 function fimDoDia(data: Date) {
   const copia = new Date(data);
   copia.setHours(23, 59, 59, 999);
   return copia;
 }
-
 function adicionarDias(data: Date, dias: number) {
   const copia = new Date(data);
   copia.setDate(copia.getDate() + dias);
   return copia;
 }
-
-function chaveData(valor: string) {
-  const data = dataSegura(valor);
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
-}
-
 function diasDesde(valor: string) {
   const inicio = inicioDoDia(dataSegura(valor));
   const hoje = inicioDoDia(new Date());
   return Math.max(0, Math.floor((hoje.getTime() - inicio.getTime()) / 86400000));
 }
-
 function numeroSeguro(valor: number) {
-  return Number.isFinite(valor) ? valor : 0;
+  return Number.isFinite(valor) ? Math.max(0, valor) : 0;
 }
-
 function normalizar(texto: string) {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
 }
-
 function limitar(valor: number, minimo: number, maximo: number) {
   return Math.min(maximo, Math.max(minimo, valor));
 }
