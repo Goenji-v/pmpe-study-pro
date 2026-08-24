@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config/api";
 import {
+  SUPABASE_PUBLIC_KEY,
   supabase,
 } from "../lib/supabase";
 
@@ -145,6 +146,10 @@ export async function gerarCronogramaIA(
   const { data: sessao } = await supabase.auth.getSession();
   const token = sessao.session?.access_token;
 
+  if (!token) {
+    throw new Error("Sua sessão expirou. Entre novamente para gerar o cronograma.");
+  }
+
   const resposta =
     await fetch(
       `${API_BASE_URL}/api/cronograma`,
@@ -153,9 +158,8 @@ export async function gerarCronogramaIA(
         headers: {
           "Content-Type":
             "application/json",
-          ...(token
-            ? { Authorization: `Bearer ${token}` }
-            : {}),
+          Authorization: `Bearer ${token}`,
+          "X-Supabase-Anon-Key": SUPABASE_PUBLIC_KEY,
         },
         body: JSON.stringify(dados),
       }
