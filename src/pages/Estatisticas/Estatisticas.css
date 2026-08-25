@@ -363,6 +363,28 @@
   height: 180px;
 }
 
+.estatisticas-container .recharts-default-tooltip {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.34);
+}
+
+.estatisticas-container .recharts-tooltip-label {
+  color: #f8fafc !important;
+  font-weight: 700;
+}
+
+.estatisticas-container .recharts-tooltip-item,
+.estatisticas-container .recharts-tooltip-item-name,
+.estatisticas-container .recharts-tooltip-item-value {
+  color: #e2e8f0 !important;
+}
+
+.estatisticas-container .recharts-tooltip-cursor {
+  fill: rgba(59, 130, 246, 0.08) !important;
+}
+
 .estatisticas-secao-cabecalho {
   margin: 24px 0 11px;
 }
