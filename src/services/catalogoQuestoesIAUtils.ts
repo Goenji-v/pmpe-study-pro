@@ -66,16 +66,13 @@ export function embaralhar<T>(
 }
 
 export async function fingerprintQuestaoIA(questao: QuestaoIA) {
-  const alternativas = Object.entries(questao.alternativas)
-    .map(([letra, texto]) => `${letra}:${normalizarChaveIA(texto)}`)
-    .join("|");
-
+  const letras = ["A", "B", "C", "D", "E"] as const;
   const conteudo = [
     questao.materia,
     questao.assunto,
     questao.banca,
     questao.enunciado,
-    alternativas,
+    ...letras.map((letra) => `${letra}:${questao.alternativas[letra]}`),
     questao.respostaCorreta,
   ]
     .map(normalizarChaveIA)

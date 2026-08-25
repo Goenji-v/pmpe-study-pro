@@ -112,3 +112,12 @@ test("fingerprint ignora diferenças cosméticas de caixa e acento", async () =>
     await fingerprintQuestaoIA(segunda)
   );
 });
+
+test("fingerprint coincide com o contrato usado pela Edge Function", async () => {
+  const exemplo = questao("1", "Português", "Subordinação", "Analise a oração.");
+
+  assert.equal(
+    await fingerprintQuestaoIA(exemplo),
+    "49c5f3c3e063dff719fbe238b2bfeab9453ac45a32e623309c5ef40a1630177b"
+  );
+});
