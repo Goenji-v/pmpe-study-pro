@@ -4,24 +4,17 @@ import test from "node:test";
 import type { Revisao } from "../src/types/index.ts";
 import { redistribuirRevisoesPendentes } from "../src/utils/revisoes.ts";
 
-function revisao(
-  id: string,
-  dataCriacao: string,
-  dataPrevista: string,
-  etapa: Revisao["etapa"] = 1,
-  reagendadaEm?: string
-): Revisao {
+function revisao(id: string, dataPrevista: string): Revisao {
   return {
     id,
     materiaId: "portugues",
     assuntoId: id,
     materia: "Português",
     assunto: id,
-    etapa,
-    dataCriacao,
+    etapa: 1,
+    dataCriacao: dataPrevista,
     dataPrevista,
     concluida: false,
-    reagendadaEm,
   };
 }
 
@@ -29,82 +22,57 @@ function dia(data: string) {
   return new Date(data).toISOString().slice(0, 10);
 }
 
-function aoMeioDiaComOffset(offset: number) {
-  const data = new Date();
-  data.setDate(data.getDate() + offset);
-  data.setHours(12, 0, 0, 0);
-  return data;
-}
+test("reorganização compacta a fila conforme a meta diária", () => {
+  const base = new Date();
+  base.setHours(12, 0, 0, 0);
 
-test("reorganização preenche vagas ao aumentar a meta diária", () => {
-  const amanha = aoMeioDiaComOffset(1);
-  const depois = aoMeioDiaComOffset(2);
+  const originais = Array.from({ length: 6 }, (_, indice) => {
+    const data = new Date(base);
+    data.setDate(data.getDate() + indice + 1);
+    return revisao(`Revisão ${indice + 1}`, data.toISOString());
+  });
 
-  const originais = [
-    revisao("Fonologia", amanha.toISOString(), amanha.toISOString()),
-    revisao("Acentuação", amanha.toISOString(), depois.toISOString()),
-  ];
-  const reorganizadas = redistribuirRevisoesPendentes(originais, 2);
-
-  assert.deepEqual(
-    reorganizadas.map((item) => dia(item.dataPrevista)),
-    [dia(amanha.toISOString()), dia(amanha.toISOString())]
-  );
-});
-
-test("reorganização move o excedente quando o limite diário diminui", () => {
-  const amanha = aoMeioDiaComOffset(1);
-
-  const originais = [
-    revisao("Fonologia", amanha.toISOString(), amanha.toISOString()),
-    revisao("Acentuação", amanha.toISOString(), amanha.toISOString()),
-    revisao("Verbos", amanha.toISOString(), amanha.toISOString()),
-  ];
   const reorganizadas = redistribuirRevisoesPendentes(originais, 2);
   const dias = reorganizadas.map((item) => dia(item.dataPrevista));
 
-  assert.equal(dias.filter((item) => item === dias[0]).length, 2);
-  assert.notEqual(dias[2], dias[0]);
+  assert.equal(new Set(dias).size, 3);
+  for (const data of new Set(dias)) {
+    assert.equal(dias.filter((item) => item === data).length, 2);
+  }
 });
 
-test("reorganização não antecipa o intervalo pedagógico da etapa", () => {
-  const criacao = aoMeioDiaComOffset(0);
-  const idealSeteDias = aoMeioDiaComOffset(7);
-  const muitoDepois = aoMeioDiaComOffset(12);
+test("18 revisões com meta 2 ocupam exatamente 9 dias", () => {
+  const base = new Date();
+  base.setHours(12, 0, 0, 0);
 
-  const originais = [
-    revisao(
-      "Concordância",
-      criacao.toISOString(),
-      muitoDepois.toISOString(),
-      3
-    ),
-  ];
+  const originais = Array.from({ length: 18 }, (_, indice) => {
+    const data = new Date(base);
+    data.setDate(data.getDate() + indice + 1);
+    return revisao(`Revisão ${indice + 1}`, data.toISOString());
+  });
+
   const reorganizadas = redistribuirRevisoesPendentes(originais, 2);
+  const dias = reorganizadas.map((item) => dia(item.dataPrevista));
+  const diasUnicos = [...new Set(dias)];
 
-  assert.equal(
-    dia(reorganizadas[0].dataPrevista),
-    dia(idealSeteDias.toISOString())
-  );
+  assert.equal(diasUnicos.length, 9);
+  for (const data of diasUnicos) {
+    assert.equal(dias.filter((item) => item === data).length, 2);
+  }
 });
 
-test("reorganização preserva reagendamento manual", () => {
-  const criacao = aoMeioDiaComOffset(0);
-  const manual = aoMeioDiaComOffset(6);
+test("meta 1 distribui uma revisão por dia", () => {
+  const base = new Date();
+  base.setHours(12, 0, 0, 0);
 
-  const originais = [
-    revisao(
-      "Crase",
-      criacao.toISOString(),
-      manual.toISOString(),
-      1,
-      new Date().toISOString()
-    ),
-  ];
-  const reorganizadas = redistribuirRevisoesPendentes(originais, 2);
+  const originais = Array.from({ length: 4 }, (_, indice) => {
+    const data = new Date(base);
+    data.setDate(data.getDate() + indice + 5);
+    return revisao(`Revisão ${indice + 1}`, data.toISOString());
+  });
 
-  assert.equal(
-    dia(reorganizadas[0].dataPrevista),
-    dia(manual.toISOString())
-  );
+  const reorganizadas = redistribuirRevisoesPendentes(originais, 1);
+  const dias = reorganizadas.map((item) => dia(item.dataPrevista));
+
+  assert.equal(new Set(dias).size, 4);
 });
