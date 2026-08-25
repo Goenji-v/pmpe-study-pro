@@ -410,7 +410,7 @@ function FiltroPeriodo({
   return (
     <button
       type="button"
-      className={`estatisticas-periodo ${ativo ? "ativo" : ""}`
+      className={`estatisticas-periodo ${ativo ? "ativo" : ""}`}
       onClick={onClick}
     >
       {children}
