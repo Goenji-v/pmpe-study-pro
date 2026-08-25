@@ -133,6 +133,25 @@ export function reagendarRevisao(revisao: Revisao, dias: number): Revisao {
   };
 }
 
+function dataMinimaParaReorganizacao(revisao: Revisao) {
+  const previstaAtual = inicioDoDia(new Date(revisao.dataPrevista));
+
+  // Um reagendamento manual é uma decisão explícita do usuário e não deve
+  // ser desfeito quando a meta diária for reaplicada.
+  if (revisao.reagendadaEm) {
+    return previstaAtual;
+  }
+
+  const criacao = new Date(revisao.dataCriacao);
+  if (Number.isNaN(criacao.getTime())) {
+    return previstaAtual;
+  }
+
+  const etapa = revisao.etapa as EtapaRevisao;
+  const intervalo = INTERVALOS_DIAS[etapa] ?? 0;
+  return inicioDoDia(adicionarDias(criacao, intervalo));
+}
+
 export function redistribuirRevisoesPendentes(
   revisoes: Revisao[],
   limiteDiario: number
@@ -142,18 +161,22 @@ export function redistribuirRevisoesPendentes(
   const concluidas = revisoes.filter((revisao) => revisao.concluida);
   const pendentes = revisoes
     .filter((revisao) => !revisao.concluida)
-    .sort(
-      (a, b) =>
+    .sort((a, b) => {
+      const minimaA = dataMinimaParaReorganizacao(a).getTime();
+      const minimaB = dataMinimaParaReorganizacao(b).getTime();
+      return (
+        minimaA - minimaB ||
         new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime() ||
         a.etapa - b.etapa
-    );
+      );
+    });
 
   const ocupacao = new Map<string, number>();
   const hoje = inicioDoDia(new Date());
 
   const reorganizadas = pendentes.map((revisao) => {
-    const original = inicioDoDia(new Date(revisao.dataPrevista));
-    const inicio = original < hoje ? new Date(hoje) : new Date(original);
+    const minima = dataMinimaParaReorganizacao(revisao);
+    const inicio = minima < hoje ? new Date(hoje) : new Date(minima);
     const candidato = new Date(inicio);
 
     for (let i = 0; i < 365; i += 1) {
