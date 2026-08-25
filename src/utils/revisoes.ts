@@ -133,25 +133,6 @@ export function reagendarRevisao(revisao: Revisao, dias: number): Revisao {
   };
 }
 
-function dataMinimaParaReorganizacao(revisao: Revisao) {
-  const previstaAtual = inicioDoDia(new Date(revisao.dataPrevista));
-
-  // Um reagendamento manual é uma decisão explícita do usuário e não deve
-  // ser desfeito quando a meta diária for reaplicada.
-  if (revisao.reagendadaEm) {
-    return previstaAtual;
-  }
-
-  const criacao = new Date(revisao.dataCriacao);
-  if (Number.isNaN(criacao.getTime())) {
-    return previstaAtual;
-  }
-
-  const etapa = revisao.etapa as EtapaRevisao;
-  const intervalo = INTERVALOS_DIAS[etapa] ?? 0;
-  return inicioDoDia(adicionarDias(criacao, intervalo));
-}
-
 export function redistribuirRevisoesPendentes(
   revisoes: Revisao[],
   limiteDiario: number
@@ -161,37 +142,24 @@ export function redistribuirRevisoesPendentes(
   const concluidas = revisoes.filter((revisao) => revisao.concluida);
   const pendentes = revisoes
     .filter((revisao) => !revisao.concluida)
-    .sort((a, b) => {
-      const minimaA = dataMinimaParaReorganizacao(a).getTime();
-      const minimaB = dataMinimaParaReorganizacao(b).getTime();
-      return (
-        minimaA - minimaB ||
+    .sort(
+      (a, b) =>
         new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime() ||
-        a.etapa - b.etapa
-      );
-    });
+        a.etapa - b.etapa ||
+        new Date(a.dataCriacao).getTime() - new Date(b.dataCriacao).getTime()
+    );
 
-  const ocupacao = new Map<string, number>();
   const hoje = inicioDoDia(new Date());
 
-  const reorganizadas = pendentes.map((revisao) => {
-    const minima = dataMinimaParaReorganizacao(revisao);
-    const inicio = minima < hoje ? new Date(hoje) : new Date(minima);
-    const candidato = new Date(inicio);
+  const reorganizadas = pendentes.map((revisao, indice) => {
+    const deslocamentoDias = Math.floor(indice / limiteDiario);
+    const prevista = adicionarDias(hoje, deslocamentoDias);
+    prevista.setHours(12, 0, 0, 0);
 
-    for (let i = 0; i < 365; i += 1) {
-      const chave = chaveData(candidato);
-      const quantidade = ocupacao.get(chave) ?? 0;
-      if (quantidade < limiteDiario) {
-        ocupacao.set(chave, quantidade + 1);
-        const prevista = new Date(candidato);
-        prevista.setHours(12, 0, 0, 0);
-        return { ...revisao, dataPrevista: prevista.toISOString() };
-      }
-      candidato.setDate(candidato.getDate() + 1);
-    }
-
-    return revisao;
+    return {
+      ...revisao,
+      dataPrevista: prevista.toISOString(),
+    };
   });
 
   return [...reorganizadas, ...concluidas];
