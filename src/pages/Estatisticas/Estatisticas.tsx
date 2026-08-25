@@ -64,18 +64,18 @@ const CORES_CATEGORIAS = [
 ];
 
 const CORES_MESES = [
-  "#3b82f6", // janeiro
-  "#22c55e", // fevereiro
-  "#8b5cf6", // março
-  "#f97316", // abril
-  "#ef4444", // maio
-  "#06b6d4", // junho
-  "#eab308", // julho
-  "#ec4899", // agosto
-  "#14b8a6", // setembro
-  "#a855f7", // outubro
-  "#f59e0b", // novembro
-  "#f43f5e", // dezembro
+  "#3b82f6",
+  "#22c55e",
+  "#8b5cf6",
+  "#f97316",
+  "#ef4444",
+  "#06b6d4",
+  "#eab308",
+  "#ec4899",
+  "#14b8a6",
+  "#a855f7",
+  "#f59e0b",
+  "#f43f5e",
 ];
 
 export default function Estatisticas() {
@@ -332,7 +332,7 @@ export default function Estatisticas() {
                   position="top"
                   fill="#e2e8f0"
                   fontSize={10}
-                  formatter={(valor: string | number) => `${valor}%`}
+                  formatter={(valor) => (valor == null ? "" : `${valor}%`)}
                 />
               </Bar>
             </BarChart>
