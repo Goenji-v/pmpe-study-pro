@@ -9,161 +9,132 @@
 
 .estatisticas-subtitle {
   color: #94a3b8;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+  max-width: 900px;
+}
+
+.estatisticas-filtros-card,
+.estatisticas-painel,
+.grafico-card,
+.estatistica-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.estatisticas-filtros-card {
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 22px;
+}
+
+.estatisticas-periodos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.estatisticas-periodo,
+.estatisticas-limpar {
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.estatisticas-periodo:hover,
+.estatisticas-limpar:hover {
+  border-color: #64748b;
+  color: #fff;
+}
+
+.estatisticas-periodo.ativo {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.estatisticas-datas,
+.estatisticas-selects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.estatisticas-datas {
+  margin-bottom: 12px;
+}
+
+.estatisticas-selects {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.estatisticas-datas label,
+.estatisticas-selects label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.estatisticas-datas input,
+.estatisticas-selects select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #475569;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 0 12px;
+}
+
+.estatisticas-selects select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.estatisticas-limpar {
+  min-height: 44px;
 }
 
 .estatisticas-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.estatisticas-cards-resumo {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.estatisticas-cards-atividade {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .estatistica-card {
-  background: #1e293b;
-  border: 1px solid #334155;
   border-radius: 16px;
-  padding: 20px;
+  padding: 18px;
+  min-width: 0;
 }
 
 .estatistica-card span {
   display: block;
   color: #94a3b8;
-  font-size: 14px;
-  margin-bottom: 10px;
+  font-size: 13px;
+  margin-bottom: 9px;
 }
 
 .estatistica-card strong {
-  font-size: 28px;
-}
-
-.texto-verde {
-  color: #22c55e;
-}
-
-.texto-vermelho {
-  color: #ef4444;
-}
-
-.graficos-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px;
-  margin-bottom: 24px;
-}
-
-.grafico-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 18px;
-  padding: 22px;
-  min-width: 0;
-}
-
-.grafico-card h2 {
-  margin-bottom: 6px;
-}
-
-.grafico-descricao {
-  color: #94a3b8;
-  font-size: 14px;
-  margin-bottom: 20px;
-}
-
-.grafico-area {
-  width: 100%;
-  height: 330px;
-}
-
-.estatisticas-tabelas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px;
-}
-
-.estatisticas-painel {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 18px;
-  padding: 22px;
-}
-
-.estatisticas-painel h2 {
-  margin-bottom: 18px;
-}
-
-.ranking-estatisticas {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.ranking-estatistica-item {
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 18px;
-}
-
-.ranking-estatistica-item p {
-  color: #94a3b8;
-  font-size: 13px;
-  margin-top: 5px;
-}
-
-.ranking-estatistica-item span {
-  font-weight: bold;
-  font-size: 17px;
-}
-
-.desempenho-bom {
-  color: #22c55e;
-}
-
-.desempenho-atencao {
-  color: #f59e0b;
-}
-
-.desempenho-critico {
-  color: #ef4444;
-}
-
-.estatisticas-vazio {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 18px;
-  padding: 40px;
-  text-align: center;
-}
-
-.estatisticas-vazio p {
-  color: #94a3b8;
-  margin-top: 10px;
-}
-
-@media (max-width: 1100px) {
-  .estatisticas-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .graficos-grid,
-  .estatisticas-tabelas {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 650px) {
-  .estatisticas-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .grafico-area {
-    height: 280px;
-  }
+  display: block;
+  font-size: 27px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .estatistica-card small {
@@ -171,7 +142,246 @@
   margin-top: 8px;
   color: #94a3b8;
   font-size: 12px;
+  line-height: 1.4;
 }
 
-.texto-amarelo { color: #f59e0b; }
-.estatisticas-sem-linhas { color: #94a3b8; padding: 16px 0; }
+.estatistica-valor-compacto {
+  font-size: 18px !important;
+}
+
+.desempenho-forte {
+  color: #22c55e !important;
+}
+
+.desempenho-atencao {
+  color: #f59e0b !important;
+}
+
+.desempenho-fraco {
+  color: #fb7185 !important;
+}
+
+.desempenho-urgente {
+  color: #ef4444 !important;
+}
+
+.desempenho-sem-dados {
+  color: #94a3b8 !important;
+}
+
+.estatisticas-desempenho-grid,
+.graficos-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.estatisticas-painel,
+.grafico-card {
+  border-radius: 18px;
+  padding: 20px;
+  min-width: 0;
+}
+
+.estatisticas-painel h2,
+.grafico-card h2,
+.estatisticas-secao-cabecalho h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.estatisticas-painel-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.estatisticas-painel-cabecalho small {
+  color: #94a3b8;
+  max-width: 280px;
+  text-align: right;
+}
+
+.estatisticas-tabela-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.estatisticas-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 650px;
+}
+
+.estatisticas-tabela th,
+.estatisticas-tabela td {
+  padding: 13px 10px;
+  border-bottom: 1px solid #334155;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.estatisticas-tabela th:first-child,
+.estatisticas-tabela td:first-child {
+  text-align: left;
+  width: 40%;
+  white-space: normal;
+}
+
+.estatisticas-tabela th {
+  color: #94a3b8;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.estatisticas-tabela td {
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.estatisticas-tabela tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.estatisticas-tabela td small {
+  display: block;
+  color: #64748b;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.estatisticas-drilldown {
+  border: 0;
+  background: transparent;
+  color: #f8fafc;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+}
+
+.estatisticas-drilldown:hover {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.estatisticas-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.grafico-descricao,
+.estatisticas-secao-cabecalho p {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 6px;
+  margin-bottom: 18px;
+}
+
+.grafico-area {
+  width: 100%;
+  height: 340px;
+}
+
+.estatisticas-secao-cabecalho {
+  margin: 30px 0 14px;
+}
+
+.estatisticas-secao-cabecalho p {
+  margin-bottom: 0;
+}
+
+.estatisticas-vazio {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 36px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.estatisticas-vazio h2 {
+  margin: 0;
+}
+
+.estatisticas-vazio p {
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+@media (max-width: 1180px) {
+  .estatisticas-cards-resumo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .estatisticas-cards-atividade {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .estatisticas-desempenho-grid,
+  .graficos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .estatisticas-title {
+    font-size: 28px;
+  }
+
+  .estatisticas-filtros-card,
+  .estatisticas-painel,
+  .grafico-card {
+    padding: 15px;
+  }
+
+  .estatisticas-selects,
+  .estatisticas-datas {
+    grid-template-columns: 1fr;
+  }
+
+  .estatisticas-limpar {
+    width: 100%;
+  }
+
+  .estatisticas-cards-resumo,
+  .estatisticas-cards-atividade {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .estatisticas-painel-cabecalho {
+    display: block;
+  }
+
+  .estatisticas-painel-cabecalho small {
+    display: block;
+    text-align: left;
+    margin-top: 6px;
+  }
+
+  .grafico-area {
+    height: 300px;
+  }
+}
+
+@media (max-width: 460px) {
+  .estatisticas-cards-resumo,
+  .estatisticas-cards-atividade {
+    grid-template-columns: 1fr;
+  }
+
+  .estatisticas-periodo {
+    flex: 1 1 calc(50% - 8px);
+  }
+}
