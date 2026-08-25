@@ -3,14 +3,15 @@
 }
 
 .estatisticas-title {
-  font-size: 34px;
-  margin-bottom: 8px;
+  font-size: 32px;
+  margin-bottom: 6px;
 }
 
 .estatisticas-subtitle {
   color: #94a3b8;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   max-width: 900px;
+  font-size: 14px;
 }
 
 .estatisticas-filtros-card,
@@ -22,16 +23,16 @@
 }
 
 .estatisticas-filtros-card {
-  border-radius: 18px;
-  padding: 18px;
-  margin-bottom: 22px;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 18px;
 }
 
 .estatisticas-periodos {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 7px;
+  margin-bottom: 14px;
 }
 
 .estatisticas-periodo,
@@ -39,8 +40,9 @@
   border: 1px solid #475569;
   background: #0f172a;
   color: #cbd5e1;
-  border-radius: 10px;
-  padding: 10px 14px;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -61,11 +63,11 @@
 .estatisticas-selects {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .estatisticas-datas {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .estatisticas-selects {
@@ -77,21 +79,22 @@
 .estatisticas-selects label {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   color: #cbd5e1;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .estatisticas-datas input,
 .estatisticas-selects select {
   width: 100%;
-  min-height: 44px;
+  min-height: 42px;
   border: 1px solid #475569;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #0f172a;
   color: #f8fafc;
-  padding: 0 12px;
+  padding: 0 11px;
+  font-size: 13px;
 }
 
 .estatisticas-selects select:disabled {
@@ -100,13 +103,13 @@
 }
 
 .estatisticas-limpar {
-  min-height: 44px;
+  min-height: 42px;
 }
 
 .estatisticas-cards {
   display: grid;
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 .estatisticas-cards-resumo {
@@ -118,35 +121,35 @@
 }
 
 .estatistica-card {
-  border-radius: 16px;
-  padding: 18px;
+  border-radius: 14px;
+  padding: 15px;
   min-width: 0;
 }
 
 .estatistica-card span {
   display: block;
   color: #94a3b8;
-  font-size: 13px;
-  margin-bottom: 9px;
+  font-size: 12px;
+  margin-bottom: 7px;
 }
 
 .estatistica-card strong {
   display: block;
-  font-size: 27px;
-  line-height: 1.1;
+  font-size: 24px;
+  line-height: 1.08;
   overflow-wrap: anywhere;
 }
 
 .estatistica-card small {
   display: block;
-  margin-top: 8px;
+  margin-top: 7px;
   color: #94a3b8;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .estatistica-valor-compacto {
-  font-size: 18px !important;
+  font-size: 17px !important;
 }
 
 .desempenho-forte {
@@ -172,15 +175,15 @@
 .estatisticas-desempenho-grid,
 .graficos-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 20px;
-  margin-bottom: 24px;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .estatisticas-painel,
 .grafico-card {
-  border-radius: 18px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 17px;
   min-width: 0;
 }
 
@@ -188,21 +191,22 @@
 .grafico-card h2,
 .estatisticas-secao-cabecalho h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .estatisticas-painel-cabecalho {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 13px;
 }
 
 .estatisticas-painel-cabecalho small {
   color: #94a3b8;
   max-width: 280px;
   text-align: right;
+  font-size: 11px;
 }
 
 .estatisticas-tabela-wrapper {
@@ -213,12 +217,12 @@
 .estatisticas-tabela {
   width: 100%;
   border-collapse: collapse;
-  min-width: 650px;
+  min-width: 640px;
 }
 
 .estatisticas-tabela th,
 .estatisticas-tabela td {
-  padding: 13px 10px;
+  padding: 11px 9px;
   border-bottom: 1px solid #334155;
   text-align: right;
   white-space: nowrap;
@@ -233,14 +237,14 @@
 
 .estatisticas-tabela th {
   color: #94a3b8;
-  font-size: 12px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .estatisticas-tabela td {
   color: #e2e8f0;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .estatisticas-tabela tbody tr:last-child td {
@@ -250,8 +254,23 @@
 .estatisticas-tabela td small {
   display: block;
   color: #64748b;
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 3px;
+  font-size: 10px;
+}
+
+.estatisticas-nome-linha {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.estatisticas-cor-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  margin-top: 5px;
+  box-shadow: 0 0 12px color-mix(in srgb, currentColor 35%, transparent);
 }
 
 .estatisticas-drilldown {
@@ -276,26 +295,76 @@
   justify-content: center;
   border: 1px solid currentColor;
   border-radius: 999px;
-  padding: 5px 8px;
-  font-size: 11px;
+  padding: 4px 7px;
+  font-size: 10px;
   font-weight: 800;
 }
 
 .grafico-descricao,
 .estatisticas-secao-cabecalho p {
   color: #94a3b8;
-  font-size: 13px;
-  margin-top: 6px;
-  margin-bottom: 18px;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 5px;
+  margin-bottom: 13px;
 }
 
 .grafico-area {
   width: 100%;
-  height: 340px;
+  height: 292px;
+}
+
+.grafico-card-categorias .grafico-area {
+  height: 310px;
+}
+
+.grafico-card-compacto .grafico-area {
+  height: 250px;
+}
+
+.grafico-card-volume {
+  animation: estatisticasEntrada 0.38s ease-out both;
+}
+
+.volume-mensal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.volume-mini-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 10px;
+  min-width: 0;
+}
+
+.volume-mini-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.volume-mini-cabecalho strong {
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.volume-mini-cabecalho small {
+  color: #64748b;
+  font-size: 9px;
+}
+
+.volume-mini-area {
+  width: 100%;
+  height: 180px;
 }
 
 .estatisticas-secao-cabecalho {
-  margin: 30px 0 14px;
+  margin: 24px 0 11px;
 }
 
 .estatisticas-secao-cabecalho p {
@@ -305,19 +374,36 @@
 .estatisticas-vazio {
   background: #1e293b;
   border: 1px solid #334155;
-  border-radius: 18px;
-  padding: 36px;
+  border-radius: 16px;
+  padding: 30px;
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .estatisticas-vazio h2 {
   margin: 0;
+  font-size: 18px;
 }
 
 .estatisticas-vazio p {
   color: #94a3b8;
-  margin-top: 8px;
+  margin-top: 7px;
+  font-size: 12px;
+}
+
+.estatisticas-entrada {
+  animation: estatisticasEntrada 0.38s ease-out both;
+}
+
+@keyframes estatisticasEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 1180px) {
@@ -337,17 +423,23 @@
 
 @media (max-width: 760px) {
   .estatisticas-title {
-    font-size: 28px;
+    font-size: 26px;
+  }
+
+  .estatisticas-subtitle {
+    font-size: 13px;
+    margin-bottom: 16px;
   }
 
   .estatisticas-filtros-card,
   .estatisticas-painel,
   .grafico-card {
-    padding: 15px;
+    padding: 13px;
   }
 
   .estatisticas-selects,
-  .estatisticas-datas {
+  .estatisticas-datas,
+  .volume-mensal-grid {
     grid-template-columns: 1fr;
   }
 
@@ -367,21 +459,56 @@
   .estatisticas-painel-cabecalho small {
     display: block;
     text-align: left;
-    margin-top: 6px;
+    margin-top: 5px;
   }
 
   .grafico-area {
+    height: 260px;
+  }
+
+  .grafico-card-categorias .grafico-area {
     height: 300px;
+  }
+
+  .grafico-card-compacto .grafico-area {
+    height: 220px;
+  }
+
+  .volume-mini-area {
+    height: 170px;
   }
 }
 
 @media (max-width: 460px) {
   .estatisticas-cards-resumo,
   .estatisticas-cards-atividade {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   .estatisticas-periodo {
-    flex: 1 1 calc(50% - 8px);
+    flex: 1 1 calc(50% - 7px);
+  }
+
+  .estatistica-card {
+    padding: 13px;
+  }
+
+  .estatistica-card strong {
+    font-size: 21px;
+  }
+
+  .estatistica-card span {
+    font-size: 11px;
+  }
+
+  .grafico-card-categorias .grafico-area {
+    height: 285px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .estatisticas-entrada,
+  .grafico-card-volume {
+    animation: none;
   }
 }
