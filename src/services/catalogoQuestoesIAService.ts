@@ -35,6 +35,7 @@ export type FiltrosCatalogoIA = {
   dificuldade: "Fácil" | "Média" | "Difícil" | "Mista";
   quantidade: number;
   preferencia: PreferenciaReusoIA;
+  concursoAlvo?: string;
 };
 
 export type ContextoPublicacaoIA = {
@@ -48,9 +49,10 @@ export async function selecionarDoCatalogoIA(
   filtros: FiltrosCatalogoIA
 ) {
   const questoes = await buscarCandidatas(filtros);
-  const idsRespondidos = filtros.preferencia === "nao_respondidas"
-    ? await listarIdsRespondidos()
-    : new Set<string>();
+  const idsRespondidos =
+    filtros.preferencia === "nao_respondidas"
+      ? await listarIdsRespondidos()
+      : new Set<string>();
 
   return selecionarQuestoesParaReuso(
     questoes,
@@ -66,73 +68,57 @@ export async function salvarQuestoesGeradasNoCatalogo(
 ): Promise<QuestaoIA[]> {
   if (questoes.length === 0) return [];
 
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData.user) {
-    throw new Error("Sua sessão expirou. Entre novamente para salvar as questões no banco compartilhado.");
-  }
-
-  const preparadas = await Promise.all(
-    questoes.map(async (questao) => ({
-      id: questao.id,
-      concurso_alvo: contexto.concursoAlvo.trim() || "Geral",
-      edital_alvo: contexto.editalAlvo.trim() || contexto.concursoAlvo.trim() || "Geral",
-      banca: questao.banca.trim(),
-      materia_id: contexto.materiaId || null,
-      materia: questao.materia.trim(),
-      materia_chave: normalizarChaveIA(questao.materia),
-      modulo_id: questao.moduloId || null,
-      modulo: questao.modulo?.trim() || null,
-      assunto_id: contexto.assuntoId || null,
-      assunto: questao.assunto.trim(),
-      assunto_chave: normalizarChaveIA(questao.assunto),
-      dificuldade: converterDificuldade(questao.dificuldade),
-      enunciado: questao.enunciado.trim(),
-      alternativas: Object.entries(questao.alternativas).map(([id, texto]) => ({
-        id,
-        texto: texto.trim(),
-      })),
-      resposta_correta_id: questao.respostaCorreta,
-      explicacao: questao.explicacao.trim() || null,
-      status: "ativa",
-      compatibilidade_edital: "direta",
-      confianca_classificacao: "alta",
-      fonte_nome: "Gerada pela IA do Study Pro",
-      origem: "ia",
-      banca_chave: normalizarChaveIA(questao.banca),
-      criado_por: authData.user.id,
-      fingerprint: await fingerprintQuestaoIA(questao),
-    }))
+  questoes.forEach((questao, indice) =>
+    validarQuestaoAntesDePublicar(questao, indice + 1)
   );
 
-  const { error } = await supabase
-    .from("questoes_catalogo")
-    .upsert(preparadas, {
-      onConflict: "fingerprint",
-      ignoreDuplicates: true,
-    });
+  const fingerprints = await Promise.all(
+    questoes.map((questao) => fingerprintQuestaoIA(questao))
+  );
+
+  const { data, error } = await supabase.functions.invoke(
+    "publicar-questoes-ia",
+    {
+      body: {
+        questoes,
+        contexto: {
+          concursoAlvo: contexto.concursoAlvo.trim() || "PMPE",
+          editalAlvo:
+            contexto.editalAlvo.trim() ||
+            contexto.concursoAlvo.trim() ||
+            "PMPE",
+          materiaId: contexto.materiaId,
+          assuntoId: contexto.assuntoId,
+        },
+      },
+    }
+  );
 
   if (error) {
-    throw new Error(`Não foi possível salvar as questões no banco compartilhado: ${error.message}`);
+    throw new Error(
+      `Não foi possível publicar as questões no catálogo seguro: ${error.message}`
+    );
   }
 
-  const fingerprints = preparadas.map((item) => item.fingerprint);
-  const { data, error: erroLeitura } = await supabase
-    .from("questoes_catalogo")
-    .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint")
-    .eq("origem", "ia")
-    .in("fingerprint", fingerprints);
+  const linhas =
+    data && typeof data === "object" && Array.isArray(data.questoes)
+      ? (data.questoes as LinhaCatalogoIA[])
+      : [];
 
-  if (erroLeitura) {
-    throw new Error(`As questões foram salvas, mas não puderam ser recarregadas: ${erroLeitura.message}`);
-  }
-
+  const validas = linhas.filter(ehQuestaoValida);
   const porFingerprint = new Map(
-    ((data ?? []) as LinhaCatalogoIA[]).map((linha) => [linha.fingerprint, converterLinha(linha)])
+    validas.map((linha) => [linha.fingerprint, converterLinha(linha)])
   );
 
-  return preparadas.map((item, indice) =>
-    porFingerprint.get(item.fingerprint) ?? questoes[indice]
-  );
+  return fingerprints.map((fingerprint, indice) => {
+    const publicada = porFingerprint.get(fingerprint);
+    if (!publicada) {
+      throw new Error(
+        `A questão ${indice + 1} não pôde ser confirmada no catálogo após a publicação.`
+      );
+    }
+    return publicada;
+  });
 }
 
 export async function registrarRespostasQuestoesIA(
@@ -160,31 +146,43 @@ export async function registrarRespostasQuestoesIA(
     .insert(linhas);
 
   if (error) {
-    throw new Error(`O resultado foi salvo no aparelho, mas o histórico online falhou: ${error.message}`);
+    throw new Error(
+      `O resultado foi salvo no aparelho, mas o histórico online falhou: ${error.message}`
+    );
   }
 }
 
 async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
   let consulta = supabase
     .from("questoes_catalogo")
-    .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint")
+    .select(
+      "id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint"
+    )
     .eq("origem", "ia")
     .eq("status", "ativa")
     .eq("compatibilidade_edital", "direta")
-    .limit(1000);
-
-  consulta = consulta
+    .eq("concurso_alvo", filtros.concursoAlvo?.trim() || "PMPE")
     .eq("materia_chave", normalizarChaveIA(filtros.materia))
     .eq("assunto_chave", normalizarChaveIA(filtros.assunto))
-    .eq("banca_chave", normalizarChaveIA(filtros.banca));
+    .eq("banca_chave", normalizarChaveIA(filtros.banca))
+    .limit(1000);
+
+  if (filtros.modulo?.trim()) {
+    consulta = consulta.eq("modulo", filtros.modulo.trim());
+  }
 
   if (filtros.dificuldade !== "Mista") {
-    consulta = consulta.eq("dificuldade", converterDificuldade(filtros.dificuldade));
+    consulta = consulta.eq(
+      "dificuldade",
+      converterDificuldade(filtros.dificuldade)
+    );
   }
 
   const { data, error } = await consulta;
   if (error) {
-    throw new Error(`Não foi possível consultar o banco compartilhado: ${error.message}`);
+    throw new Error(
+      `Não foi possível consultar o banco compartilhado: ${error.message}`
+    );
   }
 
   return ((data ?? []) as LinhaCatalogoIA[])
@@ -199,18 +197,19 @@ async function listarIdsRespondidos() {
     .limit(10000);
 
   if (error) {
-    throw new Error(`Não foi possível consultar seu histórico de questões: ${error.message}`);
+    throw new Error(
+      `Não foi possível consultar seu histórico de questões: ${error.message}`
+    );
   }
 
-  return new Set(
-    (data ?? []).map((linha) => String(linha.questao_id))
-  );
+  return new Set((data ?? []).map((linha) => String(linha.questao_id)));
 }
 
 function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
   const alternativas = Object.fromEntries(
-    (Array.isArray(linha.alternativas) ? linha.alternativas : [])
-      .map((alternativa) => [alternativa.id, alternativa.texto])
+    (Array.isArray(linha.alternativas) ? linha.alternativas : []).map(
+      (alternativa) => [alternativa.id, alternativa.texto]
+    )
   );
 
   return {
@@ -220,11 +219,12 @@ function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
     moduloId: linha.modulo_id ?? undefined,
     assunto: linha.assunto,
     banca: linha.banca,
-    dificuldade: linha.dificuldade === "facil"
-      ? "Fácil"
-      : linha.dificuldade === "dificil"
-        ? "Difícil"
-        : "Média",
+    dificuldade:
+      linha.dificuldade === "facil"
+        ? "Fácil"
+        : linha.dificuldade === "dificil"
+          ? "Difícil"
+          : "Média",
     enunciado: linha.enunciado,
     alternativas: {
       A: alternativas.A ?? "",
@@ -239,11 +239,44 @@ function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
 }
 
 function ehQuestaoValida(linha: LinhaCatalogoIA) {
+  const alternativas = Array.isArray(linha.alternativas)
+    ? linha.alternativas
+    : [];
+  const ids = alternativas.map((item) => item.id);
+  const textos = alternativas.map((item) => item.texto?.trim());
+
   return (
-    ["A", "B", "C", "D", "E"].includes(linha.resposta_correta_id ?? "")
-    && Array.isArray(linha.alternativas)
-    && linha.alternativas.length === 5
+    ["A", "B", "C", "D", "E"].includes(linha.resposta_correta_id ?? "") &&
+    alternativas.length === 5 &&
+    new Set(ids).size === 5 &&
+    ["A", "B", "C", "D", "E"].every((letra) => ids.includes(letra)) &&
+    textos.every(Boolean) &&
+    new Set(textos.map(normalizarChaveIA)).size === 5 &&
+    Boolean(linha.enunciado.trim()) &&
+    Boolean(linha.explicacao?.trim())
   );
+}
+
+function validarQuestaoAntesDePublicar(
+  questao: QuestaoIA,
+  numero: number
+) {
+  const alternativaTextos = Object.values(questao.alternativas).map((texto) =>
+    texto.trim()
+  );
+
+  if (
+    !questao.enunciado.trim() ||
+    !questao.explicacao.trim() ||
+    !["A", "B", "C", "D", "E"].includes(questao.respostaCorreta) ||
+    alternativaTextos.length !== 5 ||
+    alternativaTextos.some((texto) => !texto) ||
+    new Set(alternativaTextos.map(normalizarChaveIA)).size !== 5
+  ) {
+    throw new Error(
+      `A questão ${numero} falhou na validação e não foi publicada no catálogo.`
+    );
+  }
 }
 
 function converterDificuldade(
@@ -255,5 +288,7 @@ function converterDificuldade(
 }
 
 function ehUuid(valor: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(valor);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    valor
+  );
 }

@@ -4,6 +4,10 @@ import type {
   SessaoEstudo,
   Simulado,
 } from "../types";
+import {
+  calcularMetricasConsolidadas,
+  resumirSimulado,
+} from "../utils/metricasConsolidadas";
 
 export type ResumoGamificacao = {
   mes: string;
@@ -33,30 +37,29 @@ export function calcularGamificacao(params: {
 }): ResumoGamificacao {
   const agora = params.agora ?? new Date();
   const mes = chaveMes(agora);
+  const inicio = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0);
+  const fim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  const sessoesMes = params.sessoes.filter((item) => chaveMes(dataSegura(item.data)) === mes);
-  const questoesMes = params.questoes.filter((item) => chaveMes(dataSegura(item.data)) === mes);
-  const revisoesMes = params.revisoes.filter(
-    (item) => item.concluida && item.dataConclusao && chaveMes(dataSegura(item.dataConclusao)) === mes
-  );
-  const simuladosMes = params.simulados.filter((item) => chaveMes(dataSegura(item.data)) === mes);
+  const metricas = calcularMetricasConsolidadas({
+    sessoes: params.sessoes,
+    questoes: params.questoes,
+    revisoes: params.revisoes,
+    simulados: params.simulados,
+    inicio,
+    fim,
+  });
 
-  const minutos = sessoesMes.reduce((total, item) => total + numeroSeguro(item.minutos), 0);
-  const questoes = questoesMes.reduce(
-    (total, item) => total + numeroSeguro(item.certas) + numeroSeguro(item.erradas),
-    0
-  );
-  const acertos = questoesMes.reduce((total, item) => total + numeroSeguro(item.certas), 0);
-  const revisoes = revisoesMes.length;
-  const simulados = simuladosMes.length;
+  const simuladosMes = params.simulados.filter((item) => {
+    const data = dataSegura(item.data);
+    return data >= inicio && data <= fim;
+  });
 
-  const xpTempo = Math.floor(minutos / 10);
-  const xpQuestoes = Math.floor(questoes / 10) * 2;
-  const xpAcertos = Math.floor(acertos / 10) * 2;
-  const xpRevisoes = revisoes * 5;
+  const xpTempo = Math.floor(metricas.minutos / 10);
+  const xpQuestoes = Math.floor(metricas.questoes / 10) * 2;
+  const xpAcertos = Math.floor(metricas.certas / 10) * 2;
+  const xpRevisoes = metricas.revisoesConcluidas * 5;
   const xpSimulados = simuladosMes.reduce((total, simulado) => {
-    const totalValidas = numeroSeguro(simulado.certas) + numeroSeguro(simulado.erradas);
-    const percentual = totalValidas === 0 ? 0 : (numeroSeguro(simulado.certas) / totalValidas) * 100;
+    const percentual = resumirSimulado(simulado).aproveitamento;
     return total + 10 + (percentual >= 80 ? 10 : percentual >= 60 ? 5 : 0);
   }, 0);
 
@@ -65,12 +68,12 @@ export function calcularGamificacao(params: {
 
   return {
     mes,
-    minutos,
-    horas: Math.round((minutos / 60) * 10) / 10,
-    questoes,
-    acertos,
-    revisoes,
-    simulados,
+    minutos: metricas.minutos,
+    horas: Math.round((metricas.minutos / 60) * 10) / 10,
+    questoes: metricas.questoes,
+    acertos: metricas.certas,
+    revisoes: metricas.revisoesConcluidas,
+    simulados: metricas.simulados,
     xp,
     nivel,
     tituloNivel: tituloDoNivel(nivel),
@@ -92,8 +95,4 @@ function chaveMes(data: Date) {
 function dataSegura(valor: string) {
   const data = new Date(valor);
   return Number.isNaN(data.getTime()) ? new Date(0) : data;
-}
-
-function numeroSeguro(valor: number) {
-  return Number.isFinite(valor) ? valor : 0;
 }

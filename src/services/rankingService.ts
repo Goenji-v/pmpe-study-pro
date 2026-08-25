@@ -6,30 +6,29 @@ export async function publicarResumoRanking(params: {
   nome: string;
   resumo: ResumoGamificacao;
 }) {
-  const { error } = await supabase.from("ranking_mensal").upsert(
-    {
-      user_id: params.userId,
-      nome_publico: params.nome,
-      mes: params.resumo.mes,
-      minutos: params.resumo.minutos,
-      questoes: params.resumo.questoes,
-      acertos: params.resumo.acertos,
-      revisoes: params.resumo.revisoes,
-      simulados: params.resumo.simulados,
-      xp: params.resumo.xp,
-      nivel: params.resumo.nivel,
-      atualizado_em: new Date().toISOString(),
-    },
-    { onConflict: "user_id,mes" }
-  );
+  // `userId` e `resumo` continuam no contrato para compatibilidade com a tela,
+  // mas os números não são mais confiados ao navegador. O PostgreSQL recalcula
+  // tudo a partir do estado sincronizado do usuário autenticado.
+  void params.userId;
+  void params.resumo;
 
-  if (error) throw error;
+  const { error } = await supabase.rpc("recalcular_meu_ranking", {
+    p_nome_publico: params.nome.trim() || "Usuário",
+  });
+
+  if (error) {
+    throw new Error(`Não foi possível recalcular o ranking: ${error.message}`);
+  }
 }
 
-export async function carregarRankingMensal(mes: string): Promise<EntradaRanking[]> {
+export async function carregarRankingMensal(
+  mes: string
+): Promise<EntradaRanking[]> {
   const { data, error } = await supabase
     .from("ranking_mensal")
-    .select("user_id,nome_publico,mes,minutos,questoes,acertos,revisoes,simulados,xp,nivel")
+    .select(
+      "user_id,nome_publico,mes,minutos,questoes,acertos,revisoes,simulados,xp,nivel"
+    )
     .eq("mes", mes)
     .order("xp", { ascending: false })
     .order("minutos", { ascending: false })

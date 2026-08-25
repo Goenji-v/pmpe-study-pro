@@ -145,30 +145,21 @@ export function redistribuirRevisoesPendentes(
     .sort(
       (a, b) =>
         new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime() ||
-        a.etapa - b.etapa
+        a.etapa - b.etapa ||
+        new Date(a.dataCriacao).getTime() - new Date(b.dataCriacao).getTime()
     );
 
-  const ocupacao = new Map<string, number>();
   const hoje = inicioDoDia(new Date());
 
-  const reorganizadas = pendentes.map((revisao) => {
-    const original = inicioDoDia(new Date(revisao.dataPrevista));
-    const inicio = original < hoje ? new Date(hoje) : new Date(original);
-    const candidato = new Date(inicio);
+  const reorganizadas = pendentes.map((revisao, indice) => {
+    const deslocamentoDias = Math.floor(indice / limiteDiario);
+    const prevista = adicionarDias(hoje, deslocamentoDias);
+    prevista.setHours(12, 0, 0, 0);
 
-    for (let i = 0; i < 365; i += 1) {
-      const chave = chaveData(candidato);
-      const quantidade = ocupacao.get(chave) ?? 0;
-      if (quantidade < limiteDiario) {
-        ocupacao.set(chave, quantidade + 1);
-        const prevista = new Date(candidato);
-        prevista.setHours(12, 0, 0, 0);
-        return { ...revisao, dataPrevista: prevista.toISOString() };
-      }
-      candidato.setDate(candidato.getDate() + 1);
-    }
-
-    return revisao;
+    return {
+      ...revisao,
+      dataPrevista: prevista.toISOString(),
+    };
   });
 
   return [...reorganizadas, ...concluidas];

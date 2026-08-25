@@ -42,7 +42,6 @@ import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
 import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
 import NotificationCenter from "./components/NotificationCenter/NotificationCenter";
-import NotificationButtonBridge from "./components/NotificationButtonBridge/NotificationButtonBridge";
 import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
 
 import { AppProvider } from "./context/AppContext";
@@ -125,7 +124,6 @@ function LayoutProtegido() {
               </div>
             </div>
             <BetaFeedback />
-            <NotificationButtonBridge />
             <NotificationCenter />
           </CronometroProvider>
         </AppProvider>
