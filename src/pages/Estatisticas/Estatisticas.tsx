@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement, type ReactNode } from "react";
 import {
   Bar,
   BarChart,
@@ -405,12 +405,12 @@ function FiltroPeriodo({
 }: {
   ativo: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
       type="button"
-      className={`estatisticas-periodo ${ativo ? "ativo" : ""}`}
+      className={`estatisticas-periodo ${ativo ? "ativo" : ""}`
       onClick={onClick}
     >
       {children}
