@@ -16,6 +16,7 @@ import {
   DIAS_SEMANA,
   type AnaliseEdital,
   type ConfiguracoesComEdital,
+  type DiaSemanaId,
   type PlanoEdital,
   type PrioridadeEdital,
 } from "../../types/editalInteligente";
@@ -43,13 +44,17 @@ export default function MeuEdital() {
   const [aplicando, setAplicando] = useState(false);
 
   const totalAssuntos = useMemo(
-    () => analise?.materias.reduce((total, materia) => total + materia.assuntos.length, 0) ?? 0,
+    () =>
+      analise?.materias.reduce(
+        (total, materia) => total + materia.assuntos.length,
+        0
+      ) ?? 0,
     [analise]
   );
 
-  const diasAtivos = config.diasEstudo?.length
+  const diasAtivos: DiaSemanaId[] = config.diasEstudo?.length
     ? config.diasEstudo
-    : (["seg", "ter", "qua", "qui", "sex", "sab"] as const);
+    : ["seg", "ter", "qua", "qui", "sex", "sab"];
 
   async function processarPdf() {
     if (!arquivo) {
@@ -69,10 +74,15 @@ export default function MeuEdital() {
       setAnalise(resultado);
       setPdfNovo(pdf);
       setPlanoPrevio(null);
-      showToast("Edital analisado. Confira matérias e assuntos antes de aplicar.", "success");
+      showToast(
+        "Edital analisado. Confira matérias e assuntos antes de aplicar.",
+        "success"
+      );
     } catch (erro) {
       showToast(
-        erro instanceof Error ? erro.message : "Não foi possível analisar o edital.",
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível analisar o edital.",
         "error"
       );
     } finally {
@@ -91,10 +101,14 @@ export default function MeuEdital() {
   }
 
   function removerMateria(indice: number) {
-    setAnalise((atual) => {
-      if (!atual) return atual;
-      return { ...atual, materias: atual.materias.filter((_, i) => i !== indice) };
-    });
+    setAnalise((atual) =>
+      atual
+        ? {
+            ...atual,
+            materias: atual.materias.filter((_, i) => i !== indice),
+          }
+        : atual
+    );
     setPlanoPrevio(null);
   }
 
@@ -105,6 +119,7 @@ export default function MeuEdital() {
         materias: [],
         analisadoEm: new Date().toISOString(),
       };
+
       return {
         ...base,
         materias: [
@@ -136,7 +151,8 @@ export default function MeuEdital() {
       const assuntos = [...materia.assuntos];
       assuntos[indiceAssunto] = {
         ...assuntos[indiceAssunto],
-        [campo]: campo === "prioridade" ? (valor as PrioridadeEdital) : valor,
+        [campo]:
+          campo === "prioridade" ? (valor as PrioridadeEdital) : valor,
       };
       materia.assuntos = assuntos;
       materias[indiceMateria] = materia;
@@ -150,7 +166,9 @@ export default function MeuEdital() {
       if (!atual) return atual;
       const materias = [...atual.materias];
       const materia = { ...materias[indiceMateria] };
-      materia.assuntos = materia.assuntos.filter((_, i) => i !== indiceAssunto);
+      materia.assuntos = materia.assuntos.filter(
+        (_, i) => i !== indiceAssunto
+      );
       materias[indiceMateria] = materia;
       return { ...atual, materias };
     });
@@ -175,8 +193,12 @@ export default function MeuEdital() {
   function gerarPrevia() {
     if (!analise) return;
     const normalizada = normalizarAnaliseEdital(analise);
+
     if (normalizada.materias.length === 0) {
-      showToast("Mantenha pelo menos uma matéria com um assunto.", "warning");
+      showToast(
+        "Mantenha pelo menos uma matéria com um assunto.",
+        "warning"
+      );
       return;
     }
 
@@ -188,18 +210,21 @@ export default function MeuEdital() {
 
   async function aplicarPlano() {
     if (!analise || !planoPrevio) {
-      showToast("Gere a prévia antes de aplicar o cronograma.", "warning");
+      showToast(
+        "Gere a prévia antes de aplicar o cronograma.",
+        "warning"
+      );
       return;
     }
 
-    const pdf = pdfNovo ?? (
-      config.editalAtivo
+    const pdf =
+      pdfNovo ??
+      (config.editalAtivo
         ? {
             storagePath: config.editalAtivo.storagePath,
             nomeArquivo: config.editalAtivo.nomeArquivo,
           }
-        : null
-    );
+        : null);
 
     if (!pdf) {
       showToast("Envie o PDF do edital antes de aplicar.", "warning");
@@ -210,10 +235,14 @@ export default function MeuEdital() {
     try {
       const editalAnterior = config.editalAtivo;
       const agora = new Date().toISOString();
-      const id = editalAnterior?.id && !pdfNovo ? editalAnterior.id : crypto.randomUUID();
+      const id =
+        editalAnterior?.id && !pdfNovo
+          ? editalAnterior.id
+          : crypto.randomUUID();
 
       setMaterias((atuais) => mesclarMateriasDoEdital(atuais, analise));
-      setConfiguracoes({
+
+      const novasConfiguracoes: ConfiguracoesComEdital = {
         ...config,
         editalOnboardingVisto: true,
         editalAtivo: {
@@ -224,7 +253,8 @@ export default function MeuEdital() {
           plano: planoPrevio,
           confirmadoEm: agora,
         },
-      });
+      };
+      setConfiguracoes(novasConfiguracoes);
 
       if (
         pdfNovo &&
@@ -234,11 +264,16 @@ export default function MeuEdital() {
         void removerPdfEdital(editalAnterior.storagePath);
       }
 
-      showToast("Edital confirmado e plano de estudos aplicado.", "success");
+      showToast(
+        "Edital confirmado e plano de estudos aplicado.",
+        "success"
+      );
       navigate("/plano");
     } catch (erro) {
       showToast(
-        erro instanceof Error ? erro.message : "Não foi possível aplicar o edital.",
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível aplicar o edital.",
         "error"
       );
     } finally {
@@ -247,7 +282,11 @@ export default function MeuEdital() {
   }
 
   function continuarSemEdital() {
-    setConfiguracoes({ ...config, editalOnboardingVisto: true });
+    const novasConfiguracoes: ConfiguracoesComEdital = {
+      ...config,
+      editalOnboardingVisto: true,
+    };
+    setConfiguracoes(novasConfiguracoes);
     navigate("/");
   }
 
@@ -258,14 +297,18 @@ export default function MeuEdital() {
           <span>EDITAL INTELIGENTE</span>
           <h1>Meu Edital</h1>
           <p>
-            Envie o PDF. O Study Pro separa matérias e assuntos, estima prioridades e monta o plano conforme sua disponibilidade.
+            Envie o PDF. O Study Pro separa matérias e assuntos, estima
+            prioridades e monta o plano conforme sua disponibilidade.
           </p>
         </div>
+
         {config.editalAtivo?.storagePath && (
           <button
             type="button"
             className="edital-botao-secundario"
-            onClick={() => void abrirPdfEdital(config.editalAtivo!.storagePath)}
+            onClick={() =>
+              void abrirPdfEdital(config.editalAtivo!.storagePath)
+            }
           >
             Abrir edital atual
           </button>
@@ -276,30 +319,44 @@ export default function MeuEdital() {
         <span className="ativo">1. PDF</span>
         <span className={analise ? "ativo" : ""}>2. Conferir</span>
         <span className={planoPrevio ? "ativo" : ""}>3. Prévia</span>
-        <span className={config.editalAtivo?.confirmadoEm ? "ativo" : ""}>4. Aplicar</span>
+        <span className={config.editalAtivo?.confirmadoEm ? "ativo" : ""}>
+          4. Aplicar
+        </span>
       </div>
 
       <article className="edital-card edital-upload-card">
         <div>
           <h2>Adicionar ou trocar edital</h2>
-          <p>PDF completo ou verticalizado. Para análise automática, até 25 MB.</p>
+          <p>
+            PDF completo ou verticalizado. Para análise automática, até 25 MB.
+          </p>
         </div>
+
         <label className="edital-upload">
           <input
             type="file"
             accept="application/pdf,.pdf"
-            onChange={(evento) => setArquivo(evento.target.files?.[0] ?? null)}
+            onChange={(evento) =>
+              setArquivo(evento.target.files?.[0] ?? null)
+            }
           />
           <strong>{arquivo?.name ?? "Selecionar PDF"}</strong>
-          <span>{arquivo ? `${(arquivo.size / 1024 / 1024).toFixed(1)} MB` : "Clique para escolher o edital"}</span>
+          <span>
+            {arquivo
+              ? `${(arquivo.size / 1024 / 1024).toFixed(1)} MB`
+              : "Clique para escolher o edital"}
+          </span>
         </label>
+
         <button
           type="button"
           className="edital-botao-principal"
           disabled={!arquivo || processando}
           onClick={() => void processarPdf()}
         >
-          {processando ? "Lendo edital e organizando conteúdos..." : "Analisar edital"}
+          {processando
+            ? "Lendo edital e organizando conteúdos..."
+            : "Analisar edital"}
         </button>
       </article>
 
@@ -311,44 +368,77 @@ export default function MeuEdital() {
               <h2>{analise.concursoDetectado}</h2>
               <p>
                 {analise.materias.length} matérias · {totalAssuntos} assuntos
-                {analise.bancaDetectada ? ` · Banca ${analise.bancaDetectada}` : ""}
+                {analise.bancaDetectada
+                  ? ` · Banca ${analise.bancaDetectada}`
+                  : ""}
               </p>
             </div>
-            <button type="button" className="edital-botao-secundario" onClick={adicionarMateria}>
+            <button
+              type="button"
+              className="edital-botao-secundario"
+              onClick={adicionarMateria}
+            >
               + Matéria
             </button>
           </div>
 
-          {analise.observacao && <div className="edital-observacao">{analise.observacao}</div>}
+          {analise.observacao && (
+            <div className="edital-observacao">{analise.observacao}</div>
+          )}
 
           <div className="edital-materias">
             {analise.materias.map((materia, indiceMateria) => (
-              <section className="edital-materia" key={`${materia.id}-${indiceMateria}`}>
+              <section
+                className="edital-materia"
+                key={`${materia.id}-${indiceMateria}`}
+              >
                 <div className="edital-materia-topo">
                   <input
                     value={materia.nome}
                     aria-label="Nome da matéria"
-                    onChange={(evento) => atualizarMateria(indiceMateria, evento.target.value)}
+                    onChange={(evento) =>
+                      atualizarMateria(indiceMateria, evento.target.value)
+                    }
                   />
-                  <span className="edital-incidencia">Prioridade da matéria {materia.incidenciaEstimada}/5</span>
-                  <button type="button" onClick={() => removerMateria(indiceMateria)}>Remover</button>
+                  <span className="edital-incidencia">
+                    Prioridade da matéria {materia.incidenciaEstimada}/5
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removerMateria(indiceMateria)}
+                  >
+                    Remover
+                  </button>
                 </div>
 
                 <div className="edital-assuntos">
                   {materia.assuntos.map((assunto, indiceAssunto) => (
-                    <div className="edital-assunto" key={`${assunto.id}-${indiceAssunto}`}>
+                    <div
+                      className="edital-assunto"
+                      key={`${assunto.id}-${indiceAssunto}`}
+                    >
                       <input
                         value={assunto.nome}
                         aria-label={`Assunto de ${materia.nome}`}
                         onChange={(evento) =>
-                          atualizarAssunto(indiceMateria, indiceAssunto, "nome", evento.target.value)
+                          atualizarAssunto(
+                            indiceMateria,
+                            indiceAssunto,
+                            "nome",
+                            evento.target.value
+                          )
                         }
                       />
                       <select
                         value={assunto.prioridade}
                         aria-label={`Prioridade de ${assunto.nome}`}
                         onChange={(evento) =>
-                          atualizarAssunto(indiceMateria, indiceAssunto, "prioridade", evento.target.value)
+                          atualizarAssunto(
+                            indiceMateria,
+                            indiceAssunto,
+                            "prioridade",
+                            evento.target.value
+                          )
                         }
                       >
                         <option value="alta">Alta</option>
@@ -358,7 +448,9 @@ export default function MeuEdital() {
                       <button
                         type="button"
                         aria-label={`Remover ${assunto.nome}`}
-                        onClick={() => removerAssunto(indiceMateria, indiceAssunto)}
+                        onClick={() =>
+                          removerAssunto(indiceMateria, indiceAssunto)
+                        }
                       >
                         ×
                       </button>
@@ -384,20 +476,34 @@ export default function MeuEdital() {
             <strong>Regras que serão usadas no plano</strong>
             <div className="edital-dias-resumo">
               {DIAS_SEMANA.map((dia) => (
-                <span key={dia.id} className={diasAtivos.includes(dia.id) ? "ativo" : ""}>
+                <span
+                  key={dia.id}
+                  className={diasAtivos.includes(dia.id) ? "ativo" : ""}
+                >
                   {dia.curto}
                 </span>
               ))}
             </div>
             <p>
-              {config.metaMinutosDiaria} min/dia · {config.materiasPorDia ?? config.missoesPorDia ?? 1} matéria(s)/dia · {config.metaRevisoesDiaria} revisão(ões)/dia · meta de {config.metaQuestoesDiaria} questões/dia.
+              {config.metaMinutosDiaria} min/dia ·{" "}
+              {config.materiasPorDia ?? config.missoesPorDia ?? 1} matéria(s)/dia
+              · {config.metaRevisoesDiaria} revisão(ões)/dia · meta de{" "}
+              {config.metaQuestoesDiaria} questões/dia.
             </p>
-            <button type="button" className="edital-link-config" onClick={() => navigate("/configuracoes")}>
+            <button
+              type="button"
+              className="edital-link-config"
+              onClick={() => navigate("/configuracoes")}
+            >
               Alterar disponibilidade no perfil
             </button>
           </div>
 
-          <button type="button" className="edital-botao-principal" onClick={gerarPrevia}>
+          <button
+            type="button"
+            className="edital-botao-principal"
+            onClick={gerarPrevia}
+          >
             Gerar prévia do cronograma
           </button>
         </article>
@@ -410,7 +516,9 @@ export default function MeuEdital() {
               <span>PRÉVIA</span>
               <h2>{planoPrevio.titulo}</h2>
               <p>
-                {planoPrevio.totalSemanas} semana(s) para passar por {planoPrevio.totalAssuntos} assuntos, respeitando os dias escolhidos.
+                {planoPrevio.totalSemanas} semana(s) para passar por{" "}
+                {planoPrevio.totalAssuntos} assuntos, respeitando os dias
+                escolhidos.
               </p>
             </div>
           </div>
@@ -425,11 +533,14 @@ export default function MeuEdital() {
                     <div>
                       {dia.missoes.map((missao) => (
                         <span key={missao.id}>
-                          {missao.materia}: {missao.assunto} · {missao.duracaoMinutos} min
+                          {missao.materia}: {missao.assunto} ·{" "}
+                          {missao.duracaoMinutos} min
                         </span>
                       ))}
                       {dia.revisoesPlanejadas > 0 && (
-                        <small>+ até {dia.revisoesPlanejadas} revisões da fila</small>
+                        <small>
+                          + até {dia.revisoesPlanejadas} revisões da fila
+                        </small>
                       )}
                     </div>
                   </div>
@@ -440,7 +551,8 @@ export default function MeuEdital() {
 
           {planoPrevio.totalSemanas > 2 && (
             <p className="edital-previa-restante">
-              A prévia mostra as 2 primeiras semanas. O plano completo terá {planoPrevio.totalSemanas} semanas.
+              A prévia mostra as 2 primeiras semanas. O plano completo terá{" "}
+              {planoPrevio.totalSemanas} semanas.
             </p>
           )}
 
@@ -456,7 +568,11 @@ export default function MeuEdital() {
       )}
 
       {!config.editalOnboardingVisto && (
-        <button type="button" className="edital-pular" onClick={continuarSemEdital}>
+        <button
+          type="button"
+          className="edital-pular"
+          onClick={continuarSemEdital}
+        >
           Configurar depois e continuar no Study Pro
         </button>
       )}
