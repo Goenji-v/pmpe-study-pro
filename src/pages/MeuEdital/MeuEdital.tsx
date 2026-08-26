@@ -42,6 +42,7 @@ export default function MeuEdital() {
   );
   const [processando, setProcessando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
+  const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
 
   const totalAssuntos = useMemo(
     () =>
@@ -63,28 +64,44 @@ export default function MeuEdital() {
     }
 
     setProcessando(true);
+    setErroProcessamento(null);
+    setPdfNovo(null);
+
     try {
-      const editalId = crypto.randomUUID();
       const resultado = await analisarPdfEdital(arquivo, {
         concurso: config.concurso,
         banca: config.bancaPadrao,
       });
-      const pdf = await enviarPdfEdital(arquivo, editalId);
 
+      // A conferência deve aparecer assim que a leitura termina. O salvamento
+      // do PDF é uma etapa independente e não pode apagar uma análise válida.
       setAnalise(resultado);
-      setPdfNovo(pdf);
       setPlanoPrevio(null);
-      showToast(
-        "Edital analisado. Confira matérias e assuntos antes de aplicar.",
-        "success"
-      );
+
+      try {
+        const pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
+        setPdfNovo(pdf);
+        showToast(
+          "Edital analisado. Confira matérias e assuntos antes de aplicar.",
+          "success"
+        );
+      } catch (erroUpload) {
+        const detalhe =
+          erroUpload instanceof Error
+            ? erroUpload.message
+            : "não foi possível salvar o PDF";
+        const mensagem =
+          `A leitura foi concluída e já pode ser conferida, mas o PDF ainda não foi salvo. ${detalhe}`;
+        setErroProcessamento(mensagem);
+        showToast(mensagem, "warning");
+      }
     } catch (erro) {
-      showToast(
+      const mensagem =
         erro instanceof Error
           ? erro.message
-          : "Não foi possível analisar o edital.",
-        "error"
-      );
+          : "Não foi possível analisar o edital.";
+      setErroProcessamento(mensagem);
+      showToast(mensagem, "error");
     } finally {
       setProcessando(false);
     }
@@ -217,7 +234,7 @@ export default function MeuEdital() {
       return;
     }
 
-    const pdf =
+    let pdf =
       pdfNovo ??
       (config.editalAtivo
         ? {
@@ -225,18 +242,31 @@ export default function MeuEdital() {
             nomeArquivo: config.editalAtivo.nomeArquivo,
           }
         : null);
-
-    if (!pdf) {
-      showToast("Envie o PDF do edital antes de aplicar.", "warning");
-      return;
-    }
+    let pdfEnviadoAgora = false;
 
     setAplicando(true);
+    setErroProcessamento(null);
+
     try {
+      // Se a análise funcionou mas o upload falhou, recupera o salvamento aqui
+      // sem obrigar o usuário a gastar outra chamada de IA.
+      if (!pdf && arquivo) {
+        pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
+        setPdfNovo(pdf);
+        pdfEnviadoAgora = true;
+      }
+
+      if (!pdf) {
+        throw new Error(
+          "O PDF ainda não foi salvo. Selecione novamente o arquivo e tente aplicar o plano."
+        );
+      }
+
       const editalAnterior = config.editalAtivo;
       const agora = new Date().toISOString();
+      const usaNovoPdf = Boolean(pdfNovo || pdfEnviadoAgora);
       const id =
-        editalAnterior?.id && !pdfNovo
+        editalAnterior?.id && !usaNovoPdf
           ? editalAnterior.id
           : crypto.randomUUID();
 
@@ -257,9 +287,9 @@ export default function MeuEdital() {
       setConfiguracoes(novasConfiguracoes);
 
       if (
-        pdfNovo &&
+        usaNovoPdf &&
         editalAnterior?.storagePath &&
-        editalAnterior.storagePath !== pdfNovo.storagePath
+        editalAnterior.storagePath !== pdf.storagePath
       ) {
         void removerPdfEdital(editalAnterior.storagePath);
       }
@@ -270,12 +300,12 @@ export default function MeuEdital() {
       );
       navigate("/plano");
     } catch (erro) {
-      showToast(
+      const mensagem =
         erro instanceof Error
           ? erro.message
-          : "Não foi possível aplicar o edital.",
-        "error"
-      );
+          : "Não foi possível aplicar o edital.";
+      setErroProcessamento(mensagem);
+      showToast(mensagem, "error");
     } finally {
       setAplicando(false);
     }
@@ -336,9 +366,10 @@ export default function MeuEdital() {
           <input
             type="file"
             accept="application/pdf,.pdf"
-            onChange={(evento) =>
-              setArquivo(evento.target.files?.[0] ?? null)
-            }
+            onChange={(evento) => {
+              setArquivo(evento.target.files?.[0] ?? null);
+              setErroProcessamento(null);
+            }}
           />
           <strong>{arquivo?.name ?? "Selecionar PDF"}</strong>
           <span>
@@ -358,6 +389,10 @@ export default function MeuEdital() {
             ? "Lendo edital e organizando conteúdos..."
             : "Analisar edital"}
         </button>
+
+        {erroProcessamento && (
+          <div className="edital-observacao">{erroProcessamento}</div>
+        )}
       </article>
 
       {analise && (
