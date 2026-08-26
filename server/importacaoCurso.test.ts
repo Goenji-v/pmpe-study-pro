@@ -69,5 +69,5 @@ test("progresso de aula do curso volta para o catálogo antes de alternar cursos
 
   const atualizados = sincronizarProgressoCursos([curso], materias);
   assert.equal(atualizados[0].materias[0].modulos[0].aulas[0].concluida, true);
-  assert.equal(atualizados[0].materias[0].modulos[0].aulas[0].concluidoEm, "2026-08-26T10:00:00.000Z");
+  assert.equal(atualizados[0].materias[0].modulos[0].aulas[0].concluidaEm, "2026-08-26T10:00:00.000Z");
 });
