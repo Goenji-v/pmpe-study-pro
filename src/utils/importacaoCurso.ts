@@ -1,7 +1,6 @@
 import type { Assunto, Materia, Modulo } from "../types";
 import type {
   CapturaCurso,
-  CursoAula,
   CursoImportado,
   CursoMateria,
   CursoModulo,
@@ -341,7 +340,7 @@ function converterModuloCurso(
         url: aula.url,
         ordem: 1,
         concluida: concluido,
-        concluidaEm,
+        concluidaEm: concluidoEm,
       }],
     };
   });
