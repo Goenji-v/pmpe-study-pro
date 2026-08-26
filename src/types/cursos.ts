@@ -22,6 +22,8 @@ export type CursoAula = {
   ordem: number;
   concluida?: boolean;
   concluidaEm?: string;
+  /** Alias legado aceito durante a conversão para a árvore de conteúdos. */
+  concluidoEm?: string;
 };
 
 export type CursoModulo = {
