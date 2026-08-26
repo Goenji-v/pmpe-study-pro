@@ -8,6 +8,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import "./pages/PlanoEdital/PlanoEditalCursos.css";
 import PlanoEditalGateway from "./pages/PlanoEdital/PlanoEditalGateway";
 import MeuEdital from "./pages/MeuEdital/MeuEdital";
 import Cursos from "./pages/Cursos/Cursos";
