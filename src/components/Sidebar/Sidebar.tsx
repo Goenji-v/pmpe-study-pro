@@ -49,6 +49,7 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
   ],
   estudos: [
     "/central-estudos",
+    "/cursos",
     "/materiais",
     "/estudos",
     "/conteudos",
@@ -193,6 +194,7 @@ export default function Sidebar() {
             onToggle={alternarGrupo}
           >
             <ItemMenu to="/central-estudos" texto="Central de Estudos" />
+            <ItemMenu to="/cursos" texto="Meus Cursos" />
             <ItemMenu to="/estudos" texto="Conteúdos" />
             <ItemMenu to="/materiais" texto="Materiais" />
             <ItemMenu to="/revisoes" texto="Revisões" />

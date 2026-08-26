@@ -10,6 +10,7 @@ import {
 
 import PlanoEditalGateway from "./pages/PlanoEdital/PlanoEditalGateway";
 import MeuEdital from "./pages/MeuEdital/MeuEdital";
+import Cursos from "./pages/Cursos/Cursos";
 import ResolverSimuladoIA from "./pages/ResolverSimuladoIA/ResolverSimuladoIA";
 import MeusSimuladosIA from "./pages/MeusSimuladosIA/MeusSimuladosIA";
 import CronogramaIA from "./pages/CronogramaIA/CronogramaIA";
@@ -92,6 +93,7 @@ function LayoutProtegido() {
                     <Route path="/" element={<Dashboard />} />
 
                     <Route path="/meu-edital" element={<MeuEdital />} />
+                    <Route path="/cursos" element={<Cursos />} />
                     <Route path="/plano" element={<PlanoEditalGateway />} />
                     <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
 
