@@ -9,8 +9,13 @@ import http from "node:http";
 import { GoogleGenAI } from "@google/genai";
 import {
   montarPromptAnaliseEdital,
-  normalizarRespostaAnaliseEdital,
 } from "./editalInteligente.ts";
+import {
+  interpretarRespostaAnaliseEdital,
+} from "./editalAnaliseRobusta.ts";
+import {
+  obterStatusErro,
+} from "./retryGemini.ts";
 
 const portaPublica = Number(process.env.PORT || 3001);
 const portaInterna = Number(
@@ -24,6 +29,8 @@ const anonKeyServidor =
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "";
 const modeloEdital =
   process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+const modeloFallbackEdital =
+  process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash";
 const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
 const origensPermitidas = new Set(
@@ -119,6 +126,8 @@ app.use((req, res) => {
 });
 
 async function analisarEdital(req: Request, res: Response) {
+  const inicio = Date.now();
+
   try {
     if (!aiEdital) {
       res.status(503).json({
@@ -199,33 +208,50 @@ async function analisarEdital(req: Request, res: Response) {
       },
     ];
 
-    let resposta;
+    console.info("[edital-inteligente] análise iniciada", {
+      userId: res.locals.userId,
+      nomeArquivo,
+      tamanhoKb: Math.round(bytesPdf.length / 1024),
+    });
+
+    let analise;
+
     try {
-      resposta = await aiEdital.models.generateContent({
+      const respostaPesquisa = await aiEdital.models.generateContent({
         model: modeloEdital,
         contents,
         config: {
           tools: [{ googleSearch: {} }],
+          temperature: 0,
+          maxOutputTokens: 32768,
         },
       });
+
+      if (!respostaPesquisa.text) {
+        throw new Error("A IA não retornou texto na análise assistida por pesquisa.");
+      }
+
+      analise = interpretarRespostaAnaliseEdital(respostaPesquisa.text);
     } catch (erroPesquisa) {
       console.warn(
-        "Pesquisa assistida indisponível na análise do edital; usando análise sem grounding:",
+        "[edital-inteligente] análise com pesquisa não pôde ser confirmada; usando extração estruturada:",
         erroPesquisa
       );
-      resposta = await aiEdital.models.generateContent({
-        model: modeloEdital,
-        contents,
-      });
     }
 
-    const texto = resposta.text?.trim();
-    if (!texto) {
-      throw new Error("A IA não retornou a estrutura do edital.");
+    if (!analise) {
+      analise = await analisarEditalEstruturado(contents);
     }
 
-    const json = extrairJson(texto);
-    const analise = normalizarRespostaAnaliseEdital(JSON.parse(json));
+    console.info("[edital-inteligente] análise concluída", {
+      userId: res.locals.userId,
+      duracaoMs: Date.now() - inicio,
+      materias: analise.materias.length,
+      assuntos: analise.materias.reduce(
+        (total, materia) => total + materia.assuntos.length,
+        0
+      ),
+    });
 
     res.json({
       sucesso: true,
@@ -241,6 +267,69 @@ async function analisarEdital(req: Request, res: Response) {
           : "Não foi possível analisar o edital.",
     });
   }
+}
+
+async function analisarEditalEstruturado(
+  contents: Array<{
+    role: string;
+    parts: Array<
+      | { inlineData: { mimeType: string; data: string } }
+      | { text: string }
+    >;
+  }>
+) {
+  if (!aiEdital) {
+    throw new Error("A análise de edital está temporariamente indisponível.");
+  }
+
+  const modelos = Array.from(
+    new Set([modeloEdital, modeloFallbackEdital].map((item) => item.trim()).filter(Boolean))
+  );
+  let ultimoErro: unknown;
+
+  for (const modeloAtual of modelos) {
+    for (let tentativa = 1; tentativa <= 2; tentativa += 1) {
+      try {
+        const resposta = await aiEdital.models.generateContent({
+          model: modeloAtual,
+          contents,
+          config: {
+            temperature: 0,
+            responseMimeType: "application/json",
+            maxOutputTokens: 32768,
+          },
+        });
+
+        if (!resposta.text) {
+          throw new Error("A IA não retornou a estrutura do edital.");
+        }
+
+        return interpretarRespostaAnaliseEdital(resposta.text);
+      } catch (erro) {
+        ultimoErro = erro;
+        const status = obterStatusErro(erro);
+
+        console.warn("[edital-inteligente] tentativa estruturada falhou", {
+          modelo: modeloAtual,
+          tentativa,
+          status,
+          erro: erro instanceof Error ? erro.message : String(erro),
+        });
+
+        if (status === 429) {
+          throw erro;
+        }
+
+        if (tentativa < 2) {
+          await aguardar(1200);
+        }
+      }
+    }
+  }
+
+  throw ultimoErro instanceof Error
+    ? ultimoErro
+    : new Error("Não foi possível concluir a leitura estruturada do edital.");
 }
 
 async function autenticarEControlarUso(
@@ -348,19 +437,10 @@ function validarTamanhoDaRequisicao(
   next();
 }
 
-function extrairJson(texto: string) {
-  const limpo = texto
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-  const inicio = limpo.indexOf("{");
-  const fim = limpo.lastIndexOf("}");
-
-  if (inicio < 0 || fim <= inicio) {
-    throw new Error("A IA retornou o edital em um formato inválido.");
-  }
-
-  return limpo.slice(inicio, fim + 1);
+function aguardar(milissegundos: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, milissegundos);
+  });
 }
 
 process.env.PORT = String(portaInterna);
