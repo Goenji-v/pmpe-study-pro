@@ -6,6 +6,11 @@ import express, {
   type Response,
 } from "express";
 import http from "node:http";
+import { GoogleGenAI } from "@google/genai";
+import {
+  montarPromptAnaliseEdital,
+  normalizarRespostaAnaliseEdital,
+} from "./editalInteligente.ts";
 
 const portaPublica = Number(process.env.PORT || 3001);
 const portaInterna = Number(
@@ -16,6 +21,10 @@ const supabaseUrl =
   "https://kibnmdwabpiwyprkrhvq.supabase.co";
 const anonKeyServidor =
   process.env.SUPABASE_ANON_KEY?.trim() || "";
+const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "";
+const modeloEdital =
+  process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
 const origensPermitidas = new Set(
   [
@@ -63,6 +72,12 @@ app.use(
 app.use("/api", validarTamanhoDaRequisicao);
 app.use("/api", autenticarEControlarUso);
 
+app.post(
+  "/api/analisar-edital",
+  express.json({ limit: "40mb" }),
+  analisarEdital
+);
+
 app.use((req, res) => {
   const requisicao = http.request(
     {
@@ -102,6 +117,131 @@ app.use((req, res) => {
 
   req.pipe(requisicao);
 });
+
+async function analisarEdital(req: Request, res: Response) {
+  try {
+    if (!aiEdital) {
+      res.status(503).json({
+        sucesso: false,
+        erro: "A análise de edital está temporariamente indisponível.",
+      });
+      return;
+    }
+
+    const corpo = req.body as {
+      pdfBase64?: unknown;
+      nomeArquivo?: unknown;
+      concurso?: unknown;
+      banca?: unknown;
+    };
+
+    const pdfBase64 =
+      typeof corpo.pdfBase64 === "string" ? corpo.pdfBase64.trim() : "";
+    const nomeArquivo =
+      typeof corpo.nomeArquivo === "string"
+        ? corpo.nomeArquivo.trim().slice(0, 220)
+        : "edital.pdf";
+    const concurso =
+      typeof corpo.concurso === "string"
+        ? corpo.concurso.trim().slice(0, 180)
+        : "";
+    const banca =
+      typeof corpo.banca === "string"
+        ? corpo.banca.trim().slice(0, 120)
+        : "";
+
+    if (!pdfBase64 || pdfBase64.length > 36_000_000) {
+      res.status(400).json({
+        sucesso: false,
+        erro: "O PDF do edital está vazio ou ultrapassa o limite de análise.",
+      });
+      return;
+    }
+
+    let bytesPdf: Buffer;
+    try {
+      bytesPdf = Buffer.from(pdfBase64, "base64");
+    } catch {
+      res.status(400).json({ sucesso: false, erro: "O PDF enviado é inválido." });
+      return;
+    }
+
+    if (
+      bytesPdf.length <= 5 ||
+      bytesPdf.length > 25 * 1024 * 1024 ||
+      bytesPdf.subarray(0, 5).toString("ascii") !== "%PDF-"
+    ) {
+      res.status(400).json({
+        sucesso: false,
+        erro: "O arquivo recebido não é um PDF válido para análise.",
+      });
+      return;
+    }
+
+    const prompt = montarPromptAnaliseEdital({
+      nomeArquivo,
+      concurso,
+      banca,
+    });
+
+    const contents = [
+      {
+        role: "user",
+        parts: [
+          {
+            inlineData: {
+              mimeType: "application/pdf",
+              data: pdfBase64,
+            },
+          },
+          { text: prompt },
+        ],
+      },
+    ];
+
+    let resposta;
+    try {
+      resposta = await aiEdital.models.generateContent({
+        model: modeloEdital,
+        contents,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      });
+    } catch (erroPesquisa) {
+      console.warn(
+        "Pesquisa assistida indisponível na análise do edital; usando análise sem grounding:",
+        erroPesquisa
+      );
+      resposta = await aiEdital.models.generateContent({
+        model: modeloEdital,
+        contents,
+      });
+    }
+
+    const texto = resposta.text?.trim();
+    if (!texto) {
+      throw new Error("A IA não retornou a estrutura do edital.");
+    }
+
+    const json = extrairJson(texto);
+    const analise = normalizarRespostaAnaliseEdital(JSON.parse(json));
+
+    res.json({
+      sucesso: true,
+      analise,
+    });
+  } catch (erro) {
+    console.error("Erro ao analisar edital:", erro);
+    res.status(500).json({
+      sucesso: false,
+      erro:
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível analisar o edital.",
+    });
+  }
+}
 
 async function autenticarEControlarUso(
   req: Request,
@@ -153,7 +293,8 @@ async function autenticarEControlarUso(
       return;
     }
 
-    const importacao = req.path === "/analisar-prova";
+    const importacao =
+      req.path === "/analisar-prova" || req.path === "/analisar-edital";
     const chave = `${userId}:${importacao ? "importacao" : "geral"}`;
     const agora = Date.now();
     const janela = importacao ? janelaImportacaoMs : janelaGeralMs;
@@ -173,6 +314,7 @@ async function autenticarEControlarUso(
 
     recentes.push(agora);
     acessos.set(chave, recentes);
+    res.locals.userId = userId;
     next();
   } catch (erro) {
     console.error("Falha na autenticação da API:", erro);
@@ -189,7 +331,8 @@ function validarTamanhoDaRequisicao(
   next: NextFunction
 ) {
   const bytes = Number(req.header("content-length") || 0);
-  const importacao = req.path === "/analisar-prova";
+  const importacao =
+    req.path === "/analisar-prova" || req.path === "/analisar-edital";
   const limite = importacao ? 40 * 1024 * 1024 : 2 * 1024 * 1024;
 
   if (Number.isFinite(bytes) && bytes > limite) {
@@ -203,6 +346,21 @@ function validarTamanhoDaRequisicao(
   }
 
   next();
+}
+
+function extrairJson(texto: string) {
+  const limpo = texto
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+  const inicio = limpo.indexOf("{");
+  const fim = limpo.lastIndexOf("}");
+
+  if (inicio < 0 || fim <= inicio) {
+    throw new Error("A IA retornou o edital em um formato inválido.");
+  }
+
+  return limpo.slice(inicio, fim + 1);
 }
 
 process.env.PORT = String(portaInterna);
