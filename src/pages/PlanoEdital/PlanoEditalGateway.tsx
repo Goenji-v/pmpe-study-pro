@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./PlanoEdital.css";
 
 import { useApp } from "../../context/AppContext";
+import type { ConfiguracoesComCursos } from "../../types/cursos";
 import {
   type ConfiguracoesComEdital,
   type DiaSemanaId,
@@ -16,6 +17,7 @@ import {
   mesclarMateriasDoEdital,
   slugEdital,
 } from "../../utils/planoEdital";
+import { encontrarAulasParaMissao } from "../../utils/relacionarCursoEdital";
 import PlanoEstudos from "../PlanoEstudos/PlanoEstudos";
 
 export default function PlanoEditalGateway() {
@@ -29,6 +31,9 @@ export default function PlanoEditalGateway() {
     revisoes,
   } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
+  const configCursos = configuracoes as ConfiguracoesComCursos;
+  const cursos = configCursos.cursos ?? [];
+  const cursosAtivosIds = configCursos.cursosAtivosIds ?? [];
   const planoArmazenado = config.editalAtivo?.plano;
   const analise = config.editalAtivo?.analise;
   const [modo, setModo] = useState<"edital" | "anterior">("edital");
@@ -182,6 +187,16 @@ export default function PlanoEditalGateway() {
         </button>
       </header>
 
+      {cursosAtivosIds.length > 0 && (
+        <div className="plano-edital-cursos-ativos">
+          <div>
+            <span>CURSOS CONECTADOS</span>
+            <strong>{cursosAtivosIds.length} curso(s) ativo(s) procurando aulas para cada missão</strong>
+          </div>
+          <button type="button" onClick={() => navigate("/cursos")}>Gerenciar cursos</button>
+        </div>
+      )}
+
       {diagnostico.possuiDados && plano.totalSemanas > 2 && (
         <div className="plano-edital-adaptativo">
           <div>
@@ -318,6 +333,14 @@ export default function PlanoEditalGateway() {
                 <div className="plano-edital-missoes-detalhadas">
                   {dia.missoes.map((missao, indice) => {
                     const concluida = missoesConcluidas.includes(missao.id);
+                    const aulasRelacionadas = encontrarAulasParaMissao(
+                      cursos,
+                      cursosAtivosIds,
+                      missao.materia,
+                      missao.assunto,
+                      3
+                    );
+
                     return (
                       <article
                         key={missao.id}
@@ -337,6 +360,25 @@ export default function PlanoEditalGateway() {
                             ? ` · ${missao.metaQuestoes} questões`
                             : ""}
                         </small>
+
+                        {aulasRelacionadas.length > 0 && (
+                          <div className="plano-edital-aulas-curso">
+                            <span>🎥 Aulas relacionadas</span>
+                            {aulasRelacionadas.map((aula) => (
+                              <a
+                                key={`${aula.cursoId}-${aula.url}`}
+                                href={aula.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={`${aula.modulo} · correspondência ${Math.round(aula.score * 100)}%`}
+                              >
+                                <strong>{aula.curso}</strong>
+                                <small>{aula.aula}</small>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+
                         <button
                           type="button"
                           className={concluida ? "concluida" : ""}
