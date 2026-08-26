@@ -1,12 +1,15 @@
+import { useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
   Route,
   Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
-import PlanoEstudos from "./pages/PlanoEstudos/PlanoEstudos";
+import PlanoEditalGateway from "./pages/PlanoEdital/PlanoEditalGateway";
+import MeuEdital from "./pages/MeuEdital/MeuEdital";
 import ResolverSimuladoIA from "./pages/ResolverSimuladoIA/ResolverSimuladoIA";
 import MeusSimuladosIA from "./pages/MeusSimuladosIA/MeusSimuladosIA";
 import CronogramaIA from "./pages/CronogramaIA/CronogramaIA";
@@ -44,10 +47,27 @@ import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
 import NotificationCenter from "./components/NotificationCenter/NotificationCenter";
 import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
 
-import { AppProvider } from "./context/AppContext";
+import { AppProvider, useApp } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CronometroProvider } from "./context/CronometroContext";
 import { AuthProvider } from "./context/AuthContext";
+import type { ConfiguracoesComEdital } from "./types/editalInteligente";
+
+function EditalPrimeiroAcessoGuard() {
+  const { configuracoes, statusNuvem } = useApp();
+  const config = configuracoes as ConfiguracoesComEdital;
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (statusNuvem === "carregando") return;
+    if (config.editalOnboardingVisto) return;
+    if (location.pathname === "/meu-edital") return;
+    navigate("/meu-edital", { replace: true });
+  }, [config.editalOnboardingVisto, location.pathname, navigate, statusNuvem]);
+
+  return null;
+}
 
 function LayoutProtegido() {
   const location = useLocation();
@@ -58,6 +78,7 @@ function LayoutProtegido() {
       <ToastProvider>
         <RuntimeErrorGuard />
         <AppProvider>
+          <EditalPrimeiroAcessoGuard />
           <QuestaoIABridge />
           <CronometroProvider>
             <div className="layout">
@@ -70,8 +91,9 @@ function LayoutProtegido() {
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
 
-                    <Route path="/plano" element={<PlanoEstudos />} />
-                    <Route path="/plano-estudos" element={<PlanoEstudos />} />
+                    <Route path="/meu-edital" element={<MeuEdital />} />
+                    <Route path="/plano" element={<PlanoEditalGateway />} />
+                    <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
 
                     <Route path="/calendario" element={<Calendario />} />
                     <Route path="/cronograma-ia" element={<CronogramaIA />} />
