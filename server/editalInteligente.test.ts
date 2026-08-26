@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { normalizarRespostaAnaliseEdital } from "./editalInteligente.ts";
-import { gerarPlanoEdital } from "../src/utils/planoEdital.ts";
+import {
+  destrincharAssuntoParaPlano,
+  gerarPlanoEdital,
+} from "../src/utils/planoEdital.ts";
 import type { ConfiguracoesComEdital } from "../src/types/editalInteligente.ts";
 
 const configuracoes: ConfiguracoesComEdital = {
@@ -39,7 +42,7 @@ test("normaliza matérias e remove assuntos duplicados da análise", () => {
   assert.equal(analise.materias[0].assuntos[1].prioridade, "media");
 });
 
-test("cronograma respeita dias escolhidos e quantidade de matérias por dia", () => {
+test("cronograma mostra os sete dias e usa missões apenas nos dias escolhidos", () => {
   const analise = normalizarRespostaAnaliseEdital({
     concursoDetectado: "PMPE",
     materias: [
@@ -65,16 +68,26 @@ test("cronograma respeita dias escolhidos e quantidade de matérias por dia", ()
   });
 
   const plano = gerarPlanoEdital(analise, configuracoes);
-  const dias = plano.semanas.flatMap((semana) => semana.dias);
+  const dias = plano.semanas[0].dias;
 
   assert.equal(plano.totalAssuntos, 6);
   assert.equal(plano.totalSemanas, 1);
+  assert.equal(dias.length, 7);
   assert.deepEqual(
     dias.map((dia) => dia.diaSemana),
-    ["seg", "qua", "sex"]
+    ["seg", "ter", "qua", "qui", "sex", "sab", "dom"]
   );
-  assert.ok(dias.every((dia) => dia.missoes.length <= 2));
-  assert.ok(dias.every((dia) => dia.revisoesPlanejadas === 2));
+
+  const diasComMissao = dias
+    .filter((dia) => dia.missoes.length > 0)
+    .map((dia) => dia.diaSemana);
+  assert.deepEqual(diasComMissao, ["seg", "qua", "sex"]);
+
+  const diasInativos = dias.filter(
+    (dia) => !configuracoes.diasEstudo?.includes(dia.diaSemana)
+  );
+  assert.ok(diasInativos.every((dia) => dia.missoes.length === 0));
+  assert.ok(diasInativos.every((dia) => dia.minutosDisponiveis === 0));
 });
 
 test("assuntos de prioridade alta entram antes dos baixos dentro da disciplina", () => {
@@ -104,4 +117,17 @@ test("assuntos de prioridade alta entram antes dos baixos dentro da disciplina",
 
   assert.equal(missoes[0].assunto, "Alto");
   assert.equal(missoes[1].assunto, "Baixo");
+});
+
+test("destrincha listas amplas do edital em blocos menores de estudo", () => {
+  const partes = destrincharAssuntoParaPlano(
+    "Ato administrativo (conceito, requisitos, atributos, classificação, espécies, invalidação, anulação, revogação)"
+  );
+
+  assert.deepEqual(partes, [
+    "Ato administrativo — conceito e requisitos",
+    "Ato administrativo — atributos e classificação",
+    "Ato administrativo — espécies e invalidação",
+    "Ato administrativo — anulação e revogação",
+  ]);
 });
