@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./PlanoEdital.css";
@@ -7,8 +7,15 @@ import { useApp } from "../../context/AppContext";
 import {
   type ConfiguracoesComEdital,
   type DiaSemanaId,
+  type PrioridadeEdital,
 } from "../../types/editalInteligente";
-import { gerarPlanoEdital } from "../../utils/planoEdital";
+import { calcularDiagnosticoSemanalPlano } from "../../utils/adaptacaoPlano";
+import { adaptarPlanoEditalAoDesempenho } from "../../utils/adaptacaoPlanoEdital";
+import {
+  gerarPlanoEdital,
+  mesclarMateriasDoEdital,
+  slugEdital,
+} from "../../utils/planoEdital";
 import PlanoEstudos from "../PlanoEstudos/PlanoEstudos";
 
 export default function PlanoEditalGateway() {
@@ -16,6 +23,10 @@ export default function PlanoEditalGateway() {
     configuracoes,
     missoesConcluidas,
     setMissoesConcluidas,
+    setMaterias,
+    questoes,
+    sessoes,
+    revisoes,
   } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const planoArmazenado = config.editalAtivo?.plano;
@@ -23,17 +34,51 @@ export default function PlanoEditalGateway() {
   const [modo, setModo] = useState<"edital" | "anterior">("edital");
   const navigate = useNavigate();
 
-  const plano = useMemo(() => {
+  useEffect(() => {
+    if (!analise) return;
+
+    setMaterias((atuais) => mesclarMateriasDoEdital(atuais, analise));
+  }, [analise, setMaterias]);
+
+  const planoBase = useMemo(() => {
     if (!analise) return planoArmazenado;
 
     const estruturaAtualizada =
-      planoArmazenado?.versao === 2 &&
+      planoArmazenado?.versao === 3 &&
       planoArmazenado.semanas.every((semana) => semana.dias.length === 7);
 
     return estruturaAtualizada
       ? planoArmazenado
       : gerarPlanoEdital(analise, config);
   }, [analise, config, planoArmazenado]);
+
+  const materiasDoEdital = useMemo(
+    () => new Set((analise?.materias ?? []).map((materia) => slugEdital(materia.nome))),
+    [analise]
+  );
+
+  const diagnostico = useMemo(() => {
+    const pertenceAoEdital = (materia: string) => materiasDoEdital.has(slugEdital(materia));
+
+    return calcularDiagnosticoSemanalPlano({
+      questoes: questoes.filter((item) => pertenceAoEdital(item.materia)),
+      sessoes: sessoes.filter((item) => pertenceAoEdital(item.materia)),
+      revisoes: revisoes.filter((item) => pertenceAoEdital(item.materia)),
+      materiasDisponiveis: analise?.materias.map((materia) => materia.nome) ?? [],
+    });
+  }, [analise, materiasDoEdital, questoes, revisoes, sessoes]);
+
+  const plano = useMemo(
+    () =>
+      planoBase
+        ? adaptarPlanoEditalAoDesempenho(
+            planoBase,
+            diagnostico,
+            missoesConcluidas
+          )
+        : undefined,
+    [diagnostico, missoesConcluidas, planoBase]
+  );
 
   const [semanaSelecionada, setSemanaSelecionada] = useState(1);
   const [diaSelecionado, setDiaSelecionado] = useState<DiaSemanaId>(
@@ -127,15 +172,31 @@ export default function PlanoEditalGateway() {
           <span>PLANO PERSONALIZADO</span>
           <h1>{plano.titulo}</h1>
           <p>
-            Semana por semana, com os sete dias visíveis. O conteúdo entra apenas
-            nos dias marcados no perfil e os assuntos amplos são quebrados em
-            blocos menores de estudo.
+            As duas primeiras semanas equilibram matérias básicas e específicas.
+            A partir da semana 3, o Study Pro reorganiza as próximas missões pelo
+            seu desempenho recente, sem mexer no que já foi concluído.
           </p>
         </div>
         <button type="button" onClick={() => navigate("/meu-edital")}>
           Editar edital
         </button>
       </header>
+
+      {diagnostico.possuiDados && plano.totalSemanas > 2 && (
+        <div className="plano-edital-adaptativo">
+          <div>
+            <span>ADAPTAÇÃO ATIVA</span>
+            <strong>
+              {diagnostico.materiaPrioritaria
+                ? `${diagnostico.materiaPrioritaria} está recebendo mais prioridade`
+                : "Cronograma ajustado pelo desempenho recente"}
+            </strong>
+          </div>
+          <small>
+            Janela de {diagnostico.janelaDias} dias · confiança {diagnostico.confianca}%
+          </small>
+        </div>
+      )}
 
       <div className="plano-edital-resumo">
         <div><span>Blocos de estudo</span><strong>{idsPlano.size}</strong></div>
@@ -185,7 +246,11 @@ export default function PlanoEditalGateway() {
       <div className="plano-edital-resumo-semana">
         <div>
           <span>SEMANA {String(semana?.numero ?? 1).padStart(2, "0")}</span>
-          <h2>Escolha o dia e siga as missões na ordem</h2>
+          <h2>
+            {semana && semana.numero > 2 && diagnostico.possuiDados
+              ? "Semana adaptada ao seu desempenho"
+              : "Escolha o dia e siga as missões na ordem"}
+          </h2>
         </div>
         <strong>{progressoSemana}%</strong>
       </div>
@@ -261,7 +326,7 @@ export default function PlanoEditalGateway() {
                         <div className="plano-edital-missao-topo">
                           <span>Missão {indice + 1}</span>
                           <span className={`plano-edital-prioridade-texto prioridade-${missao.prioridade}`}>
-                            Prioridade {missao.prioridade}
+                            Prioridade {formatarPrioridade(missao.prioridade)}
                           </span>
                         </div>
                         <h3>{missao.materia}</h3>
@@ -308,4 +373,10 @@ export default function PlanoEditalGateway() {
       )}
     </section>
   );
+}
+
+function formatarPrioridade(prioridade: PrioridadeEdital) {
+  if (prioridade === "media") return "Média";
+  if (prioridade === "alta") return "Alta";
+  return "Baixa";
 }
