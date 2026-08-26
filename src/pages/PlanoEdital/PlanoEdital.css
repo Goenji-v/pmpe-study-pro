@@ -228,9 +228,275 @@
   color: #86efac;
 }
 
+.plano-edital-semanas-nav {
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.plano-edital-semanas-nav button {
+  min-width: 116px;
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: #182235;
+  color: #9eacc0;
+  cursor: pointer;
+}
+
+.plano-edital-semanas-nav button strong {
+  color: #e7eef8;
+}
+
+.plano-edital-semanas-nav button.ativo {
+  border-color: rgba(59, 130, 246, 0.72);
+  background: rgba(37, 99, 235, 0.16);
+}
+
+.plano-edital-resumo-semana {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 19px;
+  border-radius: 15px;
+  background: #182235;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.plano-edital-resumo-semana span,
+.plano-edital-titulo-dia span {
+  color: #60a5fa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.plano-edital-resumo-semana h2 {
+  margin: 4px 0 0;
+  font-size: 1.05rem;
+}
+
+.plano-edital-resumo-semana > strong {
+  font-size: 1.25rem;
+  color: #60a5fa;
+}
+
+.plano-edital-dias-nav {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.plano-edital-dias-nav button {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 8px;
+  border-radius: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(24, 34, 53, 0.78);
+  color: #c7d2e1;
+  cursor: pointer;
+}
+
+.plano-edital-dias-nav button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.plano-edital-dias-nav button small {
+  color: #7f8da4;
+}
+
+.plano-edital-dias-nav button.ativo {
+  border-color: #3b82f6;
+  background: rgba(37, 99, 235, 0.16);
+  color: #eff6ff;
+}
+
+.plano-edital-dias-nav button.dia-livre:not(.ativo) {
+  opacity: 0.52;
+}
+
+.plano-edital-conteudo-dia {
+  display: grid;
+  gap: 13px;
+  padding: 18px;
+  border-radius: 17px;
+  background: #182235;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.plano-edital-titulo-dia {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.plano-edital-titulo-dia h2 {
+  margin: 4px 0 3px;
+}
+
+.plano-edital-titulo-dia p {
+  margin: 0;
+  color: #8c9ab0;
+}
+
+.plano-edital-titulo-dia > strong {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #93c5fd;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.plano-edital-missoes-detalhadas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plano-edital-missoes-detalhadas article {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 15px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(7, 15, 28, 0.28);
+  transition: transform 180ms ease, border-color 180ms ease, opacity 180ms ease;
+}
+
+.plano-edital-missoes-detalhadas article:hover {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.34);
+}
+
+.plano-edital-missoes-detalhadas article.concluida {
+  opacity: 0.58;
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.plano-edital-missoes-detalhadas article.concluida h3,
+.plano-edital-missoes-detalhadas article.concluida p {
+  text-decoration: line-through;
+}
+
+.plano-edital-missao-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.plano-edital-missao-topo > span:first-child {
+  color: #60a5fa;
+  font-weight: 800;
+  font-size: 0.76rem;
+}
+
+.plano-edital-prioridade-texto {
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.plano-edital-prioridade-texto.prioridade-alta {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.13);
+}
+
+.plano-edital-prioridade-texto.prioridade-media {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.13);
+}
+
+.plano-edital-prioridade-texto.prioridade-baixa {
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.13);
+}
+
+.plano-edital-missoes-detalhadas h3 {
+  margin: 2px 0 0;
+  font-size: 1rem;
+}
+
+.plano-edital-missoes-detalhadas p {
+  margin: 0;
+  color: #c0cada;
+  line-height: 1.45;
+}
+
+.plano-edital-missoes-detalhadas small {
+  color: #7f8da4;
+}
+
+.plano-edital-missoes-detalhadas article > button {
+  justify-self: start;
+  margin-top: 5px;
+  border: 1px solid rgba(74, 222, 128, 0.26);
+  background: rgba(34, 197, 94, 0.09);
+  color: #bbf7d0;
+  border-radius: 9px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.plano-edital-missoes-detalhadas article > button.concluida {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.07);
+  color: #aeb9c9;
+}
+
+.plano-edital-revisoes-dia,
+.plano-edital-dia-vazio {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border-radius: 12px;
+}
+
+.plano-edital-revisoes-dia {
+  border: 1px solid rgba(245, 158, 11, 0.19);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.plano-edital-revisoes-dia strong {
+  color: #fcd34d;
+}
+
+.plano-edital-revisoes-dia span,
+.plano-edital-dia-vazio span {
+  color: #929fb2;
+  line-height: 1.45;
+}
+
+.plano-edital-dia-vazio {
+  border: 1px dashed rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.035);
+}
+
 @media (max-width: 1000px) {
   .plano-edital-resumo {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .plano-edital-dias-nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -253,8 +519,17 @@
     font-size: 1.3rem;
   }
 
-  .plano-edital-dias {
+  .plano-edital-dias,
+  .plano-edital-missoes-detalhadas {
     grid-template-columns: 1fr;
+  }
+
+  .plano-edital-dias-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plano-edital-titulo-dia {
+    flex-direction: column;
   }
 }
 
@@ -269,5 +544,9 @@
 
   .plano-edital-switch button {
     flex: 1;
+  }
+
+  .plano-edital-dias-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

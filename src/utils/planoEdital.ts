@@ -90,6 +90,69 @@ export function normalizarAnaliseEdital(
   };
 }
 
+export function destrincharAssuntoParaPlano(nomeOriginal: string): string[] {
+  const nome = nomeOriginal.replace(/\s+/g, " ").trim();
+  if (!nome) return [];
+
+  const partesPorPontoEVirgula = nome
+    .split(/\s*;\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (
+    partesPorPontoEVirgula.length >= 2 &&
+    partesPorPontoEVirgula.length <= 12
+  ) {
+    return partesPorPontoEVirgula;
+  }
+
+  const parentese = nome.match(/^(.+?)\s*\(([^()]*)\)\s*$/);
+  if (parentese) {
+    const base = parentese[1].trim();
+    const itens = parentese[2]
+      .split(/\s*[,;]\s*/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (
+      itens.length >= 4 &&
+      itens.length <= 20 &&
+      itens.every((item) => item.length <= 90)
+    ) {
+      const grupos: string[] = [];
+      for (let indice = 0; indice < itens.length; indice += 2) {
+        const grupo = itens.slice(indice, indice + 2);
+        grupos.push(`${base} — ${formatarGrupo(grupo)}`);
+      }
+      return grupos;
+    }
+  }
+
+  const doisPontos = nome.match(/^(.+?):\s*(.+)$/);
+  if (doisPontos) {
+    const base = doisPontos[1].trim();
+    const itens = doisPontos[2]
+      .split(/\s*[,;]\s*/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (
+      itens.length >= 4 &&
+      itens.length <= 20 &&
+      itens.every((item) => item.length <= 90)
+    ) {
+      const grupos: string[] = [];
+      for (let indice = 0; indice < itens.length; indice += 2) {
+        const grupo = itens.slice(indice, indice + 2);
+        grupos.push(`${base} — ${formatarGrupo(grupo)}`);
+      }
+      return grupos;
+    }
+  }
+
+  return [nome];
+}
+
 export function gerarPlanoEdital(
   analiseOriginal: AnaliseEdital,
   configuracoes: ConfiguracoesComEdital
@@ -107,10 +170,22 @@ export function gerarPlanoEdital(
   const filas = analise.materias
     .map((materia) => ({
       materia,
-      assuntos: [...materia.assuntos].sort((a, b) => {
-        const prioridade = ORDEM_PRIORIDADE[b.prioridade] - ORDEM_PRIORIDADE[a.prioridade];
-        return prioridade || a.nome.localeCompare(b.nome, "pt-BR");
-      }),
+      conteudos: [...materia.assuntos]
+        .sort((a, b) => {
+          const prioridade = ORDEM_PRIORIDADE[b.prioridade] - ORDEM_PRIORIDADE[a.prioridade];
+          return prioridade || a.nome.localeCompare(b.nome, "pt-BR");
+        })
+        .flatMap((assunto) => {
+          const partes = destrincharAssuntoParaPlano(assunto.nome);
+          return partes.map((nomePlano, indice) => ({
+            assunto,
+            nomePlano,
+            assuntoId:
+              partes.length > 1
+                ? `${assunto.id}-parte-${indice + 1}`
+                : assunto.id,
+          }));
+        }),
     }))
     .sort((a, b) => {
       const incidencia = b.materia.incidenciaEstimada - a.materia.incidenciaEstimada;
@@ -120,12 +195,21 @@ export function gerarPlanoEdital(
   const sequencia: Array<{
     materia: MateriaEdital;
     assunto: MateriaEdital["assuntos"][number];
+    assuntoId: string;
+    nomePlano: string;
   }> = [];
 
-  while (filas.some((fila) => fila.assuntos.length > 0)) {
+  while (filas.some((fila) => fila.conteudos.length > 0)) {
     filas.forEach((fila) => {
-      const assunto = fila.assuntos.shift();
-      if (assunto) sequencia.push({ materia: fila.materia, assunto });
+      const conteudo = fila.conteudos.shift();
+      if (conteudo) {
+        sequencia.push({
+          materia: fila.materia,
+          assunto: conteudo.assunto,
+          assuntoId: conteudo.assuntoId,
+          nomePlano: conteudo.nomePlano,
+        });
+      }
     });
   }
 
@@ -142,16 +226,19 @@ export function gerarPlanoEdital(
   for (let semana = 1; semana <= totalSemanas; semana += 1) {
     const dias: DiaPlanoEdital[] = [];
 
-    diasEstudo.forEach((diaSemana) => {
-      if (ponteiro >= sequencia.length) return;
-
-      const restantes = sequencia.length - ponteiro;
-      const quantidadeMissoes = Math.min(materiasPorDia, restantes);
-      const duracaoMissao = Math.max(10, Math.floor(minutosConteudo / quantidadeMissoes));
+    DIAS_SEMANA.forEach((diaCalendario) => {
+      const diaSemana = diaCalendario.id;
+      const ehDiaEstudo = diasEstudo.includes(diaSemana);
+      const restantes = Math.max(0, sequencia.length - ponteiro);
+      const quantidadeMissoes = ehDiaEstudo
+        ? Math.min(materiasPorDia, restantes)
+        : 0;
+      const duracaoMissao = quantidadeMissoes > 0
+        ? Math.max(10, Math.floor(minutosConteudo / quantidadeMissoes))
+        : 0;
       const questoesMissao = quantidadeMissoes > 0
         ? Math.floor(metaQuestoesDia / quantidadeMissoes)
         : 0;
-      const nomeDia = DIAS_SEMANA.find((dia) => dia.id === diaSemana)?.nome ?? diaSemana;
 
       const missoes = Array.from({ length: quantidadeMissoes }, () => {
         const item = sequencia[ponteiro++];
@@ -160,8 +247,8 @@ export function gerarPlanoEdital(
           ordem: ordemGlobal,
           materiaId: item.materia.id,
           materia: item.materia.nome,
-          assuntoId: item.assunto.id,
-          assunto: item.assunto.nome,
+          assuntoId: item.assuntoId,
+          assunto: item.nomePlano,
           prioridade: item.assunto.prioridade,
           duracaoMinutos: duracaoMissao,
           metaQuestoes: questoesMissao,
@@ -174,9 +261,9 @@ export function gerarPlanoEdital(
         id: `edital-s${semana}-${diaSemana}`,
         semana,
         diaSemana,
-        nomeDia,
-        minutosDisponiveis: minutosPorDia,
-        revisoesPlanejadas: revisoesPorDia,
+        nomeDia: diaCalendario.nome,
+        minutosDisponiveis: ehDiaEstudo ? minutosPorDia : 0,
+        revisoesPlanejadas: ehDiaEstudo ? revisoesPorDia : 0,
         missoes,
       });
     });
@@ -185,7 +272,8 @@ export function gerarPlanoEdital(
   }
 
   return {
-    id: `plano-edital-${Date.now()}`,
+    versao: 2,
+    id: `plano-edital-${analise.analisadoEm}`,
     titulo: `Plano do edital - ${analise.concursoDetectado}`,
     geradoEm: new Date().toISOString(),
     totalAssuntos: sequencia.length,
@@ -284,4 +372,9 @@ function normalizarDias(dias?: DiaSemanaId[]): DiaSemanaId[] {
   }
 
   return DIAS_SEMANA.map((dia) => dia.id).filter((dia) => unicos.includes(dia));
+}
+
+function formatarGrupo(itens: string[]) {
+  if (itens.length <= 1) return itens[0] ?? "";
+  return `${itens[0]} e ${itens[1]}`;
 }

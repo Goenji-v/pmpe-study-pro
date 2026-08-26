@@ -27,9 +27,15 @@ OBJETIVO:
 5. não inventar assunto que não esteja no edital;
 6. consolidar itens repetidos sem perder conteúdo;
 7. manter assuntos específicos separados quando forem claramente diferentes;
-8. atribuir prioridade alta, média ou baixa a cada assunto considerando a recorrência histórica típica da banca/concurso e a importância do tópico para a disciplina;
-9. atribuir incidenciaEstimada de 1 a 5 para cada matéria. Essa incidência é uma estimativa de prioridade de estudo, não uma probabilidade estatística;
-10. quando houver acesso à pesquisa, use-a somente para ajudar na PRIORIZAÇÃO. A lista de conteúdos deve continuar vindo exclusivamente do PDF.
+8. destrinchar itens muito amplos em unidades menores e estudáveis quando o próprio texto do edital trouxer uma lista de subtópicos;
+9. evitar devolver um único assunto com uma sequência longa de conceitos separados por vírgulas quando esses conceitos puderem virar blocos de estudo independentes;
+10. atribuir prioridade alta, média ou baixa a cada assunto considerando a recorrência histórica típica da banca/concurso e a importância do tópico para a disciplina;
+11. atribuir incidenciaEstimada de 1 a 5 para cada matéria. Essa incidência é uma estimativa de prioridade de estudo, não uma probabilidade estatística;
+12. quando houver acesso à pesquisa, use-a somente para ajudar na PRIORIZAÇÃO. A lista de conteúdos deve continuar vindo exclusivamente do PDF.
+
+EXEMPLO DE GRANULARIDADE:
+- se o edital disser "Ato administrativo (conceito, requisitos, atributos, classificação, espécies, invalidação, anulação, revogação)", prefira separar em blocos menores coerentes, sem acrescentar conteúdo externo;
+- se o edital disser apenas "Lei nº 10.826/2003 (Estatuto do Desarmamento)", preserve como um único assunto, pois o PDF não detalhou subtópicos.
 
 IMPORTANTE:
 - a prioridade pode usar conhecimento histórico/pesquisa, mas NUNCA acrescente matéria ou assunto que não esteja no PDF;

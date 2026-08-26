@@ -76,6 +76,7 @@ export type SemanaPlanoEdital = {
 };
 
 export type PlanoEdital = {
+  versao?: number;
   id: string;
   titulo: string;
   geradoEm: string;
