@@ -41,6 +41,7 @@ type GrupoMenuProps = {
 
 const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
   planejamento: [
+    "/meu-edital",
     "/cronograma-ia",
     "/plano",
     "/plano-estudos",
@@ -177,6 +178,7 @@ export default function Sidebar() {
             aberto={grupoAberto === "planejamento"}
             onToggle={alternarGrupo}
           >
+            <ItemMenu to="/meu-edital" texto="Meu Edital" />
             <ItemMenu to="/plano" texto="Plano de Estudos" />
             <ItemMenu to="/calendario" texto="Calendário" />
             <ItemMenu to="/cronograma-ia" texto="Cronograma IA" />

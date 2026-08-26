@@ -1,0 +1,273 @@
+.plano-edital-wrapper,
+.plano-edital-page {
+  display: grid;
+  gap: 16px;
+}
+
+.plano-edital-switch {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.plano-edital-switch button {
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 13px;
+  cursor: pointer;
+  background: transparent;
+  color: #8fa0b8;
+  font-weight: 700;
+}
+
+.plano-edital-switch button.ativo {
+  background: #2563eb;
+  color: white;
+}
+
+.plano-edital-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.2), transparent 36%),
+    #182235;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.plano-edital-hero span,
+.plano-edital-semana > header span {
+  color: #60a5fa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.plano-edital-hero h1 {
+  margin: 5px 0 7px;
+}
+
+.plano-edital-hero p {
+  margin: 0;
+  color: #9cabc0;
+  max-width: 720px;
+}
+
+.plano-edital-hero button {
+  align-self: flex-start;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  background: rgba(59, 130, 246, 0.1);
+  color: #bfdbfe;
+  border-radius: 10px;
+  padding: 10px 13px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.plano-edital-resumo {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.plano-edital-resumo > div {
+  padding: 13px;
+  border-radius: 13px;
+  background: #182235;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.plano-edital-resumo span {
+  display: block;
+  color: #8290a7;
+  font-size: 0.72rem;
+  margin-bottom: 4px;
+}
+
+.plano-edital-resumo strong {
+  font-size: 1rem;
+}
+
+.plano-edital-progresso {
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.plano-edital-progresso span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #22c55e);
+  transition: width 300ms ease;
+}
+
+.plano-edital-semanas {
+  display: grid;
+  gap: 14px;
+}
+
+.plano-edital-semana {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 17px;
+  background: #182235;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.plano-edital-semana > header h2 {
+  margin: 2px 0 0;
+  font-size: 2rem;
+}
+
+.plano-edital-dias {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plano-edital-dia {
+  padding: 12px;
+  border-radius: 13px;
+  background: rgba(7, 15, 28, 0.32);
+  border: 1px solid rgba(148, 163, 184, 0.11);
+}
+
+.plano-edital-dia-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.plano-edital-dia-topo div {
+  display: grid;
+  gap: 2px;
+}
+
+.plano-edital-dia-topo small {
+  color: #7f8da4;
+}
+
+.plano-edital-dia-topo > span {
+  color: #93c5fd;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.plano-edital-missoes {
+  display: grid;
+  gap: 7px;
+}
+
+.plano-edital-missoes button {
+  display: grid;
+  grid-template-columns: 5px 1fr 28px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: 11px;
+  cursor: pointer;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  background: rgba(148, 163, 184, 0.04);
+  color: #e5edf8;
+}
+
+.plano-edital-missoes button.concluida {
+  opacity: 0.58;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.plano-edital-missoes button.concluida strong,
+.plano-edital-missoes button.concluida div > span {
+  text-decoration: line-through;
+}
+
+.plano-edital-missoes button > div {
+  display: grid;
+  gap: 3px;
+}
+
+.plano-edital-missoes button div > span {
+  color: #b6c2d3;
+  font-size: 0.82rem;
+}
+
+.plano-edital-missoes button small {
+  color: #75849b;
+}
+
+.prioridade {
+  width: 5px;
+  height: 42px;
+  border-radius: 999px;
+}
+
+.prioridade-alta { background: #ef4444; }
+.prioridade-media { background: #f59e0b; }
+.prioridade-baixa { background: #3b82f6; }
+
+.plano-edital-check {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #86efac;
+}
+
+@media (max-width: 1000px) {
+  .plano-edital-resumo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .plano-edital-hero {
+    flex-direction: column;
+  }
+
+  .plano-edital-semana {
+    grid-template-columns: 1fr;
+  }
+
+  .plano-edital-semana > header {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .plano-edital-semana > header h2 {
+    font-size: 1.3rem;
+  }
+
+  .plano-edital-dias {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .plano-edital-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plano-edital-switch {
+    width: 100%;
+  }
+
+  .plano-edital-switch button {
+    flex: 1;
+  }
+}
