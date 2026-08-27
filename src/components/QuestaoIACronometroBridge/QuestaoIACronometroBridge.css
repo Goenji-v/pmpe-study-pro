@@ -10,6 +10,7 @@
 }
 
 .questoes-crono-inicio {
+  position: relative;
   width: min(460px, 100%);
   padding: 24px;
   background: #0f172a;
@@ -51,7 +52,6 @@
 
 .questoes-crono-inicio button {
   width: 100%;
-  margin-top: 18px;
   border: 0;
   border-radius: 10px;
   min-height: 44px;
@@ -60,6 +60,45 @@
   background: #2563eb;
   font-weight: 800;
   cursor: pointer;
+}
+
+.questoes-crono-inicio .questoes-crono-fechar {
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  color: #cbd5e1;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.questoes-crono-inicio .questoes-crono-fechar:hover {
+  color: #fff;
+  background: #334155;
+}
+
+.questoes-crono-inicio-acoes {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.questoes-crono-inicio .questoes-crono-agora-nao {
+  color: #cbd5e1;
+  background: #334155;
+}
+
+.questoes-crono-inicio .questoes-crono-agora-nao:hover {
+  background: #475569;
 }
 
 .questoes-crono-mini {
@@ -140,7 +179,12 @@
   }
 
   .questoes-crono-inicio h2 {
+    padding-right: 36px;
     font-size: 21px;
+  }
+
+  .questoes-crono-inicio-acoes {
+    grid-template-columns: 1fr;
   }
 
   .questoes-crono-mini {
