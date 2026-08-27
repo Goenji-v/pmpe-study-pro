@@ -1,0 +1,157 @@
+.questoes-crono-bloqueio {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.76);
+  backdrop-filter: blur(5px);
+}
+
+.questoes-crono-inicio {
+  width: min(460px, 100%);
+  padding: 24px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.questoes-crono-inicio > span {
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.questoes-crono-inicio h2 {
+  margin: 7px 0 8px;
+  color: #f8fafc;
+  font-size: 24px;
+}
+
+.questoes-crono-inicio p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.questoes-crono-inicio small {
+  display: block;
+  margin-top: 12px;
+  padding: 9px 10px;
+  color: #fcd34d;
+  font-size: 11px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 9px;
+}
+
+.questoes-crono-inicio button {
+  width: 100%;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 10px;
+  min-height: 44px;
+  padding: 10px 14px;
+  color: #fff;
+  background: #2563eb;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.questoes-crono-mini {
+  position: fixed;
+  top: 78px;
+  right: 18px;
+  z-index: 1500;
+  width: 190px;
+  padding: 10px 11px;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28);
+}
+
+.questoes-crono-mini > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.questoes-crono-mini span {
+  color: #60a5fa;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.questoes-crono-mini strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+}
+
+.questoes-crono-mini > small {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.questoes-crono-mini-acoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.questoes-crono-mini-acoes button {
+  border: 0;
+  border-radius: 7px;
+  min-height: 30px;
+  padding: 5px 7px;
+  color: #fff;
+  background: #334155;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.questoes-crono-mini-acoes .cancelar {
+  background: #7f1d1d;
+}
+
+@media (max-width: 700px) {
+  .questoes-crono-bloqueio {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .questoes-crono-inicio {
+    padding: 19px;
+    border-radius: 16px;
+  }
+
+  .questoes-crono-inicio h2 {
+    font-size: 21px;
+  }
+
+  .questoes-crono-mini {
+    top: auto;
+    right: 10px;
+    bottom: 12px;
+    width: 172px;
+    padding: 9px;
+  }
+
+  .questoes-crono-mini strong {
+    font-size: 14px;
+  }
+}

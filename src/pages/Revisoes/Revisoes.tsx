@@ -30,6 +30,7 @@ type RevisaoIA = {
 type DesempenhoRevisao = "facil" | "media" | "dificil";
 
 const CHAVE_REVISOES_IA_LEGADA = "pmpe_revisoes_ia";
+const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
 
 function chaveRevisoesIA(userId: string) {
   return `pmpe:${userId}:revisoes-ia`;
@@ -177,23 +178,63 @@ export default function Revisoes() {
     [revisoesPendentes]
   );
 
-  function iniciarRevisao(revisao: Revisao) {
+  function obterDadosCanonicos(revisao: Revisao) {
     const referencia = localizarReferenciaCanonica(materias, {
       materia: revisao.materia,
       assunto: revisao.assunto,
     });
 
+    return {
+      materia: referencia?.materia.nome ?? revisao.materia,
+      materiaId: referencia?.materia.id ?? revisao.materiaId,
+      modulo:
+        referencia?.modulo.nome ??
+        (revisao.modulo && revisao.modulo !== "Geral" ? revisao.modulo : undefined),
+      moduloId: referencia?.modulo.id ?? revisao.moduloId,
+      assunto: referencia?.assunto.nome ?? revisao.assunto,
+      assuntoId: referencia?.assunto.id ?? revisao.assuntoId,
+    };
+  }
+
+  function abrirEstudo(revisao: Revisao) {
+    const dados = obterDadosCanonicos(revisao);
+
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify({
+        ...dados,
+        tipo: "revisao",
+        formatoRevisao: "teoria",
+        objetivo: `Revisar ${dados.assunto}`,
+        observacao: `Revisão etapa ${revisao.etapa}`,
+      })
+    );
+
+    navigate("/central-estudos");
+  }
+
+  function abrirQuestoes(revisao: Revisao) {
+    const dados = obterDadosCanonicos(revisao);
+
     sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
     sessionStorage.setItem(
       "pmpe:gerar-ia:prefill",
       JSON.stringify({
-        materia: referencia?.materia.nome ?? revisao.materia,
-        modulo:
-          referencia?.modulo.nome ??
-          (revisao.modulo && revisao.modulo !== "Geral" ? revisao.modulo : undefined),
-        assunto: referencia?.assunto.nome ?? revisao.assunto,
+        materia: dados.materia,
+        modulo: dados.modulo,
+        assunto: dados.assunto,
       })
     );
+    sessionStorage.setItem(
+      CHAVE_ORIGEM_REVISAO_QUESTOES,
+      JSON.stringify({
+        ...dados,
+        revisaoId: revisao.id,
+        etapa: revisao.etapa,
+        criadoEm: new Date().toISOString(),
+      })
+    );
+
     navigate("/gerar-simulado-ia");
   }
 
@@ -279,7 +320,8 @@ export default function Revisoes() {
   }
 
   const propsGrupo = {
-    iniciarRevisao,
+    abrirEstudo,
+    abrirQuestoes,
     concluirRevisao,
     reagendarRevisao: reagendar,
     excluirRevisao,
@@ -367,7 +409,8 @@ function ResumoCard({ titulo, valor, classe }: ResumoCardProps) {
 type GrupoRevisoesProps = {
   titulo: string;
   revisoes: Revisao[];
-  iniciarRevisao: (revisao: Revisao) => void;
+  abrirEstudo: (revisao: Revisao) => void;
+  abrirQuestoes: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
   excluirRevisao: (revisao: Revisao) => void;
@@ -376,7 +419,8 @@ type GrupoRevisoesProps = {
 function GrupoRevisoes({
   titulo,
   revisoes,
-  iniciarRevisao,
+  abrirEstudo,
+  abrirQuestoes,
   concluirRevisao,
   reagendarRevisao,
   excluirRevisao,
@@ -424,9 +468,16 @@ function GrupoRevisoes({
                   <button
                     type="button"
                     className="revisao-iniciar"
-                    onClick={() => iniciarRevisao(revisao)}
+                    onClick={() => abrirEstudo(revisao)}
                   >
-                    ▶ Revisar agora
+                    ▶ Estudar
+                  </button>
+                  <button
+                    type="button"
+                    className="revisao-questoes"
+                    onClick={() => abrirQuestoes(revisao)}
+                  >
+                    ❓ Questões
                   </button>
                   <button
                     type="button"
