@@ -139,7 +139,7 @@
 
 .revisao-lateral {
   display: flex;
-  min-width: 315px;
+  min-width: 390px;
   flex-direction: column;
   align-items: flex-end;
   gap: 7px;
@@ -175,6 +175,14 @@
 
 .revisao-iniciar:hover {
   background: #1d4ed8;
+}
+
+.revisao-questoes {
+  background: #7c3aed;
+}
+
+.revisao-questoes:hover {
+  background: #6d28d9;
 }
 
 .revisao-concluir-toggle {
@@ -360,8 +368,12 @@
 
   .revisao-acoes-compactas {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 38px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
+  }
+
+  .revisao-opcoes-toggle {
+    grid-column: auto;
   }
 
   .page-interna .revisoes-container .revisao-acoes-compactas button,
