@@ -3,162 +3,238 @@
 }
 
 .revisoes-title {
-  font-size: 34px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  font-size: 30px;
 }
 
 .revisoes-subtitle {
+  margin-bottom: 24px;
   color: #94a3b8;
-  margin-bottom: 28px;
+}
+
+.revisoes-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin: -6px 0 20px;
+  padding: 12px 14px;
+  background: #172033;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.revisoes-toolbar button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .revisoes-resumo {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 26px;
+  gap: 14px;
+  margin-bottom: 22px;
 }
 
 .revisao-resumo-card {
+  padding: 16px;
   background: #1e293b;
   border: 1px solid #334155;
-  border-left: 5px solid #64748b;
-  border-radius: 16px;
-  padding: 20px;
+  border-left: 4px solid #64748b;
+  border-radius: 14px;
 }
 
 .revisao-resumo-card span {
   display: block;
+  margin-bottom: 5px;
   color: #94a3b8;
-  font-size: 14px;
-  margin-bottom: 8px;
+  font-size: 12px;
 }
 
 .revisao-resumo-card strong {
-  font-size: 30px;
+  font-size: 25px;
 }
 
-.resumo-atrasado {
-  border-left-color: #ef4444;
-}
-
-.resumo-hoje {
-  border-left-color: #f59e0b;
-}
-
-.resumo-futuro {
-  border-left-color: #3b82f6;
-}
-
-.resumo-concluido {
-  border-left-color: #22c55e;
-}
+.resumo-atrasado { border-left-color: #ef4444; }
+.resumo-hoje { border-left-color: #f59e0b; }
+.resumo-futuro { border-left-color: #3b82f6; }
+.resumo-concluido { border-left-color: #22c55e; }
 
 .revisoes-grupo {
+  margin-bottom: 20px;
+  padding: 18px;
   background: #1e293b;
   border: 1px solid #334155;
-  border-radius: 18px;
-  padding: 22px;
-  margin-bottom: 24px;
+  border-radius: 16px;
 }
 
 .revisoes-grupo h2 {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+  font-size: 18px;
 }
 
 .revisoes-lista {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 9px;
 }
 
 .revisao-card {
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 14px;
-  padding: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
+  padding: 13px 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
 }
 
-.revisao-conteudo strong {
+.revisao-conteudo {
+  min-width: 0;
+  flex: 1;
+}
+
+.revisao-conteudo strong,
+.revisao-card > div > strong {
   color: #60a5fa;
+  font-size: 14px;
 }
 
-.revisao-conteudo p {
-  margin: 6px 0;
+.revisao-conteudo p,
+.revisao-card > div > p {
+  margin: 4px 0;
+  color: #f8fafc;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .revisao-conteudo span,
-.revisao-conteudo small {
+.revisao-conteudo small,
+.revisao-card > div > span {
   display: block;
   color: #94a3b8;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .revisao-conteudo small {
-  margin-top: 5px;
+  margin-top: 3px;
 }
 
-.revisao-acoes {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.revisao-caminho {
+  display: block;
+  margin-top: 3px;
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.revisao-avaliacao,
-.revisao-reagendar {
+.revisao-lateral {
   display: flex;
-  align-items: center;
+  min-width: 315px;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 7px;
-  padding: 7px;
-  background: #172033;
-  border: 1px solid #334155;
-  border-radius: 10px;
 }
 
-.revisao-avaliacao span,
-.revisao-reagendar span {
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 700;
+.revisao-acoes-compactas {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-.revisao-acoes .avaliacao-dificil { background: #b91c1c; }
-.revisao-acoes .avaliacao-media { background: #d97706; }
-.revisao-acoes .avaliacao-facil { background: #15803d; }
-.revisao-reagendar button { background: #475569; }
-.revisao-resultado { display: block; margin-top: 7px; font-weight: 800; }
-.resultado-facil { color: #4ade80; }
-.resultado-media { color: #fbbf24; }
-.resultado-dificil { color: #f87171; }
-
-.revisao-acoes button {
-  border: none;
-  border-radius: 9px;
-  padding: 9px 13px;
-  color: white;
-  font-weight: 700;
+.revisao-acoes-compactas button,
+.revisao-painel-compacto button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 750;
   cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
-.revisao-concluir {
-  background: #16a34a;
+.revisao-acoes-compactas button:hover,
+.revisao-painel-compacto button:hover {
+  transform: translateY(-1px);
 }
 
-.revisao-concluir:hover {
+.revisao-iniciar {
+  background: #2563eb;
+}
+
+.revisao-iniciar:hover {
+  background: #1d4ed8;
+}
+
+.revisao-concluir-toggle {
   background: #15803d;
 }
 
-.revisao-excluir {
-  background: #dc2626;
+.revisao-concluir-toggle:hover,
+.revisao-concluir-toggle.ativo {
+  background: #166534;
+  border-color: #4ade80;
 }
 
-.revisao-excluir:hover {
-  background: #b91c1c;
+.revisao-opcoes-toggle {
+  min-width: 38px;
+  background: #334155;
+  letter-spacing: 1px;
 }
+
+.revisao-opcoes-toggle:hover,
+.revisao-opcoes-toggle.ativo {
+  background: #475569;
+  border-color: #64748b;
+}
+
+.revisao-painel-compacto {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 6px;
+  background: #172033;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  animation: revisao-painel-entrada 130ms ease-out;
+}
+
+.revisao-painel-compacto span {
+  margin-right: 3px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.revisao-painel-avaliacao .avaliacao-dificil { background: #b91c1c; }
+.revisao-painel-avaliacao .avaliacao-media { background: #d97706; }
+.revisao-painel-avaliacao .avaliacao-facil { background: #15803d; }
+.revisao-painel-opcoes button { background: #475569; }
+.revisao-painel-opcoes .revisao-excluir { background: #b91c1c; }
+
+.revisao-resultado {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.resultado-facil { color: #4ade80; }
+.resultado-media { color: #fbbf24; }
+.resultado-dificil { color: #f87171; }
 
 .revisao-concluida {
   opacity: 0.72;
@@ -166,16 +242,36 @@
 }
 
 .revisoes-vazio {
+  padding: 34px;
   background: #1e293b;
   border: 1px solid #334155;
-  border-radius: 18px;
-  padding: 40px;
+  border-radius: 16px;
   text-align: center;
 }
 
 .revisoes-vazio p {
+  margin-top: 8px;
   color: #94a3b8;
-  margin-top: 10px;
+}
+
+@keyframes revisao-painel-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revisao-painel-compacto,
+  .revisao-acoes-compactas button,
+  .revisao-painel-compacto button {
+    animation: none;
+    transition: none;
+  }
 }
 
 @media (max-width: 900px) {
@@ -184,115 +280,123 @@
   }
 
   .revisao-card {
-    align-items: flex-start;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .revisao-lateral {
+    width: 100%;
+    min-width: 0;
+    align-items: stretch;
+  }
+
+  .revisao-acoes-compactas,
+  .revisao-painel-compacto {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 650px) {
+  .revisoes-toolbar {
+    align-items: stretch;
     flex-direction: column;
   }
 }
 
 @media (max-width: 550px) {
+  .revisoes-title {
+    font-size: 26px;
+  }
+
+  .revisoes-subtitle {
+    margin-bottom: 18px;
+    font-size: 12px;
+  }
+
   .revisoes-resumo {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
   }
 
   .revisao-resumo-card {
-    padding: 11px;
+    padding: 10px;
     border-left-width: 3px;
-    border-radius: 10px;
+    border-radius: 9px;
   }
 
   .revisao-resumo-card span {
-    margin-bottom: 4px;
-    font-size: 11px;
+    margin-bottom: 3px;
+    font-size: 10px;
   }
 
   .revisao-resumo-card strong {
-    font-size: 22px;
+    font-size: 20px;
   }
 
-  .revisao-acoes {
+  .revisoes-grupo {
+    padding: 12px;
+    border-radius: 13px;
+  }
+
+  .revisoes-grupo h2 {
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
+
+  .revisao-card {
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .revisao-conteudo strong,
+  .revisao-card > div > strong {
+    font-size: 13px;
+  }
+
+  .revisao-conteudo p,
+  .revisao-card > div > p {
+    font-size: 13px;
+  }
+
+  .revisao-acoes-compactas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 38px;
     width: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 7px;
   }
 
-  .revisao-avaliacao,
-  .revisao-reagendar {
-    width: 100%;
-    padding: 5px;
-    gap: 5px;
-    border-radius: 8px;
-  }
-
-  .revisao-avaliacao {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: auto repeat(3, minmax(0, 1fr));
-  }
-
-  .revisao-reagendar {
-    display: grid;
-    grid-template-columns: auto repeat(3, minmax(0, 1fr));
-  }
-
-  .page-interna .revisoes-container .revisao-acoes button {
+  .page-interna .revisoes-container .revisao-acoes-compactas button,
+  .page-interna .revisoes-container .revisao-painel-compacto button {
     min-width: 0;
-    min-height: 40px;
-    flex: 0 1 auto;
-    padding: 7px 8px;
-    border-radius: 7px;
-    font-size: 11px;
+    min-height: 36px;
+    padding: 6px 7px;
+    font-size: 10px;
   }
 
-  .revisao-excluir {
-    align-self: stretch;
-    padding-inline: 10px !important;
+  .revisao-painel-compacto {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .revisao-painel-opcoes {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .revisao-painel-compacto span {
+    grid-column: 1 / -1;
+    margin: 0 0 2px;
+    font-size: 9px;
   }
 
   .revisoes-toolbar {
     gap: 8px;
-    padding: 10px;
-    font-size: 12px;
+    padding: 9px;
+    font-size: 11px;
   }
 
   .page-interna .revisoes-container .revisoes-toolbar button {
-    min-height: 40px;
-    padding: 7px 10px;
-    font-size: 11px;
+    min-height: 36px;
+    padding: 6px 9px;
+    font-size: 10px;
   }
-}
-.revisao-caminho {
-  display: block;
-  margin-top: 5px;
-  color: #60a5fa;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.revisoes-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  margin: -8px 0 22px;
-  padding: 14px 16px;
-  background: #172033;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  color: #cbd5e1;
-}
-
-.revisoes-toolbar button {
-  border: 0;
-  border-radius: 9px;
-  padding: 10px 14px;
-  background: #2563eb;
-  color: white;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-@media (max-width: 650px) {
-  .revisoes-toolbar { align-items: stretch; flex-direction: column; }
 }
