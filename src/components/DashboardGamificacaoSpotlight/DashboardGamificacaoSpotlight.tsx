@@ -34,14 +34,14 @@ export default function DashboardGamificacaoSpotlight() {
 
     const localizarDestino = () => {
       const encontrado = document.querySelector<HTMLElement>(
-        ".dashboard-pro-header > div:first-child"
+        ".dashboard-pro-header h1"
       );
       setDestino(encontrado);
     };
 
     localizarDestino();
 
-    if (document.querySelector(".dashboard-pro-header")) {
+    if (document.querySelector(".dashboard-pro-header h1")) {
       return;
     }
 
@@ -64,41 +64,42 @@ export default function DashboardGamificacaoSpotlight() {
   );
 
   return createPortal(
-    <section className="dashboard-xp-spotlight" aria-label="Progresso de nível">
-      <div className="dashboard-xp-topo">
-        <div className="dashboard-xp-identidade">
-          <span>NÍVEL {gamificacao.nivel}</span>
-          <strong>{gamificacao.tituloNivel}</strong>
-        </div>
+    <span className="dashboard-xp-inline" aria-label="Progresso de nível">
+      <span className="dashboard-xp-inline-nivel">
+        Nível {gamificacao.nivel}
+        <small>{gamificacao.tituloNivel}</small>
+      </span>
 
-        <div className="dashboard-xp-acoes">
+      <span className="dashboard-xp-inline-progresso">
+        <span className="dashboard-xp-inline-meta">
           <b>{gamificacao.xp} XP</b>
-          <button
-            type="button"
-            onClick={() => navigate("/conquistas")}
-            title="Abrir Conquistas"
-          >
-            🏆 Conquistas <span aria-hidden="true">›</span>
-          </button>
-        </div>
-      </div>
+          <small>{xpFaltante} XP para o Nível {proximoNivel}</small>
+        </span>
+        <span
+          className="dashboard-xp-inline-barra"
+          role="progressbar"
+          aria-label={`Progresso para o nível ${proximoNivel}`}
+          aria-valuemin={0}
+          aria-valuemax={XP_POR_NIVEL}
+          aria-valuenow={xpNoNivel}
+        >
+          <i style={{ width: `${progresso}%` }} />
+        </span>
+      </span>
 
-      <div className="dashboard-xp-meta">
-        <span>Próximo: Nível {proximoNivel}</span>
-        <small>{xpFaltante} XP para subir de nível</small>
-      </div>
-
-      <div
-        className="dashboard-xp-barra"
-        role="progressbar"
-        aria-label={`Progresso para o nível ${proximoNivel}`}
-        aria-valuemin={0}
-        aria-valuemax={XP_POR_NIVEL}
-        aria-valuenow={xpNoNivel}
+      <button
+        type="button"
+        className="dashboard-xp-inline-conquistas"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          navigate("/conquistas");
+        }}
+        title="Abrir Conquistas"
       >
-        <i style={{ width: `${progresso}%` }} />
-      </div>
-    </section>,
+        🏆 Conquistas
+      </button>
+    </span>,
     destino
   );
 }
