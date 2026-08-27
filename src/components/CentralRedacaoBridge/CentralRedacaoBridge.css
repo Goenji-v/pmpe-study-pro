@@ -1,0 +1,89 @@
+.central-tipo-redacao {
+  position: relative;
+}
+
+.central-tipo-redacao.central-tipo-ativo {
+  border-color: rgba(236, 72, 153, 0.72);
+  background: linear-gradient(145deg, rgba(131, 24, 67, 0.34), rgba(30, 41, 59, 0.92));
+}
+
+.central-tipo-redacao:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.central-redacao-ativa .central-estudos-formulario > .central-estudos-campo:not(.central-redacao-campo) {
+  display: none;
+}
+
+.central-redacao-campo {
+  display: flex;
+}
+
+.central-redacao-campo > small {
+  color: #8293aa;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.central-redacao-materia-fixa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid #334155;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(131, 24, 67, 0.16), rgba(17, 24, 39, 0.92));
+}
+
+.central-redacao-materia-fixa > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: rgba(236, 72, 153, 0.14);
+  font-size: 18px;
+}
+
+.central-redacao-materia-fixa > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.central-redacao-materia-fixa strong {
+  color: #f8fafc;
+  font-size: 14px;
+}
+
+.central-redacao-materia-fixa small {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.central-redacao-finalizacao small {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.central-redacao-finalizacao-info {
+  padding: 11px 13px;
+  border: 1px solid rgba(236, 72, 153, 0.24);
+  border-radius: 10px;
+  background: rgba(131, 24, 67, 0.11);
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .central-redacao-materia-fixa {
+    align-items: flex-start;
+  }
+}
