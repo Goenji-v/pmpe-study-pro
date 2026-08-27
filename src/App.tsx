@@ -48,6 +48,7 @@ import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard"
 import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
 import NotificationCenter from "./components/NotificationCenter/NotificationCenter";
 import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
+import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/QuestaoIACronometroBridge";
 
 import { AppProvider, useApp } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -83,6 +84,7 @@ function LayoutProtegido() {
           <EditalPrimeiroAcessoGuard />
           <QuestaoIABridge />
           <CronometroProvider>
+            <QuestaoIACronometroBridge />
             <div className="layout">
               <Sidebar />
 
