@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import "./QuestaoIACronometroBridge.css";
 
@@ -39,6 +39,7 @@ type ResultadoQuestoesIA = {
 
 export default function QuestaoIACronometroBridge() {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     sessaoAtiva,
     segundosDecorridos,
@@ -150,6 +151,11 @@ export default function QuestaoIACronometroBridge() {
     }
   }
 
+  function fecharAvisoInicio() {
+    sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO);
+    navigate("/resolver-simulado-ia");
+  }
+
   function encerrarSemSalvar() {
     cancelar(true);
   }
@@ -165,6 +171,15 @@ export default function QuestaoIACronometroBridge() {
       {deveBloquearInicio && (
         <div className="questoes-crono-bloqueio" role="dialog" aria-modal="true">
           <section className="questoes-crono-inicio">
+            <button
+              type="button"
+              className="questoes-crono-fechar"
+              onClick={fecharAvisoInicio}
+              aria-label="Fechar aviso e voltar"
+              title="Agora não"
+            >
+              ×
+            </button>
             <span>CRONÔMETRO INTEGRADO</span>
             <h2>
               {obterTipoSessaoQuestoesIAAtiva(questoes) === "simulado"
@@ -180,9 +195,18 @@ export default function QuestaoIACronometroBridge() {
                 Existe outro cronômetro em andamento. Ao começar, você poderá confirmar a substituição.
               </small>
             )}
-            <button type="button" onClick={iniciarQuestoes}>
-              ▶ Começar agora
-            </button>
+            <div className="questoes-crono-inicio-acoes">
+              <button
+                type="button"
+                className="questoes-crono-agora-nao"
+                onClick={fecharAvisoInicio}
+              >
+                Agora não
+              </button>
+              <button type="button" onClick={iniciarQuestoes}>
+                ▶ Começar agora
+              </button>
+            </div>
           </section>
         </div>
       )}
