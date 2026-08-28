@@ -95,4 +95,102 @@
     height: 19px;
     font-size: 9px;
   }
+
+  /* Dashboard mobile: ordem de leitura fechada de cima para baixo.
+     A meta diária passa a ficar imediatamente após a sequência semanal. */
+  .page-dashboard .dashboard-pro-v3 {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .page-dashboard .dashboard-pro-header { order: 1; }
+  .page-dashboard .dashboard-pro-hero { order: 2; }
+  .page-dashboard .dashboard-pro-stats { order: 3; margin-bottom: 5px !important; }
+  .page-dashboard .dashboard-pro-weekly { order: 4; }
+  .page-dashboard .dashboard-pro-middle { order: 5; }
+  .page-dashboard .dashboard-pro-footer-grid { order: 6; }
+
+  /* Cronômetro mais compacto sem perder o foco da sessão. */
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-session {
+    gap: 6px !important;
+    padding: 9px 10px !important;
+  }
+
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-timer,
+  .page-dashboard .dashboard-pro-timer {
+    width: 82px !important;
+    height: 82px !important;
+  }
+
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-timer strong,
+  .page-dashboard .dashboard-pro-timer strong {
+    font-size: 18px !important;
+  }
+
+  .page-dashboard .dashboard-pro-session-info {
+    text-align: center;
+  }
+
+  .page-dashboard .dashboard-pro-session-info .dashboard-pro-kicker {
+    margin-bottom: 3px;
+    font-size: 8px;
+  }
+
+  .page-dashboard .dashboard-pro-session-info h2 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.15;
+  }
+
+  .page-dashboard .dashboard-pro-session-info hr {
+    margin: 6px 0;
+  }
+
+  .page-dashboard .dashboard-pro-session-info p {
+    margin: 0;
+    font-size: 9px;
+    line-height: 1.3;
+  }
+
+  .page-dashboard .dashboard-pro-session .dashboard-pro-actions {
+    margin-top: 7px;
+  }
+
+  /* Meta do dia vira uma faixa curta logo abaixo dos dias da sequência. */
+  .page-dashboard .dashboard-pro-weekly {
+    grid-template-columns: auto minmax(72px, 1fr) auto !important;
+    align-items: center;
+    gap: 9px !important;
+    margin: 0 0 7px !important;
+    padding: 9px 11px !important;
+    border-radius: 11px !important;
+  }
+
+  .page-dashboard .dashboard-pro-weekly > div:first-child {
+    min-width: 0;
+  }
+
+  .page-dashboard .dashboard-pro-weekly .dashboard-pro-kicker {
+    margin: 0 0 2px;
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  .page-dashboard .dashboard-pro-weekly h2 {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .page-dashboard .dashboard-pro-weekly-progress {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    height: 7px;
+  }
+
+  .page-dashboard .dashboard-pro-weekly > strong {
+    font-size: 16px;
+    line-height: 1;
+  }
 }
