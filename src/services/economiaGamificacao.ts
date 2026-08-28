@@ -7,11 +7,23 @@ import type {
 } from "../types";
 import { calcularMetricasConsolidadas, resumirSimulado } from "../utils/metricasConsolidadas";
 
+export type CompraEconomia = {
+  id: string;
+  itemId: string;
+  preco: number;
+  compradoEm: string;
+};
+
 export type EstadoEconomia = {
   moedas: number;
   recompensasRecebidas: string[];
   ultimoLoginResgatado?: string;
   sequenciaLoginAtual?: number;
+  inventario?: string[];
+  compras?: CompraEconomia[];
+  tituloEquipado?: string;
+  molduraEquipada?: string;
+  temaEquipado?: string;
   atualizadoEm?: string;
 };
 
@@ -65,6 +77,19 @@ export function obterEstadoEconomia(
       : [],
     ultimoLoginResgatado: economia?.ultimoLoginResgatado,
     sequenciaLoginAtual: Math.max(0, Math.floor(Number(economia?.sequenciaLoginAtual) || 0)),
+    inventario: Array.isArray(economia?.inventario)
+      ? [...new Set(economia.inventario.filter(Boolean))]
+      : [],
+    compras: Array.isArray(economia?.compras)
+      ? economia.compras.filter(
+          (compra): compra is CompraEconomia =>
+            Boolean(compra?.id && compra?.itemId && compra?.compradoEm) &&
+            Number.isFinite(Number(compra?.preco))
+        )
+      : [],
+    tituloEquipado: economia?.tituloEquipado,
+    molduraEquipada: economia?.molduraEquipada,
+    temaEquipado: economia?.temaEquipado,
     atualizadoEm: economia?.atualizadoEm,
   };
 }

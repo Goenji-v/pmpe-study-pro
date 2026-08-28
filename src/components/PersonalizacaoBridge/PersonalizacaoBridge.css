@@ -1,0 +1,57 @@
+:root {
+  --study-accent: #3b82f6;
+  --study-accent-strong: #60a5fa;
+  --study-accent-soft: rgba(59, 130, 246, 0.16);
+  --study-accent-border: rgba(96, 165, 250, 0.45);
+  --study-accent-glow: rgba(59, 130, 246, 0.24);
+}
+
+html[data-study-theme="roxo-estrategico"] {
+  --study-accent: #8b5cf6;
+  --study-accent-strong: #a78bfa;
+  --study-accent-soft: rgba(139, 92, 246, 0.17);
+  --study-accent-border: rgba(167, 139, 250, 0.46);
+  --study-accent-glow: rgba(139, 92, 246, 0.26);
+}
+
+html[data-study-theme="esmeralda-foco"] {
+  --study-accent: #10b981;
+  --study-accent-strong: #34d399;
+  --study-accent-soft: rgba(16, 185, 129, 0.17);
+  --study-accent-border: rgba(52, 211, 153, 0.44);
+  --study-accent-glow: rgba(16, 185, 129, 0.24);
+}
+
+html[data-study-theme="dourado-elite"] {
+  --study-accent: #d99b24;
+  --study-accent-strong: #f2c45c;
+  --study-accent-soft: rgba(217, 155, 36, 0.17);
+  --study-accent-border: rgba(242, 196, 92, 0.48);
+  --study-accent-glow: rgba(217, 155, 36, 0.24);
+}
+
+html[data-study-theme="azul-operacional"] {
+  --study-accent: #147df5;
+  --study-accent-strong: #4aa4ff;
+  --study-accent-soft: rgba(20, 125, 245, 0.18);
+  --study-accent-border: rgba(74, 164, 255, 0.48);
+  --study-accent-glow: rgba(20, 125, 245, 0.28);
+}
+
+html[data-study-theme] .sidebar-link-ativo,
+html[data-study-theme] .sidebar-grupo-ativo > .sidebar-grupo-botao {
+  border-color: var(--study-accent-border);
+  background: linear-gradient(90deg, var(--study-accent-soft), rgba(15, 23, 42, 0.18));
+}
+
+html[data-study-theme] .dashboard-xp-inline-barra i {
+  background: linear-gradient(90deg, var(--study-accent), var(--study-accent-strong));
+  box-shadow: 0 0 12px var(--study-accent-glow);
+}
+
+html[data-study-theme] .economia-login-resgatar,
+html[data-study-theme] .loja-botao-primario,
+html[data-study-theme] .loja-tab-ativa {
+  border-color: var(--study-accent-border);
+  background: linear-gradient(135deg, var(--study-accent), var(--study-accent-strong));
+}

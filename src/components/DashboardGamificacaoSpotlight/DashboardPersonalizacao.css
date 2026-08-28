@@ -1,0 +1,54 @@
+.dashboard-xp-inline-nivel small {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-xp-inline.dashboard-moldura-aco {
+  border: 2px solid #4d84bd;
+  box-shadow:
+    0 0 0 1px rgba(91, 158, 224, 0.14),
+    0 10px 26px rgba(0, 0, 0, 0.17),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.dashboard-xp-inline.dashboard-moldura-tatica {
+  border: 2px solid #718ba6;
+  box-shadow:
+    0 0 0 1px rgba(180, 199, 218, 0.09),
+    0 12px 28px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.dashboard-xp-inline.dashboard-moldura-elite {
+  border: 2px solid #d7a431;
+  box-shadow:
+    0 0 0 1px rgba(248, 213, 112, 0.14),
+    0 0 24px rgba(217, 164, 49, 0.18),
+    0 12px 30px rgba(0, 0, 0, 0.21),
+    inset 0 1px 0 rgba(255, 239, 180, 0.08);
+}
+
+.dashboard-xp-inline-moedas {
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.dashboard-xp-inline-moedas:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 190, 70, 0.68);
+  background: linear-gradient(145deg, rgba(153, 103, 12, 0.3), rgba(62, 44, 14, 0.58));
+}
+
+@media (max-width: 720px) {
+  .dashboard-xp-inline-nivel small {
+    max-width: 72px;
+  }
+}
+
+@media (max-width: 430px) {
+  .dashboard-xp-inline-nivel small {
+    max-width: 62px;
+  }
+}

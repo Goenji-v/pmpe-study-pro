@@ -4,10 +4,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import "./DashboardGamificacaoSpotlight.css";
 import "./DashboardMoedas.css";
+import "./DashboardPersonalizacao.css";
 
 import { useApp } from "../../context/AppContext";
 import { obterEstadoEconomia } from "../../services/economiaGamificacao";
 import { calcularGamificacao } from "../../services/gamificacaoService";
+import { encontrarItemLoja } from "../../services/lojaGamificacao";
 
 const XP_POR_NIVEL = 250;
 
@@ -32,6 +34,13 @@ export default function DashboardGamificacaoSpotlight() {
     () => obterEstadoEconomia(configuracoes),
     [configuracoes]
   );
+
+  const tituloEquipado = encontrarItemLoja(economia.tituloEquipado);
+  const molduraEquipada = encontrarItemLoja(economia.molduraEquipada);
+  const tituloVisivel =
+    tituloEquipado?.tipo === "titulo" ? tituloEquipado.valorVisual : gamificacao.tituloNivel;
+  const molduraVisual =
+    molduraEquipada?.tipo === "moldura" ? molduraEquipada.valorVisual : "padrao";
 
   useEffect(() => {
     if (location.pathname !== "/") {
@@ -71,10 +80,13 @@ export default function DashboardGamificacaoSpotlight() {
   );
 
   return createPortal(
-    <span className="dashboard-xp-inline" aria-label="Progresso de nível e moedas">
+    <span
+      className={`dashboard-xp-inline dashboard-moldura-${molduraVisual}`}
+      aria-label="Progresso de nível e moedas"
+    >
       <span className="dashboard-xp-inline-nivel">
         Nível {gamificacao.nivel}
-        <small>{gamificacao.tituloNivel}</small>
+        <small title={tituloVisivel}>{tituloVisivel}</small>
       </span>
 
       <span className="dashboard-xp-inline-progresso">
@@ -94,11 +106,20 @@ export default function DashboardGamificacaoSpotlight() {
         </span>
       </span>
 
-      <span className="dashboard-xp-inline-moedas" title="Saldo de moedas">
+      <button
+        type="button"
+        className="dashboard-xp-inline-moedas"
+        title="Abrir Loja Study Pro"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          navigate("/loja");
+        }}
+      >
         <span>🪙</span>
         <strong>{economia.moedas}</strong>
         <small>moedas</small>
-      </span>
+      </button>
 
       <button
         type="button"
