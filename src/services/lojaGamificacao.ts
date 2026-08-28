@@ -1,6 +1,6 @@
 import type { EstadoEconomia } from "./economiaGamificacao";
 
-export type TipoItemLoja = "tema" | "moldura" | "titulo";
+export type TipoItemLoja = "tema" | "moldura";
 export type RaridadeItemLoja = "comum" | "raro" | "epico" | "lendario";
 
 export type ItemLoja = {
@@ -15,56 +15,6 @@ export type ItemLoja = {
 };
 
 export const CATALOGO_LOJA: ItemLoja[] = [
-  {
-    id: "titulo-disciplinado",
-    tipo: "titulo",
-    nome: "Disciplinado",
-    descricao: "Para quem transforma consistência em rotina.",
-    preco: 120,
-    raridade: "comum",
-    icone: "🎯",
-    valorVisual: "Disciplinado",
-  },
-  {
-    id: "titulo-maquina-questoes",
-    tipo: "titulo",
-    nome: "Máquina de Questões",
-    descricao: "Um título para quem vive de bateria de questões.",
-    preco: 180,
-    raridade: "raro",
-    icone: "⚡",
-    valorVisual: "Máquina de Questões",
-  },
-  {
-    id: "titulo-mestre-revisao",
-    tipo: "titulo",
-    nome: "Mestre da Revisão",
-    descricao: "Destaque para quem não deixa a revisão acumular.",
-    preco: 180,
-    raridade: "raro",
-    icone: "🧠",
-    valorVisual: "Mestre da Revisão",
-  },
-  {
-    id: "titulo-redator",
-    tipo: "titulo",
-    nome: "Redator",
-    descricao: "Para quem mantém treino constante de redação.",
-    preco: 160,
-    raridade: "raro",
-    icone: "✍️",
-    valorVisual: "Redator",
-  },
-  {
-    id: "titulo-operacional",
-    tipo: "titulo",
-    nome: "Operacional",
-    descricao: "Título de alto nível para quem já acumulou muitas conquistas.",
-    preco: 320,
-    raridade: "epico",
-    icone: "🛡️",
-    valorVisual: "Operacional",
-  },
   {
     id: "moldura-aco",
     tipo: "moldura",
@@ -148,7 +98,6 @@ export function itensDoInventario(estado: EstadoEconomia) {
 }
 
 export function itemEstaEquipado(estado: EstadoEconomia, item: ItemLoja) {
-  if (item.tipo === "titulo") return estado.tituloEquipado === item.id;
   if (item.tipo === "moldura") return estado.molduraEquipada === item.id;
   return estado.temaEquipado === item.id;
 }
@@ -214,9 +163,6 @@ export function equiparItemLoja(
     atualizadoEm: agora.toISOString(),
   };
 
-  if (item.tipo === "titulo") {
-    return { item, estado: { ...base, tituloEquipado: item.id } };
-  }
   if (item.tipo === "moldura") {
     return { item, estado: { ...base, molduraEquipada: item.id } };
   }
@@ -229,7 +175,6 @@ export function desequiparTipoLoja(
   agora = new Date()
 ): EstadoEconomia {
   const proximo = { ...estado, atualizadoEm: agora.toISOString() };
-  if (tipo === "titulo") delete proximo.tituloEquipado;
   if (tipo === "moldura") delete proximo.molduraEquipada;
   if (tipo === "tema") delete proximo.temaEquipado;
   return proximo;

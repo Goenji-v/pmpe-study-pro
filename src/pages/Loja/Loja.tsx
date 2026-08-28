@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import "./Loja.css";
 
@@ -25,12 +26,12 @@ type Filtro = "todos" | TipoItemLoja;
 
 const FILTROS: Array<{ id: Filtro; nome: string }> = [
   { id: "todos", nome: "Todos" },
-  { id: "titulo", nome: "Títulos" },
   { id: "moldura", nome: "Molduras" },
   { id: "tema", nome: "Temas" },
 ];
 
 export default function Loja() {
+  const navigate = useNavigate();
   const { configuracoes, setConfiguracoes } = useApp();
   const { showToast } = useToast();
   const [aba, setAba] = useState<Aba>("loja");
@@ -45,7 +46,6 @@ export default function Loja() {
     return origem.filter((item) => item.tipo === filtro);
   }, [aba, filtro, inventario]);
 
-  const titulo = encontrarItemLoja(economia.tituloEquipado);
   const moldura = encontrarItemLoja(economia.molduraEquipada);
   const tema = encontrarItemLoja(economia.temaEquipado);
 
@@ -91,8 +91,8 @@ export default function Loja() {
           <span className="loja-kicker">ECONOMIA STUDY PRO</span>
           <h1>Loja & Inventário</h1>
           <p>
-            Use as moedas conquistadas estudando para personalizar seu perfil e o visual do Study Pro.
-            Os itens não alteram sua nota, XP ou desempenho.
+            Use as moedas conquistadas estudando para personalizar o visual do Study Pro.
+            Títulos de mérito não são vendidos: eles precisam ser conquistados.
           </p>
         </div>
 
@@ -106,7 +106,10 @@ export default function Loja() {
       </section>
 
       <section className="loja-equipados" aria-label="Personalização equipada">
-        <ResumoEquipado rotulo="Título" item={titulo} fallback="Título padrão do nível" />
+        <button type="button" className="loja-equipado-item" onClick={() => navigate("/conquistas")}>
+          <span>Título</span>
+          <strong>🏆 Desbloqueado em Conquistas</strong>
+        </button>
         <ResumoEquipado rotulo="Moldura" item={moldura} fallback="Moldura padrão" />
         <ResumoEquipado rotulo="Tema" item={tema} fallback="Azul padrão" />
       </section>
@@ -219,8 +222,8 @@ export default function Loja() {
       <section className="loja-regra">
         <strong>Como funciona</strong>
         <p>
-          Comprar um item desconta moedas uma única vez. Depois ele fica permanentemente no seu inventário
-          e pode ser equipado ou trocado sem novo custo. Título, moldura e tema usam slots separados.
+          Molduras e temas são comprados uma única vez e ficam permanentemente no inventário.
+          Títulos como Disciplinado e Mestre da Revisão agora só aparecem quando os requisitos reais da conquista são cumpridos.
         </p>
       </section>
     </div>
@@ -245,10 +248,6 @@ function ResumoEquipado({
 }
 
 function PreviewItem({ item }: { item: ItemLoja }) {
-  if (item.tipo === "titulo") {
-    return <div className="loja-preview loja-preview-titulo">Nível 4 · {item.valorVisual}</div>;
-  }
-
   if (item.tipo === "moldura") {
     return (
       <div className={`loja-preview loja-preview-moldura moldura-${item.valorVisual}`}>
@@ -267,7 +266,6 @@ function PreviewItem({ item }: { item: ItemLoja }) {
 }
 
 function nomeTipo(tipo: TipoItemLoja) {
-  if (tipo === "titulo") return "TÍTULO";
   if (tipo === "moldura") return "MOLDURA";
   return "TEMA";
 }
