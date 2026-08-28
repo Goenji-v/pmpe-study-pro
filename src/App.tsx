@@ -12,6 +12,7 @@ import "./pages/PlanoEdital/PlanoEditalCursos.css";
 import PlanoEditalGateway from "./pages/PlanoEdital/PlanoEditalGateway";
 import MeuEdital from "./pages/MeuEdital/MeuEdital";
 import Cursos from "./pages/Cursos/Cursos";
+import Loja from "./pages/Loja/Loja";
 import ResolverSimuladoIA from "./pages/ResolverSimuladoIA/ResolverSimuladoIA";
 import MeusSimuladosIA from "./pages/MeusSimuladosIA/MeusSimuladosIA";
 import CronogramaIA from "./pages/CronogramaIA/CronogramaIA";
@@ -52,6 +53,7 @@ import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/Qu
 import DashboardGamificacaoSpotlight from "./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight";
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
 import EconomiaGamificacaoBridge from "./components/EconomiaGamificacaoBridge/EconomiaGamificacaoBridge";
+import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
 
 import { AppProvider, useApp } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -85,6 +87,7 @@ function LayoutProtegido() {
         <RuntimeErrorGuard />
         <AppProvider>
           <EditalPrimeiroAcessoGuard />
+          <PersonalizacaoBridge />
           <QuestaoIABridge />
           <DashboardGamificacaoSpotlight />
           <EconomiaGamificacaoBridge />
@@ -137,6 +140,7 @@ function LayoutProtegido() {
                     <Route path="/estatisticas-sessoes" element={<EstatisticasSessoes />} />
                     <Route path="/ranking" element={<Ranking />} />
                     <Route path="/conquistas" element={<Conquistas />} />
+                    <Route path="/loja" element={<Loja />} />
 
                     <Route
                       path="/relatorio-inteligente"
