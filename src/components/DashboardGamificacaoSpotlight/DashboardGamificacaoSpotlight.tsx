@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import "./DashboardGamificacaoSpotlight.css";
 import "./DashboardMoedas.css";
+import "./DashboardPersonalizacao.css";
 
 import { useApp } from "../../context/AppContext";
 import { obterEstadoEconomia } from "../../services/economiaGamificacao";
