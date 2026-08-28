@@ -4,6 +4,10 @@
   --study-accent-soft: rgba(59, 130, 246, 0.16);
   --study-accent-border: rgba(96, 165, 250, 0.45);
   --study-accent-glow: rgba(59, 130, 246, 0.24);
+  --study-skin-surface: rgba(18, 31, 50, 0.9);
+  --study-skin-surface-strong: rgba(20, 37, 61, 0.96);
+  --study-skin-border: rgba(96, 165, 250, 0.32);
+  --study-skin-shadow: rgba(59, 130, 246, 0.12);
 }
 
 html[data-study-theme="roxo-estrategico"] {
@@ -12,6 +16,8 @@ html[data-study-theme="roxo-estrategico"] {
   --study-accent-soft: rgba(139, 92, 246, 0.17);
   --study-accent-border: rgba(167, 139, 250, 0.46);
   --study-accent-glow: rgba(139, 92, 246, 0.26);
+  --study-skin-border: rgba(167, 139, 250, 0.34);
+  --study-skin-shadow: rgba(139, 92, 246, 0.13);
 }
 
 html[data-study-theme="esmeralda-foco"] {
@@ -20,6 +26,8 @@ html[data-study-theme="esmeralda-foco"] {
   --study-accent-soft: rgba(16, 185, 129, 0.17);
   --study-accent-border: rgba(52, 211, 153, 0.44);
   --study-accent-glow: rgba(16, 185, 129, 0.24);
+  --study-skin-border: rgba(52, 211, 153, 0.32);
+  --study-skin-shadow: rgba(16, 185, 129, 0.12);
 }
 
 html[data-study-theme="dourado-elite"] {
@@ -28,6 +36,10 @@ html[data-study-theme="dourado-elite"] {
   --study-accent-soft: rgba(217, 155, 36, 0.17);
   --study-accent-border: rgba(242, 196, 92, 0.48);
   --study-accent-glow: rgba(217, 155, 36, 0.24);
+  --study-skin-surface: rgba(39, 31, 16, 0.92);
+  --study-skin-surface-strong: rgba(47, 36, 16, 0.96);
+  --study-skin-border: rgba(242, 196, 92, 0.4);
+  --study-skin-shadow: rgba(217, 155, 36, 0.15);
 }
 
 html[data-study-theme="azul-operacional"] {
@@ -36,22 +48,260 @@ html[data-study-theme="azul-operacional"] {
   --study-accent-soft: rgba(20, 125, 245, 0.18);
   --study-accent-border: rgba(74, 164, 255, 0.48);
   --study-accent-glow: rgba(20, 125, 245, 0.28);
+  --study-skin-border: rgba(74, 164, 255, 0.36);
+  --study-skin-shadow: rgba(20, 125, 245, 0.14);
+}
+
+/* Molduras passam a funcionar como skins da interface, não só do cartão de nível. */
+html[data-study-frame="aco"] {
+  --study-accent: #55a7ff;
+  --study-accent-strong: #8bc5ff;
+  --study-accent-soft: rgba(85, 167, 255, 0.14);
+  --study-accent-border: rgba(139, 197, 255, 0.46);
+  --study-accent-glow: rgba(85, 167, 255, 0.24);
+  --study-skin-surface: rgba(20, 34, 52, 0.94);
+  --study-skin-surface-strong: rgba(23, 41, 64, 0.97);
+  --study-skin-border: rgba(139, 197, 255, 0.34);
+  --study-skin-shadow: rgba(85, 167, 255, 0.13);
+}
+
+html[data-study-frame="tatica"] {
+  --study-accent: #62b99f;
+  --study-accent-strong: #8ad6bc;
+  --study-accent-soft: rgba(98, 185, 159, 0.14);
+  --study-accent-border: rgba(138, 214, 188, 0.44);
+  --study-accent-glow: rgba(98, 185, 159, 0.22);
+  --study-skin-surface: rgba(19, 35, 34, 0.94);
+  --study-skin-surface-strong: rgba(22, 44, 41, 0.97);
+  --study-skin-border: rgba(138, 214, 188, 0.32);
+  --study-skin-shadow: rgba(98, 185, 159, 0.12);
+}
+
+html[data-study-frame="elite"] {
+  --study-accent: #d99b24;
+  --study-accent-strong: #ffd978;
+  --study-accent-soft: rgba(217, 155, 36, 0.18);
+  --study-accent-border: rgba(255, 217, 120, 0.56);
+  --study-accent-glow: rgba(217, 155, 36, 0.3);
+  --study-skin-surface: rgba(38, 30, 15, 0.95);
+  --study-skin-surface-strong: rgba(49, 37, 15, 0.98);
+  --study-skin-border: rgba(255, 217, 120, 0.43);
+  --study-skin-shadow: rgba(217, 155, 36, 0.18);
 }
 
 html[data-study-theme] .sidebar-link-ativo,
-html[data-study-theme] .sidebar-grupo-ativo > .sidebar-grupo-botao {
+html[data-study-theme] .sidebar-grupo-ativo > .sidebar-grupo-botao,
+html[data-study-frame] .sidebar-link-ativo,
+html[data-study-frame] .sidebar-grupo-ativo > .sidebar-grupo-botao {
   border-color: var(--study-accent-border);
   background: linear-gradient(90deg, var(--study-accent-soft), rgba(15, 23, 42, 0.18));
 }
 
-html[data-study-theme] .dashboard-xp-inline-barra i {
+html[data-study-theme] .dashboard-xp-inline-barra i,
+html[data-study-frame] .dashboard-xp-inline-barra i {
   background: linear-gradient(90deg, var(--study-accent), var(--study-accent-strong));
   box-shadow: 0 0 12px var(--study-accent-glow);
 }
 
 html[data-study-theme] .economia-login-resgatar,
 html[data-study-theme] .loja-botao-primario,
-html[data-study-theme] .loja-tab-ativa {
+html[data-study-theme] .loja-tab-ativa,
+html[data-study-frame] .economia-login-resgatar,
+html[data-study-frame] .loja-botao-primario,
+html[data-study-frame] .loja-tab-ativa {
   border-color: var(--study-accent-border);
   background: linear-gradient(135deg, var(--study-accent), var(--study-accent-strong));
+}
+
+/* Teste de skin completa: quando há tema ou moldura equipada, a cor acompanha a interface inteira. */
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) body,
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .layout,
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .content,
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .page {
+  background:
+    radial-gradient(circle at 78% -8%, var(--study-accent-soft), transparent 28%),
+    #0f172a;
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .sidebar {
+  border-right-color: var(--study-skin-border);
+  box-shadow: 8px 0 30px var(--study-skin-shadow);
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .sidebar-logo-icone {
+  border-color: var(--study-accent-border);
+  box-shadow: 0 0 18px var(--study-accent-glow);
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .header {
+  border-bottom-color: var(--study-skin-border);
+  box-shadow: 0 8px 26px var(--study-skin-shadow);
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .header-identidade strong,
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .dashboard-pro-kicker {
+  color: var(--study-accent-strong);
+}
+
+/* Todos os grandes blocos do Dashboard recebem a skin equipada. */
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) :is(
+  .dashboard-pro-mission,
+  .dashboard-pro-session,
+  .dashboard-pro-panel,
+  .dashboard-pro-weekly,
+  .dashboard-pro-footer-grid > *,
+  .dashboard-pro-stats-art > *
+) {
+  border-color: var(--study-skin-border) !important;
+  background:
+    radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 42%),
+    linear-gradient(145deg, var(--study-skin-surface-strong), var(--study-skin-surface)) !important;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.16),
+    0 0 24px var(--study-skin-shadow) !important;
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) :is(
+  .dashboard-pro-search,
+  .dashboard-pro-date,
+  .dashboard-pro-icon,
+  .dashboard-pro-review-list button,
+  .dashboard-pro-panel-title button,
+  .dashboard-pro-actions button,
+  .dashboard-pro-badge,
+  .dashboard-pro-timer
+) {
+  border-color: var(--study-skin-border) !important;
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) :is(
+  .dashboard-pro-actions .primary,
+  .dashboard-pro-actions button.primary,
+  .dashboard-pro-badge
+) {
+  color: #0b1220;
+  background: linear-gradient(135deg, var(--study-accent), var(--study-accent-strong)) !important;
+  box-shadow: 0 7px 20px var(--study-accent-glow);
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) :is(
+  .dashboard-pro-progress > div,
+  .dashboard-pro-weekly-progress > div
+) {
+  background: linear-gradient(90deg, var(--study-accent), var(--study-accent-strong)) !important;
+  box-shadow: 0 0 14px var(--study-accent-glow);
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) :is(
+  .dashboard-pro-progress,
+  .dashboard-pro-weekly-progress
+) {
+  border-color: var(--study-skin-border);
+  background: color-mix(in srgb, var(--study-accent) 10%, #122033) !important;
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .dashboard-pro-review-calendar,
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .dashboard-pro-session-info h2,
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .dashboard-pro-mission h2 {
+  color: var(--study-accent-strong);
+}
+
+/* O próprio cartão de nível deixa de parecer um elemento isolado. */
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .dashboard-xp-inline {
+  border-color: var(--study-accent-border) !important;
+  background:
+    radial-gradient(circle at 0% 50%, var(--study-accent-soft), transparent 38%),
+    linear-gradient(135deg, var(--study-skin-surface-strong), var(--study-skin-surface)) !important;
+  box-shadow: 0 10px 28px var(--study-skin-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) .dashboard-xp-inline-nivel {
+  color: var(--study-accent-strong) !important;
+}
+
+/* Detalhes das demais telas também acompanham a skin sem alterar legibilidade/conteúdo. */
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) :is(input, select, textarea):focus {
+  outline: none;
+  border-color: var(--study-accent-border) !important;
+  box-shadow: 0 0 0 3px var(--study-accent-soft) !important;
+}
+
+:where(
+  html[data-study-theme]:not([data-study-theme="padrao"]),
+  html[data-study-frame]:not([data-study-frame="padrao"])
+) :is(
+  .loja-card,
+  .economia-login-card
+) {
+  border-color: var(--study-skin-border) !important;
+  box-shadow: 0 14px 34px var(--study-skin-shadow) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    html[data-study-theme]:not([data-study-theme="padrao"]),
+    html[data-study-frame]:not([data-study-frame="padrao"])
+  ) * {
+    transition: none !important;
+  }
 }
