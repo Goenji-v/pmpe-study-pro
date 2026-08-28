@@ -7,12 +7,14 @@ import { useApp } from "../../context/AppContext";
 import { calcularGamificacao } from "../../services/gamificacaoService";
 import {
   aplicarRecompensasPendentes,
+  chaveDataLocal,
   listarRecompensasConquistadas,
   obterEstadoEconomia,
   obterRecompensaLogin,
   resgatarRecompensaLogin,
   type ConfiguracoesComEconomia,
 } from "../../services/economiaGamificacao";
+import { migrarTitulosRetiradosDaLoja } from "../../services/migracaoTitulosLoja";
 
 export default function EconomiaGamificacaoBridge() {
   const location = useLocation();
@@ -30,6 +32,7 @@ export default function EconomiaGamificacaoBridge() {
   const [loginFechado, setLoginFechado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const ultimoLoteAvisado = useRef("");
+  const reembolsoAvisado = useRef(false);
 
   const gamificacao = useMemo(
     () =>
@@ -73,6 +76,38 @@ export default function EconomiaGamificacaoBridge() {
     const recebidas = new Set(economia.recompensasRecebidas);
     return recompensasConquistadas.filter((item) => !recebidas.has(item.id));
   }, [economia.recompensasRecebidas, recompensasConquistadas]);
+
+  useEffect(() => {
+    if (statusNuvem === "carregando") return;
+
+    const hoje = chaveDataLocal(new Date());
+    const marcadorAcesso = `acesso:${hoje}`;
+    const migracao = migrarTitulosRetiradosDaLoja(economia);
+    const acessoRegistrado = migracao.estado.recompensasRecebidas.includes(marcadorAcesso);
+
+    if (!migracao.mudou && acessoRegistrado) return;
+
+    const estadoFinal = acessoRegistrado
+      ? migracao.estado
+      : {
+          ...migracao.estado,
+          recompensasRecebidas: [
+            ...migracao.estado.recompensasRecebidas,
+            marcadorAcesso,
+          ],
+          atualizadoEm: new Date().toISOString(),
+        };
+
+    setConfiguracoes((atuais) => ({
+      ...atuais,
+      economia: estadoFinal,
+    }) as ConfiguracoesComEconomia);
+
+    if (migracao.moedasReembolsadas > 0 && !reembolsoAvisado.current) {
+      reembolsoAvisado.current = true;
+      setAviso(`🪙 +${migracao.moedasReembolsadas} moedas reembolsadas por títulos retirados da Loja`);
+    }
+  }, [economia, setConfiguracoes, statusNuvem]);
 
   useEffect(() => {
     if (statusNuvem === "carregando" || pendentes.length === 0) return;
