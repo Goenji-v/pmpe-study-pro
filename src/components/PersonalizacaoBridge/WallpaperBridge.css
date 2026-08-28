@@ -1,0 +1,102 @@
+html[data-study-wallpaper="ativo"] {
+  background-color: #07101d;
+  background-image:
+    linear-gradient(rgba(4, 10, 19, 0.74), rgba(7, 16, 29, 0.84)),
+    var(--study-wallpaper-desktop);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+html[data-study-wallpaper="ativo"] body,
+html[data-study-wallpaper="ativo"] .layout,
+html[data-study-wallpaper="ativo"] .content,
+html[data-study-wallpaper="ativo"] .page {
+  background: transparent !important;
+}
+
+html[data-study-wallpaper="ativo"] .sidebar {
+  background: rgba(8, 17, 30, 0.93) !important;
+  backdrop-filter: blur(14px);
+}
+
+html[data-study-wallpaper="ativo"] .header {
+  background: rgba(9, 19, 33, 0.82) !important;
+  backdrop-filter: blur(15px);
+}
+
+html[data-study-wallpaper="ativo"] :is(
+  .dashboard-pro-mission,
+  .dashboard-pro-session,
+  .dashboard-pro-panel,
+  .dashboard-pro-weekly,
+  .dashboard-pro-footer-grid > *,
+  .dashboard-pro-stats-art > *,
+  .loja-card,
+  .loja-hero,
+  .loja-regra,
+  .loja-equipado-item
+) {
+  backdrop-filter: blur(10px);
+}
+
+.loja-equipados.loja-equipados-quatro {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.loja-preview-wallpaper {
+  position: relative;
+  min-height: 112px;
+  overflow: hidden;
+  border: 1px solid #2e4766;
+  background: #0b1524;
+}
+
+.loja-preview-wallpaper img {
+  display: block;
+  width: 100%;
+  height: 112px;
+  object-fit: cover;
+}
+
+.loja-preview-wallpaper::after {
+  content: "Desktop + celular";
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #dbeafe;
+  background: rgba(5, 12, 22, 0.76);
+  font-size: 9px;
+  font-weight: 800;
+  backdrop-filter: blur(6px);
+}
+
+@media (max-width: 900px) {
+  .loja-equipados.loja-equipados-quatro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  html[data-study-wallpaper="ativo"] {
+    background-image:
+      linear-gradient(rgba(4, 10, 19, 0.72), rgba(7, 16, 29, 0.86)),
+      var(--study-wallpaper-mobile);
+    background-position: center top;
+    background-attachment: scroll;
+  }
+
+  .loja-equipados.loja-equipados-quatro {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  html[data-study-wallpaper="ativo"] .sidebar,
+  html[data-study-wallpaper="ativo"] .header {
+    backdrop-filter: none;
+  }
+}
