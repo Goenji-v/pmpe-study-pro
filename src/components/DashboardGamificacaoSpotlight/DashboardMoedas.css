@@ -58,18 +58,29 @@
 
 @media (max-width: 720px) {
   .dashboard-xp-inline-moedas {
-    position: absolute;
-    top: -8px;
-    right: -7px;
-    min-height: 23px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: #3b2a0d;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+    position: static;
+    min-width: 0;
+    min-height: 32px;
+    padding: 0 7px;
+    border-radius: 8px;
+    gap: 3px;
+    background: linear-gradient(145deg, rgba(137, 91, 10, .28), rgba(50, 36, 12, .56));
+    box-shadow: none;
   }
 
-  .dashboard-xp-inline {
-    position: relative;
+  .dashboard-xp-inline-moedas > span {
+    font-size: 11px;
+  }
+
+  .dashboard-xp-inline-moedas strong {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 430px) {
+  .dashboard-xp-inline-moedas {
+    min-height: 29px;
+    padding-inline: 5px;
   }
 
   .dashboard-xp-inline-moedas > span {
@@ -83,7 +94,7 @@
 
 @media (max-width: 360px) {
   .dashboard-xp-inline-moedas {
-    top: -7px;
-    right: -5px;
+    min-height: 27px;
+    padding-inline: 4px;
   }
 }
