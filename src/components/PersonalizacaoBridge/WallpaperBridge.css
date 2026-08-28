@@ -1,15 +1,34 @@
 html[data-study-wallpaper="ativo"] {
+  background: #07101d;
+}
+
+html[data-study-wallpaper="ativo"] body {
+  position: relative;
+  background: #07101d !important;
+}
+
+html[data-study-wallpaper="ativo"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background-color: #07101d;
   background-image:
-    linear-gradient(rgba(4, 10, 19, 0.74), rgba(7, 16, 29, 0.84)),
+    linear-gradient(rgba(4, 10, 19, 0.58), rgba(7, 16, 29, 0.72)),
     var(--study-wallpaper-desktop);
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  background-attachment: fixed;
 }
 
-html[data-study-wallpaper="ativo"] body,
+html[data-study-wallpaper="ativo"] #root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  background: transparent !important;
+}
+
 html[data-study-wallpaper="ativo"] .layout,
 html[data-study-wallpaper="ativo"] .content,
 html[data-study-wallpaper="ativo"] .page {
@@ -17,15 +36,16 @@ html[data-study-wallpaper="ativo"] .page {
 }
 
 html[data-study-wallpaper="ativo"] .sidebar {
-  background: rgba(8, 17, 30, 0.93) !important;
+  background: rgba(8, 17, 30, 0.9) !important;
   backdrop-filter: blur(14px);
 }
 
 html[data-study-wallpaper="ativo"] .header {
-  background: rgba(9, 19, 33, 0.82) !important;
+  background: rgba(9, 19, 33, 0.78) !important;
   backdrop-filter: blur(15px);
 }
 
+/* Wallpaper é o fundo; tema/moldura continuam definindo cores, bordas e brilhos. */
 html[data-study-wallpaper="ativo"] :is(
   .dashboard-pro-mission,
   .dashboard-pro-session,
@@ -38,7 +58,21 @@ html[data-study-wallpaper="ativo"] :is(
   .loja-regra,
   .loja-equipado-item
 ) {
-  backdrop-filter: blur(10px);
+  background:
+    radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 44%),
+    linear-gradient(145deg, rgba(14, 25, 42, 0.86), rgba(8, 16, 29, 0.82)) !important;
+  backdrop-filter: blur(11px) saturate(0.92);
+}
+
+html[data-study-wallpaper="ativo"] :is(
+  .dashboard-pro-mission,
+  .dashboard-pro-session,
+  .dashboard-pro-panel,
+  .dashboard-pro-weekly,
+  .dashboard-pro-footer-grid > *,
+  .dashboard-pro-stats-art > *
+) {
+  border-color: var(--study-skin-border) !important;
 }
 
 .loja-equipados.loja-equipados-quatro {
@@ -81,12 +115,28 @@ html[data-study-wallpaper="ativo"] :is(
 }
 
 @media (max-width: 700px) {
-  html[data-study-wallpaper="ativo"] {
+  html[data-study-wallpaper="ativo"] body::before {
     background-image:
-      linear-gradient(rgba(4, 10, 19, 0.72), rgba(7, 16, 29, 0.86)),
+      linear-gradient(rgba(4, 10, 19, 0.5), rgba(7, 16, 29, 0.7)),
       var(--study-wallpaper-mobile);
     background-position: center top;
-    background-attachment: scroll;
+  }
+
+  html[data-study-wallpaper="ativo"] .page {
+    padding-inline: 12px;
+  }
+
+  html[data-study-wallpaper="ativo"] :is(
+    .dashboard-pro-mission,
+    .dashboard-pro-session,
+    .dashboard-pro-panel,
+    .dashboard-pro-weekly,
+    .dashboard-pro-footer-grid > *,
+    .dashboard-pro-stats-art > *
+  ) {
+    background:
+      radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 46%),
+      linear-gradient(145deg, rgba(13, 24, 40, 0.84), rgba(7, 15, 27, 0.8)) !important;
   }
 
   .loja-equipados.loja-equipados-quatro {
@@ -96,7 +146,15 @@ html[data-study-wallpaper="ativo"] :is(
 
 @media (prefers-reduced-transparency: reduce) {
   html[data-study-wallpaper="ativo"] .sidebar,
-  html[data-study-wallpaper="ativo"] .header {
+  html[data-study-wallpaper="ativo"] .header,
+  html[data-study-wallpaper="ativo"] :is(
+    .dashboard-pro-mission,
+    .dashboard-pro-session,
+    .dashboard-pro-panel,
+    .dashboard-pro-weekly,
+    .dashboard-pro-footer-grid > *,
+    .dashboard-pro-stats-art > *
+  ) {
     backdrop-filter: none;
   }
 }
