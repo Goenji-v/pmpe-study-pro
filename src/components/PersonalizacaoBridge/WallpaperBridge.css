@@ -15,7 +15,7 @@ html[data-study-wallpaper="ativo"] body::before {
   pointer-events: none;
   background-color: #07101d;
   background-image:
-    linear-gradient(rgba(4, 10, 19, 0.58), rgba(7, 16, 29, 0.72)),
+    linear-gradient(rgba(4, 10, 19, 0.5), rgba(7, 16, 29, 0.64)),
     var(--study-wallpaper-desktop);
   background-position: center;
   background-repeat: no-repeat;
@@ -36,12 +36,12 @@ html[data-study-wallpaper="ativo"] .page {
 }
 
 html[data-study-wallpaper="ativo"] .sidebar {
-  background: rgba(8, 17, 30, 0.9) !important;
+  background: rgba(8, 17, 30, 0.94) !important;
   backdrop-filter: blur(14px);
 }
 
 html[data-study-wallpaper="ativo"] .header {
-  background: rgba(9, 19, 33, 0.78) !important;
+  background: rgba(9, 19, 33, 0.9) !important;
   backdrop-filter: blur(15px);
 }
 
@@ -60,8 +60,8 @@ html[data-study-wallpaper="ativo"] :is(
 ) {
   background:
     radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 44%),
-    linear-gradient(145deg, rgba(14, 25, 42, 0.86), rgba(8, 16, 29, 0.82)) !important;
-  backdrop-filter: blur(11px) saturate(0.92);
+    linear-gradient(145deg, rgba(14, 25, 42, 0.76), rgba(8, 16, 29, 0.72)) !important;
+  backdrop-filter: blur(9px) saturate(0.94);
 }
 
 html[data-study-wallpaper="ativo"] :is(
@@ -117,7 +117,7 @@ html[data-study-wallpaper="ativo"] :is(
 @media (max-width: 700px) {
   html[data-study-wallpaper="ativo"] body::before {
     background-image:
-      linear-gradient(rgba(4, 10, 19, 0.5), rgba(7, 16, 29, 0.7)),
+      linear-gradient(rgba(4, 10, 19, 0.42), rgba(7, 16, 29, 0.6)),
       var(--study-wallpaper-mobile);
     background-position: center top;
   }
@@ -136,7 +136,7 @@ html[data-study-wallpaper="ativo"] :is(
   ) {
     background:
       radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 46%),
-      linear-gradient(145deg, rgba(13, 24, 40, 0.84), rgba(7, 15, 27, 0.8)) !important;
+      linear-gradient(145deg, rgba(13, 24, 40, 0.74), rgba(7, 15, 27, 0.7)) !important;
   }
 
   .loja-equipados.loja-equipados-quatro {
