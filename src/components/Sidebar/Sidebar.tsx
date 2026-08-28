@@ -70,6 +70,7 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/estatisticas",
   ],
   sistema: [
+    "/loja",
     "/conquistas",
     "/ranking",
     "/backup",
@@ -230,6 +231,7 @@ export default function Sidebar() {
           >
             <ItemMenu to="/ranking" texto="Ranking" />
             <ItemMenu to="/conquistas" texto="Conquistas" />
+            <ItemMenu to="/loja" texto="Loja & Inventário" />
             <ItemMenu to="/backup" texto="Backup e Segurança" />
             <ItemMenu to="/configuracoes" texto="Configurações" />
 
