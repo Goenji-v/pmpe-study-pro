@@ -151,9 +151,10 @@ function calcularDisciplina30Dias(entrada: EntradaTitulos, agora: Date) {
   const metaMinutos = Math.max(1, Math.floor(Number(entrada.configuracoes.metaMinutosDiaria) || 0));
   const metaQuestoes = Math.max(1, Math.floor(Number(entrada.configuracoes.metaQuestoesDiaria) || 0));
   const metaRevisoes = Math.max(0, Math.floor(Number(entrada.configuracoes.metaRevisoesDiaria) || 0));
-  const logins = new Set(entrada.economia.diasLogin ?? []);
+  const logins = new Set<string>();
 
   entrada.economia.recompensasRecebidas.forEach((id) => {
+    if (id.startsWith("acesso:")) logins.add(id.slice("acesso:".length));
     if (id.startsWith("login:")) logins.add(id.slice("login:".length));
   });
 
