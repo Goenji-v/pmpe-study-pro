@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import BetaMonitor from "../../components/BetaMonitor/BetaMonitor";
 import CuradoriaQuestoes from "../../components/CuradoriaQuestoes/CuradoriaQuestoes";
-import GerenciarLojaAdmin from "../../components/GerenciarLojaAdmin/GerenciarLojaAdmin";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
 import {
   carregarResumoAdmin,
@@ -85,7 +84,7 @@ export default function Admin() {
         <div>
           <span className="admin-etiqueta">ACESSO RESTRITO</span>
           <h1>🛡️ Administração</h1>
-          <p>Acompanhe usuários, atividade geral e gerencie os itens publicados na Loja.</p>
+          <p>Acompanhe usuários, atividade geral e a curadoria de conteúdo do Study Pro.</p>
         </div>
         <div className="admin-seguranca">
           <strong>RLS + RPC protegida</strong>
@@ -109,8 +108,6 @@ export default function Admin() {
         <Card titulo="Questões" valor={resumo.questoesNoMes} detalhe="Resolvidas no mês" />
         <Card titulo="Acertos" valor={resumo.acertosNoMes} detalhe="Acertos registrados" />
       </div>
-
-      <GerenciarLojaAdmin />
 
       <section className="admin-painel">
         <div className="admin-painel-topo">

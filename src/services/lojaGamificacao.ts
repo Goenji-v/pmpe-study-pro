@@ -1,11 +1,10 @@
 import type { EstadoEconomia } from "./economiaGamificacao";
 
-export type TipoItemLoja = "tema" | "moldura" | "wallpaper";
+export type TipoItemLoja = "tema" | "moldura";
 export type RaridadeItemLoja = "comum" | "raro" | "epico" | "lendario";
 
 export type ItemLoja = {
   id: string;
-  idBanco?: string;
   tipo: TipoItemLoja;
   nome: string;
   descricao: string;
@@ -14,12 +13,7 @@ export type ItemLoja = {
   icone: string;
   valorVisual: string;
   ativo?: boolean;
-  wallpaperDesktopUrl?: string;
-  wallpaperMobileUrl?: string;
-  wallpaperPreviewUrl?: string;
 };
-
-const PREFIXO_WALLPAPER_EQUIPADO = "@equip:wallpaper:";
 
 export const CATALOGO_LOJA: ItemLoja[] = [
   {
@@ -106,19 +100,13 @@ export function itensDoInventario(
   estado: EstadoEconomia,
   catalogo: ItemLoja[] = CATALOGO_LOJA
 ) {
-  const ids = new Set((estado.inventario ?? []).filter((id) => !id.startsWith(PREFIXO_WALLPAPER_EQUIPADO)));
+  const ids = new Set(estado.inventario ?? []);
   return catalogo.filter((item) => ids.has(item.id));
-}
-
-export function obterWallpaperEquipadoId(estado: EstadoEconomia) {
-  const marcador = (estado.inventario ?? []).find((id) => id.startsWith(PREFIXO_WALLPAPER_EQUIPADO));
-  return marcador?.slice(PREFIXO_WALLPAPER_EQUIPADO.length);
 }
 
 export function itemEstaEquipado(estado: EstadoEconomia, item: ItemLoja) {
   if (item.tipo === "moldura") return estado.molduraEquipada === item.id;
-  if (item.tipo === "tema") return estado.temaEquipado === item.id;
-  return obterWallpaperEquipadoId(estado) === item.id;
+  return estado.temaEquipado === item.id;
 }
 
 export function comprarItemLoja(
@@ -188,15 +176,8 @@ export function equiparItemLoja(
   if (item.tipo === "moldura") {
     return { item, estado: { ...base, molduraEquipada: item.id } };
   }
-  if (item.tipo === "tema") {
-    return { item, estado: { ...base, temaEquipado: item.id } };
-  }
 
-  const inventario = (base.inventario ?? []).filter(
-    (id) => !id.startsWith(PREFIXO_WALLPAPER_EQUIPADO)
-  );
-  inventario.push(`${PREFIXO_WALLPAPER_EQUIPADO}${item.id}`);
-  return { item, estado: { ...base, inventario } };
+  return { item, estado: { ...base, temaEquipado: item.id } };
 }
 
 export function desequiparTipoLoja(
@@ -207,10 +188,5 @@ export function desequiparTipoLoja(
   const proximo = { ...estado, atualizadoEm: agora.toISOString() };
   if (tipo === "moldura") delete proximo.molduraEquipada;
   if (tipo === "tema") delete proximo.temaEquipado;
-  if (tipo === "wallpaper") {
-    proximo.inventario = (proximo.inventario ?? []).filter(
-      (id) => !id.startsWith(PREFIXO_WALLPAPER_EQUIPADO)
-    );
-  }
   return proximo;
 }
