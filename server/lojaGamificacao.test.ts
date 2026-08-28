@@ -23,16 +23,16 @@ function economiaComMoedas(moedas: number): EstadoEconomia {
 
 test("compra desconta moedas uma vez e adiciona item permanentemente ao inventario", () => {
   const inicial = economiaComMoedas(300);
-  const primeira = comprarItemLoja(inicial, "titulo-disciplinado", new Date("2026-08-28T12:00:00Z"));
+  const primeira = comprarItemLoja(inicial, "moldura-aco", new Date("2026-08-28T12:00:00Z"));
 
   assert.equal(primeira.erro, undefined);
-  assert.equal(primeira.estado.moedas, 180);
-  assert.deepEqual(primeira.estado.inventario, ["titulo-disciplinado"]);
+  assert.equal(primeira.estado.moedas, 150);
+  assert.deepEqual(primeira.estado.inventario, ["moldura-aco"]);
   assert.equal(primeira.estado.compras?.length, 1);
 
-  const repetida = comprarItemLoja(primeira.estado, "titulo-disciplinado");
+  const repetida = comprarItemLoja(primeira.estado, "moldura-aco");
   assert.match(repetida.erro ?? "", /já está/i);
-  assert.equal(repetida.estado.moedas, 180);
+  assert.equal(repetida.estado.moedas, 150);
   assert.equal(repetida.estado.compras?.length, 1);
 });
 
@@ -44,21 +44,20 @@ test("nao permite comprar item sem saldo suficiente", () => {
   assert.deepEqual(resultado.estado.inventario, []);
 });
 
-test("titulo moldura e tema usam slots independentes", () => {
+test("moldura e tema usam slots independentes", () => {
   let estado = economiaComMoedas(1000);
 
-  for (const itemId of ["titulo-disciplinado", "moldura-aco", "tema-roxo-estrategico"]) {
+  for (const itemId of ["moldura-aco", "tema-roxo-estrategico"]) {
     estado = comprarItemLoja(estado, itemId).estado;
     estado = equiparItemLoja(estado, itemId).estado;
   }
 
-  assert.equal(estado.tituloEquipado, "titulo-disciplinado");
   assert.equal(estado.molduraEquipada, "moldura-aco");
   assert.equal(estado.temaEquipado, "tema-roxo-estrategico");
 
-  const titulo = comprarItemLoja(economiaComMoedas(300), "titulo-disciplinado").item;
-  assert.ok(titulo);
-  assert.equal(itemEstaEquipado(estado, titulo), true);
+  const moldura = comprarItemLoja(economiaComMoedas(300), "moldura-aco").item;
+  assert.ok(moldura);
+  assert.equal(itemEstaEquipado(estado, moldura), true);
 });
 
 test("nao equipa item que nao foi comprado", () => {
@@ -67,7 +66,7 @@ test("nao equipa item que nao foi comprado", () => {
   assert.equal(resultado.estado.temaEquipado, undefined);
 });
 
-test("normalizacao da economia preserva inventario compras e itens equipados", () => {
+test("normalizacao da economia preserva inventario compras e dados legados para migracao", () => {
   const configuracoes = {
     nomeUsuario: "Teste",
     concurso: "PMPE",
