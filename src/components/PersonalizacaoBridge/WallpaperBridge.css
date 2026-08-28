@@ -15,7 +15,7 @@ html[data-study-wallpaper="ativo"] body::before {
   pointer-events: none;
   background-color: #07101d;
   background-image:
-    linear-gradient(rgba(4, 10, 19, 0.3), rgba(7, 16, 29, 0.42)),
+    linear-gradient(rgba(4, 10, 19, 0.22), rgba(7, 16, 29, 0.32)),
     var(--study-wallpaper-desktop);
   background-position: center;
   background-repeat: no-repeat;
@@ -59,9 +59,9 @@ html[data-study-wallpaper="ativo"] :is(
   .loja-equipado-item
 ) {
   background:
-    radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 48%),
-    linear-gradient(145deg, rgba(14, 25, 42, 0.58), rgba(8, 16, 29, 0.54)) !important;
-  backdrop-filter: blur(4px) saturate(0.98);
+    radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 52%),
+    linear-gradient(145deg, rgba(14, 25, 42, 0.48), rgba(8, 16, 29, 0.44)) !important;
+  backdrop-filter: blur(2px) saturate(1);
 }
 
 html[data-study-wallpaper="ativo"] :is(
@@ -117,7 +117,7 @@ html[data-study-wallpaper="ativo"] :is(
 @media (max-width: 700px) {
   html[data-study-wallpaper="ativo"] body::before {
     background-image:
-      linear-gradient(rgba(4, 10, 19, 0.22), rgba(7, 16, 29, 0.38)),
+      linear-gradient(rgba(4, 10, 19, 0.14), rgba(7, 16, 29, 0.28)),
       var(--study-wallpaper-mobile);
     background-position: center top;
   }
@@ -135,9 +135,9 @@ html[data-study-wallpaper="ativo"] :is(
     .dashboard-pro-stats-art > *
   ) {
     background:
-      radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 50%),
-      linear-gradient(145deg, rgba(13, 24, 40, 0.56), rgba(7, 15, 27, 0.5)) !important;
-    backdrop-filter: blur(3px) saturate(0.99);
+      radial-gradient(circle at 100% 0%, var(--study-accent-soft), transparent 54%),
+      linear-gradient(145deg, rgba(13, 24, 40, 0.46), rgba(7, 15, 27, 0.4)) !important;
+    backdrop-filter: blur(2px) saturate(1);
   }
 
   .loja-equipados.loja-equipados-quatro {
