@@ -1,0 +1,149 @@
+import { describe, expect, it } from "vitest";
+
+import type { ConfiguracoesApp, RegistroQuestao, SessaoEstudo } from "../types";
+import {
+  aplicarRecompensasPendentes,
+  listarRecompensasConquistadas,
+  obterEstadoEconomia,
+  resgatarRecompensaLogin,
+  type EstadoEconomia,
+} from "./economiaGamificacao";
+
+const configuracoes: ConfiguracoesApp = {
+  nomeUsuario: "Aluno",
+  concurso: "PMPE",
+  bancaPadrao: "AOCP",
+  metaQuestoesDiaria: 100,
+  metaMinutosDiaria: 120,
+  metaRevisoesDiaria: 2,
+  missoesPorDia: 1,
+  tema: "escuro",
+};
+
+function recompensas(params: {
+  sessoes?: SessaoEstudo[];
+  questoes?: RegistroQuestao[];
+  nivelAtual?: number;
+}) {
+  return listarRecompensasConquistadas({
+    sessoes: params.sessoes ?? [],
+    questoes: params.questoes ?? [],
+    revisoes: [],
+    simulados: [],
+    missoesConcluidas: [],
+    configuracoes,
+    nivelAtual: params.nivelAtual ?? 1,
+  });
+}
+
+describe("economia de gamificação", () => {
+  it("premia a meta de tempo igualmente para quem apenas bate a meta ou passa dela", () => {
+    const sessao120: SessaoEstudo = {
+      id: "s-120",
+      data: "2026-08-01T18:00:00-03:00",
+      tipo: "estudo",
+      materia: "Português",
+      assunto: "Interpretação",
+      minutos: 120,
+    };
+    const sessao240: SessaoEstudo = {
+      ...sessao120,
+      id: "s-240",
+      minutos: 240,
+    };
+
+    const premio120 = recompensas({ sessoes: [sessao120] }).find(
+      (item) => item.id === "meta-tempo:2026-08-01"
+    );
+    const premio240 = recompensas({ sessoes: [sessao240] }).find(
+      (item) => item.id === "meta-tempo:2026-08-01"
+    );
+
+    expect(premio120?.moedas).toBe(8);
+    expect(premio240?.moedas).toBe(8);
+  });
+
+  it("usa marcos incrementais para questões sem premiar infinitamente o volume", () => {
+    const registro: RegistroQuestao = {
+      id: "q-1",
+      materia: "RLM",
+      assunto: "Proposições",
+      banca: "AOCP",
+      certas: 24,
+      erradas: 6,
+      minutos: 35,
+      data: "2026-08-02T19:00:00-03:00",
+    };
+
+    const premios = recompensas({ questoes: [registro] }).filter(
+      (item) => item.categoria === "questoes"
+    );
+
+    expect(premios.map((item) => item.id).sort()).toEqual([
+      "questoes:20:2026-08-02",
+      "questoes:30:2026-08-02",
+    ]);
+    expect(premios.reduce((total, item) => total + item.moedas, 0)).toBe(6);
+  });
+
+  it("entrega bônus nos marcos de 7, 14 e 30 dias de sequência", () => {
+    const sessoes = Array.from({ length: 30 }, (_, indice): SessaoEstudo => ({
+      id: `s-${indice + 1}`,
+      data: `2026-07-${String(indice + 1).padStart(2, "0")}T18:00:00-03:00`,
+      tipo: "estudo",
+      materia: "Português",
+      assunto: "Treino",
+      minutos: 30,
+    }));
+
+    const premios = recompensas({ sessoes }).filter(
+      (item) => item.categoria === "sequencia"
+    );
+
+    expect(premios.map((item) => item.moedas)).toEqual([12, 20, 50]);
+    expect(premios.reduce((total, item) => total + item.moedas, 0)).toBe(82);
+  });
+
+  it("dá 20 moedas no sétimo login consecutivo e não duplica o resgate", () => {
+    let estado: EstadoEconomia = {
+      moedas: 0,
+      recompensasRecebidas: [],
+      sequenciaLoginAtual: 0,
+    };
+
+    let ultimoPremio = 0;
+    for (let dia = 1; dia <= 7; dia += 1) {
+      const data = `2026-08-${String(dia).padStart(2, "0")}`;
+      const resultado = resgatarRecompensaLogin(estado, data, new Date(`${data}T12:00:00-03:00`));
+      estado = resultado.estado;
+      ultimoPremio = resultado.recompensa?.moedas ?? 0;
+    }
+
+    expect(ultimoPremio).toBe(20);
+    expect(estado.sequenciaLoginAtual).toBe(7);
+    expect(estado.moedas).toBe(44);
+
+    const repetido = resgatarRecompensaLogin(estado, "2026-08-07");
+    expect(repetido.recompensa).toBeNull();
+    expect(repetido.estado.moedas).toBe(44);
+  });
+
+  it("registra cada recompensa uma única vez", () => {
+    const estado = obterEstadoEconomia(configuracoes);
+    const lista = [
+      {
+        id: "nivel:2",
+        moedas: 15,
+        titulo: "Nível 2 alcançado",
+        categoria: "nivel" as const,
+      },
+    ];
+
+    const primeira = aplicarRecompensasPendentes(estado, lista);
+    const segunda = aplicarRecompensasPendentes(primeira.estado, lista);
+
+    expect(primeira.estado.moedas).toBe(15);
+    expect(segunda.estado.moedas).toBe(15);
+    expect(segunda.novas).toHaveLength(0);
+  });
+});
