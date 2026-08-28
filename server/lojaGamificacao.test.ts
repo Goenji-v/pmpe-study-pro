@@ -7,13 +7,12 @@ import {
   type EstadoEconomia,
 } from "../src/services/economiaGamificacao.ts";
 import {
+  CATALOGO_LOJA,
   comprarItemLoja,
   desequiparTipoLoja,
   equiparItemLoja,
   itemEstaEquipado,
   itensDoInventario,
-  obterWallpaperEquipadoId,
-  type ItemLoja,
 } from "../src/services/lojaGamificacao.ts";
 
 function economiaComMoedas(moedas: number): EstadoEconomia {
@@ -25,21 +24,10 @@ function economiaComMoedas(moedas: number): EstadoEconomia {
   };
 }
 
-const wallpaperTeste: ItemLoja = {
-  id: "wallpaper:abc",
-  idBanco: "abc",
-  tipo: "wallpaper",
-  nome: "Patrulha Noturna",
-  descricao: "Teste de wallpaper responsivo.",
-  preco: 260,
-  raridade: "raro",
-  icone: "🖼️",
-  valorVisual: "patrulha-noturna",
-  ativo: true,
-  wallpaperDesktopUrl: "https://example.com/desktop.webp",
-  wallpaperMobileUrl: "https://example.com/mobile.webp",
-  wallpaperPreviewUrl: "https://example.com/preview.webp",
-};
+test("catalogo da loja mantém apenas temas e molduras", () => {
+  assert.ok(CATALOGO_LOJA.length > 0);
+  assert.equal(CATALOGO_LOJA.every((item) => item.tipo === "tema" || item.tipo === "moldura"), true);
+});
 
 test("compra desconta moedas uma vez e adiciona item permanentemente ao inventario", () => {
   const inicial = economiaComMoedas(300);
@@ -86,43 +74,15 @@ test("nao equipa item que nao foi comprado", () => {
   assert.equal(resultado.estado.temaEquipado, undefined);
 });
 
-test("wallpaper remoto pode ser comprado e equipado sem misturar marcador com inventario visual", () => {
-  const catalogo = [wallpaperTeste];
-  const compra = comprarItemLoja(
-    economiaComMoedas(500),
-    wallpaperTeste.id,
-    new Date("2026-08-28T13:00:00Z"),
-    catalogo
-  );
+test("desequipar tema preserva a compra no inventario", () => {
+  let estado = economiaComMoedas(500);
+  estado = comprarItemLoja(estado, "tema-roxo-estrategico").estado;
+  estado = equiparItemLoja(estado, "tema-roxo-estrategico").estado;
+  estado = desequiparTipoLoja(estado, "tema");
 
-  assert.equal(compra.erro, undefined);
-  assert.equal(compra.estado.moedas, 240);
-  assert.deepEqual(compra.estado.inventario, [wallpaperTeste.id]);
-
-  const equipado = equiparItemLoja(compra.estado, wallpaperTeste.id, new Date(), catalogo);
-  assert.equal(equipado.erro, undefined);
-  assert.equal(obterWallpaperEquipadoId(equipado.estado), wallpaperTeste.id);
-  assert.equal(itemEstaEquipado(equipado.estado, wallpaperTeste), true);
-  assert.deepEqual(itensDoInventario(equipado.estado, catalogo).map((item) => item.id), [wallpaperTeste.id]);
-  assert.equal(equipado.estado.inventario?.filter((id) => id === wallpaperTeste.id).length, 1);
-});
-
-test("desequipar wallpaper preserva a compra no inventario", () => {
-  const catalogo = [wallpaperTeste];
-  let estado = comprarItemLoja(economiaComMoedas(500), wallpaperTeste.id, new Date(), catalogo).estado;
-  estado = equiparItemLoja(estado, wallpaperTeste.id, new Date(), catalogo).estado;
-  estado = desequiparTipoLoja(estado, "wallpaper");
-
-  assert.equal(obterWallpaperEquipadoId(estado), undefined);
-  assert.equal(estado.inventario?.includes(wallpaperTeste.id), true);
-  assert.equal(itensDoInventario(estado, catalogo).length, 1);
-});
-
-test("wallpaper oculto nao aceita nova compra", () => {
-  const oculto: ItemLoja = { ...wallpaperTeste, ativo: false };
-  const resultado = comprarItemLoja(economiaComMoedas(1000), oculto.id, new Date(), [oculto]);
-  assert.match(resultado.erro ?? "", /não está disponível/i);
-  assert.equal(resultado.estado.moedas, 1000);
+  assert.equal(estado.temaEquipado, undefined);
+  assert.equal(estado.inventario?.includes("tema-roxo-estrategico"), true);
+  assert.equal(itensDoInventario(estado).some((item) => item.id === "tema-roxo-estrategico"), true);
 });
 
 test("normalizacao da economia preserva inventario compras e dados legados para migracao", () => {
