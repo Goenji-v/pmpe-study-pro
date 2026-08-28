@@ -1,0 +1,89 @@
+.dashboard-xp-inline-moedas {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 11px;
+  color: #ffe39a;
+  background: linear-gradient(145deg, rgba(137, 91, 10, .24), rgba(50, 36, 12, .5));
+  border: 1px solid rgba(245, 190, 70, .42);
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.dashboard-xp-inline-moedas > span {
+  font-size: 14px;
+}
+
+.dashboard-xp-inline-moedas strong {
+  color: #ffe8a8;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.dashboard-xp-inline-moedas small {
+  color: #c9a94f;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+@media (max-width: 1280px) {
+  .dashboard-xp-inline-moedas {
+    min-height: 34px;
+    padding: 0 8px;
+  }
+
+  .dashboard-xp-inline-moedas small {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-xp-inline-moedas {
+    gap: 3px;
+    padding: 0 6px;
+  }
+
+  .dashboard-xp-inline-moedas > span {
+    font-size: 12px;
+  }
+
+  .dashboard-xp-inline-moedas strong {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-xp-inline-moedas {
+    position: absolute;
+    top: -8px;
+    right: -7px;
+    min-height: 23px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #3b2a0d;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+  }
+
+  .dashboard-xp-inline {
+    position: relative;
+  }
+
+  .dashboard-xp-inline-moedas > span {
+    font-size: 10px;
+  }
+
+  .dashboard-xp-inline-moedas strong {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-xp-inline-moedas {
+    top: -7px;
+    right: -5px;
+  }
+}

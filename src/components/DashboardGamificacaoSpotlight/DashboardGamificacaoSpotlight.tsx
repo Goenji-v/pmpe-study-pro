@@ -3,8 +3,10 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import "./DashboardGamificacaoSpotlight.css";
+import "./DashboardMoedas.css";
 
 import { useApp } from "../../context/AppContext";
+import { obterEstadoEconomia } from "../../services/economiaGamificacao";
 import { calcularGamificacao } from "../../services/gamificacaoService";
 
 const XP_POR_NIVEL = 250;
@@ -12,7 +14,7 @@ const XP_POR_NIVEL = 250;
 export default function DashboardGamificacaoSpotlight() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { sessoes, questoes, revisoes, simulados } = useApp();
+  const { sessoes, questoes, revisoes, simulados, configuracoes } = useApp();
   const [destino, setDestino] = useState<HTMLElement | null>(null);
 
   const gamificacao = useMemo(
@@ -24,6 +26,11 @@ export default function DashboardGamificacaoSpotlight() {
         simulados,
       }),
     [sessoes, questoes, revisoes, simulados]
+  );
+
+  const economia = useMemo(
+    () => obterEstadoEconomia(configuracoes),
+    [configuracoes]
   );
 
   useEffect(() => {
@@ -64,7 +71,7 @@ export default function DashboardGamificacaoSpotlight() {
   );
 
   return createPortal(
-    <span className="dashboard-xp-inline" aria-label="Progresso de nível">
+    <span className="dashboard-xp-inline" aria-label="Progresso de nível e moedas">
       <span className="dashboard-xp-inline-nivel">
         Nível {gamificacao.nivel}
         <small>{gamificacao.tituloNivel}</small>
@@ -85,6 +92,12 @@ export default function DashboardGamificacaoSpotlight() {
         >
           <i style={{ width: `${progresso}%` }} />
         </span>
+      </span>
+
+      <span className="dashboard-xp-inline-moedas" title="Saldo de moedas">
+        <span>🪙</span>
+        <strong>{economia.moedas}</strong>
+        <small>moedas</small>
       </span>
 
       <button

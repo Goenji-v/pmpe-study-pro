@@ -1,0 +1,184 @@
+.economia-toast {
+  position: fixed;
+  top: 82px;
+  right: 22px;
+  z-index: 9998;
+  max-width: min(360px, calc(100vw - 28px));
+  padding: 12px 15px;
+  color: #fff4c7;
+  background: linear-gradient(135deg, #3c2b0d, #151c2b 72%);
+  border: 1px solid rgba(245, 190, 70, .52);
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, .34);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.economia-login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 8, 23, .68);
+  backdrop-filter: blur(5px);
+}
+
+.economia-login-card {
+  position: relative;
+  width: min(390px, 100%);
+  padding: 28px 24px 20px;
+  text-align: center;
+  color: #eef5ff;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(245, 181, 48, .19), transparent 38%),
+    linear-gradient(150deg, #17243a, #0d1728 76%);
+  border: 1px solid rgba(245, 190, 70, .43);
+  border-radius: 20px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .45);
+}
+
+.economia-login-fechar {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #aebbd0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.economia-login-fechar:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, .06);
+}
+
+.economia-login-moeda {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #5c3f08, #291d0a);
+  border: 1px solid rgba(250, 204, 72, .6);
+  box-shadow: 0 0 0 7px rgba(245, 181, 48, .06), 0 14px 35px rgba(0, 0, 0, .25);
+  font-size: 36px;
+}
+
+.economia-login-kicker {
+  color: #f1c75f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.economia-login-card h2 {
+  margin: 8px 0 6px;
+  font-size: 24px;
+}
+
+.economia-login-card p {
+  margin: 0 auto;
+  max-width: 310px;
+  color: #9fb0c8;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.economia-login-premio {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 18px 0 14px;
+  color: #f7d56b;
+}
+
+.economia-login-premio strong {
+  font-size: 31px;
+  line-height: 1;
+}
+
+.economia-login-premio span {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.economia-login-dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 2px 0 18px;
+}
+
+.economia-login-dias span {
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #6e829e;
+  background: #111e31;
+  border: 1px solid #283b57;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.economia-login-dias span.feito {
+  color: #ffebaa;
+  background: rgba(180, 119, 9, .2);
+  border-color: rgba(245, 190, 70, .5);
+}
+
+.economia-login-resgatar,
+.economia-login-agora-nao {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.economia-login-resgatar {
+  color: #1f1603;
+  background: linear-gradient(90deg, #eab53d, #ffd86f);
+  border: 0;
+  box-shadow: 0 10px 25px rgba(234, 181, 61, .16);
+}
+
+.economia-login-agora-nao {
+  min-height: 38px;
+  margin-top: 7px;
+  color: #91a3bb;
+  background: transparent;
+  border: 0;
+}
+
+@media (max-width: 520px) {
+  .economia-toast {
+    top: 72px;
+    right: 14px;
+    left: 14px;
+    max-width: none;
+    text-align: center;
+  }
+
+  .economia-login-overlay {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .economia-login-card {
+    width: 100%;
+    padding: 25px 18px 16px;
+    border-radius: 20px 20px 14px 14px;
+  }
+}

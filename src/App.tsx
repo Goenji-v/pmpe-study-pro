@@ -51,6 +51,7 @@ import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
 import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/QuestaoIACronometroBridge";
 import DashboardGamificacaoSpotlight from "./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight";
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
+import EconomiaGamificacaoBridge from "./components/EconomiaGamificacaoBridge/EconomiaGamificacaoBridge";
 
 import { AppProvider, useApp } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -86,6 +87,7 @@ function LayoutProtegido() {
           <EditalPrimeiroAcessoGuard />
           <QuestaoIABridge />
           <DashboardGamificacaoSpotlight />
+          <EconomiaGamificacaoBridge />
           <CronometroProvider>
             <QuestaoIACronometroBridge />
             <CentralRedacaoBridge />
