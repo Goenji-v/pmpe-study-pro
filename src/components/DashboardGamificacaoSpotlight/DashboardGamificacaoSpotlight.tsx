@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import "./DashboardGamificacaoSpotlight.css";
+import "./DashboardMoedas.css";
 
 import { useApp } from "../../context/AppContext";
 import { obterEstadoEconomia } from "../../services/economiaGamificacao";
