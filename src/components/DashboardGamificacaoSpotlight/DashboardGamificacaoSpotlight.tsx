@@ -10,13 +10,24 @@ import { useApp } from "../../context/AppContext";
 import { obterEstadoEconomia } from "../../services/economiaGamificacao";
 import { calcularGamificacao } from "../../services/gamificacaoService";
 import { encontrarItemLoja } from "../../services/lojaGamificacao";
+import {
+  calcularTitulosConquista,
+  obterTituloEquipadoValido,
+} from "../../services/conquistasTitulos";
 
 const XP_POR_NIVEL = 250;
 
 export default function DashboardGamificacaoSpotlight() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { sessoes, questoes, revisoes, simulados, configuracoes } = useApp();
+  const {
+    sessoes,
+    questoes,
+    revisoes,
+    simulados,
+    missoesConcluidas,
+    configuracoes,
+  } = useApp();
   const [destino, setDestino] = useState<HTMLElement | null>(null);
 
   const gamificacao = useMemo(
@@ -35,10 +46,34 @@ export default function DashboardGamificacaoSpotlight() {
     [configuracoes]
   );
 
-  const tituloEquipado = encontrarItemLoja(economia.tituloEquipado);
+  const titulosConquista = useMemo(
+    () =>
+      calcularTitulosConquista({
+        sessoes,
+        questoes,
+        revisoes,
+        simulados,
+        missoesConcluidas,
+        configuracoes,
+        economia,
+      }),
+    [
+      sessoes,
+      questoes,
+      revisoes,
+      simulados,
+      missoesConcluidas,
+      configuracoes,
+      economia,
+    ]
+  );
+
+  const tituloEquipado = obterTituloEquipadoValido(
+    titulosConquista,
+    economia.tituloEquipado
+  );
   const molduraEquipada = encontrarItemLoja(economia.molduraEquipada);
-  const tituloVisivel =
-    tituloEquipado?.tipo === "titulo" ? tituloEquipado.valorVisual : gamificacao.tituloNivel;
+  const tituloVisivel = tituloEquipado?.nome ?? gamificacao.tituloNivel;
   const molduraVisual =
     molduraEquipada?.tipo === "moldura" ? molduraEquipada.valorVisual : "padrao";
 
