@@ -16,6 +16,7 @@ import {
 export default function PersonalizacaoBridge() {
   const { configuracoes } = useApp();
   const economia = useMemo(() => obterEstadoEconomia(configuracoes), [configuracoes]);
+  const wallpaperEquipadoId = obterWallpaperEquipadoId(economia);
   const [wallpapers, setWallpapers] = useState<ItemLoja[]>([]);
 
   useEffect(() => {
@@ -30,12 +31,12 @@ export default function PersonalizacaoBridge() {
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [wallpaperEquipadoId]);
 
   const catalogo = useMemo(() => [...CATALOGO_LOJA, ...wallpapers], [wallpapers]);
   const tema = encontrarItemLoja(economia.temaEquipado, catalogo);
   const moldura = encontrarItemLoja(economia.molduraEquipada, catalogo);
-  const wallpaper = encontrarItemLoja(obterWallpaperEquipadoId(economia), catalogo);
+  const wallpaper = encontrarItemLoja(wallpaperEquipadoId, catalogo);
 
   useEffect(() => {
     const raiz = document.documentElement;
