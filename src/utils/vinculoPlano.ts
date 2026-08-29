@@ -35,7 +35,7 @@ const CAMPOS_QUE_DESVINCULAM = [
 
 export function aplicarAlteracoesComVinculoSeguro<T extends EstadoVinculoPlano>(
   anterior: T,
-  alteracoes: Partial<T>
+  alteracoes: Partial<EstadoVinculoPlano>
 ): T {
   const deveDesvincular = Boolean(
     anterior.missaoId &&
@@ -63,7 +63,7 @@ export function aplicarAlteracoesComVinculoSeguro<T extends EstadoVinculoPlano>(
 
 export function missaoPossuiReferenciaCanonica(
   missao: MissaoPlano | undefined
-): boolean {
+): missao is MissaoPlano {
   return Boolean(
     missao && obterReferenciasDaMissao(missao).length > 0
   );
