@@ -35,7 +35,7 @@ import {
 } from "../../services/conteudos/navegarConteudos";
 import { localizarProximaAula } from "../../services/conteudos/localizarConteudo";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
-import { planoPMPE } from "../../data/planoPMPE";
+import { obterReferenciasDaMissao, planoPMPE } from "../../data/planoPMPE";
 
 type EstadoNavegacaoCentral = {
   origem?: "dashboard" | "plano";
@@ -177,23 +177,28 @@ const [
       return;
     }
 
-    // Etapa 15: mesmo um prefill salvo por versão antiga é refeito a partir
-    // da missão e dos IDs canônicos atuais antes de abrir a Central.
+    // Conteúdo canônico pode ser reconstruído com segurança. Missões livres
+    // podem ter sido adaptadas pelo diagnóstico; nesses casos preservamos a
+    // matéria/assunto recebidos do Plano em vez de voltar ao texto estático.
     if (prefill.missaoId) {
       const missao = planoPMPE
         .flatMap((semana) => semana.dias)
         .flatMap((dia) => dia.missoes)
         .find((item) => item.id === prefill?.missaoId);
 
-      if (missao) {
+      if (missao && obterReferenciasDaMissao(missao).length > 0) {
+        const objetivoRecebido = prefill.objetivo;
+        const canonica = criarDadosSessaoDaMissao(
+          materias,
+          missao,
+          prefill.semana ?? 1,
+          prefill.dia ?? 1
+        );
+
         prefill = {
           ...prefill,
-          ...criarDadosSessaoDaMissao(
-            materias,
-            missao,
-            prefill.semana ?? 1,
-            prefill.dia ?? 1
-          ),
+          ...canonica,
+          objetivo: objetivoRecebido ?? canonica.objetivo,
         };
       }
     }
@@ -713,9 +718,11 @@ const [
     );
 
     setMensagem(
-      resultado.revisaoCriada
-        ? "Sessão salva. Assunto concluído e revisão programada."
-        : "Sessão salva sem duplicar o tempo."
+      estado.tipo === "simulado"
+        ? "Simulado salvo no histórico."
+        : resultado.revisaoCriada
+          ? "Sessão salva. Assunto concluído e revisão programada."
+          : "Sessão salva sem duplicar o tempo."
     );
   }
 

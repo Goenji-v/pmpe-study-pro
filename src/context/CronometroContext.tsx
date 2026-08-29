@@ -15,6 +15,11 @@ import {
 } from "../services/conteudos/navegarConteudos";
 import { obterReferenciasDaMissao, planoPMPE } from "../data/planoPMPE";
 import { criarDadosSessaoDaMissao } from "../services/conteudos/sincronizacaoCanonica";
+import {
+  aplicarAlteracoesComVinculoSeguro,
+  missaoPossuiReferenciaCanonica,
+  obterMateriaEfetivaDaSessao,
+} from "../utils/vinculoPlano";
 
 import type {
   Dificuldade,
@@ -158,6 +163,7 @@ export function CronometroProvider({
     materias,
     setSessoes,
     setQuestoes,
+    setSimulados,
     setMissoesConcluidas,
     definirConclusaoAssunto,
     definirConclusaoAula,
@@ -198,9 +204,9 @@ export function CronometroProvider({
     );
   }, [chaveStorage, sessaoAtiva]);
 
-  // Etapa 15: se uma sessão em andamento veio do Plano, revalida sua
-  // referência ao carregar uma versão nova do app. Isso corrige sessões
-  // antigas sem reiniciar o cronômetro nem perder o tempo já contado.
+  // Sessões vinculadas a conteúdo canônico são revalidadas após atualizações
+  // do catálogo. Missões livres/adaptativas preservam a matéria escolhida pelo
+  // diagnóstico e não podem ser sobrescritas pela definição estática do plano.
   useEffect(() => {
     if (!sessaoAtiva.missaoId || materias.length === 0) return;
 
@@ -209,7 +215,7 @@ export function CronometroProvider({
       .flatMap((dia) => dia.missoes)
       .find((item) => item.id === sessaoAtiva.missaoId);
 
-    if (!missao) return;
+    if (!missaoPossuiReferenciaCanonica(missao)) return;
 
     const canonica = criarDadosSessaoDaMissao(
       materias,
@@ -285,7 +291,13 @@ export function CronometroProvider({
       }
     }
 
-    if (!dados.materia.trim()) {
+    const materiaEfetiva =
+      obterMateriaEfetivaDaSessao(
+        dados.tipo,
+        dados.materia
+      );
+
+    if (!materiaEfetiva) {
       showToast(
         "Selecione uma matéria.",
         "warning"
@@ -302,7 +314,7 @@ export function CronometroProvider({
     }
 
     setSessaoAtiva({
-      materia: dados.materia.trim(),
+      materia: materiaEfetiva,
       materiaId: dados.materiaId,
       modulo: dados.modulo?.trim() || undefined,
       moduloId: dados.moduloId,
@@ -351,10 +363,11 @@ export function CronometroProvider({
     }
 
     setSessaoAtiva(
-      (anterior) => ({
-        ...anterior,
-        ...dados,
-      })
+      (anterior) =>
+        aplicarAlteracoesComVinculoSeguro(
+          anterior,
+          dados
+        )
     );
   }
 
@@ -515,77 +528,76 @@ export function CronometroProvider({
       dia: sessaoAtiva.dia,
     };
 
-    setSessoes(
-      (anteriores) => [
-        novaSessao,
-        ...anteriores,
-      ]
-    );
+    // Simulado possui histórico próprio. Persisti-lo também como sessão faria
+    // o Dashboard somar o mesmo tempo duas vezes.
+    if (sessaoAtiva.tipo !== "simulado") {
+      setSessoes(
+        (anteriores) => [
+          novaSessao,
+          ...anteriores,
+        ]
+      );
+    }
 
     const quantidadeAcertos =
-  dados.quantidadeAcertos;
+      dados.quantidadeAcertos;
 
-const quantidadeErros =
-  dados.quantidadeErros;
+    const quantidadeErros =
+      dados.quantidadeErros;
 
-if (
-  (sessaoAtiva.tipo === "questoes" ||
-    (sessaoAtiva.tipo === "revisao" && dados.formatoRevisao === "questoes")) &&
-  typeof quantidadeAcertos ===
-    "number" &&
-  typeof quantidadeErros ===
-    "number"
-) {
-  
+    if (
+      (sessaoAtiva.tipo === "questoes" ||
+        (sessaoAtiva.tipo === "revisao" && dados.formatoRevisao === "questoes")) &&
+      typeof quantidadeAcertos === "number" &&
+      typeof quantidadeErros === "number"
+    ) {
       setQuestoes(
         (anteriores) => [
           {
-            id:
-              crypto.randomUUID(),
-
-            materia:
-              sessaoAtiva.materia,
-
-            materiaId:
-              sessaoAtiva.materiaId,
-
-            modulo:
-              sessaoAtiva.modulo,
-
-            moduloId:
-              sessaoAtiva.moduloId,
-
-            assunto:
-              sessaoAtiva.assunto,
-
-            assuntoId:
-              sessaoAtiva.assuntoId,
-
-            banca:
-              dados.banca?.trim() ||
-              "Não informada",
-
-            certas:
-              quantidadeAcertos,
-
-            erradas:
-              quantidadeErros,
-
+            id: crypto.randomUUID(),
+            materia: sessaoAtiva.materia,
+            materiaId: sessaoAtiva.materiaId,
+            modulo: sessaoAtiva.modulo,
+            moduloId: sessaoAtiva.moduloId,
+            assunto: sessaoAtiva.assunto,
+            assuntoId: sessaoAtiva.assuntoId,
+            banca: dados.banca?.trim() || "Não informada",
+            certas: quantidadeAcertos,
+            erradas: quantidadeErros,
             // O tempo já pertence à Sessão de Estudo criada acima.
-            // O RegistroQuestao automático guarda apenas desempenho,
-            // evitando duplicar minutos nas estatísticas.
             minutos: 0,
-
-            data:
-              finalizadaEm,
-
-            observacao:
-              dados.observacao?.trim() ||
-              undefined,
+            data: finalizadaEm,
+            observacao: dados.observacao?.trim() || undefined,
           },
           ...anteriores,
         ]
       );
+    }
+
+    if (
+      sessaoAtiva.tipo === "simulado" &&
+      typeof quantidadeAcertos === "number" &&
+      typeof quantidadeErros === "number"
+    ) {
+      setSimulados((anteriores) => [
+        {
+          id: crypto.randomUUID(),
+          nome: sessaoAtiva.assunto || "Simulado",
+          banca: dados.banca?.trim() || "Não informada",
+          certas: quantidadeAcertos,
+          erradas: quantidadeErros,
+          anuladas: 0,
+          totalQuestoes: quantidadeAcertos + quantidadeErros,
+          minutos: Math.round(minutos),
+          data: finalizadaEm,
+          observacao:
+            dados.observacao?.trim() ||
+            sessaoAtiva.observacao ||
+            undefined,
+          origem: "manual",
+        },
+        ...anteriores,
+      ]);
     }
 
     const missaoPlano = sessaoAtiva.missaoId
@@ -736,7 +748,9 @@ if (
     );
 
     showToast(
-      "Sessão finalizada e salva.",
+      sessaoAtiva.tipo === "simulado"
+        ? "Simulado finalizado e salvo."
+        : "Sessão finalizada e salva.",
       "success"
     );
 
