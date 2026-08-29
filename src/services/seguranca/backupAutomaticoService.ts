@@ -105,6 +105,45 @@ export function listarBackupsAutomaticosLocais(
   }
 }
 
+/**
+ * Reduz apenas os backups automáticos quando a cota do localStorage fica
+ * pressionada. Nunca apaga o estado operacional atual nem dados da nuvem.
+ */
+export function reduzirBackupsAutomaticosLocais(
+  usuarioId: string,
+  limite: number
+): number {
+  if (typeof window === "undefined") return 0;
+
+  const chave = chaveDoUsuario(usuarioId);
+  const quantidade = Math.max(0, Math.floor(limite));
+  const existentes = listarBackupsAutomaticosLocais(usuarioId)
+    .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+
+  if (quantidade === 0 || existentes.length === 0) {
+    window.localStorage.removeItem(chave);
+    window.dispatchEvent(new Event("pmpe-backup-atualizado"));
+    return 0;
+  }
+
+  const mantidos = existentes.slice(0, quantidade);
+
+  try {
+    window.localStorage.setItem(
+      chave,
+      JSON.stringify(mantidos)
+    );
+    window.dispatchEvent(new Event("pmpe-backup-atualizado"));
+    return mantidos.length;
+  } catch {
+    // Se nem a versão reduzida couber, liberar esse cache é mais seguro do que
+    // bloquear a fila de sincronização. O dado principal continua preservado.
+    window.localStorage.removeItem(chave);
+    window.dispatchEvent(new Event("pmpe-backup-atualizado"));
+    return 0;
+  }
+}
+
 export function criarBackupAutomaticoLocal(
   usuarioId: string,
   estado: unknown,
