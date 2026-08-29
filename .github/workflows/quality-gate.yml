@@ -35,6 +35,17 @@ jobs:
             git commit -m "chore: corrigir vulnerabilidades npm"
             git push origin HEAD:${{ github.head_ref }}
           fi
+      - name: Corrigir avisos de lint da manutenção
+        if: github.event_name == 'pull_request' && github.head_ref == 'chore/seguranca-lint-deps'
+        run: |
+          node scripts/corrigir-lint.mjs
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package.json package-lock.json src
+            git commit -m "chore: eliminar avisos de lint"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - name: Verificar vulnerabilidades high
         run: npm audit --audit-level=high
       - name: Executar lint
