@@ -86,3 +86,18 @@ p {
     padding: 20px 16px;
   }
 }
+
+/* Mantém os selos de prioridade sempre horizontais e compactos. */
+.conteudos-assunto-item .prioridade {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: max-content !important;
+  min-width: max-content !important;
+  max-width: max-content !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  writing-mode: horizontal-tb !important;
+  line-height: 1 !important;
+}
