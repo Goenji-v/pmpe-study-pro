@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   quality:
@@ -14,42 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
+        uses: actions/checkout@v7
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Instalar dependencias
         run: npm ci
-      - name: Aplicar correções seguras do npm audit
-        if: github.event_name == 'pull_request' && github.head_ref == 'chore/seguranca-lint-deps'
-        run: |
-          npm audit fix
-          if ! git diff --quiet -- package.json package-lock.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package.json package-lock.json
-            git commit -m "chore: corrigir vulnerabilidades npm"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
-      - name: Corrigir avisos de lint da manutenção
-        if: github.event_name == 'pull_request' && github.head_ref == 'chore/seguranca-lint-deps'
-        run: |
-          node scripts/corrigir-lint.mjs
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package.json package-lock.json src
-            git commit -m "chore: eliminar avisos de lint"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
       - name: Verificar vulnerabilidades high
         run: npm audit --audit-level=high
-      - name: Executar lint
-        run: npm run lint -- --format=agent
+      - name: Executar lint sem avisos
+        run: npm run lint -- --deny-warnings --format=agent
       - name: Executar testes
         run: npm test
       - name: Executar TypeScript e build
