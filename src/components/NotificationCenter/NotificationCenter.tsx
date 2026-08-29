@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useApp } from "../../context/AppContext";
@@ -56,7 +56,7 @@ export default function NotificationCenter() {
     return missao ? { semana, dia, missao } : null;
   }, [configuracoes.semanaAtualPlano, missoesConcluidas, plano]);
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     if (!usuario?.id) return;
 
     try {
@@ -72,7 +72,7 @@ export default function NotificationCenter() {
     } catch (error) {
       console.warn("Não foi possível atualizar notificações:", error);
     }
-  }
+  }, [administrador, usuario?.id]);
 
   useEffect(() => {
     void carregar();
@@ -83,7 +83,7 @@ export default function NotificationCenter() {
       window.clearInterval(intervalo);
       window.removeEventListener("focus", aoFocar);
     };
-  }, [usuario?.id, administrador]);
+  }, [carregar]);
 
   useEffect(() => {
     const abrir = () => {
@@ -92,7 +92,7 @@ export default function NotificationCenter() {
     };
     window.addEventListener("pmpe:notificacoes:abrir", abrir);
     return () => window.removeEventListener("pmpe:notificacoes:abrir", abrir);
-  }, [usuario?.id, administrador]);
+  }, [carregar]);
 
   useEffect(() => {
     if (!usuario?.id) return;
@@ -113,7 +113,7 @@ export default function NotificationCenter() {
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [usuario?.id, missaoHoje?.missao.id]);
+  }, [missaoHoje, usuario?.id]);
 
   useEffect(() => {
     if (!administrador || !usuario?.id || feedbacksPendentes.length === 0) return;
@@ -182,7 +182,7 @@ export default function NotificationCenter() {
 
     document.addEventListener("click", clicarNoSino);
     return () => document.removeEventListener("click", clicarNoSino);
-  }, [usuario?.id, administrador]);
+  }, [carregar]);
 
   useEffect(() => {
     const botao = document.querySelector<HTMLButtonElement>(

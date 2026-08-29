@@ -44,6 +44,7 @@ export default function CloudStatus() {
     resolverConflitoSincronizacao,
   } = useApp();
   const { usuario } = useAuth();
+  const usuarioId = usuario?.id;
 
   const [executando, setExecutando] = useState(false);
   const [painelAberto, setPainelAberto] = useState(false);
@@ -57,12 +58,14 @@ export default function CloudStatus() {
 
   const ultimoBackup = useMemo(() => {
     const manual = localStorage.getItem(CHAVE_ULTIMO_BACKUP_MANUAL);
-    const automatico = usuario
-      ? listarBackupsAutomaticosLocais(usuario.id)[0]?.criadoEm ?? null
+    const automatico = usuarioId
+      ? listarBackupsAutomaticosLocais(usuarioId)[0]?.criadoEm ?? null
       : null;
 
     return dataMaisRecente([manual, automatico]);
-  }, [usuario?.id, versaoBackup, statusNuvem]);
+    // versaoBackup e statusNuvem são gatilhos explícitos para reler o localStorage.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioId, versaoBackup, statusNuvem]);
 
   async function sincronizar() {
     if (executando) return;

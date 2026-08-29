@@ -199,7 +199,10 @@ export default function Dashboard() {
           planoCalendario
         ),
     };
-  }, [atualizacaoPlano, missoesConcluidas, planoCalendario]);
+    // atualizacaoPlano é um token explícito disparado por eventos externos do Dashboard.
+    /* oxlint-disable react-hooks/exhaustive-deps */
+  }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]);
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   const hoje = obterDataLocal();
 

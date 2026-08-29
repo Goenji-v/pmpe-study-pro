@@ -1,3 +1,5 @@
+/* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
+/* oxlint-disable react/only-export-components */
 import {
   createContext,
   useCallback,
@@ -825,9 +827,10 @@ export function AppProvider({
   children,
 }: AppProviderProps) {
   const { usuario } = useAuth();
+  const usuarioId = usuario?.id;
 
   const userId =
-    usuario?.id ?? "sem-usuario";
+    usuarioId ?? "sem-usuario";
 
   const [materias, setMaterias] =
     useLocalStorage<Materia[]>(
@@ -1177,7 +1180,7 @@ export function AppProvider({
   }
 
   useEffect(() => {
-    if (!usuario) {
+    if (!usuarioId) {
       nuvemInicializadaRef.current = false;
       hidratandoRef.current = false;
       ultimoEstadoSalvoRef.current = "";
@@ -1190,7 +1193,7 @@ export function AppProvider({
       return;
     }
 
-    const idDaConta = usuario.id;
+    const idDaConta = usuarioId;
     let ativo = true;
 
     async function iniciarNuvem() {
@@ -1363,7 +1366,7 @@ export function AppProvider({
       }
     };
   }, [
-    usuario?.id,
+    usuarioId,
     aplicarEstadoDaNuvem,
   ]);
 
@@ -1396,7 +1399,7 @@ export function AppProvider({
 
   useEffect(() => {
     if (
-      !usuario ||
+      !usuarioId ||
       !nuvemInicializadaRef.current ||
       hidratandoRef.current
     ) {
@@ -1417,7 +1420,7 @@ export function AppProvider({
 
     try {
       registrarEstadoPendenteSincronizacao(
-        usuario.id,
+        usuarioId,
         estadoAtual,
         revisaoBaseRef.current
       );
@@ -1453,7 +1456,7 @@ export function AppProvider({
 
     setStatusNuvem("salvando");
 
-    const idDaConta = usuario.id;
+    const idDaConta = usuarioId;
 
     timerSalvarRef.current =
       setTimeout(() => {
@@ -1474,7 +1477,7 @@ export function AppProvider({
     };
   }, [
     estadoAtual,
-    usuario?.id,
+    usuarioId,
   ]);
 
   async function salvarAlteracao(
@@ -1734,7 +1737,7 @@ export function AppProvider({
   }
 
   useEffect(() => {
-    if (!usuario) return;
+    if (!usuarioId) return;
 
     function ficouOffline() {
       setStatusNuvem("offline");
@@ -1761,7 +1764,9 @@ export function AppProvider({
       window.removeEventListener("offline", ficouOffline);
       window.removeEventListener("online", voltouOnline);
     };
-  }, [usuario?.id]);
+    // sincronizarAgora lê os dados atuais por refs; o listener deve mudar apenas com a conta.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioId]);
 
   function definirConclusaoAssunto(
     materiaId: string,

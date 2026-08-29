@@ -4,6 +4,7 @@ import { verificarAdministrador } from "../services/adminService";
 
 export function useAdminStatus() {
   const { usuario } = useAuth();
+  const usuarioId = usuario?.id;
   const [administrador, setAdministrador] = useState(false);
   const [carregandoAdmin, setCarregandoAdmin] = useState(true);
 
@@ -11,7 +12,7 @@ export function useAdminStatus() {
     let ativo = true;
 
     async function carregar() {
-      if (!usuario) {
+      if (!usuarioId) {
         if (ativo) {
           setAdministrador(false);
           setCarregandoAdmin(false);
@@ -33,7 +34,7 @@ export function useAdminStatus() {
     return () => {
       ativo = false;
     };
-  }, [usuario?.id]);
+  }, [usuarioId]);
 
   return { administrador, carregandoAdmin };
 }

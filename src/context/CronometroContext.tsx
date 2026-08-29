@@ -1,3 +1,5 @@
+/* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
+/* oxlint-disable react/only-export-components */
 import {
   createContext,
   useContext,
@@ -247,7 +249,19 @@ export function CronometroProvider({
       urlAula: canonica.urlAula,
       urlQuestoes: canonica.urlQuestoes,
     }));
-  }, [materias, sessaoAtiva.missaoId]);
+  }, [
+    materias,
+    sessaoAtiva.missaoId,
+    sessaoAtiva.semana,
+    sessaoAtiva.dia,
+    sessaoAtiva.materiaId,
+    sessaoAtiva.moduloId,
+    sessaoAtiva.assuntoId,
+    sessaoAtiva.aulaId,
+    sessaoAtiva.materia,
+    sessaoAtiva.modulo,
+    sessaoAtiva.assunto,
+  ]);
 
   useEffect(() => {
     if (sessaoAtiva.status !== "rodando") {
