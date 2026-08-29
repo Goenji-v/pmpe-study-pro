@@ -22,8 +22,10 @@ jobs:
           cache: npm
       - name: Instalar dependencias
         run: npm ci
+      - name: Diagnosticar vulnerabilidades
+        run: npm audit --json || true
       - name: Executar lint
-        run: npm run lint
+        run: npm run lint -- --format=agent
       - name: Executar testes
         run: npm test
       - name: Executar TypeScript e build
