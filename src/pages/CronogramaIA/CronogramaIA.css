@@ -1,517 +1,1386 @@
-.cronograma-container {
+.cronograma-container.tatico-container {
+  --tatico-bg: #0f172a;
+  --tatico-card: #182235;
+  --tatico-card-2: #111b2e;
+  --tatico-border: #2d3b52;
+  --tatico-border-soft: rgba(148, 163, 184, 0.18);
+  --tatico-text: #f8fafc;
+  --tatico-muted: #94a3b8;
+  --tatico-soft: #cbd5e1;
+  --tatico-purple: #8b5cf6;
+  --tatico-purple-soft: #c4b5fd;
+  --tatico-green: #4ade80;
+  --tatico-yellow: #fbbf24;
+  --tatico-red: #f87171;
   width: 100%;
+  color: var(--tatico-text);
 }
 
-.cronograma-cabecalho {
+.tatico-container *,
+.tatico-container *::before,
+.tatico-container *::after {
+  box-sizing: border-box;
+}
+
+.tatico-container button,
+.tatico-container input,
+.tatico-container select,
+.tatico-container textarea {
+  font: inherit;
+}
+
+.tatico-cabecalho {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 22px;
-  margin-bottom: 20px;
+  gap: 24px;
+  margin-bottom: 18px;
 }
 
-.cronograma-etiqueta {
+.tatico-cabecalho h1,
+.tatico-painel h2,
+.tatico-missao-atual h2,
+.tatico-historico-toggle h2 {
+  margin: 0;
+  color: var(--tatico-text);
+}
+
+.tatico-cabecalho h1 {
+  margin-top: 6px;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.tatico-cabecalho p,
+.tatico-painel-cabecalho p,
+.tatico-historico-toggle p {
+  margin: 7px 0 0;
+  color: var(--tatico-muted);
+  line-height: 1.55;
+}
+
+.tatico-cabecalho p {
+  max-width: 690px;
+}
+
+.tatico-eyebrow,
+.tatico-secao-label {
   display: block;
-  margin-bottom: 6px;
-  color: #a78bfa;
-  font-size: 11px;
+  color: var(--tatico-purple-soft);
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 
-.cronograma-cabecalho h1 {
-  margin-bottom: 7px;
-  font-size: 34px;
-}
-
-.cronograma-cabecalho p {
-  color: #94a3b8;
-}
-
-.cronograma-configuracao {
-  display: grid;
-  grid-template-columns:
-    130px 140px;
-  gap: 7px 10px;
-  min-width: 330px;
-  padding: 16px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 14px;
-}
-
-.cronograma-configuracao label {
-  color: #94a3b8;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.cronograma-configuracao input,
-.cronograma-configuracao select {
-  width: 100%;
-  padding: 9px;
-  color: #ffffff;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-}
-
-.cronograma-configuracao button {
-  grid-column: 1 / -1;
-  padding: 11px;
-  color: #ffffff;
-  background: #7c3aed;
-  border: none;
-  border-radius: 9px;
-  font-weight: 900;
+.tatico-botao-estrategia,
+.tatico-botao-secundario,
+.tatico-botao-texto,
+.tatico-botao-fechar,
+.tatico-tarefa-acao button,
+.tatico-historico-ajustes button {
+  border: 0;
   cursor: pointer;
 }
 
-.cronograma-configuracao button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
+.tatico-botao-estrategia {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 10px 14px;
+  color: var(--tatico-soft);
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid var(--tatico-border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
-.cronograma-erro {
-  padding: 13px 15px;
-  margin-bottom: 17px;
+.tatico-botao-estrategia:hover {
+  color: #ffffff;
+  background: #1e293b;
+  border-color: #5b4d84;
+}
+
+.tatico-alerta {
+  padding: 11px 13px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tatico-alerta-erro {
   color: #fecaca;
-  background: rgba(220, 38, 38, 0.14);
-  border: 1px solid rgba(239, 68, 68, 0.45);
-  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.13);
+  border: 1px solid rgba(248, 113, 113, 0.38);
 }
 
-.cronograma-questionario {
-  padding: 20px;
-  margin-bottom: 20px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 15px;
+.tatico-alerta-info {
+  margin: 12px 0 0;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.24);
 }
 
-.cronograma-questionario-topo,
-.cronograma-questionario-rodape,
-.cronograma-aprovacao { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
-.cronograma-questionario-topo span,
-.cronograma-aprovacao span { color: #a78bfa; font-size: 11px; font-weight: 900; }
-.cronograma-questionario-topo p,
-.cronograma-aprovacao p { margin-top: 5px; color: #94a3b8; font-size: 13px; }
-.cronograma-questionario-topo > strong { color: #c4b5fd; font-size: 13px; }
-.cronograma-perguntas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-top: 18px; }
-.cronograma-perguntas label { display: flex; flex-direction: column; gap: 7px; color: #cbd5e1; font-size: 12px; font-weight: 700; }
-.cronograma-perguntas input,
-.cronograma-perguntas select,
-.cronograma-perguntas textarea { width: 100%; padding: 10px; color: white; background: #0f172a; border: 1px solid #475569; border-radius: 9px; }
-.cronograma-pergunta-check { flex-direction: row !important; align-items: center; padding: 10px; background: #0f172a; border: 1px solid #475569; border-radius: 9px; }
-.cronograma-pergunta-check input { width: auto; }
-.cronograma-observacao { grid-column: span 2; }
-.cronograma-observacao textarea { min-height: 66px; resize: vertical; }
-.cronograma-questionario-rodape { margin-top: 14px; justify-content: flex-end; }
-.cronograma-questionario-rodape span { margin-right: auto; color: #93c5fd; font-size: 13px; }
-.cronograma-questionario-rodape button,
-.cronograma-aprovacao button { padding: 10px 14px; color: white; background: #7c3aed; border: 0; border-radius: 9px; font-weight: 900; cursor: pointer; }
-.cronograma-aprovacao { padding: 14px; margin-bottom: 16px; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.45); border-radius: 11px; }
-.cronograma-aprovacao.aprovado { background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.45); }
-.cronograma-aprovacao.aprovado strong { color: #4ade80; }
-.cronograma-tarefa-rodape button:disabled { cursor: not-allowed; opacity: .55; background: #475569; }
-
-.cronograma-fechamento-grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; margin-bottom: 20px; }
-.cronograma-relatorio-mensal,
-.cronograma-automacao-controlada { padding: 19px; background: #1e293b; border: 1px solid #334155; border-radius: 15px; }
-.cronograma-relatorio-mensal header,
-.cronograma-automacao-controlada header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
-.cronograma-relatorio-mensal header span,
-.cronograma-automacao-controlada header span { color: #a78bfa; font-size: 10px; font-weight: 900; }
-.cronograma-relatorio-mensal header > strong { color: #c4b5fd; text-transform: capitalize; }
-.cronograma-relatorio-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
-.cronograma-relatorio-cards > div { padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 10px; }
-.cronograma-relatorio-cards span,
-.cronograma-relatorio-cards strong,
-.cronograma-relatorio-cards small { display: block; }
-.cronograma-relatorio-cards span,
-.cronograma-relatorio-cards small { color: #94a3b8; font-size: 11px; }
-.cronograma-relatorio-cards strong { margin: 6px 0; font-size: 21px; }
-.cronograma-diagnostico-mensal { margin-top: 12px; padding: 12px; background: rgba(37,99,235,.1); border: 1px solid rgba(96,165,250,.35); border-radius: 10px; }
-.cronograma-diagnostico-mensal p { margin: 5px 0; color: #cbd5e1; font-size: 13px; }
-.cronograma-automacao-controlada header label { display: flex; align-items: center; gap: 7px; color: #4ade80; }
-.cronograma-automacao-controlada ul { padding-left: 19px; color: #cbd5e1; font-size: 13px; line-height: 1.7; }
-.cronograma-mensagem-automacao { margin: 11px 0; padding: 9px; color: #bfdbfe; background: #172033; border-radius: 8px; font-size: 12px; }
-.cronograma-historico-ajustes { margin-top: 14px; }
-.cronograma-historico-ajustes h3 { margin-bottom: 9px; font-size: 14px; }
-.cronograma-historico-ajustes > p { color: #94a3b8; font-size: 12px; }
-.cronograma-historico-ajustes article { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px; margin-top: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 9px; }
-.cronograma-historico-ajustes article strong,
-.cronograma-historico-ajustes article span { display: block; }
-.cronograma-historico-ajustes article span,
-.cronograma-historico-ajustes article p { margin-top: 3px; color: #94a3b8; font-size: 10px; }
-.cronograma-historico-ajustes button { padding: 7px 9px; color: white; background: #475569; border: 0; border-radius: 7px; cursor: pointer; }
-
-.cronograma-resumo {
-  display: grid;
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
-  gap: 13px;
-  margin-bottom: 20px;
+.tatico-missao-atual,
+.tatico-painel {
+  margin-bottom: 16px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(20, 30, 48, 0.98));
+  border: 1px solid var(--tatico-border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.12);
 }
 
-.cronograma-resumo-card {
-  padding: 15px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
+.tatico-missao-atual {
+  position: relative;
+  overflow: hidden;
+  padding: 22px;
+  border-color: rgba(139, 92, 246, 0.38);
 }
 
-.cronograma-resumo-card span,
-.cronograma-resumo-card strong {
-  display: block;
+.tatico-missao-atual::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  content: "";
+  background: linear-gradient(90deg, #7c3aed, #a78bfa, transparent 78%);
 }
 
-.cronograma-resumo-card span {
-  color: #94a3b8;
-  font-size: 11px;
-}
-
-.cronograma-resumo-card strong {
-  margin-top: 7px;
-  font-size: 22px;
-}
-
-.cronograma-layout {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    280px;
-  gap: 20px;
-  align-items: start;
-}
-
-.cronograma-principal,
-.cronograma-historico {
-  padding: 19px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 15px;
-}
-
-.cronograma-historico {
-  position: sticky;
-  top: 20px;
-}
-
-.cronograma-plano-topo {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 15px;
-}
-
-.cronograma-plano-topo span,
-.cronograma-objetivo span {
-  display: block;
-  color: #a78bfa;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.7px;
-}
-
-.cronograma-plano-topo h2 {
-  margin: 5px 0;
-}
-
-.cronograma-plano-topo p {
-  color: #94a3b8;
-  line-height: 1.45;
-}
-
-.cronograma-plano-topo > strong {
-  color: #a78bfa;
-  font-size: 21px;
-  white-space: nowrap;
-}
-
-.cronograma-objetivo {
-  padding: 13px;
-  margin-bottom: 18px;
-  background: rgba(124, 58, 237, 0.13);
-  border: 1px solid rgba(167, 139, 250, 0.35);
-  border-radius: 10px;
-}
-
-.cronograma-objetivo strong {
-  display: block;
-  margin-top: 5px;
-  color: #ddd6fe;
-}
-
-.cronograma-dias {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.cronograma-dia-titulo {
+.tatico-missao-superior,
+.tatico-painel-cabecalho,
+.tatico-estrategia-rodape,
+.tatico-ajuste-atual,
+.tatico-subcabecalho,
+.tatico-historico-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 16px;
 }
 
-.cronograma-dia-titulo span {
-  color: #60a5fa;
-  font-size: 12px;
+.tatico-missao-superior > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tatico-status,
+.tatico-prioridade-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tatico-status {
+  padding: 6px 8px;
+}
+
+.tatico-status.aprovado {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.28);
+}
+
+.tatico-status.pendente {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.11);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+}
+
+.tatico-status.neutro {
+  color: var(--tatico-soft);
+  background: rgba(100, 116, 139, 0.13);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.tatico-prioridade-badge {
+  padding: 8px 10px;
+  color: var(--tatico-purple-soft);
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+}
+
+.tatico-missao-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.tatico-missao-conteudo {
+  min-width: 0;
+}
+
+.tatico-missao-tipo {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--tatico-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tatico-missao-conteudo h2 {
+  font-size: clamp(26px, 3.2vw, 40px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.tatico-missao-assunto {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: var(--tatico-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.tatico-missao-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px;
+}
+
+.tatico-missao-meta span {
+  padding: 7px 9px;
+  color: #dbeafe;
+  background: #111c30;
+  border: 1px solid #2b3b55;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 800;
 }
 
-.cronograma-tarefas {
-  display: flex;
-  flex-direction: column;
+.tatico-missao-contexto {
+  display: grid;
+  align-content: start;
   gap: 9px;
 }
 
-.cronograma-tarefa {
-  display: grid;
-  grid-template-columns:
-    38px minmax(0, 1fr);
-  gap: 12px;
+.tatico-missao-contexto > div {
   padding: 13px;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-left-width: 5px;
-  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.64);
+  border: 1px solid var(--tatico-border-soft);
+  border-radius: 11px;
 }
 
-.cronograma-teoria {
-  border-left-color: #2563eb;
-}
-
-.cronograma-questoes {
-  border-left-color: #7c3aed;
-}
-
-.cronograma-revisao {
-  border-left-color: #16a34a;
-}
-
-.cronograma-simulado {
-  border-left-color: #d97706;
-}
-
-.cronograma-redacao {
-  border-left-color: #db2777;
-}
-
-.cronograma-misto {
-  border-left-color: #64748b;
-}
-
-.cronograma-numero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  color: #ffffff;
-  background: #334155;
-  border-radius: 9px;
-  font-weight: 900;
-}
-
-.cronograma-tarefa-topo,
-.cronograma-tarefa-rodape {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 13px;
-}
-
-.cronograma-tarefa-topo span {
+.tatico-missao-contexto span,
+.tatico-missao-contexto strong {
   display: block;
-  margin-top: 4px;
-  color: #94a3b8;
-  font-size: 11px;
 }
 
-.cronograma-tarefa-topo small {
-  color: #a78bfa;
-  font-weight: 900;
-  white-space: nowrap;
+.tatico-missao-contexto span {
+  color: var(--tatico-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
-.cronograma-tarefa p {
-  margin: 8px 0;
-  color: #cbd5e1;
+.tatico-missao-contexto strong {
+  margin-top: 5px;
+  color: var(--tatico-text);
   font-size: 13px;
   line-height: 1.45;
 }
 
-.cronograma-tarefa-rodape span {
-  color: #60a5fa;
-  font-size: 11px;
+.tatico-missao-acoes {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
 }
 
-.cronograma-tarefa-rodape button {
-  padding: 7px 11px;
+.tatico-botao-principal {
+  min-width: 220px;
+  min-height: 48px;
+  padding: 12px 18px;
   color: #ffffff;
-  background: #0f766e;
-  border: none;
-  border-radius: 7px;
-  font-weight: 800;
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  border: 1px solid rgba(196, 181, 253, 0.28);
+  border-radius: 11px;
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18);
+  font-size: 13px;
+  font-weight: 900;
   cursor: pointer;
+  transition: transform 150ms ease, filter 150ms ease;
 }
 
-.cronograma-historico h2 {
-  margin-bottom: 13px;
+.tatico-botao-principal:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
-.cronograma-historico > p {
-  color: #94a3b8;
+.tatico-botao-principal:disabled,
+.tatico-tarefa-acao button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
-.cronograma-historico-lista {
+.tatico-botao-principal.compacto {
+  min-width: 160px;
+  min-height: 40px;
+  padding: 9px 13px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.tatico-ajuda-inline {
+  color: var(--tatico-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.tatico-painel {
+  padding: 19px;
+}
+
+.tatico-painel-cabecalho {
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.tatico-painel-cabecalho h2,
+.tatico-historico-toggle h2 {
+  margin-top: 4px;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.tatico-painel-cabecalho p {
+  max-width: 720px;
+  font-size: 12px;
+}
+
+.tatico-botao-fechar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--tatico-muted);
+  background: transparent;
+  border: 1px solid var(--tatico-border);
+  border-radius: 9px;
+  place-items: center;
+  font-size: 20px;
+}
+
+.tatico-estrategia {
+  border-color: rgba(96, 165, 250, 0.24);
+}
+
+.tatico-estrategia-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.tatico-estrategia-grid label,
+.tatico-campo-fixo {
+  min-width: 0;
+}
+
+.tatico-estrategia-grid label {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  color: var(--tatico-soft);
+  font-size: 11px;
+  font-weight: 800;
 }
 
-.cronograma-historico-lista article {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    30px;
-  gap: 5px;
-  background: #0f172a;
-  border: 1px solid #334155;
+.tatico-estrategia-grid input,
+.tatico-estrategia-grid select,
+.tatico-estrategia-grid textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px;
+  color: #ffffff;
+  background: #0d1728;
+  border: 1px solid #33445d;
+  border-radius: 9px;
+  outline: none;
+}
+
+.tatico-estrategia-grid input:focus,
+.tatico-estrategia-grid select:focus,
+.tatico-estrategia-grid textarea:focus {
+  border-color: #7c6bb2;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08);
+}
+
+.tatico-campo-fixo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 64px;
+  padding: 9px 11px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid var(--tatico-border-soft);
   border-radius: 9px;
 }
 
-.cronograma-historico-lista article.ativo {
-  border-color: #7c3aed;
-}
-
-.cronograma-abrir {
-  padding: 10px;
-  color: #ffffff;
-  text-align: left;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.cronograma-abrir strong,
-.cronograma-abrir span {
-  display: block;
-}
-
-.cronograma-abrir span {
-  margin-top: 4px;
-  color: #94a3b8;
+.tatico-campo-fixo span,
+.tatico-campo-fixo small {
+  color: var(--tatico-muted);
   font-size: 10px;
 }
 
-.cronograma-excluir {
-  color: #fca5a5;
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
+.tatico-campo-fixo strong {
+  margin: 3px 0;
+  font-size: 12px;
 }
 
-.cronograma-vazio {
-  padding: 40px;
-  color: #94a3b8;
-  text-align: center;
-  background: #0f172a;
-  border: 1px dashed #475569;
+.tatico-observacao {
+  grid-column: span 2;
+}
+
+.tatico-observacao textarea {
+  min-height: 66px;
+  resize: vertical;
+}
+
+.tatico-estrategia-rodape {
+  align-items: flex-end;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--tatico-border-soft);
+}
+
+.tatico-estrategia-rodape > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.tatico-estrategia-rodape span {
+  color: #bfdbfe;
+  font-size: 11px;
+}
+
+.tatico-estrategia-rodape small {
+  color: var(--tatico-muted);
+  font-size: 10px;
+}
+
+.tatico-estrategia-acoes,
+.tatico-ajuste-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tatico-botao-secundario {
+  min-height: 38px;
+  padding: 8px 12px;
+  color: var(--tatico-soft);
+  background: #26344a;
+  border: 1px solid #3a4b65;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.tatico-botao-secundario:hover {
+  background: #304059;
+}
+
+.tatico-botao-texto {
+  padding: 7px 0;
+  color: var(--tatico-purple-soft);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.tatico-total-plano {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  color: #ddd6fe;
+  background: rgba(124, 58, 237, 0.11);
+  border: 1px solid rgba(167, 139, 250, 0.24);
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.tatico-plano-resumo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  padding: 12px 14px;
+  margin-bottom: 11px;
+  background: rgba(15, 23, 42, 0.48);
+  border: 1px solid var(--tatico-border-soft);
   border-radius: 11px;
 }
 
-.cronograma-vazio h2 {
-  margin-bottom: 8px;
-  color: #e2e8f0;
+.tatico-plano-resumo > div span,
+.tatico-plano-resumo > div strong {
+  display: block;
 }
 
-@media (max-width: 1050px) {
-  .cronograma-fechamento-grid { grid-template-columns: 1fr; }
-  .cronograma-layout {
+.tatico-plano-resumo > div span {
+  color: var(--tatico-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tatico-plano-resumo > div strong {
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tatico-plano-resumo > span {
+  align-self: center;
+  color: var(--tatico-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.tatico-dias-lista {
+  display: grid;
+  gap: 8px;
+}
+
+.tatico-dia-card {
+  overflow: hidden;
+  background: #101a2b;
+  border: 1px solid var(--tatico-border-soft);
+  border-radius: 11px;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.tatico-dia-card.aberto {
+  background: #111c30;
+  border-color: rgba(139, 92, 246, 0.36);
+}
+
+.tatico-dia-resumo,
+.tatico-historico-toggle,
+.tatico-plano-abrir,
+.tatico-plano-excluir {
+  border: 0;
+  cursor: pointer;
+}
+
+.tatico-dia-resumo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 13px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+}
+
+.tatico-dia-data {
+  min-width: 0;
+}
+
+.tatico-dia-data span,
+.tatico-dia-data strong,
+.tatico-dia-data small,
+.tatico-dia-meta strong,
+.tatico-dia-meta span {
+  display: block;
+}
+
+.tatico-dia-data span {
+  color: var(--tatico-purple-soft);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.tatico-dia-data strong {
+  margin-top: 3px;
+  font-size: 13px;
+}
+
+.tatico-dia-data small {
+  max-width: 760px;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--tatico-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tatico-dia-meta {
+  display: grid;
+  grid-template-columns: auto auto 24px;
+  align-items: center;
+  gap: 10px;
+  margin-left: 16px;
+  text-align: right;
+}
+
+.tatico-dia-meta strong {
+  font-size: 12px;
+}
+
+.tatico-dia-meta span {
+  color: var(--tatico-muted);
+  font-size: 10px;
+}
+
+.tatico-dia-meta b {
+  color: var(--tatico-purple-soft);
+  font-size: 17px;
+  text-align: center;
+}
+
+.tatico-dia-detalhes {
+  display: grid;
+  gap: 7px;
+  padding: 0 12px 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.tatico-tarefa-linha {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.09);
+}
+
+.tatico-tarefa-linha:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.tatico-tarefa-ordem {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  color: #ddd6fe;
+  background: rgba(124, 58, 237, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-radius: 8px;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tatico-tarefa-info > div strong,
+.tatico-tarefa-info > div span {
+  display: block;
+}
+
+.tatico-tarefa-info strong {
+  font-size: 12px;
+}
+
+.tatico-tarefa-info span {
+  margin-top: 2px;
+  color: var(--tatico-soft);
+  font-size: 10px;
+}
+
+.tatico-tarefa-info p {
+  margin: 5px 0 0;
+  color: var(--tatico-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.tatico-tarefa-acao {
+  display: grid;
+  min-width: 132px;
+  justify-items: end;
+  gap: 3px;
+}
+
+.tatico-tarefa-acao > span {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.tatico-tarefa-acao > small {
+  color: var(--tatico-muted);
+  font-size: 9px;
+}
+
+.tatico-tarefa-acao button {
+  min-width: 84px;
+  margin-top: 4px;
+  padding: 7px 9px;
+  color: #ffffff;
+  background: #6d4bc7;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tatico-vazio {
+  display: grid;
+  gap: 4px;
+  padding: 24px;
+  color: var(--tatico-muted);
+  text-align: center;
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px dashed #334155;
+  border-radius: 11px;
+  font-size: 12px;
+}
+
+.tatico-vazio strong {
+  color: var(--tatico-soft);
+  font-size: 13px;
+}
+
+.tatico-vazio.compacto {
+  padding: 13px;
+  text-align: left;
+}
+
+.tatico-diagnostico-resumo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tatico-diagnostico-resumo > div,
+.tatico-relatorio-grid > div {
+  padding: 12px;
+  background: #101a2b;
+  border: 1px solid var(--tatico-border-soft);
+  border-radius: 10px;
+}
+
+.tatico-diagnostico-resumo span,
+.tatico-diagnostico-resumo strong,
+.tatico-relatorio-grid span,
+.tatico-relatorio-grid strong,
+.tatico-relatorio-grid small {
+  display: block;
+}
+
+.tatico-diagnostico-resumo span,
+.tatico-relatorio-grid span,
+.tatico-relatorio-grid small {
+  color: var(--tatico-muted);
+  font-size: 10px;
+}
+
+.tatico-diagnostico-resumo strong {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tatico-explicacao-prioridade {
+  padding: 12px 14px;
+  margin-top: 9px;
+  background: rgba(124, 58, 237, 0.09);
+  border: 1px solid rgba(167, 139, 250, 0.23);
+  border-radius: 10px;
+}
+
+.tatico-explicacao-prioridade span,
+.tatico-explicacao-prioridade strong {
+  display: block;
+}
+
+.tatico-explicacao-prioridade span {
+  color: var(--tatico-purple-soft);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tatico-explicacao-prioridade strong {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.tatico-explicacao-prioridade p {
+  margin: 4px 0 0;
+  color: var(--tatico-muted);
+  font-size: 10px;
+}
+
+.tatico-diagnostico-detalhes {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tatico-border-soft);
+}
+
+.tatico-ranking-linha {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 10px;
+  background: #101a2b;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 9px;
+}
+
+.tatico-ranking-posicao {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  color: var(--tatico-purple-soft);
+  background: rgba(124, 58, 237, 0.12);
+  border-radius: 7px;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tatico-ranking-linha > div:nth-child(2) strong,
+.tatico-ranking-linha > div:nth-child(2) small {
+  display: block;
+}
+
+.tatico-ranking-linha > div:nth-child(2) strong {
+  font-size: 11px;
+}
+
+.tatico-ranking-linha > div:nth-child(2) small,
+.tatico-ranking-linha > div:nth-child(2) p {
+  color: var(--tatico-muted);
+  font-size: 9px;
+}
+
+.tatico-ranking-linha > div:nth-child(2) p {
+  margin: 3px 0 0;
+}
+
+.tatico-ranking-score {
+  min-width: 76px;
+  text-align: right;
+}
+
+.tatico-ranking-score strong,
+.tatico-ranking-score span,
+.tatico-ranking-score small {
+  display: block;
+}
+
+.tatico-ranking-score strong {
+  font-size: 16px;
+}
+
+.tatico-ranking-score span,
+.tatico-ranking-score small {
+  color: var(--tatico-muted);
+  font-size: 8px;
+}
+
+.tatico-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tatico-toggle input {
+  width: 14px;
+  height: 14px;
+  accent-color: #22c55e;
+}
+
+.tatico-ajuste-atual {
+  padding: 12px 13px;
+  background: #101a2b;
+  border: 1px solid var(--tatico-border-soft);
+  border-radius: 10px;
+}
+
+.tatico-ajuste-atual > div:first-child span,
+.tatico-ajuste-atual > div:first-child strong,
+.tatico-ajuste-atual > div:first-child small {
+  display: block;
+}
+
+.tatico-ajuste-atual > div:first-child span,
+.tatico-ajuste-atual > div:first-child small {
+  color: var(--tatico-muted);
+  font-size: 10px;
+}
+
+.tatico-ajuste-atual > div:first-child strong {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.tatico-ajustes-detalhes {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.55fr) minmax(0, 1.45fr);
+  gap: 12px;
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--tatico-border-soft);
+}
+
+.tatico-regras-ia,
+.tatico-historico-ajustes {
+  padding: 11px;
+  background: #101a2b;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 10px;
+}
+
+.tatico-regras-ia > span,
+.tatico-historico-ajustes > span {
+  color: var(--tatico-soft);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tatico-regras-ia ul {
+  padding-left: 17px;
+  margin: 8px 0 0;
+  color: var(--tatico-muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.tatico-historico-ajustes > p {
+  margin: 8px 0 0;
+  color: var(--tatico-muted);
+  font-size: 10px;
+}
+
+.tatico-historico-ajustes article {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.09);
+}
+
+.tatico-historico-ajustes article:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.tatico-historico-ajustes article strong,
+.tatico-historico-ajustes article small {
+  display: block;
+}
+
+.tatico-historico-ajustes article strong {
+  font-size: 10px;
+}
+
+.tatico-historico-ajustes article small,
+.tatico-historico-ajustes article p {
+  color: var(--tatico-muted);
+  font-size: 9px;
+}
+
+.tatico-historico-ajustes article p {
+  margin: 3px 0 0;
+}
+
+.tatico-historico-ajustes button {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  color: var(--tatico-soft);
+  background: #26344a;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.tatico-historico {
+  padding: 0;
+  overflow: hidden;
+}
+
+.tatico-historico-toggle {
+  align-items: center;
+  width: 100%;
+  padding: 17px 19px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+}
+
+.tatico-historico-toggle > strong {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  color: var(--tatico-purple-soft);
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: 8px;
+  place-items: center;
+  font-size: 18px;
+}
+
+.tatico-historico-conteudo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: 12px;
+  padding: 0 19px 19px;
+  border-top: 1px solid var(--tatico-border-soft);
+}
+
+.tatico-relatorio-mensal,
+.tatico-planos-antigos {
+  padding: 13px;
+  margin-top: 13px;
+  background: #101a2b;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 10px;
+}
+
+.tatico-subcabecalho > div span,
+.tatico-subcabecalho > div strong {
+  display: block;
+}
+
+.tatico-subcabecalho > div span {
+  color: var(--tatico-muted);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tatico-subcabecalho > div strong {
+  margin-top: 2px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.tatico-relatorio-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.tatico-relatorio-grid > div {
+  padding: 10px;
+  background: #0d1728;
+}
+
+.tatico-relatorio-grid strong {
+  margin: 4px 0;
+  font-size: 16px;
+}
+
+.tatico-relatorio-leitura {
+  padding: 9px 10px;
+  margin-top: 8px;
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(96, 165, 250, 0.15);
+  border-radius: 8px;
+}
+
+.tatico-relatorio-leitura p {
+  margin: 3px 0;
+  color: var(--tatico-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.tatico-relatorio-leitura strong {
+  color: var(--tatico-soft);
+}
+
+.tatico-planos-lista {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.tatico-planos-lista article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  align-items: stretch;
+  overflow: hidden;
+  background: #0d1728;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+}
+
+.tatico-planos-lista article.ativo {
+  border-color: rgba(139, 92, 246, 0.38);
+}
+
+.tatico-plano-abrir {
+  min-width: 0;
+  padding: 9px 10px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+}
+
+.tatico-plano-abrir strong,
+.tatico-plano-abrir span {
+  display: block;
+}
+
+.tatico-plano-abrir strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tatico-plano-abrir span {
+  margin-top: 2px;
+  color: var(--tatico-muted);
+  font-size: 8px;
+}
+
+.tatico-plano-excluir {
+  display: grid;
+  width: 30px;
+  color: #fca5a5;
+  background: transparent;
+  border-left: 1px solid rgba(148, 163, 184, 0.1);
+  place-items: center;
+  font-size: 16px;
+}
+
+@media (max-width: 1100px) {
+  .tatico-missao-grid,
+  .tatico-plano-resumo,
+  .tatico-historico-conteudo {
     grid-template-columns: 1fr;
   }
 
-  .cronograma-historico {
-    position: static;
+  .tatico-estrategia-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tatico-diagnostico-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tatico-ajustes-detalhes {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
-  .cronograma-relatorio-cards { grid-template-columns: repeat(2, 1fr); }
-  .cronograma-perguntas { grid-template-columns: 1fr 1fr; }
-  .cronograma-cabecalho {
+  .tatico-cabecalho,
+  .tatico-missao-superior,
+  .tatico-painel-cabecalho,
+  .tatico-estrategia-rodape,
+  .tatico-ajuste-atual {
+    align-items: stretch;
     flex-direction: column;
   }
 
-  .cronograma-configuracao {
+  .tatico-cabecalho {
+    gap: 12px;
+    margin-bottom: 13px;
+  }
+
+  .tatico-cabecalho h1 {
+    font-size: 28px;
+  }
+
+  .tatico-botao-estrategia {
+    width: 100%;
+  }
+
+  .tatico-missao-atual,
+  .tatico-painel {
+    padding: 14px;
+    margin-bottom: 11px;
+    border-radius: 13px;
+  }
+
+  .tatico-missao-superior > div {
+    justify-content: space-between;
+  }
+
+  .tatico-prioridade-badge {
+    align-self: flex-start;
+  }
+
+  .tatico-missao-grid {
+    gap: 13px;
+    margin-top: 15px;
+  }
+
+  .tatico-missao-conteudo h2 {
+    font-size: 28px;
+  }
+
+  .tatico-missao-assunto {
+    font-size: 13px;
+  }
+
+  .tatico-missao-contexto {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tatico-missao-acoes {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .tatico-botao-principal,
+  .tatico-botao-principal.compacto {
     width: 100%;
     min-width: 0;
   }
 
-  .cronograma-resumo {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+  .tatico-estrategia-grid,
+  .tatico-diagnostico-resumo,
+  .tatico-relatorio-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tatico-observacao {
+    grid-column: 1 / -1;
+  }
+
+  .tatico-estrategia-acoes,
+  .tatico-ajuste-acoes {
+    width: 100%;
+  }
+
+  .tatico-estrategia-acoes > button,
+  .tatico-ajuste-acoes > button {
+    flex: 1 1 0;
+  }
+
+  .tatico-plano-resumo {
+    gap: 8px;
+  }
+
+  .tatico-dia-resumo {
+    align-items: flex-start;
+  }
+
+  .tatico-dia-data small {
+    max-width: 52vw;
+  }
+
+  .tatico-dia-meta {
+    grid-template-columns: 1fr 22px;
+    gap: 4px 8px;
+  }
+
+  .tatico-dia-meta span {
+    display: none;
+  }
+
+  .tatico-tarefa-linha {
+    grid-template-columns: 27px minmax(0, 1fr);
+  }
+
+  .tatico-tarefa-acao {
+    grid-column: 2;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    justify-items: start;
+  }
+
+  .tatico-tarefa-acao button {
+    justify-self: end;
+    margin-top: 0;
+  }
+
+  .tatico-ranking-linha {
+    grid-template-columns: 25px minmax(0, 1fr);
+  }
+
+  .tatico-ranking-score {
+    grid-column: 2;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .tatico-ranking-score strong,
+  .tatico-ranking-score span,
+  .tatico-ranking-score small {
+    display: inline;
+  }
+
+  .tatico-historico-toggle {
+    padding: 14px;
+  }
+
+  .tatico-historico-conteudo {
+    padding: 0 14px 14px;
   }
 }
 
-@media (max-width: 560px) {
-  .cronograma-relatorio-cards { grid-template-columns: 1fr; }
-  .cronograma-perguntas { grid-template-columns: 1fr; }
-  .cronograma-observacao { grid-column: auto; }
-  .cronograma-questionario-topo,
-  .cronograma-questionario-rodape,
-  .cronograma-aprovacao { align-items: stretch; flex-direction: column; }
-  .cronograma-configuracao {
+@media (max-width: 480px) {
+  .tatico-missao-contexto,
+  .tatico-estrategia-grid,
+  .tatico-diagnostico-resumo,
+  .tatico-relatorio-grid {
     grid-template-columns: 1fr;
   }
 
-  .cronograma-configuracao button {
+  .tatico-missao-superior > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .tatico-observacao {
     grid-column: auto;
   }
 
-  .cronograma-resumo {
-    grid-template-columns: 1fr;
+  .tatico-dia-data small {
+    max-width: 55vw;
   }
 
-  .cronograma-plano-topo,
-  .cronograma-tarefa-topo,
-  .cronograma-tarefa-rodape {
-    align-items: flex-start;
+  .tatico-dia-meta strong {
+    font-size: 10px;
+  }
+
+  .tatico-estrategia-acoes,
+  .tatico-ajuste-acoes {
+    align-items: stretch;
     flex-direction: column;
   }
 
-  .cronograma-tarefa-rodape button {
-    width: 100%;
+  .tatico-tarefa-acao {
+    grid-template-columns: 1fr auto;
+  }
+
+  .tatico-tarefa-acao > small {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .tatico-tarefa-acao button {
+    grid-column: 2;
+    grid-row: 1 / 3;
   }
 }
-
-/* Etapa 17 — diagnóstico adaptativo */
-.cronograma-domingo-fixo { display:flex; flex-direction:column; justify-content:center; gap:5px; padding:10px; color:#c4b5fd; background:rgba(124,58,237,.10); border:1px solid rgba(167,139,250,.35); border-radius:9px; }
-.cronograma-domingo-fixo strong { font-size:12px; }
-.cronograma-domingo-fixo span { color:#94a3b8; font-size:11px; }
-.cronograma-diagnostico-semanal { padding:19px; margin-bottom:20px; background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(30,41,59,.96)); border:1px solid rgba(96,165,250,.35); border-radius:15px; }
-.cronograma-diagnostico-semanal header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }
-.cronograma-diagnostico-semanal header span { color:#93c5fd; font-size:10px; font-weight:900; letter-spacing:.08em; }
-.cronograma-diagnostico-semanal header h2 { margin-top:3px; }
-.cronograma-diagnostico-semanal header > strong { color:#60a5fa; font-size:20px; }
-.cronograma-diagnostico-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
-.cronograma-diagnostico-grid > div { padding:11px 12px; background:#0f172a; border:1px solid #334155; border-radius:10px; }
-.cronograma-diagnostico-grid span,.cronograma-diagnostico-grid strong { display:block; }
-.cronograma-diagnostico-grid span { color:#94a3b8; font-size:11px; }
-.cronograma-diagnostico-grid strong { margin-top:5px; font-size:20px; }
-.cronograma-diagnostico-ranking { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-top:10px; }
-.cronograma-diagnostico-ranking article { display:grid; grid-template-columns:26px minmax(0,1fr) auto; gap:9px; align-items:center; padding:10px; background:rgba(15,23,42,.72); border:1px solid #334155; border-radius:10px; }
-.cronograma-diagnostico-ranking article > b { display:grid; place-items:center; width:25px; height:25px; color:#bfdbfe; background:rgba(37,99,235,.24); border-radius:7px; }
-.cronograma-diagnostico-ranking article strong,.cronograma-diagnostico-ranking article small { display:block; }
-.cronograma-diagnostico-ranking article small,.cronograma-diagnostico-ranking > p,.cronograma-diagnostico-regra { color:#94a3b8; font-size:11px; }
-.cronograma-diagnostico-ranking article em { color:#60a5fa; font-size:18px; font-style:normal; font-weight:900; }
-.cronograma-diagnostico-regra { margin:11px 0 0; padding-top:10px; border-top:1px solid rgba(148,163,184,.18); }
-@media (max-width:760px) { .cronograma-diagnostico-ranking { grid-template-columns:1fr; } }
-@media (max-width:560px) { .cronograma-diagnostico-semanal header { align-items:flex-start; flex-direction:column; } .cronograma-diagnostico-grid { grid-template-columns:1fr; } }
