@@ -1,4 +1,7 @@
 import type { EstadoAppNuvem } from "../sincronizacaoService";
+import {
+  reduzirBackupsAutomaticosLocais,
+} from "./backupAutomaticoService";
 
 export type MetadadosSincronizacaoLocal = {
   usuarioId: string;
@@ -34,22 +37,89 @@ function clonar<T>(valor: T): T {
   return JSON.parse(JSON.stringify(valor)) as T;
 }
 
-export function obterMetadadosSincronizacaoLocal(
-  usuarioId: string
-): MetadadosSincronizacaoLocal {
-  const padrao: MetadadosSincronizacaoLocal = {
-    usuarioId,
-    ultimaRevisaoConfirmada: 0,
-    ultimaSincronizacaoEm: null,
+function obterLocalStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function obterSessionStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function lerStorage(storage: Storage | null, chave: string) {
+  if (!storage) return null;
+  try {
+    return storage.getItem(chave);
+  } catch {
+    return null;
+  }
+}
+
+function removerStorage(storage: Storage | null, chave: string) {
+  if (!storage) return;
+  try {
+    storage.removeItem(chave);
+  } catch {
+    // A limpeza é best-effort; não deve derrubar a sincronização.
+  }
+}
+
+function ehErroDeCota(erro: unknown) {
+  if (!erro || typeof erro !== "object") return false;
+
+  const candidato = erro as {
+    name?: unknown;
+    code?: unknown;
+    message?: unknown;
   };
 
-  if (typeof window === "undefined") return padrao;
+  const nome = typeof candidato.name === "string" ? candidato.name : "";
+  const codigo = typeof candidato.code === "number" ? candidato.code : 0;
+  const mensagem = typeof candidato.message === "string"
+    ? candidato.message.toLowerCase()
+    : "";
 
-  const bruto = window.localStorage.getItem(chaveMeta(usuarioId));
-  if (!bruto) return padrao;
+  return (
+    nome === "QuotaExceededError" ||
+    nome === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    codigo === 22 ||
+    codigo === 1014 ||
+    mensagem.includes("quota") ||
+    mensagem.includes("exceeded")
+  );
+}
+
+function tentarSalvar(storage: Storage | null, chave: string, valor: string) {
+  if (!storage) {
+    return { salvou: false, erro: null as unknown };
+  }
+
+  try {
+    storage.setItem(chave, valor);
+    return { salvou: true, erro: null as unknown };
+  } catch (erro) {
+    return { salvou: false, erro };
+  }
+}
+
+function parseMetadados(
+  bruto: string | null,
+  usuarioId: string
+): MetadadosSincronizacaoLocal | null {
+  if (!bruto) return null;
 
   try {
     const valor = JSON.parse(bruto) as Partial<MetadadosSincronizacaoLocal>;
+    if (valor.usuarioId && valor.usuarioId !== usuarioId) return null;
 
     return {
       usuarioId,
@@ -64,40 +134,14 @@ export function obterMetadadosSincronizacaoLocal(
           : null,
     };
   } catch {
-    return padrao;
+    return null;
   }
 }
 
-export function registrarSincronizacaoConfirmada(
-  usuarioId: string,
-  estado: EstadoAppNuvem
-) {
-  if (typeof window === "undefined") return;
-
-  const agora = new Date().toISOString();
-  const revisao = Math.max(
-    0,
-    Math.floor(estado.syncRevision ?? 0)
-  );
-
-  const metadados: MetadadosSincronizacaoLocal = {
-    usuarioId,
-    ultimaRevisaoConfirmada: revisao,
-    ultimaSincronizacaoEm: estado.atualizadoEm ?? estado.salvoEm ?? agora,
-  };
-
-  window.localStorage.setItem(
-    chaveMeta(usuarioId),
-    JSON.stringify(metadados)
-  );
-}
-
-export function obterEstadoPendenteSincronizacao(
+function parsePendente(
+  bruto: string | null,
   usuarioId: string
 ): EstadoPendenteSincronizacao | null {
-  if (typeof window === "undefined") return null;
-
-  const bruto = window.localStorage.getItem(chavePendente(usuarioId));
   if (!bruto) return null;
 
   try {
@@ -119,6 +163,135 @@ export function obterEstadoPendenteSincronizacao(
   } catch {
     return null;
   }
+}
+
+function salvarTextoComRecuperacaoDeCota(
+  usuarioId: string,
+  chave: string,
+  serializado: string
+) {
+  const local = obterLocalStorage();
+  const sessao = obterSessionStorage();
+
+  let tentativaLocal = tentarSalvar(local, chave, serializado);
+  if (tentativaLocal.salvou) {
+    removerStorage(sessao, chave);
+    return;
+  }
+
+  if (ehErroDeCota(tentativaLocal.erro)) {
+    // Backups automáticos são cópias de segurança e não podem impedir o dado
+    // operacional pendente de ser salvo. Primeiro preservamos apenas o mais
+    // recente; se ainda não couber, liberamos esse cache por completo.
+    reduzirBackupsAutomaticosLocais(usuarioId, 1);
+    tentativaLocal = tentarSalvar(local, chave, serializado);
+
+    if (!tentativaLocal.salvou && ehErroDeCota(tentativaLocal.erro)) {
+      reduzirBackupsAutomaticosLocais(usuarioId, 0);
+      tentativaLocal = tentarSalvar(local, chave, serializado);
+    }
+
+    if (tentativaLocal.salvou) {
+      removerStorage(sessao, chave);
+      return;
+    }
+  }
+
+  // Última linha de defesa para a aba atual. Isso evita transformar falta de
+  // espaço do localStorage em "Erro na nuvem" enquanto a sincronização ainda
+  // pode ser concluída normalmente.
+  const tentativaSessao = tentarSalvar(sessao, chave, serializado);
+  if (tentativaSessao.salvou) {
+    removerStorage(local, chave);
+    return;
+  }
+
+  const detalhe = tentativaLocal.erro instanceof Error
+    ? tentativaLocal.erro.message
+    : tentativaSessao.erro instanceof Error
+      ? tentativaSessao.erro.message
+      : "armazenamento indisponível";
+
+  throw new Error(
+    `O navegador ficou sem espaço para proteger a sincronização local. ${detalhe}`
+  );
+}
+
+export function obterMetadadosSincronizacaoLocal(
+  usuarioId: string
+): MetadadosSincronizacaoLocal {
+  const padrao: MetadadosSincronizacaoLocal = {
+    usuarioId,
+    ultimaRevisaoConfirmada: 0,
+    ultimaSincronizacaoEm: null,
+  };
+
+  if (typeof window === "undefined") return padrao;
+
+  const chave = chaveMeta(usuarioId);
+  const local = parseMetadados(
+    lerStorage(obterLocalStorage(), chave),
+    usuarioId
+  );
+  const sessao = parseMetadados(
+    lerStorage(obterSessionStorage(), chave),
+    usuarioId
+  );
+
+  if (!local) return sessao ?? padrao;
+  if (!sessao) return local;
+
+  const instanteLocal = local.ultimaSincronizacaoEm ?? "";
+  const instanteSessao = sessao.ultimaSincronizacaoEm ?? "";
+  return instanteSessao > instanteLocal ? sessao : local;
+}
+
+export function registrarSincronizacaoConfirmada(
+  usuarioId: string,
+  estado: EstadoAppNuvem
+) {
+  if (typeof window === "undefined") return;
+
+  const agora = new Date().toISOString();
+  const revisao = Math.max(
+    0,
+    Math.floor(estado.syncRevision ?? 0)
+  );
+
+  const metadados: MetadadosSincronizacaoLocal = {
+    usuarioId,
+    ultimaRevisaoConfirmada: revisao,
+    ultimaSincronizacaoEm: estado.atualizadoEm ?? estado.salvoEm ?? agora,
+  };
+
+  salvarTextoComRecuperacaoDeCota(
+    usuarioId,
+    chaveMeta(usuarioId),
+    JSON.stringify(metadados)
+  );
+}
+
+export function obterEstadoPendenteSincronizacao(
+  usuarioId: string
+): EstadoPendenteSincronizacao | null {
+  if (typeof window === "undefined") return null;
+
+  const chave = chavePendente(usuarioId);
+  const local = parsePendente(
+    lerStorage(obterLocalStorage(), chave),
+    usuarioId
+  );
+  const sessao = parsePendente(
+    lerStorage(obterSessionStorage(), chave),
+    usuarioId
+  );
+
+  if (!local) return sessao;
+  if (!sessao) return local;
+
+  return sessao.atualizadoEm > local.atualizadoEm
+    ? sessao
+    : local;
 }
 
 export function registrarEstadoPendenteSincronizacao(
@@ -151,7 +324,8 @@ export function registrarEstadoPendenteSincronizacao(
     estado: clonar(estado),
   };
 
-  window.localStorage.setItem(
+  salvarTextoComRecuperacaoDeCota(
+    usuarioId,
     chavePendente(usuarioId),
     JSON.stringify(pendente)
   );
@@ -171,7 +345,8 @@ export function registrarTentativaPendente(usuarioId: string) {
     atualizadoEm: new Date().toISOString(),
   };
 
-  window.localStorage.setItem(
+  salvarTextoComRecuperacaoDeCota(
+    usuarioId,
     chavePendente(usuarioId),
     JSON.stringify(proximo)
   );
@@ -179,7 +354,9 @@ export function registrarTentativaPendente(usuarioId: string) {
 
 export function limparEstadoPendenteSincronizacao(usuarioId: string) {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(chavePendente(usuarioId));
+  const chave = chavePendente(usuarioId);
+  removerStorage(obterLocalStorage(), chave);
+  removerStorage(obterSessionStorage(), chave);
 }
 
 export function navegadorEstaOnline() {
