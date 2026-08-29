@@ -162,7 +162,7 @@ export default function BancoQuestoes() {
     return () => {
       ativo = false;
     };
-  }, [configuracoes.concurso]);
+  }, [configuracoes.concurso, showToast]);
 
   const materiaSelecionada = materias.find(
     (materia: Materia) => materia.id === materiaId
@@ -176,10 +176,13 @@ export default function BancoQuestoes() {
     (modulo) => modulo.id === moduloId
   );
 
+  // bancoQuestoes invalida a leitura das estatísticas persistidas no storage.
+  /* oxlint-disable react-hooks/exhaustive-deps */
   const estatisticasPorQuestao = useMemo(
     () => carregarEstatisticasQuestoes(),
     [bancoQuestoes]
   );
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   const estatisticaDaQuestao = (questao: QuestaoBanco) =>
     estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;

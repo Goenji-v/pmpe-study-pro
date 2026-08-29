@@ -56,10 +56,13 @@ export default function QuestaoIACronometroBridge() {
   const cronometroQuestoesIA =
     cronometroAtivo && sessaoAtiva.objetivo.startsWith(MARCADOR_OBJETIVO);
 
+  // location.key força releitura do storage a cada nova navegação para a prova.
+  /* oxlint-disable react-hooks/exhaustive-deps */
   const questoes = useMemo(
     () => (emTelaDeProva ? carregarQuestoes() : []),
     [emTelaDeProva, location.key]
   );
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     setFinalizadaNestaTela(false);

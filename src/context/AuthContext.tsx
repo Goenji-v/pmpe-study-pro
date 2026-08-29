@@ -1,3 +1,5 @@
+/* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
+/* oxlint-disable react/only-export-components */
 import {
   createContext,
   useContext,

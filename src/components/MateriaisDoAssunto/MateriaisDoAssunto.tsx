@@ -35,9 +35,12 @@ export default function MateriaisDoAssunto({
   const [erro, setErro] =
     useState("");
 
+  // carregar usa somente os três campos abaixo; a função local é recriada por render.
+  /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     carregar();
   }, [materia, modulo, assunto]);
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   async function carregar() {
     if (

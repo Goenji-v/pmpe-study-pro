@@ -59,6 +59,7 @@ export default function Backup() {
   } = useApp();
 
   const { usuario } = useAuth();
+  const usuarioId = usuario?.id;
   const { showToast } = useToast();
   const inputArquivoRef = useRef<HTMLInputElement | null>(null);
   const [importando, setImportando] = useState(false);
@@ -70,10 +71,13 @@ export default function Backup() {
 
   const backupsAutomaticos = useMemo(
     () =>
-      usuario
-        ? listarBackupsAutomaticosLocais(usuario.id)
+      usuarioId
+        ? listarBackupsAutomaticosLocais(usuarioId)
         : [],
-    [usuario?.id, ultimoBackup, statusNuvem]
+    // ultimoBackup e statusNuvem são gatilhos explícitos para reler backups locais.
+    /* oxlint-disable react-hooks/exhaustive-deps */
+    [usuarioId, ultimoBackup, statusNuvem]
+    /* oxlint-enable react-hooks/exhaustive-deps */
   );
 
   const totalAssuntos = materias.reduce(

@@ -134,7 +134,7 @@ export default function CronogramaIA() {
   const [cronogramaAtual, setCronogramaAtual] = useState<CronogramaGeradoIA | null>(null);
 
   const [estrategiaAberta, setEstrategiaAberta] = useState(() =>
-    !Boolean(localStorage.getItem(chavePerfil))
+    !localStorage.getItem(chavePerfil)
   );
   const [diagnosticoAberto, setDiagnosticoAberto] = useState(false);
   const [ajustesAbertos, setAjustesAbertos] = useState(false);

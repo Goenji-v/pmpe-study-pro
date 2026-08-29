@@ -42,10 +42,13 @@ export default function MissaoDoDia({
     [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]
   );
 
+  // atualizacao é um token explícito para invalidar o cálculo após eventos externos.
+  /* oxlint-disable react-hooks/exhaustive-deps */
   const proxima = useMemo(
     () => getProximaMissao(missoesConcluidas, planoCalendario, semanaAtual),
     [atualizacao, missoesConcluidas, planoCalendario, semanaAtual]
   );
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   function iniciarMissao(
     dados: ProximaMissaoPlano

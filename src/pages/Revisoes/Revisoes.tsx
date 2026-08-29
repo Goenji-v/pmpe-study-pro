@@ -42,6 +42,9 @@ export default function Revisoes() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  // A função é local, mas todas as capturas relevantes são enumeradas para
+  // renovar os listeners quando o estado usado na importação mudar.
+  /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (!usuario) return;
 
@@ -58,7 +61,8 @@ export default function Revisoes() {
       window.removeEventListener("pmpe-revisoes-ia-atualizadas", atualizarRevisoesIA);
       window.removeEventListener("storage", atualizarRevisoesIA);
     };
-  }, [usuario?.id]);
+  }, [usuario, revisoes, materias, configuracoes.metaRevisoesDiaria, setRevisoes, showToast]);
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   function importarRevisoesIA() {
     if (!usuario) return;

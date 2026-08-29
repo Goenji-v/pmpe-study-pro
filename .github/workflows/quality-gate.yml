@@ -14,16 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Instalar dependencias
         run: npm ci
-      - name: Executar lint
-        run: npm run lint
+      - name: Verificar vulnerabilidades high
+        run: npm audit --audit-level=high
+      - name: Executar lint sem avisos
+        run: npm run lint -- --deny-warnings --format=agent
       - name: Executar testes
         run: npm test
       - name: Executar TypeScript e build

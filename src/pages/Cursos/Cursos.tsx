@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 
 import "./Cursos.css";
 import { useApp } from "../../context/AppContext";
@@ -26,12 +26,12 @@ export default function Cursos() {
   const [mensagem, setMensagem] = useState("");
   const [aba, setAba] = useState<"arquivo" | "capturador">("arquivo");
 
-  const resumo = useMemo(() => ({
+  const resumo = {
     cursos: cursos.length,
     ativos: ativosIds.length,
     materias: cursos.reduce((total, curso) => total + curso.materias.length, 0),
     aulas: cursos.reduce((total, curso) => total + contarAulas(curso), 0),
-  }), [ativosIds.length, cursos]);
+  };
 
   async function analisarArquivo() {
     if (!arquivo) {
