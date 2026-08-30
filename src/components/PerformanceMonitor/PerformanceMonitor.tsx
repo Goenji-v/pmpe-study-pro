@@ -9,6 +9,23 @@ type EntradaLayoutShift = PerformanceEntry & {
   hadRecentInput: boolean;
 };
 
+type EntradaInteracao = PerformanceEntry & {
+  duration: number;
+  interactionId?: number;
+};
+
+function calcularInp(interacoes: Map<number, number>, piorEventoSemInteracao: number) {
+  if (interacoes.size === 0) return piorEventoSemInteracao;
+
+  const latencias = Array.from(interacoes.values()).sort((a, b) => b - a);
+  const indicePercentil = Math.min(
+    Math.floor(interacoes.size / 50),
+    latencias.length - 1
+  );
+
+  return latencias[indicePercentil] ?? piorEventoSemInteracao;
+}
+
 export default function PerformanceMonitor() {
   const location = useLocation();
   const rotaInicial = useRef(location.pathname);
@@ -17,6 +34,8 @@ export default function PerformanceMonitor() {
     if (!import.meta.env.PROD || typeof window === "undefined" || navigator.webdriver) return;
     if (!("PerformanceObserver" in window)) return;
 
+    // LCP/CLS/TTFB são métricas do documento. Mantemos a rota presente no
+    // primeiro mount para não atribuir o mesmo carregamento a navegações SPA.
     const rota = rotaInicial.current;
     const observadores: PerformanceObserver[] = [];
     const timers = new Map<NomeMetricaPerformance, ReturnType<typeof setTimeout>>();
@@ -94,12 +113,29 @@ export default function PerformanceMonitor() {
     }
 
     if (tiposSuportados.includes("event")) {
-      let piorInteracao = 0;
+      const interacoes = new Map<number, number>();
+      let piorEventoSemInteracao = 0;
+
       const observer = new PerformanceObserver((lista) => {
-        for (const entrada of lista.getEntries()) {
-          piorInteracao = Math.max(piorInteracao, entrada.duration);
+        for (const entradaBase of lista.getEntries()) {
+          const entrada = entradaBase as EntradaInteracao;
+          const interactionId = entrada.interactionId ?? 0;
+
+          if (interactionId > 0) {
+            interacoes.set(
+              interactionId,
+              Math.max(interacoes.get(interactionId) ?? 0, entrada.duration)
+            );
+          } else {
+            piorEventoSemInteracao = Math.max(
+              piorEventoSemInteracao,
+              entrada.duration
+            );
+          }
         }
-        if (piorInteracao > 0) enviar("INP", piorInteracao);
+
+        const inp = calcularInp(interacoes, piorEventoSemInteracao);
+        if (inp > 0) enviar("INP", inp);
       });
       observer.observe({
         type: "event",
