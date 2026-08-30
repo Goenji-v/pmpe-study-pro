@@ -12,6 +12,9 @@
     "lint": "oxlint src server",
     "build": "tsc -b && vite build",
     "check": "npm run lint && npm test && npm run build",
+    "e2e": "playwright test",
+    "e2e:smoke": "playwright test e2e/smoke.spec.ts",
+    "e2e:auth": "playwright test e2e/authenticated-critical.spec.ts",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
@@ -28,6 +31,7 @@
     "recharts": "^3.9.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^24.13.3",
