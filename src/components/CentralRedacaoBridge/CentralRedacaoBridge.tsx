@@ -18,6 +18,10 @@ import {
 } from "../../utils/planoCalendario";
 import { getSemanaAtual } from "../../utils/planoUtils";
 import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
+import {
+  montarObservacaoRedacao,
+  type ModalidadeRedacao,
+} from "../../utils/redacaoRegistro";
 
 const TIPO_REDACAO = "redacao" as const;
 const MATERIA_REDACAO = "Redação";
@@ -25,6 +29,7 @@ const MATERIA_REDACAO = "Redação";
 type PendenciaRedacao = {
   iniciadaEm: string | null;
   tema: string;
+  modalidade: ModalidadeRedacao;
   nota?: number;
 };
 
@@ -48,6 +53,8 @@ export default function CentralRedacaoBridge() {
   const [destinoFinalizacao, setDestinoFinalizacao] = useState<HTMLElement | null>(null);
   const [temaFinalizacao, setTemaFinalizacao] = useState("");
   const [notaFinalizacao, setNotaFinalizacao] = useState("");
+  const [modalidadeFinalizacao, setModalidadeFinalizacao] =
+    useState<ModalidadeRedacao>("treino");
 
   const pendenciaRef = useRef<PendenciaRedacao | null>(null);
   const tipoAnteriorRef = useRef(sessaoAtiva.tipo);
@@ -164,6 +171,7 @@ export default function CentralRedacaoBridge() {
 
     setTemaFinalizacao(sessaoAtiva.assunto || "");
     setNotaFinalizacao("");
+    setModalidadeFinalizacao("treino");
   }, [destinoFinalizacao, redacaoAtiva, sessaoAtiva.assunto]);
 
   useEffect(() => {
@@ -177,16 +185,27 @@ export default function CentralRedacaoBridge() {
 
     const capturarFinalizacao = (evento: Event) => {
       const tema = temaFinalizacao.trim();
-      const nota = parseNota(notaFinalizacao);
+      const nota =
+        modalidadeFinalizacao === "completa"
+          ? parseNota(notaFinalizacao)
+          : undefined;
 
       if (!tema) {
         evento.preventDefault();
         evento.stopPropagation();
-        window.alert("Informe o tema da redação.");
+        window.alert(
+          modalidadeFinalizacao === "treino"
+            ? "Informe o tema ou foco do treino."
+            : "Informe o tema da redação."
+        );
         return;
       }
 
-      if (notaFinalizacao.trim() && nota === undefined) {
+      if (
+        modalidadeFinalizacao === "completa" &&
+        notaFinalizacao.trim() &&
+        nota === undefined
+      ) {
         evento.preventDefault();
         evento.stopPropagation();
         window.alert("Informe uma nota válida ou deixe o campo em branco.");
@@ -196,6 +215,7 @@ export default function CentralRedacaoBridge() {
       pendenciaRef.current = {
         iniciadaEm: sessaoAtiva.iniciadoEm,
         tema,
+        modalidade: modalidadeFinalizacao,
         nota,
       };
     };
@@ -206,6 +226,7 @@ export default function CentralRedacaoBridge() {
       botaoSalvar.removeEventListener("click", capturarFinalizacao, true);
   }, [
     destinoFinalizacao,
+    modalidadeFinalizacao,
     notaFinalizacao,
     redacaoAtiva,
     sessaoAtiva.iniciadoEm,
@@ -230,8 +251,9 @@ export default function CentralRedacaoBridge() {
       anteriores.map((sessao) => {
         if (sessao.id !== sessaoCriada.id) return sessao;
 
-        const observacao = anexarNotaNaObservacao(
+        const observacao = montarObservacaoRedacao(
           sessao.observacao,
+          pendencia.modalidade,
           pendencia.nota
         );
 
@@ -295,17 +317,17 @@ export default function CentralRedacaoBridge() {
             </div>
 
             <div className="central-estudos-campo central-redacao-campo">
-              <label>Tema da redação</label>
+              <label>Tema ou foco da atividade</label>
               <input
                 value={sessaoAtiva.assunto}
                 onChange={(evento) =>
                   atualizarDados({ assunto: evento.target.value })
                 }
                 disabled={cronometroAtivo}
-                placeholder="Ex.: Desafios do combate ao desperdício de alimentos"
+                placeholder="Ex.: treinar introdução sobre desperdício de alimentos"
               />
               <small>
-                O tema será usado para identificar o treino no histórico.
+                Pode ser o tema completo ou apenas a parte da redação que será treinada.
               </small>
             </div>
 
@@ -344,29 +366,58 @@ export default function CentralRedacaoBridge() {
         createPortal(
           <>
             <label className="central-redacao-finalizacao">
-              Tema da redação
-              <input
-                value={temaFinalizacao}
-                onChange={(evento) => setTemaFinalizacao(evento.target.value)}
-                placeholder="Tema trabalhado na redação"
-              />
+              Tipo do registro
+              <select
+                value={modalidadeFinalizacao}
+                onChange={(evento) => {
+                  const modalidade = evento.target.value as ModalidadeRedacao;
+                  setModalidadeFinalizacao(modalidade);
+                  if (modalidade === "treino") {
+                    setNotaFinalizacao("");
+                  }
+                }}
+              >
+                <option value="treino">Treino de redação</option>
+                <option value="completa">Redação completa</option>
+              </select>
+              <small>
+                Treino registra o tempo sem nota. Redação completa permite informar a nota.
+              </small>
             </label>
 
             <label className="central-redacao-finalizacao">
-              Nota obtida <small>(opcional)</small>
+              {modalidadeFinalizacao === "treino"
+                ? "Tema ou foco do treino"
+                : "Tema da redação"}
               <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={notaFinalizacao}
-                onChange={(evento) => setNotaFinalizacao(evento.target.value)}
-                placeholder="Ex.: 8.5, 18 ou 85"
+                value={temaFinalizacao}
+                onChange={(evento) => setTemaFinalizacao(evento.target.value)}
+                placeholder={
+                  modalidadeFinalizacao === "treino"
+                    ? "Ex.: introdução, D1 ou conclusão"
+                    : "Tema trabalhado na redação"
+                }
               />
             </label>
 
+            {modalidadeFinalizacao === "completa" && (
+              <label className="central-redacao-finalizacao">
+                Nota obtida <small>(opcional)</small>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={notaFinalizacao}
+                  onChange={(evento) => setNotaFinalizacao(evento.target.value)}
+                  placeholder="Ex.: 8.5, 18 ou 85"
+                />
+              </label>
+            )}
+
             <div className="central-redacao-finalizacao-info finalizacao-campo-largo">
-              O tempo do cronômetro entra automaticamente no Dashboard e no Histórico.
-              Se houver uma missão de redação pendente hoje, ela também será concluída com este mesmo registro, sem duplicar o tempo.
+              {modalidadeFinalizacao === "treino"
+                ? "O treino será identificado no Histórico e o tempo entrará normalmente no Dashboard. Se houver uma missão de redação pendente hoje, ela também será concluída com este mesmo registro."
+                : "A redação completa será identificada no Histórico, com a nota quando informada. O tempo entra normalmente no Dashboard e conclui a missão de redação pendente do dia sem duplicação."}
             </div>
           </>,
           destinoFinalizacao
@@ -384,17 +435,4 @@ function parseNota(valor: string) {
   }
 
   return Math.round(nota * 100) / 100;
-}
-
-function anexarNotaNaObservacao(
-  observacao: string | undefined,
-  nota: number | undefined
-) {
-  const base = observacao?.trim() || "";
-  if (nota === undefined) return base || undefined;
-
-  const registroNota = `Nota da redação: ${nota}`;
-  if (base.includes(registroNota)) return base;
-
-  return base ? `${base}\n${registroNota}` : registroNota;
 }
