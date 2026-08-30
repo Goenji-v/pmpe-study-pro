@@ -89,13 +89,14 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
         const aberto = ordenados.some((item) => item.status === "aberto");
+        const status: StatusErroCliente = aberto ? "aberto" : "resolvido";
 
         return {
           chave,
           itens: ordenados,
           ultimo: ordenados[0],
           usuariosAfetados: new Set(ordenados.map((item) => item.user_id)).size,
-          status: aberto ? "aberto" : "resolvido",
+          status,
         };
       })
       .sort(
