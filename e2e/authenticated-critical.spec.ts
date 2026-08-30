@@ -11,10 +11,36 @@ const rotasCriticas = [
   "/",
 ];
 
+async function esperarLayoutEstavel(page: import("@playwright/test").Page) {
+  await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(async () => {
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+  });
+}
+
+async function verificarSemOverflowHorizontal(
+  page: import("@playwright/test").Page,
+  rota: string
+) {
+  const dimensoes = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    documento: document.documentElement.scrollWidth,
+    body: document.body.scrollWidth,
+  }));
+
+  const larguraReal = Math.max(dimensoes.documento, dimensoes.body);
+  expect(
+    larguraReal,
+    `A rota ${rota} criou overflow horizontal: ${larguraReal}px para viewport de ${dimensoes.viewport}px.`
+  ).toBeLessThanOrEqual(dimensoes.viewport + 2);
+}
+
 test.describe("fluxo crítico autenticado", () => {
   test.skip(!email || !senha, "Configure E2E_TEST_EMAIL e E2E_TEST_PASSWORD com uma conta de teste dedicada.");
 
-  test("login persiste e as rotas críticas abrem sem erro de runtime", async ({ page }) => {
+  test("login persiste e as rotas críticas abrem sem erro de runtime ou overflow", async ({ page }) => {
     const errosDePagina: Error[] = [];
     page.on("pageerror", (erro) => errosDePagina.push(erro));
 
@@ -24,20 +50,23 @@ test.describe("fluxo crítico autenticado", () => {
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await expect(page).not.toHaveURL(/\/login(?:$|\?)/, { timeout: 15_000 });
-    await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+    await esperarLayoutEstavel(page);
+    await verificarSemOverflowHorizontal(page, page.url());
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page).not.toHaveURL(/\/login(?:$|\?)/);
-    await expect(page.locator(".layout")).toBeVisible();
+    await esperarLayoutEstavel(page);
+    await verificarSemOverflowHorizontal(page, page.url());
 
     for (const rota of rotasCriticas) {
       await page.goto(rota, { waitUntil: "domcontentloaded" });
       await expect(page).not.toHaveURL(/\/login(?:$|\?)/);
-      await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+      await esperarLayoutEstavel(page);
 
       const texto = await page.locator("body").innerText();
       expect(texto).not.toContain("Algo deu errado");
       expect(texto).not.toContain("Erro inesperado");
+      await verificarSemOverflowHorizontal(page, rota);
     }
 
     expect(errosDePagina).toEqual([]);
