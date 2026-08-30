@@ -3,6 +3,25 @@ import { expect, test, type Page } from "@playwright/test";
 const email = process.env.E2E_TEST_EMAIL;
 const senha = process.env.E2E_TEST_PASSWORD;
 
+async function fecharRecompensaDiariaSeAberta(page: Page) {
+  const overlay = page.locator(".economia-login-overlay");
+
+  await page.waitForTimeout(700);
+
+  if (!(await overlay.isVisible())) return;
+
+  await expect(page.getByRole("dialog")).toBeVisible();
+
+  const fechar = page.getByRole("button", {
+    name: "Fechar recompensa de login",
+    exact: true,
+  });
+
+  await expect(fechar).toBeVisible();
+  await fechar.click();
+  await expect(overlay).toHaveCount(0);
+}
+
 async function entrar(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.getByLabel("E-mail").fill(email!);
@@ -10,6 +29,7 @@ async function entrar(page: Page) {
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).not.toHaveURL(/\/login(?:$|\?)/, { timeout: 15_000 });
   await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+  await fecharRecompensaDiariaSeAberta(page);
 }
 
 async function navegarPeloMenu(
