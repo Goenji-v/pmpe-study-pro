@@ -5,7 +5,7 @@ create or replace function public.recalcular_meu_ranking(p_nome_publico text def
 returns public.ranking_mensal
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog, pg_temp
 as $$
 declare
   v_user_id uuid := auth.uid();
@@ -165,10 +165,16 @@ begin
 end;
 $$;
 
-revoke all on function public.recalcular_meu_ranking(text) from public;
-grant execute on function public.recalcular_meu_ranking(text) to authenticated;
+comment on function public.recalcular_meu_ranking(text) is
+  'SECURITY DEFINER intencional: recalcula o ranking a partir dos dados do próprio auth.uid() sem permitir escrita direta do cliente em ranking_mensal.';
+revoke all on function public.recalcular_meu_ranking(text) from PUBLIC, anon;
+grant execute on function public.recalcular_meu_ranking(text) to authenticated, service_role;
 
-revoke insert, update, delete on table public.ranking_mensal from authenticated;
+-- O cliente pode ler o ranking, mas não pode alterar métricas diretamente.
+revoke all on table public.ranking_mensal from anon;
+revoke insert, update, delete, truncate, references, trigger
+  on table public.ranking_mensal from authenticated;
+grant select on table public.ranking_mensal to authenticated;
 
 drop policy if exists "usuario publica proprio ranking" on public.ranking_mensal;
 drop policy if exists "usuario atualiza proprio ranking" on public.ranking_mensal;

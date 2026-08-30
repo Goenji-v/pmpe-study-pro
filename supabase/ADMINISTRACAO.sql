@@ -13,31 +13,38 @@ drop policy if exists "admin ve proprio cadastro" on public.administradores;
 create policy "admin ve proprio cadastro"
 on public.administradores for select
 to authenticated
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
+
+-- Privilégios mínimos: usuários autenticados só precisam consultar o próprio
+-- registro via RLS. Escrita administrativa continua fora do cliente comum.
+revoke all on table public.administradores from anon;
+revoke insert, update, delete, truncate, references, trigger
+  on table public.administradores from authenticated;
+grant select on table public.administradores to authenticated;
 
 create or replace function public.sou_admin()
 returns boolean
 language sql
 stable
-security definer
-set search_path = public
+security invoker
+set search_path = pg_catalog, pg_temp
 as $$
   select exists (
     select 1
     from public.administradores
-    where user_id = auth.uid()
+    where user_id = (select auth.uid())
   );
 $$;
 
-revoke all on function public.sou_admin() from public;
-grant execute on function public.sou_admin() to authenticated;
+revoke all on function public.sou_admin() from PUBLIC, anon;
+grant execute on function public.sou_admin() to authenticated, service_role;
 
 create or replace function public.admin_resumo()
 returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, auth
+set search_path = pg_catalog, auth, pg_temp
 as $$
 declare
   mes_atual text := to_char(now(), 'YYYY-MM');
@@ -67,8 +74,10 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_resumo() from public;
-grant execute on function public.admin_resumo() to authenticated;
+comment on function public.admin_resumo() is
+  'SECURITY DEFINER intencional: consulta auth.users após validar public.sou_admin().';
+revoke all on function public.admin_resumo() from PUBLIC, anon;
+grant execute on function public.admin_resumo() to authenticated, service_role;
 
 create or replace function public.admin_listar_usuarios()
 returns table (
@@ -88,7 +97,7 @@ returns table (
 language plpgsql
 stable
 security definer
-set search_path = public, auth
+set search_path = pg_catalog, auth, pg_temp
 as $$
 declare
   mes_atual text := to_char(now(), 'YYYY-MM');
@@ -118,8 +127,10 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_listar_usuarios() from public;
-grant execute on function public.admin_listar_usuarios() to authenticated;
+comment on function public.admin_listar_usuarios() is
+  'SECURITY DEFINER intencional: consulta auth.users após validar public.sou_admin().';
+revoke all on function public.admin_listar_usuarios() from PUBLIC, anon;
+grant execute on function public.admin_listar_usuarios() to authenticated, service_role;
 
 -- DEPOIS DE EXECUTAR ESTE SCRIPT:
 -- 1. Descubra seu UUID em Authentication > Users.
