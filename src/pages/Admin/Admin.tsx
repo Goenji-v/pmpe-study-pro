@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import BetaMonitor from "../../components/BetaMonitor/BetaMonitor";
 import CuradoriaQuestoes from "../../components/CuradoriaQuestoes/CuradoriaQuestoes";
+import PerformanceMonitorAdmin from "../../components/PerformanceMonitor/PerformanceMonitorAdmin";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
 import {
   carregarResumoAdmin,
@@ -160,6 +161,7 @@ export default function Admin() {
       </section>
 
       <BetaMonitor usuarios={usuarios} />
+      <PerformanceMonitorAdmin />
       <CuradoriaQuestoes />
     </section>
   );
