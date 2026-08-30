@@ -1,0 +1,58 @@
+name: E2E Production
+
+on:
+  schedule:
+    - cron: "30 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Smoke e fluxo autenticado
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      E2E_BASE_URL: https://pmpe-study-pro-two.vercel.app
+      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Smoke obrigatório
+        run: npm run e2e:smoke
+      - name: Verificar conta E2E dedicada
+        id: conta
+        shell: bash
+        run: |
+          if [ -n "$E2E_TEST_EMAIL" ] && [ -n "$E2E_TEST_PASSWORD" ]; then
+            echo "disponivel=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "disponivel=false" >> "$GITHUB_OUTPUT"
+            echo "Conta E2E não configurada; fluxo autenticado será ignorado."
+          fi
+      - name: Fluxo autenticado crítico
+        if: steps.conta.outputs.disponivel == 'true'
+        run: npm run e2e:auth
+      - name: Publicar diagnóstico no resumo
+        if: always()
+        shell: bash
+        run: |
+          echo "## E2E Production" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Base URL: $E2E_BASE_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Smoke: executado" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.conta.outputs.disponivel }}" = "true" ]; then
+            echo "- Fluxo autenticado: executado" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Fluxo autenticado: aguardando secrets E2E_TEST_EMAIL/E2E_TEST_PASSWORD" >> "$GITHUB_STEP_SUMMARY"
+          fi
