@@ -25,15 +25,15 @@ create policy metricas_performance_inserir_proprio
 on public.metricas_performance
 for insert
 to authenticated
-with check (auth.uid() = user_id);
+with check ((select auth.uid()) = user_id);
 
 drop policy if exists metricas_performance_atualizar_proprio on public.metricas_performance;
 create policy metricas_performance_atualizar_proprio
 on public.metricas_performance
 for update
 to authenticated
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 drop policy if exists metricas_performance_ler_admin on public.metricas_performance;
 create policy metricas_performance_ler_admin
