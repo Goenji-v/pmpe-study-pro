@@ -9,6 +9,7 @@ import {
   classificarMetrica,
   formatarValorMetrica,
   rotuloMetrica,
+  type ClassificacaoPerformance,
   type NomeMetricaPerformance,
 } from "../../utils/performanceMetrics";
 import "./PerformanceMonitorAdmin.css";
@@ -69,11 +70,11 @@ export default function PerformanceMonitorAdmin() {
           );
         });
 
-        const classificacoes = METRICAS.flatMap((metrica) => {
+        const classificacoes: ClassificacaoPerformance[] = METRICAS.flatMap((metrica) => {
           const valor = valores.get(metrica);
           return valor === null || valor === undefined ? [] : [classificarMetrica(metrica, valor)];
         });
-        const status = classificacoes.includes("ruim")
+        const status: ClassificacaoPerformance = classificacoes.includes("ruim")
           ? "ruim"
           : classificacoes.includes("atencao")
             ? "atencao"
@@ -88,7 +89,7 @@ export default function PerformanceMonitorAdmin() {
         };
       })
       .sort((a, b) => {
-        const peso = { ruim: 2, atencao: 1, bom: 0 } as const;
+        const peso: Record<ClassificacaoPerformance, number> = { ruim: 2, atencao: 1, bom: 0 };
         return peso[b.status] - peso[a.status] || b.atualizadoEm - a.atualizadoEm;
       });
   }, [filtrados]);
@@ -160,7 +161,7 @@ export default function PerformanceMonitorAdmin() {
   );
 }
 
-function rotuloClassificacao(classificacao: "bom" | "atencao" | "ruim" | "sem-dados") {
+function rotuloClassificacao(classificacao: ClassificacaoPerformance | "sem-dados") {
   if (classificacao === "bom") return "Bom";
   if (classificacao === "atencao") return "Atenção";
   if (classificacao === "ruim") return "Ruim";
