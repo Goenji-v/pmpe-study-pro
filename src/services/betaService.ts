@@ -1,7 +1,9 @@
 import { supabase } from "../lib/supabase";
+import { obterVersaoApp } from "../utils/monitoramentoErro";
 
 export type CategoriaFeedbackBeta = "bug" | "visual" | "ideia" | "outro";
 export type StatusFeedbackBeta = "em_analise" | "aprovado" | "concluido" | "rejeitado";
+export type StatusErroCliente = "aberto" | "resolvido";
 
 export type FeedbackBeta = {
   id: string;
@@ -24,13 +26,16 @@ export type ErroClienteBeta = {
   incident_id: string;
   origem: string;
   mensagem: string;
+  stack: string | null;
   rota: string | null;
+  user_agent: string | null;
   viewport: string | null;
   app_version: string | null;
+  fingerprint: string;
+  status: StatusErroCliente;
+  resolvido_em: string | null;
   created_at: string;
 };
-
-const VERSAO_BETA = "beta-v2";
 
 function viewportAtual() {
   if (typeof window === "undefined") return null;
@@ -58,7 +63,7 @@ export async function enviarFeedbackBeta(
         : null,
     user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 1000) : null,
     viewport: viewportAtual(),
-    app_version: VERSAO_BETA,
+    app_version: obterVersaoApp(),
   });
 
   if (error) {
@@ -115,15 +120,34 @@ export async function atualizarStatusFeedbackBeta(
   }
 }
 
-export async function listarErrosClienteBeta(limite = 30): Promise<ErroClienteBeta[]> {
+export async function listarErrosClienteBeta(limite = 100): Promise<ErroClienteBeta[]> {
   const { data, error } = await supabase
     .from("erros_cliente")
-    .select("id,user_id,incident_id,origem,mensagem,rota,viewport,app_version,created_at")
+    .select("id,user_id,incident_id,origem,mensagem,stack,rota,user_agent,viewport,app_version,fingerprint,status,resolvido_em,created_at")
     .order("created_at", { ascending: false })
     .limit(limite);
 
   if (error) throw new Error(error.message);
   return (data ?? []) as ErroClienteBeta[];
+}
+
+export async function atualizarStatusErrosCliente(
+  ids: string[],
+  status: StatusErroCliente
+) {
+  if (ids.length === 0) return;
+
+  const { error } = await supabase
+    .from("erros_cliente")
+    .update({
+      status,
+      resolvido_em: status === "resolvido" ? new Date().toISOString() : null,
+    })
+    .in("id", ids);
+
+  if (error) {
+    throw new Error(`Não foi possível atualizar o erro: ${error.message}`);
+  }
 }
 
 function mensagemStatus(status: StatusFeedbackBeta, resposta: string | null) {
