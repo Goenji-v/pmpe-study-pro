@@ -1,16 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  atualizarStatusErrosCliente,
   atualizarStatusFeedbackBeta,
   listarErrosClienteBeta,
   listarFeedbackBeta,
   type ErroClienteBeta,
   type FeedbackBeta,
+  type StatusErroCliente,
   type StatusFeedbackBeta,
 } from "../../services/betaService";
 import type { UsuarioAdmin } from "../../services/adminService";
+import { descreverAmbiente } from "../../utils/monitoramentoErro";
 
 import "./BetaMonitor.css";
+
+type GrupoErro = {
+  chave: string;
+  itens: ErroClienteBeta[];
+  ultimo: ErroClienteBeta;
+  usuariosAfetados: number;
+  status: StatusErroCliente;
+};
 
 export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) {
   const [feedbacks, setFeedbacks] = useState<FeedbackBeta[]>([]);
@@ -19,6 +30,7 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
   const [erro, setErro] = useState("");
   const [atualizandoId, setAtualizandoId] = useState<string | null>(null);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
+  const [mostrarResolvidos, setMostrarResolvidos] = useState(false);
 
   async function carregar() {
     try {
@@ -26,7 +38,7 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
       setErro("");
       const [novosFeedbacks, novosErros] = await Promise.all([
         listarFeedbackBeta(60),
-        listarErrosClienteBeta(40),
+        listarErrosClienteBeta(100),
       ]);
       setFeedbacks(novosFeedbacks);
       setErros(novosErros);
@@ -63,6 +75,41 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
     [feedbacks]
   );
 
+  const gruposErros = useMemo<GrupoErro[]>(() => {
+    const mapa = new Map<string, ErroClienteBeta[]>();
+
+    erros.forEach((item) => {
+      const chave = item.fingerprint || item.incident_id;
+      mapa.set(chave, [...(mapa.get(chave) ?? []), item]);
+    });
+
+    return [...mapa.entries()]
+      .map(([chave, itens]) => {
+        const ordenados = [...itens].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const aberto = ordenados.some((item) => item.status === "aberto");
+
+        return {
+          chave,
+          itens: ordenados,
+          ultimo: ordenados[0],
+          usuariosAfetados: new Set(ordenados.map((item) => item.user_id)).size,
+          status: aberto ? "aberto" : "resolvido",
+        };
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.ultimo.created_at).getTime() -
+          new Date(a.ultimo.created_at).getTime()
+      );
+  }, [erros]);
+
+  const errosAbertos = gruposErros.filter((grupo) => grupo.status === "aberto").length;
+  const gruposVisiveis = mostrarResolvidos
+    ? gruposErros
+    : gruposErros.filter((grupo) => grupo.status === "aberto");
+
   async function mudarStatus(item: FeedbackBeta, status: StatusFeedbackBeta) {
     try {
       setAtualizandoId(item.id);
@@ -89,13 +136,34 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
     }
   }
 
+  async function mudarStatusErro(grupo: GrupoErro, status: StatusErroCliente) {
+    try {
+      setAtualizandoId(grupo.chave);
+      setErro("");
+      const ids = grupo.itens.map((item) => item.id);
+      await atualizarStatusErrosCliente(ids, status);
+      const resolvidoEm = status === "resolvido" ? new Date().toISOString() : null;
+      setErros((atuais) =>
+        atuais.map((item) =>
+          ids.includes(item.id)
+            ? { ...item, status, resolvido_em: resolvidoEm }
+            : item
+        )
+      );
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Não foi possível atualizar o erro.");
+    } finally {
+      setAtualizandoId(null);
+    }
+  }
+
   return (
     <section className="beta-monitor">
       <header className="beta-monitor-topo">
         <div>
-          <span>BETA / PRÉ-LANÇAMENTO</span>
+          <span>BETA / PRODUÇÃO</span>
           <h2>Feedback e erros reais</h2>
-          <p>Identifique o testador, acompanhe o status e avise quando a solicitação for tratada.</p>
+          <p>Monitore falhas reais por rota, versão, navegador e dispositivo.</p>
         </div>
         <button type="button" onClick={() => void carregar()} disabled={carregando}>
           {carregando ? "Atualizando..." : "Atualizar"}
@@ -106,7 +174,7 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
         <article><strong>{feedbacks.length}</strong><span>feedbacks</span></article>
         <article><strong>{pendentes}</strong><span>em análise</span></article>
         <article><strong>{bugs}</strong><span>bugs relatados</span></article>
-        <article><strong>{erros.length}</strong><span>erros capturados</span></article>
+        <article><strong>{errosAbertos}</strong><span>erros abertos</span></article>
       </div>
 
       {erro && <div className="beta-monitor-erro">{erro}</div>}
@@ -178,26 +246,69 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
         </section>
 
         <section>
-          <h3>Erros automáticos</h3>
-          {erros.length === 0 ? (
-            <div className="beta-monitor-vazio">Nenhuma falha capturada.</div>
+          <div className="beta-monitor-secao-topo">
+            <div>
+              <h3>Erros automáticos</h3>
+              <small>{gruposErros.length} tipos · {erros.length} ocorrências</small>
+            </div>
+            <button type="button" onClick={() => setMostrarResolvidos((valor) => !valor)}>
+              {mostrarResolvidos ? "Ocultar resolvidos" : "Ver resolvidos"}
+            </button>
+          </div>
+
+          {gruposVisiveis.length === 0 ? (
+            <div className="beta-monitor-vazio">
+              {gruposErros.length === 0 ? "Nenhuma falha capturada." : "Nenhum erro aberto."}
+            </div>
           ) : (
             <div className="beta-monitor-lista">
-              {erros.slice(0, 12).map((item) => {
+              {gruposVisiveis.slice(0, 20).map((grupo) => {
+                const item = grupo.ultimo;
                 const usuario = usuariosPorId.get(item.user_id);
                 return (
-                  <article key={item.id}>
+                  <article key={grupo.chave} className={`beta-monitor-erro-card ${grupo.status}`}>
                     <div className="beta-monitor-item-topo">
-                      <span className="beta-monitor-tag erro">{item.origem}</span>
+                      <div className="beta-monitor-tags">
+                        <span className="beta-monitor-tag erro">{item.origem}</span>
+                        <span className={`beta-monitor-status ${grupo.status}`}>
+                          {grupo.status === "aberto" ? "Aberto" : "Resolvido"}
+                        </span>
+                      </div>
                       <small>{formatarData(item.created_at)}</small>
                     </div>
+
                     <div className="beta-monitor-autor">
                       <strong>{usuario?.nome || "Usuário"}</strong>
                       <span>{usuario?.email || item.user_id}</span>
                     </div>
+
                     <p>{item.mensagem}</p>
-                    <footer>{item.rota || "rota não informada"} · {item.viewport || "viewport desconhecida"}</footer>
-                    <code>{item.incident_id}</code>
+                    <div className="beta-monitor-meta">
+                      <span>{item.rota || "rota não informada"}</span>
+                      <span>{item.viewport || "viewport desconhecida"}</span>
+                      <span>{descreverAmbiente(item.user_agent)}</span>
+                      <span>versão {item.app_version || "desconhecida"}</span>
+                    </div>
+                    <footer>
+                      {grupo.itens.length} ocorrência{grupo.itens.length === 1 ? "" : "s"} · {grupo.usuariosAfetados} usuário{grupo.usuariosAfetados === 1 ? "" : "s"}
+                    </footer>
+                    <code>{grupo.chave}</code>
+
+                    {(item.stack || item.user_agent) && (
+                      <details className="beta-monitor-detalhes">
+                        <summary>Detalhes técnicos</summary>
+                        {item.user_agent && <code>{item.user_agent}</code>}
+                        {item.stack && <pre>{item.stack}</pre>}
+                      </details>
+                    )}
+
+                    <div className="beta-monitor-acoes">
+                      {grupo.status === "aberto" ? (
+                        <button type="button" className="concluir" disabled={atualizandoId === grupo.chave} onClick={() => void mudarStatusErro(grupo, "resolvido")}>Marcar resolvido</button>
+                      ) : (
+                        <button type="button" className="aprovar" disabled={atualizandoId === grupo.chave} onClick={() => void mudarStatusErro(grupo, "aberto")}>Reabrir</button>
+                      )}
+                    </div>
                   </article>
                 );
               })}
