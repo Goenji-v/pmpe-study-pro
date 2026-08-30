@@ -1,0 +1,76 @@
+name: Alertas de CI em produção
+
+on:
+  workflow_run:
+    workflows:
+      - Quality Gate
+      - E2E Production
+    types:
+      - completed
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  registrar-status:
+    if: github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Criar, atualizar ou encerrar alerta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          case "$WORKFLOW_NAME" in
+            "Quality Gate") TITLE="[Produção] Quality Gate falhou" ;;
+            "E2E Production") TITLE="[Produção] E2E falhou" ;;
+            *) exit 0 ;;
+          esac
+
+          EXISTING_ISSUE="$(
+            gh issue list \
+              --repo "$REPO" \
+              --state open \
+              --limit 100 \
+              --json number,title \
+              --jq ".[] | select(.title == \"$TITLE\") | .number" \
+            | head -n 1
+          )"
+
+          if [[ "$CONCLUSION" == "failure" || "$CONCLUSION" == "timed_out" || "$CONCLUSION" == "startup_failure" ]]; then
+            BODY="$(cat <<EOF
+          Um check de produção terminou com falha.
+
+          - Workflow: **$WORKFLOW_NAME**
+          - Resultado: **$CONCLUSION**
+          - Commit: \`$COMMIT_SHA\`
+          - Execução: $RUN_URL
+          - Run ID: \`$RUN_ID\`
+
+          O alerta será encerrado automaticamente quando esse workflow voltar a passar na \`main\`.
+          EOF
+            )"
+
+            if [[ -n "$EXISTING_ISSUE" ]]; then
+              gh issue comment "$EXISTING_ISSUE" --repo "$REPO" --body "$BODY"
+            else
+              gh issue create --repo "$REPO" --title "$TITLE" --body "$BODY"
+            fi
+            exit 0
+          fi
+
+          if [[ "$CONCLUSION" == "success" && -n "$EXISTING_ISSUE" ]]; then
+            gh issue comment "$EXISTING_ISSUE" \
+              --repo "$REPO" \
+              --body "✅ Recuperado: **$WORKFLOW_NAME** voltou a passar na \`main\`. Execução: $RUN_URL"
+            gh issue close "$EXISTING_ISSUE" --repo "$REPO" --reason completed
+          fi
