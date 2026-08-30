@@ -6,9 +6,11 @@ const senha = process.env.E2E_TEST_PASSWORD;
 async function fecharRecompensaDiariaSeAberta(page: Page) {
   const overlay = page.locator(".economia-login-overlay");
 
-  await page.waitForTimeout(700);
-
-  if (!(await overlay.isVisible())) return;
+  try {
+    await overlay.waitFor({ state: "visible", timeout: 5_000 });
+  } catch {
+    return;
+  }
 
   await expect(page.getByRole("dialog")).toBeVisible();
 
