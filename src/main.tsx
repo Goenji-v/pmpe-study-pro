@@ -12,6 +12,7 @@ import "./styles/app-premium.css";
 import "./styles/mobile-density.css";
 import "./styles/mobile-dashboard-fixes.css";
 import "./styles/visual-qa-final.css";
+import "./components/BetaMonitor/BetaMonitorProducao.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
