@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { useToast } from "../../context/ToastContext";
 import { registrarErroRuntime } from "../../services/seguranca/diagnosticoErroService";
+import PerformanceMonitor from "../PerformanceMonitor/PerformanceMonitor";
 
 export default function RuntimeErrorGuard() {
   const { showToast } = useToast();
@@ -41,5 +42,5 @@ export default function RuntimeErrorGuard() {
     };
   }, [showToast]);
 
-  return null;
+  return <PerformanceMonitor />;
 }
