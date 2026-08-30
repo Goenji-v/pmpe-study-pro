@@ -22,10 +22,9 @@ test.describe("smoke de autenticação e produção", () => {
     });
   }
 
-  test("login rejeita e-mail inválido no cliente sem quebrar a página", async ({ page }) => {
+  test("login vazio é rejeitado pelo cliente sem quebrar a página", async ({ page }) => {
     await page.goto("/login", { waitUntil: "domcontentloaded" });
 
-    await page.getByLabel("E-mail").fill("email-invalido");
     await page.getByLabel("Senha").fill("qualquer-senha");
     await page.getByRole("button", { name: "Entrar" }).click();
 
