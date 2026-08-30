@@ -15,6 +15,10 @@ export default function Configuracoes() {
   const { configuracoes, setConfiguracoes } = useApp();
   const { showToast } = useToast();
   const configInicial = configuracoes as ConfiguracoesComEdital;
+  const ritmoInicial = Math.max(
+    1,
+    Math.min(4, configInicial.materiasPorDia ?? configInicial.missoesPorDia ?? 1)
+  );
 
   const [formulario, setFormulario] = useState<ConfiguracoesComEdital>({
     ...configInicial,
@@ -22,8 +26,8 @@ export default function Configuracoes() {
       configInicial.diasEstudo?.length
         ? configInicial.diasEstudo
         : ["seg", "ter", "qua", "qui", "sex", "sab"],
-    materiasPorDia:
-      configInicial.materiasPorDia ?? configInicial.missoesPorDia ?? 1,
+    materiasPorDia: ritmoInicial,
+    missoesPorDia: ritmoInicial,
   });
 
   function atualizarCampo<K extends keyof ConfiguracoesComEdital>(
@@ -31,6 +35,15 @@ export default function Configuracoes() {
     valor: ConfiguracoesComEdital[K]
   ) {
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
+  }
+
+  function atualizarRitmoDiario(valor: number) {
+    const ritmo = Math.max(1, Math.min(4, valor));
+    setFormulario((anterior) => ({
+      ...anterior,
+      materiasPorDia: ritmo,
+      missoesPorDia: ritmo,
+    }));
   }
 
   function alternarDia(dia: DiaSemanaId) {
@@ -48,6 +61,10 @@ export default function Configuracoes() {
   function salvarConfiguracoes() {
     const nomeLimpo = formulario.nomeUsuario.trim();
     const concursoLimpo = formulario.concurso.trim();
+    const ritmoDiario = Math.max(
+      1,
+      Math.min(4, formulario.materiasPorDia ?? formulario.missoesPorDia ?? 1)
+    );
 
     if (!nomeLimpo) {
       showToast("Informe o nome do usuário.", "warning");
@@ -64,11 +81,7 @@ export default function Configuracoes() {
     if (
       formulario.metaQuestoesDiaria < 0 ||
       formulario.metaMinutosDiaria < 0 ||
-      formulario.metaRevisoesDiaria < 0 ||
-      (formulario.missoesPorDia ?? 1) < 1 ||
-      (formulario.missoesPorDia ?? 1) > 6 ||
-      (formulario.materiasPorDia ?? 1) < 1 ||
-      (formulario.materiasPorDia ?? 1) > 4
+      formulario.metaRevisoesDiaria < 0
     ) {
       showToast("Confira as metas e a quantidade de matérias por dia.", "error");
       return;
@@ -78,6 +91,8 @@ export default function Configuracoes() {
       ...formulario,
       nomeUsuario: nomeLimpo,
       concurso: concursoLimpo,
+      materiasPorDia: ritmoDiario,
+      missoesPorDia: ritmoDiario,
     };
 
     setConfiguracoes(dadosAtualizados);
@@ -188,12 +203,7 @@ export default function Configuracoes() {
             <select
               id="materiasPorDia"
               value={formulario.materiasPorDia ?? 1}
-              onChange={(evento) =>
-                atualizarCampo(
-                  "materiasPorDia",
-                  Math.max(1, Math.min(4, Number(evento.target.value)))
-                )
-              }
+              onChange={(evento) => atualizarRitmoDiario(Number(evento.target.value))}
             >
               {[1, 2, 3, 4].map((quantidade) => (
                 <option value={quantidade} key={quantidade}>
@@ -202,7 +212,7 @@ export default function Configuracoes() {
               ))}
             </select>
             <small>
-              O plano do edital divide o tempo diário entre essa quantidade de matérias.
+              O mesmo valor também define as missões por dia no plano anterior.
             </small>
           </div>
         </div>
@@ -248,27 +258,6 @@ export default function Configuracoes() {
               }
             />
             <small>A mesma meta continua sendo usada para reorganizar a fila de revisões.</small>
-          </div>
-
-          <div className="configuracoes-form-group configuracoes-ritmo">
-            <label htmlFor="missoesPorDia">Missões por dia no plano anterior</label>
-            <select
-              id="missoesPorDia"
-              value={formulario.missoesPorDia ?? 1}
-              onChange={(evento) =>
-                atualizarCampo(
-                  "missoesPorDia",
-                  Math.max(1, Math.min(6, Number(evento.target.value)))
-                )
-              }
-            >
-              {[1, 2, 3, 4, 5, 6].map((quantidade) => (
-                <option key={quantidade} value={quantidade}>
-                  {quantidade} {quantidade === 1 ? "missão" : "missões"}
-                </option>
-              ))}
-            </select>
-            <small>Essa opção é mantida para compatibilidade com o plano antigo.</small>
           </div>
         </div>
 
