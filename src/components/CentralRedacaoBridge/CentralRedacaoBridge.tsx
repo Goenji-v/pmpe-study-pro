@@ -275,7 +275,7 @@ export default function CentralRedacaoBridge() {
       materia: MATERIA_REDACAO,
       assunto: "",
       tipo: TIPO_REDACAO,
-      objetivo: "Treino de redação",
+      objetivo: "Atividade de redação",
       missaoId: vinculoRedacaoHoje?.missaoId,
       semana: vinculoRedacaoHoje?.semana,
       dia: vinculoRedacaoHoje?.dia,
