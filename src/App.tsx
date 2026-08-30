@@ -14,14 +14,10 @@ import Header from "./components/Header/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
-import BetaFeedback from "./components/BetaFeedback/BetaFeedback";
-import NotificationCenter from "./components/NotificationCenter/NotificationCenter";
-import QuestaoIABridge from "./components/QuestaoIABridge/QuestaoIABridge";
 import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/QuestaoIACronometroBridge";
-import DashboardGamificacaoSpotlight from "./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight";
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
-import EconomiaGamificacaoBridge from "./components/EconomiaGamificacaoBridge/EconomiaGamificacaoBridge";
 import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
+import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 
 import { AppProvider, useApp } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -61,6 +57,9 @@ const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Ranking = lazy(() => import("./pages/Ranking/Ranking"));
 const Admin = lazy(() => import("./pages/Admin/Admin"));
 const Conquistas = lazy(() => import("./pages/Conquistas/Conquistas"));
+const DashboardGamificacaoSpotlight = lazy(
+  () => import("./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight")
+);
 
 function CarregandoRota() {
   return (
@@ -97,9 +96,12 @@ function LayoutProtegido() {
         <AppProvider>
           <EditalPrimeiroAcessoGuard />
           <PersonalizacaoBridge />
-          <QuestaoIABridge />
-          <DashboardGamificacaoSpotlight />
-          <EconomiaGamificacaoBridge />
+          {paginaDashboard && (
+            <Suspense fallback={null}>
+              <DashboardGamificacaoSpotlight />
+            </Suspense>
+          )}
+          <DeferredAppExtras />
           <CronometroProvider>
             <QuestaoIACronometroBridge />
             <CentralRedacaoBridge />
@@ -171,8 +173,6 @@ function LayoutProtegido() {
                 </main>
               </div>
             </div>
-            <BetaFeedback />
-            <NotificationCenter />
           </CronometroProvider>
         </AppProvider>
       </ToastProvider>
