@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -10,6 +11,13 @@ import "./CentralRedacaoBridge.css";
 
 import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
+import {
+  criarPlanoCalendario,
+  normalizarMissoesPorDia,
+  obterDiaAtualPlano,
+} from "../../utils/planoCalendario";
+import { getSemanaAtual } from "../../utils/planoUtils";
+import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
 
 const TIPO_REDACAO = "redacao" as const;
 const MATERIA_REDACAO = "Redação";
@@ -22,7 +30,12 @@ type PendenciaRedacao = {
 
 export default function CentralRedacaoBridge() {
   const location = useLocation();
-  const { sessoes, setSessoes } = useApp();
+  const {
+    sessoes,
+    setSessoes,
+    missoesConcluidas,
+    configuracoes,
+  } = useApp();
   const {
     sessaoAtiva,
     cronometroAtivo,
@@ -41,6 +54,41 @@ export default function CentralRedacaoBridge() {
 
   const naCentral = location.pathname === "/central-estudos";
   const redacaoAtiva = sessaoAtiva.tipo === TIPO_REDACAO;
+
+  const planoCalendario = useMemo(
+    () =>
+      criarPlanoCalendario(
+        normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1)
+      ),
+    [configuracoes.missoesPorDia]
+  );
+
+  const semanaAtual = useMemo(
+    () =>
+      getSemanaAtual(
+        missoesConcluidas,
+        planoCalendario,
+        configuracoes.semanaAtualPlano
+      ),
+    [
+      configuracoes.semanaAtualPlano,
+      missoesConcluidas,
+      planoCalendario,
+    ]
+  );
+
+  const diaAtual = obterDiaAtualPlano();
+
+  const vinculoRedacaoHoje = useMemo(
+    () =>
+      localizarMissaoRedacaoPendenteDoDia(
+        planoCalendario,
+        missoesConcluidas,
+        semanaAtual,
+        diaAtual
+      ),
+    [diaAtual, missoesConcluidas, planoCalendario, semanaAtual]
+  );
 
   useEffect(() => {
     if (!naCentral) {
@@ -206,6 +254,9 @@ export default function CentralRedacaoBridge() {
       assunto: "",
       tipo: TIPO_REDACAO,
       objetivo: "Treino de redação",
+      missaoId: vinculoRedacaoHoje?.missaoId,
+      semana: vinculoRedacaoHoje?.semana,
+      dia: vinculoRedacaoHoje?.dia,
     });
   }
 
@@ -315,7 +366,7 @@ export default function CentralRedacaoBridge() {
 
             <div className="central-redacao-finalizacao-info finalizacao-campo-largo">
               O tempo do cronômetro entra automaticamente no Dashboard e no Histórico.
-              Se o treino já foi feito, ajuste o campo de minutos acima antes de salvar.
+              Se houver uma missão de redação pendente hoje, ela também será concluída com este mesmo registro, sem duplicar o tempo.
             </div>
           </>,
           destinoFinalizacao
