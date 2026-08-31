@@ -42,13 +42,12 @@ test.describe("smoke de autenticação e produção", () => {
     await expect(page.getByText("MODO DEMONSTRAÇÃO")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Como estou indo?" })).toBeVisible();
 
-    const botaoPlano = page.getByRole("button", { name: "Plano Tático" });
-    if (await botaoPlano.isVisible()) {
-      await botaoPlano.click();
-    } else {
+    const larguraViewport = page.viewportSize()?.width ?? 1280;
+    if (larguraViewport <= 720) {
       await page.getByRole("button", { name: "Abrir menu" }).click();
-      await page.getByRole("button", { name: "Plano Tático" }).click();
     }
+
+    await page.getByRole("button", { name: "Plano Tático" }).click();
 
     await expect(page.getByRole("heading", { name: "O que preciso fazer?" })).toBeVisible();
     expect(errosDePagina).toEqual([]);
