@@ -35,4 +35,16 @@ jobs:
           test -n "$E2E_TEST_EMAIL"
           test -n "$E2E_TEST_PASSWORD"
       - name: Auditar mobile
-        run: npx playwright test e2e/mobile-complete-audit.spec.ts --project=mobile-chrome
+        run: >-
+          npx playwright test
+          e2e/mobile-complete-audit.spec.ts
+          e2e/mobile-visual-audit.spec.ts
+          --project=mobile-chrome
+      - name: Anexar relatório visual
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-audit-report
+          path: playwright-report
+          if-no-files-found: error
+          retention-days: 7
