@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import {
+  Link,
   Navigate,
   useLocation,
   useNavigate,
@@ -328,6 +329,11 @@ export default function Auth() {
 
       <section className="auth-formulario-area">
         <div className="auth-formulario-card">
+          <div className="auth-beta-linha">
+            <span>BETA ABERTA</span>
+            <small>Teste gratuito durante a fase beta</small>
+          </div>
+
           <div className="auth-formulario-topo">
             <span>
               {modo === "login"
@@ -491,6 +497,22 @@ export default function Auth() {
                     : "Enviar instruções"}
             </button>
           </form>
+
+          {modo === "login" && (
+            <div className="auth-demo-area">
+              <div className="auth-demo-divisor">
+                <span>ou</span>
+              </div>
+
+              <Link
+                to="/demo"
+                className="auth-demo-link"
+              >
+                <strong>Explorar demonstração</strong>
+                <small>Sem cadastro · dados fictícios · não altera sua conta</small>
+              </Link>
+            </div>
+          )}
 
           <div className="auth-links">
             {modo ===
