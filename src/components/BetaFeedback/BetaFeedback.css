@@ -176,15 +176,20 @@
   .beta-feedback-gatilho {
     right: auto;
     left: 10px;
-    bottom: 10px;
-    min-height: 36px;
-    padding: 6px 10px;
-    font-size: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    font-size: 0;
   }
 
   .beta-feedback-gatilho span {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
   }
 
   .beta-feedback-overlay {
