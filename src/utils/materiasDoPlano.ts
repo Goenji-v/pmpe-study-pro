@@ -15,6 +15,12 @@ import {
 } from "../data/cursoPortugues";
 
 import {
+  criarAulasSegurancaInformacao,
+  CURSO_INFORMATICA_NOME,
+  SEGURANCA_INFORMACAO_ASSUNTO,
+} from "../data/cursoInformatica";
+
+import {
   criarIdModuloGeral,
   NOME_MODULO_GERAL,
 } from "../services/conteudos/navegarConteudos";
@@ -121,6 +127,19 @@ function prioridadeDaMissao(
   return "media";
 }
 
+function aulasDaMissao(
+  missao: MissaoPlano
+) {
+  if (
+    missao.materia === CURSO_INFORMATICA_NOME &&
+    missao.assunto === SEGURANCA_INFORMACAO_ASSUNTO
+  ) {
+    return criarAulasSegurancaInformacao(missao.urlAula);
+  }
+
+  return undefined;
+}
+
 export function gerarMateriasDoPlano(): Materia[] {
   const mapa = new Map<
     string,
@@ -177,6 +196,10 @@ export function gerarMateriasDoPlano(): Materia[] {
               concluido: false,
               prioridade:
                 prioridadeDaMissao(
+                  missao
+                ),
+              aulas:
+                aulasDaMissao(
                   missao
                 ),
               aula:
