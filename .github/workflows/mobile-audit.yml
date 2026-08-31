@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      E2E_BASE_URL: https://pmpe-study-pro-two.vercel.app
+      E2E_BASE_URL: https://pmpe-study-pro-git-qa-mobile-complete-audit-pmpe-study-pro.vercel.app
       E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
       E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
     steps:
