@@ -31,4 +31,26 @@ test.describe("smoke de autenticação e produção", () => {
     await expect(page.getByText("Digite um e-mail válido.")).toBeVisible();
     await expect(page).toHaveURL(/\/login(?:$|\?)/);
   });
+
+  test("demonstração pública abre sem login e permite navegar pelas áreas", async ({ page }) => {
+    const errosDePagina: Error[] = [];
+    page.on("pageerror", (erro) => errosDePagina.push(erro));
+
+    await page.goto("/demo", { waitUntil: "domcontentloaded" });
+
+    await expect(page).toHaveURL(/\/demo$/);
+    await expect(page.getByText("MODO DEMONSTRAÇÃO")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Como estou indo?" })).toBeVisible();
+
+    const botaoPlano = page.getByRole("button", { name: "Plano Tático" });
+    if (await botaoPlano.isVisible()) {
+      await botaoPlano.click();
+    } else {
+      await page.getByRole("button", { name: "Abrir menu" }).click();
+      await page.getByRole("button", { name: "Plano Tático" }).click();
+    }
+
+    await expect(page.getByRole("heading", { name: "O que preciso fazer?" })).toBeVisible();
+    expect(errosDePagina).toEqual([]);
+  });
 });
