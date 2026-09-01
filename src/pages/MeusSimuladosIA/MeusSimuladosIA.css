@@ -189,8 +189,20 @@
 
 .caderno-ia-acoes {
   display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   margin-top: 15px;
+}
+
+.caderno-ia-revisar {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid #4f8de5;
+  border-radius: 10px;
+  background: #163967;
+  color: #f1f6ff;
+  font-weight: 750;
+  cursor: pointer;
 }
 
 .caderno-ia-resolver,

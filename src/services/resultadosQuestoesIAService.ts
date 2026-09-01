@@ -19,7 +19,7 @@ type LinhaResultadoQuestoesIA = {
     total?: unknown;
     registros?: unknown;
     simulado?: unknown;
-    auditoria?: AuditoriaResultadoIA;
+    auditoria?: unknown;
   } | null;
 };
 
@@ -55,6 +55,10 @@ export async function salvarResultadoQuestoesIA(
           total: resultado.total,
           registros: resultado.registros,
           simulado: resultado.simulado ?? null,
+          cadernoId: resultado.cadernoId,
+          questoes: resultado.questoes,
+          respostas: resultado.respostas,
+          auditoria: resultado.auditoria,
         },
         updated_at: new Date().toISOString(),
       },
@@ -74,7 +78,7 @@ export async function listarResultadosQuestoesIA(): Promise<
   const { data, error } = await supabase
     .from("resultados_simulados_ia")
     .select(
-      "id,local_id,nome,certas,erradas,em_branco,percentual,data,dados"
+      "id,local_id,nome,certas,erradas,em_branco,percentual,data,tipo:dados->tipo,total:dados->total,registros:dados->registros,simulado:dados->simulado,auditoria:dados->auditoria"
     )
     .order("data", { ascending: false })
     .limit(1000);
@@ -85,8 +89,10 @@ export async function listarResultadosQuestoesIA(): Promise<
     );
   }
 
-  return ((data ?? []) as LinhaResultadoQuestoesIA[])
-    .map(converterLinha)
+  // A sincronização de métricas não precisa baixar todas as questões de cada prova.
+  // Os detalhes completos são carregados apenas ao abrir a revisão de um caderno.
+  return (data ?? [])
+    .map((linha) => converterLinha({ ...linha, dados: linha } as LinhaResultadoQuestoesIA))
     .filter(
       (
         resultado
@@ -134,7 +140,7 @@ function converterLinha(
       tentativaId: id,
       origem: tipo === "simulado" ? "simulado-ia" : "questoes-ia",
     })),
-    auditoria: linha.dados?.auditoria,
+    auditoria: linha.dados?.auditoria as AuditoriaResultadoIA | undefined,
     simulado: simulado
       ? {
           ...simulado,
