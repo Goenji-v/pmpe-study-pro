@@ -192,6 +192,15 @@ export default function MeusSimuladosIA() {
               </div>
 
               <div className="caderno-ia-acoes">
+                {estatisticas && (
+                  <button
+                    type="button"
+                    className="caderno-ia-revisar"
+                    onClick={() => navigate(`/resolver-simulado-ia/revisao/${caderno.id}`)}
+                  >
+                    Ver correção
+                  </button>
+                )}
                 <button
                   type="button"
                   className="caderno-ia-resolver"

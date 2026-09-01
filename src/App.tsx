@@ -31,6 +31,7 @@ const Cursos = lazy(() => import("./pages/Cursos/Cursos"));
 const Loja = lazy(() => import("./pages/Loja/Loja"));
 const ResolverSimuladoIA = lazy(() => import("./pages/ResolverSimuladoIA/ResolverSimuladoIA"));
 const MeusSimuladosIA = lazy(() => import("./pages/MeusSimuladosIA/MeusSimuladosIA"));
+const RevisaoCadernoIA = lazy(() => import("./pages/RevisaoCadernoIA/RevisaoCadernoIA"));
 const CronogramaIA = lazy(() => import("./pages/CronogramaIA/CronogramaIA"));
 const GerarSimuladoIA = lazy(() => import("./pages/GerarSimuladoIA/GerarSimuladoIA"));
 const CentroMateriais = lazy(() => import("./pages/CentroMateriais/CentroMateriais"));
@@ -145,6 +146,7 @@ function LayoutProtegido() {
                       <Route path="/simulados" element={<Simulados />} />
                       <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
                       <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
+                      <Route path="/resolver-simulado-ia/revisao/:cadernoId" element={<RevisaoCadernoIA />} />
                       <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
                       <Route path="/estatisticas-simulado-ia" element={<EstatisticasSimuladoIA />} />
 

@@ -204,6 +204,9 @@ export type ResultadoQuestoesIAPersistido = {
   emBranco: number;
   percentual: number;
   registros: RegistroQuestao[];
+  cadernoId?: string;
+  questoes?: QuestaoIA[];
+  respostas?: Record<string, string>;
   auditoria?: AuditoriaResultadoIA;
   simulado?: Simulado;
 };
