@@ -4,6 +4,10 @@ import type {
 
 import { criarUrlApi } from "../config/api";
 import { fetchApiAutenticada } from "./apiAutenticada";
+import {
+  montarPromptRevisaoQuestoesIA,
+  validarLoteRevisado,
+} from "./revisaoQuestoesIAUtils";
 
 export type DificuldadeIA =
   | "Fácil"
@@ -43,6 +47,14 @@ type RespostaErro = {
   resposta?: string;
 };
 
+type SolicitacaoLoteIA = {
+  assunto: string;
+  quantidade: number;
+  banca: string;
+  enunciadosEvitar?: string[];
+  etapa: "geração" | "revisão";
+};
+
 const API_URL = criarUrlApi("/api/gerar");
 const LETRAS = ["A", "B", "C", "D", "E"] as const;
 
@@ -51,6 +63,57 @@ export async function gerarQuestoesIA(
 ): Promise<{ sucesso: true; questoes: QuestaoIA[] }> {
   const assuntoCompleto = montarContextoGeracao(parametros);
 
+  const loteInicial = await solicitarLoteIA({
+    assunto: assuntoCompleto,
+    quantidade: parametros.quantidade,
+    banca: parametros.banca,
+    enunciadosEvitar: parametros.enunciadosEvitar ?? [],
+    etapa: "geração",
+  });
+
+  if (loteInicial.length !== parametros.quantidade) {
+    throw new Error(
+      `A IA gerou ${loteInicial.length} questão(ões), mas eram esperadas ${parametros.quantidade}. O lote foi rejeitado antes da revisão.`
+    );
+  }
+
+  const promptRevisao = montarPromptRevisaoQuestoesIA({
+    contextoOriginal: assuntoCompleto,
+    banca: parametros.banca,
+    questoes: loteInicial,
+  });
+
+  const loteRevisado = validarLoteRevisado(
+    await solicitarLoteIA({
+      assunto: promptRevisao,
+      quantidade: parametros.quantidade,
+      banca: parametros.banca,
+      etapa: "revisão",
+    }),
+    parametros.quantidade
+  );
+
+  const questoes = normalizarQuestoes(loteRevisado, parametros);
+
+  if (questoes.length !== parametros.quantidade) {
+    throw new Error(
+      `A revisão de qualidade deixou ${questoes.length} questão(ões) válidas, mas eram esperadas ${parametros.quantidade}. O lote não foi liberado.`
+    );
+  }
+
+  return {
+    sucesso: true,
+    questoes,
+  };
+}
+
+async function solicitarLoteIA({
+  assunto,
+  quantidade,
+  banca,
+  enunciadosEvitar = [],
+  etapa,
+}: SolicitacaoLoteIA) {
   let resposta: Response;
 
   try {
@@ -60,10 +123,10 @@ export async function gerarQuestoesIA(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        assunto: assuntoCompleto,
-        quantidade: parametros.quantidade,
-        banca: parametros.banca,
-        enunciadosEvitar: parametros.enunciadosEvitar ?? [],
+        assunto,
+        quantidade,
+        banca,
+        enunciadosEvitar,
       }),
     });
   } catch (erro) {
@@ -72,7 +135,9 @@ export async function gerarQuestoesIA(
     }
 
     throw new Error(
-      "Não foi possível conectar à IA. Verifique se a API está online e tente novamente."
+      etapa === "revisão"
+        ? "A revisão de qualidade das questões não conseguiu acessar a IA. Nenhuma questão não revisada foi liberada."
+        : "Não foi possível conectar à IA. Verifique se a API está online e tente novamente."
     );
   }
 
@@ -81,33 +146,35 @@ export async function gerarQuestoesIA(
   try {
     dados = (await resposta.json()) as RespostaSucesso | RespostaErro;
   } catch {
-    throw new Error("A API retornou uma resposta inválida.");
+    throw new Error(
+      etapa === "revisão"
+        ? "A revisão de qualidade retornou uma resposta inválida. O lote não foi liberado."
+        : "A API retornou uma resposta inválida."
+    );
   }
 
   if (!resposta.ok || !dados.sucesso) {
-    throw new Error(
+    const mensagemApi =
       "erro" in dados
         ? dados.erro
-        : `Erro HTTP ${resposta.status}`
+        : `Erro HTTP ${resposta.status}`;
+
+    throw new Error(
+      etapa === "revisão"
+        ? `A revisão de qualidade falhou: ${mensagemApi}. O lote não foi liberado.`
+        : mensagemApi
     );
   }
 
   if (!Array.isArray(dados.questoes)) {
-    throw new Error("A API não retornou uma lista válida de questões.");
-  }
-
-  const questoes = normalizarQuestoes(dados.questoes, parametros);
-
-  if (questoes.length !== parametros.quantidade) {
     throw new Error(
-      `A IA retornou ${questoes.length} questão(ões) válidas, mas eram esperadas ${parametros.quantidade}. Tente gerar novamente.`
+      etapa === "revisão"
+        ? "A revisão de qualidade não retornou uma lista de questões. O lote não foi liberado."
+        : "A API não retornou uma lista válida de questões."
     );
   }
 
-  return {
-    sucesso: true,
-    questoes,
-  };
+  return dados.questoes;
 }
 
 function montarContextoGeracao(
