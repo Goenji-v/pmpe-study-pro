@@ -106,7 +106,7 @@ export default function DashboardGamificacaoSpotlight() {
     return null;
   }
 
-  const xpNoNivel = gamificacao.xp % XP_POR_NIVEL;
+  const xpNoNivel = gamificacao.xpTotal % XP_POR_NIVEL;
   const xpFaltante = XP_POR_NIVEL - xpNoNivel;
   const proximoNivel = gamificacao.nivel + 1;
   const progresso = Math.min(
@@ -126,7 +126,7 @@ export default function DashboardGamificacaoSpotlight() {
 
       <span className="dashboard-xp-inline-progresso">
         <span className="dashboard-xp-inline-meta">
-          <b>{gamificacao.xp} XP</b>
+          <b title="XP acumulado em todo o histórico">{gamificacao.xpTotal} XP</b>
           <small>{xpFaltante} XP para o Nível {proximoNivel}</small>
         </span>
         <span

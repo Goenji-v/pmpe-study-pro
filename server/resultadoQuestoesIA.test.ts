@@ -242,3 +242,27 @@ test("20% cria revisão urgente para o mesmo dia", () => {
     "2026-08-22"
   );
 });
+
+test("auditoria substitui a nota antiga sem duplicar nem apagar registros manuais", async () => {
+  const { aplicarAuditoriasResultadosLocais } = await import("../src/utils/resultadoQuestoesIA");
+  const questoes = [criarQuestao(1), criarQuestao(2)];
+  const registros = criarRegistrosQuestoesIA({ tentativaId: "revisada", tipo: "questoes", questoes,
+    respostas: responder(questoes, 1), materias, data: "2026-09-01T12:00:00Z" });
+  const resultado: ResultadoQuestoesIAPersistido = { id: "revisada", nome: "Teste", data: "2026-09-01T12:00:00Z",
+    tipo: "questoes", total: 2, certas: 1, erradas: 1, emBranco: 0, percentual: 50, registros,
+    auditoria: { revisadaEm: "2026-09-01T13:00:00Z", totalAplicadas: 3,
+      excluidas: [{ id: "ambigua", numero: 3, motivo: "Duas respostas" }], questoesValidas: questoes, respostas: responder(questoes, 1) } };
+  const antigo = { ...registros[0], certas: 1, erradas: 2 };
+  const manual = { ...registros[0], id: "manual", tentativaId: undefined, origem: "manual" as const };
+  const primeira = mesclarResultadosQuestoesIANoHistorico({ questoes: [antigo, manual], simulados: [], resultados: [resultado] });
+  assert.equal(primeira.questoes.length, 2);
+  assert.equal(primeira.questoes[0].erradas, 1);
+  assert.equal(primeira.questoes[1], manual);
+  const segunda = mesclarResultadosQuestoesIANoHistorico({ ...primeira, resultados: [resultado] });
+  assert.equal(segunda.questoes, primeira.questoes);
+  const cache = aplicarAuditoriasResultadosLocais([{ id: "revisada", total: 3, respostas: { ambigua: "D" } }, { id: "outro" }], [resultado]);
+  assert.equal(cache[0].total, 2);
+  assert.equal(cache[0].percentual, 50);
+  assert.deepEqual(cache[1], { id: "outro" });
+  assert.equal(aplicarAuditoriasResultadosLocais(cache, [resultado]), cache);
+});

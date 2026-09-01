@@ -69,6 +69,25 @@ export function mesclarResultadosQuestoesIANoHistorico({
   simulados: Simulado[];
   resultados: ResultadoQuestoesIAPersistido[];
 }) {
+  // Revisions from the canonical history replace stale local aggregates.
+  // Unreviewed attempts retain the original merge behavior.
+  for (const resultado of resultados) {
+    if (!resultado.auditoria?.revisadaEm) continue;
+    const atuais = questoes.filter((q) => q.tentativaId === resultado.id);
+    if (JSON.stringify(atuais) !== JSON.stringify(resultado.registros)) {
+      questoes = [
+        ...resultado.registros,
+        ...questoes.filter((q) => q.tentativaId !== resultado.id),
+      ];
+    }
+    if (resultado.simulado) {
+      const atual = simulados.find((s) => s.id === resultado.id || s.tentativaId === resultado.id);
+      if (JSON.stringify(atual) !== JSON.stringify(resultado.simulado)) {
+        simulados = [resultado.simulado, ...simulados.filter((s) => s.id !== resultado.id && s.tentativaId !== resultado.id)];
+      }
+    }
+  }
+
   const tentativasRegistradas = new Set(
     questoes
       .map((registro) => registro.tentativaId)
@@ -336,4 +355,31 @@ function normalizar(valor: string) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
+}
+
+export function aplicarAuditoriasResultadosLocais(
+  locais: Record<string, unknown>[],
+  resultados: ResultadoQuestoesIAPersistido[]
+) {
+  const revisados = new Map(resultados.filter((r) => r.auditoria?.revisadaEm).map((r) => [r.id, r]));
+  let mudou = false;
+  const atualizados = locais.map((local) => {
+    const remoto = revisados.get(String(local.id));
+    if (!remoto?.auditoria) return local;
+    const proximo = {
+      ...local,
+      total: remoto.total,
+      certas: remoto.certas,
+      erradas: remoto.erradas,
+      emBranco: remoto.emBranco,
+      percentual: remoto.percentual,
+      questoes: remoto.auditoria.questoesValidas,
+      respostas: remoto.auditoria.respostas,
+      auditoria: remoto.auditoria,
+    };
+    if (JSON.stringify(local) === JSON.stringify(proximo)) return local;
+    mudou = true;
+    return proximo;
+  });
+  return mudou ? atualizados : locais;
 }

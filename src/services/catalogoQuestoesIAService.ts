@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase";
 import type { Dificuldade, QuestaoIA } from "../types/index";
 import {
   fingerprintQuestaoIA,
+  reconciliarQuestoesComCatalogo,
   normalizarChaveIA,
   selecionarQuestoesParaReuso,
   type PreferenciaReusoIA,
@@ -60,6 +61,22 @@ export async function selecionarDoCatalogoIA(
     filtros.quantidade,
     filtros.preferencia
   );
+}
+
+export async function atualizarQuestoesAntesDoTreino(questoes: QuestaoIA[]) {
+  if (questoes.length === 0) return [];
+  const ids = [...new Set(questoes.map((q) => q.id).filter(ehUuid))];
+  const ativas: QuestaoIA[] = [];
+  for (let inicio = 0; inicio < ids.length; inicio += 100) {
+    const { data, error } = await supabase.from("questoes_catalogo")
+      .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint")
+      .in("id", ids.slice(inicio, inicio + 100))
+      .eq("origem", "ia")
+      .eq("status", "ativa");
+    if (error) throw new Error("Não foi possível verificar a validade das questões. Conecte-se e tente novamente.");
+    ativas.push(...((data ?? []) as LinhaCatalogoIA[]).filter(ehQuestaoValida).map(converterLinha));
+  }
+  return reconciliarQuestoesComCatalogo(questoes, ativas);
 }
 
 export async function salvarQuestoesGeradasNoCatalogo(
@@ -215,9 +232,11 @@ function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
   return {
     id: linha.id,
     materia: linha.materia,
+    materiaId: linha.materia_id ?? undefined,
     modulo: linha.modulo ?? undefined,
     moduloId: linha.modulo_id ?? undefined,
     assunto: linha.assunto,
+    assuntoId: linha.assunto_id ?? undefined,
     banca: linha.banca,
     dificuldade:
       linha.dificuldade === "facil"

@@ -185,6 +185,14 @@ export type Simulado = {
   tentativaId?: string;
 };
 
+export type AuditoriaResultadoIA = {
+  revisadaEm: string;
+  totalAplicadas: number;
+  excluidas: Array<{ id: string; numero: number; motivo: string }>;
+  questoesValidas: QuestaoIA[];
+  respostas: Record<string, string>;
+};
+
 export type ResultadoQuestoesIAPersistido = {
   id: string;
   nome: string;
@@ -196,6 +204,7 @@ export type ResultadoQuestoesIAPersistido = {
   emBranco: number;
   percentual: number;
   registros: RegistroQuestao[];
+  auditoria?: AuditoriaResultadoIA;
   simulado?: Simulado;
 };
 

@@ -121,3 +121,18 @@ test("fingerprint coincide com o contrato usado pela Edge Function", async () =>
     "49c5f3c3e063dff719fbe238b2bfeab9453ac45a32e623309c5ef40a1630177b"
   );
 });
+
+test("caderno antigo perde itens indisponíveis e recebe gabarito atual sem mudar a ordem", async () => {
+  const { reconciliarQuestoesComCatalogo } = await import("../src/services/catalogoQuestoesIAUtils");
+  const base = { id: "q1", materia: "Português", assunto: "Fonologia", banca: "AOCP", dificuldade: "Média" as const,
+    enunciado: "Enunciado", alternativas: { A: "A", B: "B", C: "C", D: "D", E: "E" },
+    respostaCorreta: "A" as const, explicacao: "Explicação" };
+  const local = [{ ...base, materiaId: "portugues" }, { ...base, id: "anulada" }];
+  const atual = [{ ...base, respostaCorreta: "B" as const, explicacao: "Corrigida" }];
+  const resultado = reconciliarQuestoesComCatalogo(local, atual);
+  assert.equal(resultado.length, 1);
+  assert.equal(resultado[0].respostaCorreta, "B");
+  assert.equal(resultado[0].materiaId, "portugues");
+  assert.equal(local.length, 2);
+  assert.deepEqual(reconciliarQuestoesComCatalogo(local, []), []);
+});
