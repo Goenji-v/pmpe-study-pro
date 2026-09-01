@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import type {
+  AuditoriaResultadoIA,
   ResultadoQuestoesIAPersistido,
   Simulado,
 } from "../types";
@@ -18,6 +19,7 @@ type LinhaResultadoQuestoesIA = {
     total?: unknown;
     registros?: unknown;
     simulado?: unknown;
+    auditoria?: AuditoriaResultadoIA;
   } | null;
 };
 
@@ -132,6 +134,7 @@ function converterLinha(
       tentativaId: id,
       origem: tipo === "simulado" ? "simulado-ia" : "questoes-ia",
     })),
+    auditoria: linha.dados?.auditoria,
     simulado: simulado
       ? {
           ...simulado,

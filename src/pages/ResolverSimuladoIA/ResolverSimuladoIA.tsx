@@ -20,6 +20,7 @@ import { useApp } from "../../context/AppContext";
 
 import {
   registrarRespostasQuestoesIA,
+  atualizarQuestoesAntesDoTreino,
 } from "../../services/catalogoQuestoesIAService";
 import {
   definirTipoSessaoQuestoesIAAtiva,
@@ -128,7 +129,9 @@ export default function ResolverSimuladoIA() {
   ] = useState("");
 
   useEffect(() => {
-    carregarQuestoes();
+    let ativo = true;
+    void carregarQuestoes(() => ativo);
+    return () => { ativo = false; };
   }, []);
 
   const resultado = useMemo(() => {
@@ -214,7 +217,7 @@ export default function ResolverSimuladoIA() {
             100
         );
 
-  function carregarQuestoes() {
+  async function carregarQuestoes(ativo: () => boolean) {
     const salvo =
       localStorage.getItem(
         CHAVE_QUESTOES_IA
@@ -234,14 +237,21 @@ export default function ResolverSimuladoIA() {
         ? (valor as QuestaoIA[])
         : [];
 
-      setQuestoes(carregadas);
+      const verificadas = await atualizarQuestoesAntesDoTreino(carregadas);
+      if (!ativo()) return;
+      setQuestoes(verificadas);
+      if (verificadas.length < carregadas.length) {
+        setMensagem(`${carregadas.length - verificadas.length} questão(ões) retirada(s) deste treino por anulação ou indisponibilidade. Elas não entram na sua nota.`);
+      }
       setTipoSessao(
-        obterTipoSessaoQuestoesIAAtiva(carregadas)
+        obterTipoSessaoQuestoesIAAtiva(verificadas)
       );
-    } catch {
+    } catch (erro) {
+      if (!ativo()) return;
+      setMensagem(erro instanceof Error ? erro.message : "Não foi possível validar este caderno.");
       setQuestoes([]);
     } finally {
-      setCarregando(false);
+      if (ativo()) setCarregando(false);
     }
   }
 
@@ -717,12 +727,11 @@ export default function ResolverSimuladoIA() {
       <section className="resolver-ia-container">
         <div className="resolver-ia-vazio">
           <h1>
-            Nenhuma questão gerada
+            Nenhuma questão disponível
           </h1>
 
           <p>
-            Gere questões com o Gemini
-            antes de iniciar o simulado.
+            {mensagem || "Gere questões antes de iniciar o treino."}
           </p>
 
           <button

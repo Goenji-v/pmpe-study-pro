@@ -18,11 +18,13 @@ export type ResumoGamificacao = {
   revisoes: number;
   simulados: number;
   xp: number;
+  /** XP de todo o histórico, usado para o nível permanente. */
+  xpTotal: number;
   nivel: number;
   tituloNivel: string;
 };
 
-export type EntradaRanking = ResumoGamificacao & {
+export type EntradaRanking = Omit<ResumoGamificacao, "xpTotal"> & {
   userId: string;
   nome: string;
   posicao?: number;
@@ -54,17 +56,22 @@ export function calcularGamificacao(params: {
     return data >= inicio && data <= fim;
   });
 
-  const xpTempo = Math.floor(metricas.minutos / 10);
-  const xpQuestoes = Math.floor(metricas.questoes / 10) * 2;
-  const xpAcertos = Math.floor(metricas.certas / 10) * 2;
-  const xpRevisoes = metricas.revisoesConcluidas * 5;
-  const xpSimulados = simuladosMes.reduce((total, simulado) => {
-    const percentual = resumirSimulado(simulado).aproveitamento;
-    return total + 10 + (percentual >= 80 ? 10 : percentual >= 60 ? 5 : 0);
-  }, 0);
-
-  const xp = xpTempo + xpQuestoes + xpAcertos + xpRevisoes + xpSimulados;
-  const nivel = Math.max(1, Math.floor(xp / 250) + 1);
+  const xp = calcularXp(metricas, simuladosMes);
+  const metricasTotais = calcularMetricasConsolidadas({
+    sessoes: params.sessoes,
+    questoes: params.questoes,
+    revisoes: params.revisoes,
+    simulados: params.simulados,
+    fim: agora,
+  });
+  const xpTotal = calcularXp(
+    metricasTotais,
+    params.simulados.filter((item) => {
+      const data = new Date(item.data);
+      return !Number.isNaN(data.getTime()) && data <= agora;
+    })
+  );
+  const nivel = Math.max(1, Math.floor(xpTotal / 250) + 1);
 
   return {
     mes,
@@ -75,9 +82,26 @@ export function calcularGamificacao(params: {
     revisoes: metricas.revisoesConcluidas,
     simulados: metricas.simulados,
     xp,
+    xpTotal,
     nivel,
     tituloNivel: tituloDoNivel(nivel),
   };
+}
+
+function calcularXp(
+  metricas: ReturnType<typeof calcularMetricasConsolidadas>,
+  simulados: Simulado[]
+) {
+  const xpTempo = Math.floor(metricas.minutos / 10);
+  const xpQuestoes = Math.floor(metricas.questoes / 10) * 2;
+  const xpAcertos = Math.floor(metricas.certas / 10) * 2;
+  const xpRevisoes = metricas.revisoesConcluidas * 5;
+  const xpSimulados = simulados.reduce((total, simulado) => {
+    const percentual = resumirSimulado(simulado).aproveitamento;
+    return total + 10 + (percentual >= 80 ? 10 : percentual >= 60 ? 5 : 0);
+  }, 0);
+
+  return xpTempo + xpQuestoes + xpAcertos + xpRevisoes + xpSimulados;
 }
 
 export function tituloDoNivel(nivel: number) {

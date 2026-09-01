@@ -70,6 +70,7 @@ import {
 
 import {
   mesclarResultadosQuestoesIANoHistorico,
+  aplicarAuditoriasResultadosLocais,
 } from "../utils/resultadoQuestoesIA";
 
 import {
@@ -1057,6 +1058,20 @@ export function AppProvider({
       try {
         const resultados = await listarResultadosQuestoesIA();
         if (!ativo) return;
+
+        try {
+          const chave = "pmpe_resultados_simulados_ia";
+          const locais: unknown = JSON.parse(localStorage.getItem(chave) || "[]");
+          if (Array.isArray(locais)) {
+            const atualizados = aplicarAuditoriasResultadosLocais(locais, resultados);
+            if (atualizados !== locais) {
+              localStorage.setItem(chave, JSON.stringify(atualizados));
+              window.dispatchEvent(new Event("pmpe-simulado-ia-finalizado"));
+            }
+          }
+        } catch (erro) {
+          console.error("Não foi possível atualizar o cache da tentativa revisada:", erro);
+        }
 
         setQuestoes((anteriores) =>
           mesclarResultadosQuestoesIANoHistorico({

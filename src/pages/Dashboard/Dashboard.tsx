@@ -470,7 +470,7 @@ export default function Dashboard() {
   );
 
   const xpNoNivel =
-    gamificacao.xp % 250;
+    gamificacao.xpTotal % 250;
 
   const xpParaProximoNivel =
     250;
@@ -481,7 +481,7 @@ export default function Dashboard() {
     );
 
   const ouro =
-    Math.floor(gamificacao.xp / 5);
+    Math.floor(gamificacao.xpTotal / 5);
 
   const conquistas =
     calcularConquistasDashboard({

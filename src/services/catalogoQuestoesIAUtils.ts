@@ -85,3 +85,19 @@ export async function fingerprintQuestaoIA(questao: QuestaoIA) {
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
+
+/** A saved notebook is a snapshot; only currently active catalog rows may run. */
+export function reconciliarQuestoesComCatalogo(
+  locais: QuestaoIA[],
+  ativas: QuestaoIA[]
+) {
+  const porId = new Map(ativas.map((q) => [q.id, q]));
+  return locais.flatMap((q) => {
+    const atual = porId.get(q.id);
+    return atual ? [{ ...q, ...atual,
+      materiaId: atual.materiaId ?? q.materiaId,
+      moduloId: atual.moduloId ?? q.moduloId,
+      assuntoId: atual.assuntoId ?? q.assuntoId,
+    }] : [];
+  });
+}

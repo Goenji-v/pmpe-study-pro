@@ -73,7 +73,7 @@ export default function Ranking() {
       {aviso && <div className="ranking-aviso">{aviso}</div>}
 
       <div className="ranking-resumo-grid">
-        <Resumo titulo="Nível" valor={`${resumo.nivel}`} detalhe={resumo.tituloNivel} />
+        <Resumo titulo="Nível" valor={`${resumo.nivel}`} detalhe={`${resumo.tituloNivel} · ${resumo.xpTotal} XP acumulados`} />
         <Resumo titulo="Horas" valor={`${resumo.horas}h`} detalhe="No mês atual" />
         <Resumo titulo="Questões" valor={`${resumo.questoes}`} detalhe={`${resumo.acertos} certas`} />
         <Resumo titulo="XP" valor={`${resumo.xp}`} detalhe="Pontuação mensal" />
@@ -104,6 +104,7 @@ export default function Ranking() {
       <section className="ranking-regras">
         <h2>Como o XP é calculado</h2>
         <p>10 min de estudo = 1 XP · 10 questões = 2 XP · 10 acertos = 2 XP · revisão = 5 XP · simulado = 10 XP, com bônus por desempenho.</p>
+        <p>Seu nível considera o XP de todo o histórico e continua na virada do mês. A classificação do ranking usa apenas o XP do mês atual.</p>
       </section>
     </section>
   );
