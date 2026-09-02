@@ -316,7 +316,7 @@ function converterModuloCurso(curso: CursoImportado, materia: CursoMateria, modu
     const concluido = salvo?.concluido ?? aula.concluida ?? false;
     const concluidoEm = salvo?.concluidoEm ?? aula.concluidoEm;
     const id = `curso:${curso.id}:aula:${aula.id}`;
-    return { id, nome: aula.nome, concluido, concluidoEm, prioridade: "media", aula: aula.url, aulas: [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm }] };
+    return { id, nome: aula.nome, concluido, concluidoEm, prioridade: "media", aula: aula.url, aulas: [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm: concluidoEm }] };
   });
   return { id: `curso:${curso.id}:modulo:${modulo.id}`, nome: `${curso.nome} · ${modulo.nome}`, ordem: modulo.ordem, assuntos };
 }
