@@ -16,6 +16,7 @@ export type EstadoVinculoPlano = {
   objetivo?: string;
   observacao?: string;
   missaoId?: string;
+  revisaoId?: string;
   semana?: number;
   dia?: number;
   urlAula?: string;
@@ -38,7 +39,7 @@ export function aplicarAlteracoesComVinculoSeguro<T extends EstadoVinculoPlano>(
   alteracoes: Partial<EstadoVinculoPlano>
 ): T {
   const deveDesvincular = Boolean(
-    anterior.missaoId &&
+    (anterior.missaoId || anterior.revisaoId) &&
       CAMPOS_QUE_DESVINCULAM.some((campo) => {
         if (!Object.prototype.hasOwnProperty.call(alteracoes, campo)) {
           return false;
@@ -56,6 +57,7 @@ export function aplicarAlteracoesComVinculoSeguro<T extends EstadoVinculoPlano>(
           missaoId: undefined,
           semana: undefined,
           dia: undefined,
+          revisaoId: undefined,
         }
       : {}),
   };

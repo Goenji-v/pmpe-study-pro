@@ -5,10 +5,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
+import { avaliarRevisaoPorQuestoes, concluirRevisaoNaLista, revisaoCorrespondeASessao } from "../utils/revisoes";
 import { useApp } from "./AppContext";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
@@ -50,6 +52,7 @@ export type SessaoAtiva = {
   iniciadoEm: string | null;
   pausadoEm: string | null;
   segundosPausados: number;
+  revisaoId?: string;
   missaoId?: string;
   semana?: number;
   dia?: number;
@@ -69,6 +72,7 @@ export type DadosIniciarSessao = {
   formatoRevisao?: "teoria" | "questoes";
   objetivo?: string;
   observacao?: string;
+  revisaoId?: string;
   missaoId?: string;
   semana?: number;
   dia?: number;
@@ -94,11 +98,14 @@ export type DadosFinalizacaoSessao = {
   formatoRevisao?: "teoria" | "questoes";
 
   concluirAssunto?: boolean;
+  /** O resolvedor IA já registrou as questões e o simulado. */
+  resultadoJaRegistrado?: boolean;
 };
 
 type ResultadoFinalizacao = {
   sessao: SessaoEstudo;
   revisaoCriada: boolean;
+  revisaoConcluida: boolean;
 };
 
 type CronometroContextType = {
@@ -113,7 +120,7 @@ type CronometroContextType = {
         "materia" | "materiaId" | "modulo" | "moduloId" |
         "assunto" | "assuntoId" | "aulaId" | "tipo" | "formatoRevisao" |
         "objetivo" | "observacao" |
-        "missaoId" | "semana" | "dia" |
+        "revisaoId" | "missaoId" | "semana" | "dia" |
         "urlAula" | "urlQuestoes"
       >
     >
@@ -163,6 +170,9 @@ export function CronometroProvider({
 
   const {
     materias,
+    revisoes,
+    setRevisoes,
+    configuracoes,
     setSessoes,
     setQuestoes,
     setSimulados,
@@ -172,6 +182,7 @@ export function CronometroProvider({
   } = useApp();
 
   const { showToast } = useToast();
+  const finalizacaoConsumida = useRef(false);
 
   const chaveStorage =
     chaveSessao(
@@ -189,6 +200,7 @@ export function CronometroProvider({
     useState(Date.now());
 
   useEffect(() => {
+    finalizacaoConsumida.current = false;
     setSessaoAtiva(
       carregarSessao(chaveStorage)
     );
@@ -327,6 +339,7 @@ export function CronometroProvider({
       return false;
     }
 
+    finalizacaoConsumida.current = false;
     setSessaoAtiva({
       materia: materiaEfetiva,
       materiaId: dados.materiaId,
@@ -343,6 +356,7 @@ export function CronometroProvider({
       iniciadoEm: new Date().toISOString(),
       pausadoEm: null,
       segundosPausados: 0,
+      revisaoId: dados.tipo === "revisao" ? dados.revisaoId : undefined,
       missaoId: dados.missaoId,
       semana: dados.semana,
       dia: dados.dia,
@@ -367,7 +381,7 @@ export function CronometroProvider({
         "materia" | "materiaId" | "modulo" | "moduloId" |
         "assunto" | "assuntoId" | "aulaId" | "tipo" | "formatoRevisao" |
         "objetivo" | "observacao" |
-        "missaoId" | "semana" | "dia" |
+        "revisaoId" | "missaoId" | "semana" | "dia" |
         "urlAula" | "urlQuestoes"
       >
     >
@@ -401,6 +415,7 @@ export function CronometroProvider({
       formatoRevisao: dados.formatoRevisao,
       objetivo: dados.objetivo?.trim() ?? "",
       observacao: dados.observacao?.trim() ?? "",
+      revisaoId: dados.tipo === "revisao" ? dados.revisaoId : undefined,
       missaoId: dados.missaoId,
       semana: dados.semana,
       dia: dados.dia,
@@ -469,7 +484,7 @@ export function CronometroProvider({
   function finalizar(
     dados: DadosFinalizacaoSessao
   ): ResultadoFinalizacao | null {
-    if (!cronometroAtivo) {
+    if (!cronometroAtivo || finalizacaoConsumida.current) {
       return null;
     }
 
@@ -488,12 +503,22 @@ export function CronometroProvider({
       return null;
     }
 
-    const finalizadaEm =
-      new Date().toISOString();
+    const formatoRevisao = dados.formatoRevisao ?? sessaoAtiva.formatoRevisao;
+    const revisaoPorQuestoes = sessaoAtiva.tipo === "revisao" && formatoRevisao === "questoes";
+    const avaliacaoAutomatica = revisaoPorQuestoes
+      ? avaliarRevisaoPorQuestoes(dados.quantidadeQuestoes, dados.quantidadeAcertos) : null;
+    if (revisaoPorQuestoes && !avaliacaoAutomatica && !dados.resultadoJaRegistrado) {
+      showToast("Informe o total de questões e uma quantidade válida de acertos.", "warning");
+      return null;
+    }
+    const avaliacaoRevisao = revisaoPorQuestoes ? avaliacaoAutomatica ?? undefined : dados.avaliacaoRevisao;
+    finalizacaoConsumida.current = true;
+    const finalizadaEm = new Date().toISOString();
 
     const novaSessao:
       SessaoEstudo = {
       id: crypto.randomUUID(),
+      revisaoId: sessaoAtiva.revisaoId,
       tipo: sessaoAtiva.tipo,
       materia: sessaoAtiva.materia,
       materiaId: sessaoAtiva.materiaId,
@@ -526,12 +551,10 @@ export function CronometroProvider({
         undefined,
 
       dificuldade:
-        dados.dificuldade,
+        revisaoPorQuestoes ? avaliacaoRevisao : dados.dificuldade,
 
-      avaliacaoRevisao:
-        dados.avaliacaoRevisao,
-      formatoRevisao:
-        dados.formatoRevisao,
+      avaliacaoRevisao,
+      formatoRevisao,
       data: finalizadaEm,
       iniciadaEm:
         sessaoAtiva.iniciadoEm ??
@@ -560,8 +583,9 @@ export function CronometroProvider({
       dados.quantidadeErros;
 
     if (
+      !dados.resultadoJaRegistrado &&
       (sessaoAtiva.tipo === "questoes" ||
-        (sessaoAtiva.tipo === "revisao" && dados.formatoRevisao === "questoes")) &&
+        (sessaoAtiva.tipo === "revisao" && formatoRevisao === "questoes")) &&
       typeof quantidadeAcertos === "number" &&
       typeof quantidadeErros === "number"
     ) {
@@ -589,6 +613,7 @@ export function CronometroProvider({
     }
 
     if (
+      !dados.resultadoJaRegistrado &&
       sessaoAtiva.tipo === "simulado" &&
       typeof quantidadeAcertos === "number" &&
       typeof quantidadeErros === "number"
@@ -612,6 +637,18 @@ export function CronometroProvider({
         },
         ...anteriores,
       ]);
+    }
+
+    const revisaoConcluida = Boolean(avaliacaoRevisao && revisoes.some(
+      (revisao) => !revisao.concluida && revisaoCorrespondeASessao(revisao, novaSessao)
+    ));
+    if (sessaoAtiva.tipo === "revisao" && sessaoAtiva.revisaoId && avaliacaoRevisao) {
+      const proximaId = crypto.randomUUID();
+      setRevisoes((anteriores) => concluirRevisaoNaLista({
+        revisoes: anteriores, revisaoId: sessaoAtiva.revisaoId!,
+        desempenho: avaliacaoRevisao, limiteDiario: configuracoes.metaRevisoesDiaria,
+        agora: new Date(finalizadaEm), proximaId, sessao: novaSessao,
+      }));
     }
 
     const missaoPlano = sessaoAtiva.missaoId
@@ -764,13 +801,14 @@ export function CronometroProvider({
     showToast(
       sessaoAtiva.tipo === "simulado"
         ? "Simulado finalizado e salvo."
-        : "Sessão finalizada e salva.",
+        : revisaoConcluida ? "Sessão salva e revisão concluída. Agenda atualizada." : "Sessão finalizada e salva.",
       "success"
     );
 
     return {
       sessao: novaSessao,
       revisaoCriada,
+      revisaoConcluida,
     };
   }
 

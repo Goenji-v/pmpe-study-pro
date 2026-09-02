@@ -126,6 +126,7 @@ export type TipoSessao =
 
 export type SessaoEstudo = {
   id: string;
+  revisaoId?: string;
   data: string;
 
   tipo: TipoSessao;
@@ -311,6 +312,7 @@ export type ConfiguracoesApp = {
 
 export type Revisao = {
   id: string;
+  sessaoId?: string;
   materiaId: string;
   moduloId?: string;
   assuntoId: string;

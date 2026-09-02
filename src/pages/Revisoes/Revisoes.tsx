@@ -9,7 +9,7 @@ import { useToast } from "../../context/ToastContext";
 import {
   calcularDiasDiferenca,
   criarPrimeiraRevisao,
-  criarProximaRevisao,
+  concluirRevisaoNaLista,
   formatarDataRevisao,
   statusDaRevisao,
   redistribuirRevisoesPendentes,
@@ -207,6 +207,7 @@ export default function Revisoes() {
       "pmpe:central-estudos:prefill",
       JSON.stringify({
         ...dados,
+        revisaoId: revisao.id,
         tipo: "revisao",
         formatoRevisao: "teoria",
         objetivo: `Revisar ${dados.assunto}`,
@@ -243,28 +244,16 @@ export default function Revisoes() {
   }
 
   function concluirRevisao(revisao: Revisao, desempenho: DesempenhoRevisao) {
-    const revisaoConcluida: Revisao = {
-      ...revisao,
-      concluida: true,
-      dataConclusao: new Date().toISOString(),
-      desempenho,
-    };
-
-    setRevisoes((anteriores) => {
-      const listaAtualizada = anteriores.map((item) =>
-        item.id === revisao.id ? revisaoConcluida : item
-      );
-      const proximaRevisao = criarProximaRevisao(
-        revisao,
-        listaAtualizada,
-        configuracoes.metaRevisoesDiaria
-      );
-      return proximaRevisao ? [proximaRevisao, ...listaAtualizada] : listaAtualizada;
-    });
+    const agora = new Date();
+    const proximaId = crypto.randomUUID();
+    setRevisoes((anteriores) => concluirRevisaoNaLista({
+      revisoes: anteriores, revisaoId: revisao.id, desempenho,
+      limiteDiario: configuracoes.metaRevisoesDiaria, agora, proximaId,
+    }));
 
     showToast(
-      revisao.etapa < 4
-        ? "Revisão concluída. Próxima etapa adicionada à agenda."
+      (desempenho !== "facil" || revisao.etapa < 4)
+        ? "Revisão concluída. Próxima revisão agendada conforme seu desempenho."
         : "Ciclo de revisões finalizado.",
       "success"
     );
@@ -335,7 +324,7 @@ export default function Revisoes() {
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
       <p className="revisoes-subtitle">
-        Sistema automático 0-1-7-15, com distribuição conforme sua meta diária.
+        Revisões conforme seu desempenho: fácil avança no ciclo 0-1-7-15; média repete em 3 dias; difícil, em 1 dia. A agenda respeita sua meta diária.
       </p>
 
       <div className="revisoes-toolbar">
@@ -388,6 +377,9 @@ export default function Revisoes() {
                     <small className={`revisao-resultado resultado-${revisao.desempenho}`}>
                       Desempenho: {formatarDesempenho(revisao.desempenho)}
                     </small>
+                  )}
+                  {typeof revisao.certas === "number" && typeof revisao.erradas === "number" && (
+                    <small>{revisao.certas} acerto(s) · {revisao.erradas} erro(s)</small>
                   )}
                 </div>
               </div>

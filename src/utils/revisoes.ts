@@ -1,6 +1,7 @@
 import type {
   EtapaRevisao,
   Revisao,
+  SessaoEstudo,
 } from "../types";
 
 const INTERVALOS_DIAS: Record<EtapaRevisao, number> = {
@@ -84,9 +85,13 @@ export function criarPrimeiraRevisao(params: {
 export function criarProximaRevisao(
   revisaoAtual: Revisao,
   revisoesExistentes: Revisao[] = [],
-  limiteDiario = 0
+  limiteDiario = 0,
+  agora = new Date(),
+  id: string = crypto.randomUUID()
 ): Revisao | null {
-  if (revisaoAtual.etapa >= 4) return null;
+  const repetir = revisaoAtual.desempenho === "dificil" || revisaoAtual.desempenho === "media";
+  if (!repetir && revisaoAtual.etapa >= 4) return null;
+  const proximaEtapa = repetir ? revisaoAtual.etapa : (revisaoAtual.etapa + 1) as EtapaRevisao;
 
   const jaExiste = revisoesExistentes.some(
     (item) =>
@@ -94,13 +99,13 @@ export function criarProximaRevisao(
       item.id !== revisaoAtual.id &&
       item.materiaId === revisaoAtual.materiaId &&
       item.assuntoId === revisaoAtual.assuntoId &&
-      item.etapa === revisaoAtual.etapa + 1
+      (!item.moduloId || !revisaoAtual.moduloId || item.moduloId === revisaoAtual.moduloId)
   );
   if (jaExiste) return null;
 
-  const proximaEtapa = (revisaoAtual.etapa + 1) as EtapaRevisao;
-  const agora = new Date();
-  const dataIdeal = adicionarDias(agora, INTERVALOS_DIAS[proximaEtapa]);
+  const intervalo = revisaoAtual.desempenho === "dificil" ? 1
+    : revisaoAtual.desempenho === "media" ? 3 : INTERVALOS_DIAS[proximaEtapa];
+  const dataIdeal = adicionarDias(agora, intervalo);
   const dataPrevista = encontrarDataDisponivelParaRevisao({
     dataBase: dataIdeal,
     revisoes: revisoesExistentes,
@@ -108,7 +113,7 @@ export function criarProximaRevisao(
   });
 
   return {
-    id: crypto.randomUUID(),
+    id,
     materiaId: revisaoAtual.materiaId,
     moduloId: revisaoAtual.moduloId,
     assuntoId: revisaoAtual.assuntoId,
@@ -120,6 +125,43 @@ export function criarProximaRevisao(
     dataPrevista: dataPrevista.toISOString(),
     concluida: false,
   };
+}
+
+export function avaliarRevisaoPorQuestoes(total?: number, acertos?: number): NonNullable<Revisao["desempenho"]> | null {
+  if (typeof total !== "number" || typeof acertos !== "number" ||
+    !Number.isInteger(total) || !Number.isInteger(acertos) || total <= 0 || acertos < 0 || acertos > total) return null;
+  const percentual = acertos / total;
+  return percentual >= 0.8 ? "facil" : percentual >= 0.5 ? "media" : "dificil";
+}
+
+export function revisaoCorrespondeASessao(revisao: Revisao, sessao: Pick<SessaoEstudo, "tipo" | "revisaoId" | "materiaId" | "moduloId" | "assuntoId" | "materia" | "assunto">) {
+  const igual = (a: string, b: string) => a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() === b.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  return sessao.tipo === "revisao" && revisao.id === sessao.revisaoId &&
+    (sessao.materiaId ? sessao.materiaId === revisao.materiaId : igual(sessao.materia, revisao.materia)) &&
+    (sessao.assuntoId ? sessao.assuntoId === revisao.assuntoId : igual(sessao.assunto, revisao.assunto)) &&
+    (!sessao.moduloId || !revisao.moduloId || sessao.moduloId === revisao.moduloId);
+}
+
+/** Conclusão e próxima revisão entram juntas na mesma atualização do estado. */
+export function concluirRevisaoNaLista(params: {
+  revisoes: Revisao[];
+  revisaoId: string;
+  desempenho: NonNullable<Revisao["desempenho"]>;
+  limiteDiario: number;
+  agora: Date;
+  proximaId: string;
+  sessao?: SessaoEstudo;
+}): Revisao[] {
+  const { revisoes, revisaoId, desempenho, limiteDiario, agora, proximaId, sessao } = params;
+  const atual = revisoes.find((item) => item.id === revisaoId);
+  if (!atual || atual.concluida || (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
+  const concluida: Revisao = {
+    ...atual, concluida: true, desempenho, dataConclusao: agora.toISOString(),
+    ...(sessao ? { sessaoId: sessao.id, certas: sessao.quantidadeAcertos, erradas: sessao.quantidadeErros } : {}),
+  };
+  const atualizadas = revisoes.map((item) => item.id === revisaoId ? concluida : item);
+  const proxima = criarProximaRevisao(concluida, atualizadas, limiteDiario, agora, proximaId);
+  return proxima ? [proxima, ...atualizadas] : atualizadas;
 }
 
 export function reagendarRevisao(revisao: Revisao, dias: number): Revisao {
