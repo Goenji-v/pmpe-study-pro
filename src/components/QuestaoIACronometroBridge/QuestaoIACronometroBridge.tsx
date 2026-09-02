@@ -11,7 +11,6 @@ import { obterTipoSessaoQuestoesIAAtiva } from "../../services/cadernosSimulados
 import type { QuestaoIA } from "../../types";
 
 const CHAVE_QUESTOES_IA = "pmpe_questoes_ia";
-const CHAVE_RESULTADOS_IA = "pmpe_resultados_simulados_ia";
 const CHAVE_ORIGEM_REVISAO = "pmpe:questoes-ia:origem-revisao";
 const MARCADOR_OBJETIVO = "[Questões IA]";
 
@@ -69,13 +68,15 @@ export default function QuestaoIACronometroBridge() {
   }, [location.pathname, location.key]);
 
   useEffect(() => {
-    function aoFinalizarQuestoes() {
+    function aoFinalizarQuestoes(evento: Event) {
+      // Atualizações do cache também usam este evento, mas não encerram sessões.
+      if (!(evento instanceof CustomEvent) || !evento.detail) return;
+      const resultado = evento.detail as ResultadoQuestoesIA;
       if (!cronometroQuestoesIA) {
         setFinalizadaNestaTela(true);
         return;
       }
 
-      const resultado = carregarResultadoMaisRecente();
       const minutos = Math.max(1, Math.round(segundosDecorridos / 60));
       const total = resultado?.total ?? questoes.length;
       const primeiraQuestao = resultado?.questoes?.[0] ?? questoes[0];
@@ -83,6 +84,9 @@ export default function QuestaoIACronometroBridge() {
       finalizar({
         minutosReais: minutos,
         quantidadeQuestoes: total > 0 ? total : undefined,
+        quantidadeAcertos: resultado.certas,
+        quantidadeErros: resultado.erradas,
+        resultadoJaRegistrado: true,
         banca: primeiraQuestao?.banca,
         formatoRevisao:
           sessaoAtiva.tipo === "revisao" ? "questoes" : undefined,
@@ -110,7 +114,7 @@ export default function QuestaoIACronometroBridge() {
 
     const tipo = obterTipoSessaoQuestoesIAAtiva(questoes);
     const primeira = questoes[0];
-    const origemRevisao = carregarOrigemRevisao(primeira);
+    const origemRevisao = carregarOrigemRevisao(questoes);
 
     const dados = origemRevisao
       ? {
@@ -120,6 +124,7 @@ export default function QuestaoIACronometroBridge() {
           moduloId: origemRevisao.moduloId,
           assunto: origemRevisao.assunto,
           assuntoId: origemRevisao.assuntoId,
+          revisaoId: origemRevisao.revisaoId,
           tipo: "revisao" as const,
           formatoRevisao: "questoes" as const,
           objetivo: `${MARCADOR_OBJETIVO} Revisão · ${origemRevisao.assunto}`,
@@ -249,7 +254,7 @@ function carregarQuestoes(): QuestaoIA[] {
   }
 }
 
-function carregarOrigemRevisao(primeira?: QuestaoIA): OrigemRevisao | null {
+function carregarOrigemRevisao(questoes: QuestaoIA[]): OrigemRevisao | null {
   const salvo = sessionStorage.getItem(CHAVE_ORIGEM_REVISAO);
   if (!salvo) return null;
 
@@ -257,8 +262,8 @@ function carregarOrigemRevisao(primeira?: QuestaoIA): OrigemRevisao | null {
     const origem = JSON.parse(salvo) as OrigemRevisao;
     const criadaEm = origem.criadoEm ? new Date(origem.criadoEm).getTime() : 0;
     const recente = criadaEm > 0 && Date.now() - criadaEm <= 6 * 60 * 60 * 1000;
-    const mesmaMateria = !primeira || normalizar(primeira.materia) === normalizar(origem.materia);
-    const mesmoAssunto = !primeira || normalizar(primeira.assunto) === normalizar(origem.assunto);
+    const mesmaMateria = questoes.every((questao) => normalizar(questao.materia) === normalizar(origem.materia));
+    const mesmoAssunto = questoes.every((questao) => normalizar(questao.assunto) === normalizar(origem.assunto));
 
     if (recente && mesmaMateria && mesmoAssunto) return origem;
   } catch {
@@ -267,22 +272,6 @@ function carregarOrigemRevisao(primeira?: QuestaoIA): OrigemRevisao | null {
 
   sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO);
   return null;
-}
-
-function carregarResultadoMaisRecente(): ResultadoQuestoesIA | null {
-  const salvo = localStorage.getItem(CHAVE_RESULTADOS_IA);
-  if (!salvo) return null;
-
-  try {
-    const valor: unknown = JSON.parse(salvo);
-    if (!Array.isArray(valor) || valor.length === 0) return null;
-
-    return [...(valor as ResultadoQuestoesIA[])].sort(
-      (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-    )[0] ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function normalizar(valor: string) {

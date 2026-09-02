@@ -16,6 +16,8 @@ import type {
   Simulado,
   TipoSessaoQuestoesIA,
 } from "../../types/index";
+import { useCronometro } from "../../context/CronometroContext";
+import { revisaoCorrespondeASessao } from "../../utils/revisoes";
 import { useApp } from "../../context/AppContext";
 
 import {
@@ -77,6 +79,7 @@ const CHAVE_RESULTADOS_IA =
 
 export default function ResolverSimuladoIA() {
   const navigate = useNavigate();
+  const { sessaoAtiva, cronometroAtivo } = useCronometro();
   const {
     materias,
     revisoes,
@@ -481,10 +484,16 @@ export default function ResolverSimuladoIA() {
       );
     }
 
+    const revisaoDaSessao = cronometroAtivo && sessaoAtiva.objetivo.startsWith("[Questões IA]")
+      ? revisoes.find((item) => revisaoCorrespondeASessao(item, sessaoAtiva)) : undefined;
+    // A revisão vinculada será concluída pelo cronômetro com a regra 80% / 50%.
+    // Os demais assuntos continuam recebendo o diagnóstico de treino habitual.
     const diagnosticoAtual = calcularDiagnosticoQuestoesIA(
       novoResultado.questoes,
       novoResultado.respostas
-    );
+    ).filter((item) => !revisaoDaSessao || !revisaoCorrespondeASessao(revisaoDaSessao, {
+      ...item, tipo: "revisao", revisaoId: revisaoDaSessao.id,
+    }));
     const resumo = aplicarRevisoesDoResultadoIA({
       revisoes,
       diagnostico: diagnosticoAtual,
@@ -545,9 +554,7 @@ export default function ResolverSimuladoIA() {
     );
 
     window.dispatchEvent(
-      new Event(
-        "pmpe-simulado-ia-finalizado"
-      )
+      new CustomEvent("pmpe-simulado-ia-finalizado", { detail: novoResultado })
     );
 
     const gravacoes: Promise<unknown>[] = [

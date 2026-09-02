@@ -159,3 +159,13 @@
     width: 100%;
   }
 }
+.finalizacao-avaliacao {
+  padding: 16px;
+  border: 1px solid #3b82f6;
+  border-radius: 12px;
+  background: #12243b;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+.finalizacao-avaliacao p { margin: 8px 0; }
+.finalizacao-avaliacao small { color: #cbd5e1; }

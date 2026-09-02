@@ -10,6 +10,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import { avaliarRevisaoPorQuestoes } from "../../utils/revisoes";
 import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
 
@@ -239,6 +240,8 @@ const [
         prefill.tipo === "estudo"
           ? "aula"
           : prefill.tipo,
+      revisaoId: prefill.revisaoId,
+      formatoRevisao: prefill.formatoRevisao,
       objetivo: prefill.objetivo ?? "",
       observacao: prefill.observacao ?? "",
       missaoId: prefill.missaoId,
@@ -335,6 +338,11 @@ const [
     estado.tipo === "simulado";
 
   const formatoRevisao = estado.formatoRevisao ?? "teoria";
+  const revisaoPorQuestoes = estado.tipo === "revisao" && formatoRevisao === "questoes";
+  const avaliacaoAutomatica = quantidadeQuestoes.trim() && quantidadeAcertos.trim()
+    ? avaliarRevisaoPorQuestoes(Number(quantidadeQuestoes), Number(quantidadeAcertos)) : null;
+  const rotulosAvaliacao = { facil: "Fácil", media: "Média", dificil: "Difícil" };
+
 
   function alterarCampo(
     campo:
@@ -506,6 +514,7 @@ const [
         observacao:
           estado.observacao,
 
+        revisaoId: estado.revisaoId,
         missaoId:
           estado.missaoId,
 
@@ -645,6 +654,7 @@ const [
       }
 
       if (
+        !quantidadeAcertos.trim() ||
         !Number.isInteger(
           acertos
         ) ||
@@ -720,6 +730,8 @@ const [
     setMensagem(
       estado.tipo === "simulado"
         ? "Simulado salvo no histórico."
+        : resultado.revisaoConcluida
+          ? "Sessão salva e revisão concluída. Sua agenda foi atualizada automaticamente."
         : resultado.revisaoCriada
           ? "Sessão salva. Assunto concluído e revisão programada."
           : "Sessão salva sem duplicar o tempo."
@@ -1400,7 +1412,7 @@ const [
                     />
                   </label>
 
-                  <label>
+                  {!revisaoPorQuestoes && <label>
                     Dificuldade
 
                     <select
@@ -1425,12 +1437,21 @@ const [
                         Difícil
                       </option>
                     </select>
-                  </label>
+                  </label>}
                 </>
               )}
 
-              {estado.tipo ===
-                "revisao" && (
+              {revisaoPorQuestoes && (
+                <div className="finalizacao-campo-largo finalizacao-avaliacao" role="status" aria-live="polite">
+                  <strong>Avaliação automática da revisão</strong>
+                  <p>{avaliacaoAutomatica
+                    ? `${rotulosAvaliacao[avaliacaoAutomatica]} · ${Number(quantidadeAcertos)} de ${Number(quantidadeQuestoes)} acertos (${(Number(quantidadeAcertos) / Number(quantidadeQuestoes) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)`
+                    : "Informe as questões realizadas e os acertos para calcular."}</p>
+                  <small>Fácil: 80% ou mais · Média: 50% a menos de 80% · Difícil: abaixo de 50%.</small>
+                  {estado.revisaoId && <p>Ao salvar, esta revisão será concluída. Fácil avança no ciclo; média repete em 3 dias; difícil, em 1 dia, conforme as vagas na agenda.</p>}
+                </div>
+              )}
+              {estado.tipo === "revisao" && !revisaoPorQuestoes && (
                 <label>
                   Como foi a revisão?
 
