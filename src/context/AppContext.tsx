@@ -25,6 +25,7 @@ import {
 
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao } from "../utils/revisoes";
+import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 
 import {
   atualizarAssuntoNaArvore,
@@ -792,7 +793,12 @@ function mesmosIds(a: string[], b: string[]) {
 function reconciliarEstadoComConteudos(
   estado: EstadoAppNuvem
 ): EstadoAppNuvem {
-  const materiasBase = reconciliarMateriasComPlano(estado.materias);
+  const estadoCursos = reconciliarCursosImportados(estado);
+  // Reapply imports after the canonical syllabus so same-label lessons survive.
+  const materiasBase = reconciliarCursosImportados({
+    ...estadoCursos,
+    materias: reconciliarMateriasComPlano(estadoCursos.materias),
+  }).materias;
   const materias = recuperarHistoricoPortugues(
     materiasBase,
     estado.missoesConcluidas,
@@ -808,7 +814,7 @@ function reconciliarEstadoComConteudos(
   );
 
   return {
-    ...estado,
+    ...estadoCursos,
     materias,
     sessoes,
     questoes,

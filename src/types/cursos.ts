@@ -1,4 +1,4 @@
-import type { ConfiguracoesApp } from "./index";
+import type { Assunto, ConfiguracoesApp } from "./index";
 
 export type AreaCapturaCurso = "conteudo" | "menu" | "cabecalho" | "rodape" | "desconhecida";
 
@@ -62,6 +62,8 @@ export type CursoAula = {
   concluidaEm?: string;
   /** Alias legado aceito durante a conversão para a árvore de conteúdos. */
   concluidoEm?: string;
+  /** Preserva anotações, materiais e progresso ao mover conteúdos de categoria. */
+  registroEstudo?: Assunto;
 };
 
 export type CursoModulo = {
@@ -71,11 +73,16 @@ export type CursoModulo = {
   aulas: CursoAula[];
 };
 
+export type CategoriaCursoMateria = "disciplina" | "complementar" | "pendente";
+
 export type CursoMateria = {
   id: string;
   nome: string;
   ordem: number;
   modulos: CursoModulo[];
+  categoria?: CategoriaCursoMateria;
+  origemUrl?: string;
+  classificacaoManual?: boolean;
 };
 
 export type CursoImportado = {
@@ -88,6 +95,7 @@ export type CursoImportado = {
   atualizadoEm: string;
   materias: CursoMateria[];
   relatorioCaptura?: RelatorioCapturaCurso;
+  classificacaoVersao?: 1;
 };
 
 export type ConfiguracoesCursosExtras = {

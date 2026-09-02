@@ -1,0 +1,10 @@
+.curso-classificacao{display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:#bfdbfe}
+.curso-classificacao select{max-width:100%;padding:10px;border:1px solid #64748b;border-radius:8px;background:#0f1829;color:#e8eef8}
+.curso-complementares{padding:12px;border:1px solid #475569;border-radius:10px;overflow-wrap:anywhere}
+.curso-complementares summary{cursor:pointer;color:#bfdbfe}
+.curso-complementares a{color:#93c5fd;text-decoration:underline}
+.curso-complementares p{color:#cbd5e1}
+.curso-complementares h3{font-size:1rem}
+.curso-complementares details{margin:8px 0}
+.cursos-preview-acoes button:focus-visible,.curso-classificacao select:focus-visible,.curso-complementares summary:focus-visible{outline:2px solid #93c5fd;outline-offset:3px}
+@media(max-width:620px){.curso-linha-edicao,.curso-card-acoes{flex-wrap:wrap}.curso-linha-edicao>input{min-width:0}.curso-card-acoes>button{flex:1}}

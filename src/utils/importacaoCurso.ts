@@ -1,5 +1,5 @@
 import type { Assunto, Materia, Modulo } from "../types";
-import { CODIGO_CAPTURADOR_CURSO } from "./capturadorCurso";
+import { classificarOrigemCurso, identificarDisciplina, origemDaAula } from "./classificacaoCurso";
 import type {
   CapturaCurso,
   CursoAula,
@@ -8,21 +8,6 @@ import type {
   CursoModulo,
   ItemCapturaCurso,
 } from "../types/cursos";
-
-const MATERIAS_CONHECIDAS: Array<{ nome: string; expressoes: RegExp[] }> = [
-  { nome: "Língua Portuguesa", expressoes: [/\bportugu[eê]s\b/i, /l[ií]ngua portuguesa/i, /gram[aá]tica/i] },
-  { nome: "Raciocínio Lógico e Matemática", expressoes: [/racioc[ií]nio l[oó]gico/i, /\brlm\b/i, /\bmatem[aá]tica\b/i] },
-  { nome: "Informática", expressoes: [/inform[aá]tica/i, /tecnologia da informa[cç][aã]o/i, /fundamentos da computa[cç][aã]o/i] },
-  { nome: "História", expressoes: [/\bhist[oó]ria\b/i] },
-  { nome: "Geografia", expressoes: [/\bgeografia\b/i] },
-  { nome: "Direito Constitucional", expressoes: [/constitucional/i] },
-  { nome: "Direito Administrativo", expressoes: [/administrativo/i] },
-  { nome: "Direito Penal", expressoes: [/(^|\s)direito penal\b/i, /\bpenal\b/i] },
-  { nome: "Direito Processual Penal", expressoes: [/processual penal/i, /processo penal/i] },
-  { nome: "Direitos Humanos", expressoes: [/direitos humanos/i] },
-  { nome: "Legislação Extravagante", expressoes: [/legisla[cç][aã]o extravagante/i, /legisla[cç][aã]o especial/i, /leis especiais/i] },
-  { nome: "Redação", expressoes: [/\breda[cç][aã]o\b/i] },
-];
 
 const RUIDO = /\b(edital|perfil|minha conta|sair|logout|login|entrar|carrinho|suporte|certificado|ranking|comunidade|grupo\s+live|ao\s+vivo|anota[cç][oõ]es?)\b/i;
 const URL_AULA = /\/(lessons?|aulas?|videoaulas?|topics?|conteudos?|course-content|lesson-content)(\/|$)/i;
@@ -37,7 +22,7 @@ export function slugCurso(valor: string): string {
 export function identificarMateriaCurso(texto: string): string | undefined {
   const limpo = limparTexto(texto);
   if (!limpo || limpo.length > 180) return undefined;
-  return MATERIAS_CONHECIDAS.find((m) => m.expressoes.some((r) => r.test(limpo)))?.nome;
+  return identificarDisciplina(limpo);
 }
 
 export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: string): CursoImportado {
@@ -144,8 +129,8 @@ export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: str
 
   if (!materiasValidas.length) throw new Error("Não foi possível identificar aulas ou links. Use o Capturador V3 na página principal do curso. Se a plataforma não for compatível, o capturador mostrará essa limitação.");
   const avisos = captura.avisos?.length ? captura.avisos : captura.urlOrigem ? ["Captura de uma única página. Aulas de módulos não carregados podem estar ausentes; isso não comprova que o curso inteiro foi capturado."] : [];
-  return { id: idCurso, nome, origem: captura.urlOrigem ? "captura-json" : "texto", urlOrigem: captura.urlOrigem, criadoEm: agora, atualizadoEm: agora, materias: materiasValidas,
-    relatorioCaptura: avisos.length ? { origensEncontradas: 1, origensLidas: 0, pendencias: [], avisos, cancelada: Boolean(captura.cancelada) } : undefined };
+  return normalizarClassificacaoCurso({ id: idCurso, nome, origem: captura.urlOrigem ? "captura-json" : "texto", urlOrigem: captura.urlOrigem, criadoEm: agora, atualizadoEm: agora, materias: materiasValidas,
+    relatorioCaptura: avisos.length ? { origensEncontradas: 1, origensLidas: 0, pendencias: [], avisos, cancelada: Boolean(captura.cancelada) } : undefined });
 }
 
 function organizarPaginasCapturadas(captura: CapturaCurso, nomeInformado?: string): CursoImportado {
@@ -171,7 +156,7 @@ function organizarPaginasCapturadas(captura: CapturaCurso, nomeInformado?: strin
     if (paginasVistas.has(chave)) continue;
     paginasVistas.add(chave);
     relatorio.origensEncontradas++;
-    const materia: CursoMateria = { id: `${id}-materia-${materias.length + 1}`, nome: identificarMateriaCurso(nomePagina) || nomePagina.replace(/^pmpe\s+/i, ""), ordem: materias.length + 1, modulos: [] };
+    const materia: CursoMateria = { id: `${id}-materia-${materias.length + 1}`, nome: nomePagina, origemUrl: url, ordem: materias.length + 1, modulos: [] };
     const vistas = new Set<string>();
     let invalidas = 0;
     for (const modulo of pagina.modulos.slice(0, 300)) {
@@ -194,7 +179,85 @@ function organizarPaginasCapturadas(captura: CapturaCurso, nomeInformado?: strin
     else relatorio.pendencias.push({ nome: nomePagina, motivo: [pagina.motivo || "Grade incompleta ou sem aulas acessíveis.", invalidas ? `${invalidas} item(ns) inválido(s) ou acima do limite ignorado(s).` : ""].filter(Boolean).join(" ") });
   }
   if (!materias.length) throw new Error(`Nenhuma grade pôde ser importada. ${relatorio.pendencias.slice(0, 3).map(p => `${p.nome}: ${p.motivo}`).join(" ")}`);
-  return { id, nome, origem: "captura-json", urlOrigem: origem, criadoEm: agora, atualizadoEm: agora, materias, relatorioCaptura: relatorio };
+  return normalizarClassificacaoCurso({ id, nome, origem: "captura-json", urlOrigem: origem, criadoEm: agora, atualizadoEm: agora, materias, relatorioCaptura: relatorio });
+}
+
+/** Same repair for new files and old catalogs; IDs and lesson objects survive. */
+export function normalizarClassificacaoCurso(curso: CursoImportado): CursoImportado {
+  if (curso.classificacaoVersao === 1) return curso;
+  const materias: CursoMateria[] = [];
+  for (const materia of curso.materias) {
+    if (materia.classificacaoManual) { materias.push(materia); continue; }
+    const grupos = new Map<string, CursoMateria>();
+    for (const modulo of materia.modulos) {
+      const partes = new Map<string, CursoAula[]>();
+      for (const aula of modulo.aulas) {
+        const classe = classificarOrigemCurso(materia.nome, aula.url || materia.origemUrl, modulo.nome);
+        const chave = `${classe.categoria}|${classe.nome}|${classe.origemUrl || materia.id}`;
+        if (!grupos.has(chave)) grupos.set(chave, { ...materia, ...classe, id: grupos.size ? `${materia.id}-grupo-${grupos.size + 1}` : materia.id, modulos: [] });
+        const aulas = partes.get(chave) ?? [];
+        aulas.push(aula);
+        partes.set(chave, aulas);
+      }
+      let parte = 0;
+      for (const [chave, aulas] of partes) {
+        const grupo = grupos.get(chave)!;
+        grupo.modulos.push({ ...modulo, id: parte++ ? `${modulo.id}-grupo-${parte}` : modulo.id, aulas });
+      }
+    }
+    materias.push(...grupos.values());
+  }
+  return { ...curso, materias: materias.map((m, i) => ({ ...m, ordem: i + 1 })), classificacaoVersao: 1 };
+}
+
+function identidadeCurso(curso: CursoImportado) {
+  const origem = normalizarUrl(curso.urlOrigem);
+  if (!origem) return undefined;
+  return origemDaAula(origem)?.chave || origem.replace(/\/$/, "");
+}
+
+export function encontrarCursoExistente(cursos: CursoImportado[], recebido: CursoImportado) {
+  const identidade = identidadeCurso(recebido);
+  return cursos.find(c => c.id === recebido.id || Boolean(identidade && identidadeCurso(c) === identidade));
+}
+
+/** Merge is additive: a partial/new capture cannot delete old lessons or notes. */
+export function mesclarCursoRecebido(cursos: CursoImportado[], recebido: CursoImportado): CursoImportado {
+  const novo = normalizarClassificacaoCurso(recebido);
+  const anteriorBruto = encontrarCursoExistente(cursos, novo);
+  if (!anteriorBruto) return novo;
+  const anterior = normalizarClassificacaoCurso(anteriorBruto);
+  const resultado = structuredClone(anterior);
+  const urls = new Set(resultado.materias.flatMap(m => m.modulos.flatMap(x => x.aulas.flatMap(a => a.url ? [normalizarUrl(a.url)] : []))));
+  for (const materia of novo.materias) {
+    let destino = resultado.materias.find(m => (m.origemUrl && m.origemUrl === materia.origemUrl && m.categoria === materia.categoria) || (slugCurso(m.nome) === slugCurso(materia.nome) && m.categoria === materia.categoria));
+    if (!destino) { destino = { ...materia, id: `${anterior.id}-materia-nova-${resultado.materias.length + 1}`, modulos: [] }; resultado.materias.push(destino); }
+    for (const modulo of materia.modulos) {
+      let moduloDestino = destino.modulos.find(m => slugCurso(m.nome) === slugCurso(modulo.nome));
+      for (const aula of modulo.aulas) {
+        const url = normalizarUrl(aula.url);
+        if (url && urls.has(url)) continue;
+        if (!url && moduloDestino?.aulas.some(a => !a.url && slugCurso(a.nome) === slugCurso(aula.nome))) continue;
+        if (!moduloDestino) { moduloDestino = { ...modulo, id: `${destino.id}-modulo-novo-${destino.modulos.length + 1}`, aulas: [] }; destino.modulos.push(moduloDestino); }
+        moduloDestino.aulas.push({ ...aula, id: `${moduloDestino.id}-aula-nova-${moduloDestino.aulas.length + 1}`, ordem: moduloDestino.aulas.length + 1 });
+        if (url) urls.add(url);
+      }
+    }
+  }
+  return { ...resultado, atualizadoEm: novo.atualizadoEm, relatorioCaptura: novo.relatorioCaptura ?? resultado.relatorioCaptura,
+    materias: resultado.materias.filter(m => m.modulos.length).map((m, i) => ({ ...m, ordem: i + 1 })) };
+}
+
+type ExtrasCursos = { cursos?: CursoImportado[]; cursosAtivosIds?: string[] };
+export function reconciliarCursosImportados<T extends { materias: Materia[]; configuracoes: object }>(estado: T): T {
+  const config = estado.configuracoes as ExtrasCursos;
+  const antigos = config.cursos;
+  if (!antigos?.length) return estado;
+  let cursos = sincronizarProgressoCursos(antigos, estado.materias).map(normalizarClassificacaoCurso);
+  const materias = aplicarCursosAtivosNasMaterias(estado.materias, cursos, config.cursosAtivosIds ?? []);
+  cursos = sincronizarProgressoCursos(cursos, materias);
+  if (JSON.stringify(cursos) === JSON.stringify(antigos) && JSON.stringify(materias) === JSON.stringify(estado.materias)) return estado;
+  return { ...estado, materias, configuracoes: { ...estado.configuracoes, cursos } } as T;
 }
 
 export function capturaDeTexto(textoOriginal: string, titulo = "Curso importado"): CapturaCurso {
@@ -228,7 +291,7 @@ export async function extrairCursoDeArquivo(file: File): Promise<CursoImportado>
   const texto = await file.text();
   if (nome.endsWith(".json")) {
     const bruto = JSON.parse(texto) as unknown;
-    if (ehCursoImportado(bruto)) return normalizarCursoRecebido(bruto, file.name);
+    if (ehCursoImportado(bruto)) return normalizarClassificacaoCurso(normalizarCursoRecebido(bruto, file.name));
     if (ehCapturaCurso(bruto)) return { ...organizarCapturaCurso(bruto, bruto.titulo || removerExtensao(file.name)), origem: "captura-json", nomeArquivo: file.name };
     throw new Error("O JSON não está no formato de curso ou captura do Study Pro.");
   }
@@ -247,8 +310,10 @@ export function aplicarCursosAtivosNasMaterias(materiasAtuais: Materia[], cursos
   const base = removerModulosDeCursos(materiasAtuais);
   for (const curso of cursos.filter((c) => ativosIds.includes(c.id))) {
     for (const materiaCurso of curso.materias) {
+      if (materiaCurso.categoria && materiaCurso.categoria !== "disciplina") continue;
       const chave = slugCurso(materiaCurso.nome);
       let indice = base.findIndex((m) => slugCurso(m.nome) === chave);
+      if (indice < 0) indice = base.findIndex(m => identificarMateriaCurso(m.nome) === materiaCurso.nome);
       if (indice < 0) { base.push({ id: `curso-materia-${chave}`, nome: materiaCurso.nome, modulos: [], assuntos: [] }); indice = base.length - 1; }
       const atual = base[indice];
       const modulos = [...(atual.modulos ?? []), ...materiaCurso.modulos.map((m) => converterModuloCurso(curso, materiaCurso, m, progresso))];
@@ -261,13 +326,9 @@ export function aplicarCursosAtivosNasMaterias(materiasAtuais: Materia[], cursos
 export function sincronizarProgressoCursos(cursos: CursoImportado[], materias: Materia[]): CursoImportado[] {
   const progresso = mapearProgressoDosCursos(materias);
   return cursos.map((curso) => ({ ...curso, materias: curso.materias.map((materia) => ({ ...materia, modulos: materia.modulos.map((modulo) => ({ ...modulo, aulas: modulo.aulas.map((aula) => {
-    const salvo = progresso.get(chaveProgresso(curso.id, materia.nome, aula.nome));
-    return salvo ? { ...aula, concluida: salvo.concluido, concluidaEm: salvo.concluidoEm } : aula;
+    const salvo = buscarProgresso(progresso, curso.id, aula);
+    return salvo ? { ...aula, concluida: salvo.concluido, concluidaEm: salvo.concluidoEm, registroEstudo: salvo } : aula;
   }) })) })) }));
-}
-
-export function criarCodigoCapturadorCurso(): string {
-  return `javascript:${CODIGO_CAPTURADOR_CURSO}`;
 }
 
 function pontuarMateria(item: ItemCapturaCurso, texto: string, materia?: string) {
@@ -368,13 +429,14 @@ function tipoMaterial(texto: string, href: string): "pdf" | "download" | "materi
   return "link";
 }
 
-function converterModuloCurso(curso: CursoImportado, materia: CursoMateria, modulo: CursoModulo, progresso: Map<string, { concluido: boolean; concluidoEm?: string }>): Modulo {
+function converterModuloCurso(curso: CursoImportado, _materia: CursoMateria, modulo: CursoModulo, progresso: Map<string, Assunto>): Modulo {
   const assuntos: Assunto[] = modulo.aulas.map((aula) => {
-    const salvo = progresso.get(chaveProgresso(curso.id, materia.nome, aula.nome));
+    const salvo = buscarProgresso(progresso, curso.id, aula) ?? aula.registroEstudo;
     const concluido = salvo?.concluido ?? aula.concluida ?? false;
-    const concluidoEm = salvo?.concluidoEm ?? aula.concluidoEm;
+    const concluidoEm = salvo?.concluidoEm ?? aula.concluidaEm ?? aula.concluidoEm;
     const id = `curso:${curso.id}:aula:${aula.id}`;
-    return { id, nome: aula.nome, concluido, concluidoEm, prioridade: "media", aula: aula.url, aulas: [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm: concluidoEm }] };
+    return { ...salvo, id, nome: salvo?.nome ?? aula.nome, concluido, concluidoEm, prioridade: salvo?.prioridade ?? "media", aula: aula.url,
+      aulas: salvo?.aulas?.length ? salvo.aulas : [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm: concluidoEm }] };
   });
   return { id: `curso:${curso.id}:modulo:${modulo.id}`, nome: `${curso.nome} · ${modulo.nome}`, ordem: modulo.ordem, assuntos };
 }
@@ -382,22 +444,28 @@ function converterModuloCurso(curso: CursoImportado, materia: CursoMateria, modu
 function removerModulosDeCursos(materias: Materia[]): Materia[] {
   return materias.flatMap((materia) => {
     const modulos = (materia.modulos ?? []).filter((m) => !m.id.startsWith("curso:"));
-    if (materia.id.startsWith("curso-materia-") && !modulos.length) return [];
-    return [{ ...materia, modulos, assuntos: modulos.length ? modulos.flatMap((m) => m.assuntos) : materia.assuntos.filter((a) => !a.id.startsWith("curso:")) }];
+    const assuntos = modulos.length ? modulos.flatMap((m) => m.assuntos) : materia.assuntos.filter((a) => !a.id.startsWith("curso:"));
+    if (materia.id.startsWith("curso-materia-") && !modulos.length && !assuntos.length) return [];
+    return [{ ...materia, modulos, assuntos }];
   });
 }
 
 function mapearProgressoDosCursos(materias: Materia[]) {
-  const mapa = new Map<string, { concluido: boolean; concluidoEm?: string }>();
+  const mapa = new Map<string, Assunto>();
   for (const materia of materias) for (const modulo of materia.modulos ?? []) {
     const cursoId = modulo.id.match(/^curso:(.+?):modulo:/)?.[1];
     if (!cursoId) continue;
-    for (const assunto of modulo.assuntos) mapa.set(chaveProgresso(cursoId, materia.nome, assunto.nome), { concluido: assunto.concluido, concluidoEm: assunto.concluidoEm });
+    for (const assunto of modulo.assuntos) {
+      mapa.set(`id:${assunto.id}`, assunto);
+      for (const url of [assunto.aula, ...(assunto.aulas ?? []).map(a => a.url)]) if (url) mapa.set(`url:${cursoId}|${normalizarUrl(url)}`, assunto);
+    }
   }
   return mapa;
 }
 
-function chaveProgresso(cursoId: string, materia: string, aula: string) { return `${cursoId}|${slugCurso(materia)}|${slugCurso(aula)}`; }
+function buscarProgresso(mapa: Map<string, Assunto>, cursoId: string, aula: CursoAula) {
+  return mapa.get(`id:curso:${cursoId}:aula:${aula.id}`) ?? (aula.url ? mapa.get(`url:${cursoId}|${normalizarUrl(aula.url)}`) : undefined);
+}
 function pareceTituloDeMateria(texto: string, materia: string) { const a = slugCurso(texto), b = slugCurso(materia); return a === b || a.startsWith(`${b}-`) || a.length <= b.length + 24; }
 function pareceModulo(texto: string) { return /\b(m[oó]dulo|unidade|bloco|cap[ií]tulo|trilha|disciplina)\b/i.test(texto); }
 function pareceAula(texto: string) { return /\b(aula|videoaula|v[ií]deo|parte\s*\d+)\b/i.test(texto) || /^\d+[.)-]\s+/.test(texto); }

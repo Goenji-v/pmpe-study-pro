@@ -1,5 +1,9 @@
 // Kept as a literal so the bookmarklet never depends on Vite/TypeScript helpers.
 // Tutor curriculum selectors follow the upstream lesson_sidebar.php template.
+export function criarCodigoCapturadorCurso(): string {
+  return `javascript:${CODIGO_CAPTURADOR_CURSO}`;
+}
+
 export const CODIGO_CAPTURADOR_CURSO = String.raw`void (async function () {
   'use strict';
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
@@ -27,14 +31,14 @@ export const CODIGO_CAPTURADOR_CURSO = String.raw`void (async function () {
       return match ? u.origin + '/courses/' + match[1] + '/' : undefined;
     } catch (_) { return; }
   };
-  const usefulName = (...values) => values.map(clean).find(v => v && !percent(v));
+  const generic = value => /^(imagem|image|foto|capa|thumbnail|banner)( do curso| de curso| course)?$/i.test(clean(value));
+  const usefulName = (...values) => values.map(clean).find(v => v && !percent(v) && !generic(v));
   const slugName = key => {
     const slug = new URL(key).pathname.split('/')[2];
     try { return decodeURIComponent(slug).replace(/-/g, ' '); } catch (_) { return slug.replace(/-/g, ' '); }
   };
   const cardName = (a, key) => usefulName(
-    a.getAttribute('aria-label'), a.getAttribute('title'), a.querySelector('img')?.getAttribute('alt'),
-    a.textContent, slugName(key)
+    slugName(key), a.getAttribute('aria-label'), a.getAttribute('title'), a.querySelector('img')?.getAttribute('alt'), a.textContent
   ).slice(0, 180);
   const isNavigation = e => {
     for (let p = e; p && !/^(BODY|HTML)$/.test(p.tagName); p = p.parentElement) {
