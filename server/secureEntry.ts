@@ -15,7 +15,9 @@ import {
 } from "./editalAnaliseRobusta.ts";
 import {
   obterStatusErro,
+  modeloGeminiIndisponivel,
 } from "./retryGemini.ts";
+import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
 
 const portaPublica = Number(process.env.PORT || 3001);
 const portaInterna = Number(
@@ -27,10 +29,7 @@ const supabaseUrl =
 const anonKeyServidor =
   process.env.SUPABASE_ANON_KEY?.trim() || "";
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "";
-const modeloEdital =
-  process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
-const modeloFallbackEdital =
-  process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash";
+const { modelo: modeloEdital, modeloFallback: modeloFallbackEdital } = resolverModelosGemini(process.env);
 const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
 const origensPermitidas = new Set(
@@ -222,7 +221,7 @@ async function analisarEdital(req: Request, res: Response) {
         contents,
         config: {
           tools: [{ googleSearch: {} }],
-          temperature: 0,
+          ...parametrosExtracaoGemini(modeloEdital),
           maxOutputTokens: 32768,
         },
       });
@@ -294,7 +293,7 @@ async function analisarEditalEstruturado(
           model: modeloAtual,
           contents,
           config: {
-            temperature: 0,
+            ...parametrosExtracaoGemini(modeloAtual),
             responseMimeType: "application/json",
             maxOutputTokens: 32768,
           },
@@ -316,9 +315,11 @@ async function analisarEditalEstruturado(
           erro: erro instanceof Error ? erro.message : String(erro),
         });
 
-        if (status === 429) {
+        if (status === 429 || status === 401 || status === 403) {
           throw erro;
         }
+
+        if (modeloGeminiIndisponivel(erro)) break;
 
         if (tentativa < 2) {
           await aguardar(1200);

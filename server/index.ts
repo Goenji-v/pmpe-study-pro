@@ -12,6 +12,7 @@ import {
   parsearJsonDaIA,
 } from "./jsonIa.ts";
 import { executarComFallbackGemini } from "./retryGemini.ts";
+import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
 
 const app = express();
 
@@ -19,13 +20,7 @@ const PORT = Number(
   process.env.PORT || 3001
 );
 
-const modelo =
-  process.env.GEMINI_MODEL ||
-  "gemini-3.1-flash-lite";
-
-const modeloFallback =
-  process.env.GEMINI_FALLBACK_MODEL ||
-  "gemini-2.5-flash";
+const { modelo, modeloFallback } = resolverModelosGemini(process.env);
 
 const apiKey =
   process.env.GEMINI_API_KEY;
@@ -1234,7 +1229,7 @@ async function gerarJsonComPdf({
         ],
       }],
       config: {
-        temperature: 0,
+        ...parametrosExtracaoGemini(modeloAtual),
         responseMimeType: "application/json",
         maxOutputTokens,
       },
