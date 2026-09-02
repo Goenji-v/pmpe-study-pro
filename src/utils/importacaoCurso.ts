@@ -1,4 +1,5 @@
 import type { Assunto, Materia, Modulo } from "../types";
+import { CODIGO_CAPTURADOR_CURSO } from "./capturadorCurso";
 import type {
   CapturaCurso,
   CursoAula,
@@ -40,6 +41,15 @@ export function identificarMateriaCurso(texto: string): string | undefined {
 }
 
 export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: string): CursoImportado {
+  if (/study\s*pro/i.test(captura.titulo || "") || /^https?:\/\/pmpe-study-pro[^/]*\/cursos(?:[/?#]|$)/i.test(captura.urlOrigem || "")) {
+    throw new Error("Este arquivo foi capturado no próprio Study Pro. Execute o Capturador V3 na página principal da plataforma do curso, onde estão os cartões das matérias.");
+  }
+  if (captura.versao === 3 && captura.paginas?.length) return organizarPaginasCapturadas(captura, nomeInformado);
+  const cartoes = captura.itens.filter((item) => /course-link/.test(`${item.classes || ""} ${item.containerKey || ""}`) && item.href && URL_CURSO.test(item.href));
+  if (cartoes.length) {
+    const quantidade = new Set(cartoes.map((item) => item.href?.split("/lessons/")[0])).size;
+    throw new Error(`Este arquivo contém ${quantidade} cartões de matérias, mas não suas grades. Substitua o favorito antigo pelo Capturador V3 e execute uma vez nessa mesma página principal. Ele percorrerá os cartões automaticamente.`);
+  }
   const agora = new Date().toISOString();
   const nome = limparTexto(nomeInformado || captura.titulo || "Curso importado");
   const idCurso = `curso-${slugCurso(nome)}-${agora.replace(/\D/g, "").slice(0, 14)}`;
@@ -71,7 +81,7 @@ export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: str
 
   for (const item of captura.itens.slice(0, 7000)) {
     const texto = limparTexto(item.texto);
-    if (!texto || texto.length < 2) continue;
+    if (!texto || texto.length < 2 || /^\d+(?:[.,]\d+)?\s*%$/.test(texto)) continue;
     const materiaDetectada = identificarMateriaCurso(texto);
     const sMateria = pontuarMateria(item, texto, materiaDetectada);
     const sModulo = pontuarModulo(item, texto);
@@ -94,7 +104,8 @@ export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: str
       continue;
     }
 
-    if (sMaterial >= 60 && item.href && ultimaAula) {
+    if (sMaterial >= 60 && item.href) {
+      if (!ultimaAula) continue;
       const href = normalizarUrl(item.href);
       if (href) {
         const materiais = ultimaAula.materiais ?? [];
@@ -131,8 +142,59 @@ export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: str
       .filter((modulo) => modulo.aulas.length > 0),
   })).filter((materia) => materia.modulos.length > 0);
 
-  if (!materiasValidas.length) throw new Error("Não foi possível identificar aulas ou links. Abra a página onde aparecem os módulos/aulas e use o Capturador V2.");
-  return { id: idCurso, nome, origem: captura.urlOrigem ? "captura-json" : "texto", urlOrigem: captura.urlOrigem, criadoEm: agora, atualizadoEm: agora, materias: materiasValidas };
+  if (!materiasValidas.length) throw new Error("Não foi possível identificar aulas ou links. Use o Capturador V3 na página principal do curso. Se a plataforma não for compatível, o capturador mostrará essa limitação.");
+  const avisos = captura.avisos?.length ? captura.avisos : captura.urlOrigem ? ["Captura de uma única página. Aulas de módulos não carregados podem estar ausentes; isso não comprova que o curso inteiro foi capturado."] : [];
+  return { id: idCurso, nome, origem: captura.urlOrigem ? "captura-json" : "texto", urlOrigem: captura.urlOrigem, criadoEm: agora, atualizadoEm: agora, materias: materiasValidas,
+    relatorioCaptura: avisos.length ? { origensEncontradas: 1, origensLidas: 0, pendencias: [], avisos, cancelada: Boolean(captura.cancelada) } : undefined };
+}
+
+function organizarPaginasCapturadas(captura: CapturaCurso, nomeInformado?: string): CursoImportado {
+  if (!captura.paginas || captura.paginas.length > 100) throw new Error("O JSON excedeu o limite de 100 matérias por importação.");
+  const agora = new Date().toISOString();
+  const nome = limparTexto(nomeInformado || captura.titulo || "Curso importado");
+  const id = `curso-${slugCurso(nome)}-${agora.replace(/\D/g, "").slice(0, 14)}`;
+  const materias: CursoMateria[] = [];
+  const relatorio = { origensEncontradas: 0, origensLidas: 0, pendencias: [] as Array<{ nome: string; motivo: string }>, avisos: captura.avisos ?? [], cancelada: Boolean(captura.cancelada) };
+  const paginasVistas = new Set<string>();
+  const origem = normalizarUrl(captura.urlOrigem);
+  if (!origem) throw new Error("A captura não informa a página de origem válida.");
+  for (const pagina of captura.paginas) {
+    const url = normalizarUrl(pagina.url);
+    const nomePagina = limparTexto(pagina.nome) || "Matéria sem nome";
+    const caminhoCurso = url && new URL(url).pathname.match(/^\/courses\/[^/]+\//)?.[0];
+    if (!url || !caminhoCurso || new URL(url).origin !== new URL(origem).origin) {
+      relatorio.origensEncontradas++;
+      relatorio.pendencias.push({ nome: nomePagina, motivo: "Página de matéria inválida ou de outra plataforma." });
+      continue;
+    }
+    const chave = new URL(url).origin + caminhoCurso;
+    if (paginasVistas.has(chave)) continue;
+    paginasVistas.add(chave);
+    relatorio.origensEncontradas++;
+    const materia: CursoMateria = { id: `${id}-materia-${materias.length + 1}`, nome: identificarMateriaCurso(nomePagina) || nomePagina.replace(/^pmpe\s+/i, ""), ordem: materias.length + 1, modulos: [] };
+    const vistas = new Set<string>();
+    let invalidas = 0;
+    for (const modulo of pagina.modulos.slice(0, 300)) {
+      const idModulo = `${materia.id}-modulo-${materia.modulos.length + 1}`;
+      const aulas: CursoAula[] = [];
+      for (const aula of modulo.aulas.slice(0, 5000)) {
+        const href = normalizarUrl(aula.url);
+        const titulo = limparTexto(aula.nome);
+        if (!href || !titulo || /^\d+(?:[.,]\d+)?\s*%$/.test(titulo) || new URL(href).origin !== new URL(url).origin || !new URL(href).pathname.startsWith(`${caminhoCurso}lessons/`)) { invalidas++; continue; }
+        if (vistas.has(href)) continue;
+        vistas.add(href);
+        aulas.push({ id: `${idModulo}-aula-${aulas.length + 1}`, nome: titulo.slice(0, 220), url: href, ordem: aulas.length + 1 });
+      }
+      if (modulo.aulas.length > 5000) invalidas += modulo.aulas.length - 5000;
+      if (aulas.length) materia.modulos.push({ id: idModulo, nome: limparTexto(modulo.nome).slice(0, 160) || "Geral", ordem: materia.modulos.length + 1, aulas });
+    }
+    if (pagina.modulos.length > 300) invalidas++;
+    if (materia.modulos.length) materias.push(materia);
+    if (pagina.estado === "lida" && materia.modulos.length && !invalidas) relatorio.origensLidas++;
+    else relatorio.pendencias.push({ nome: nomePagina, motivo: [pagina.motivo || "Grade incompleta ou sem aulas acessíveis.", invalidas ? `${invalidas} item(ns) inválido(s) ou acima do limite ignorado(s).` : ""].filter(Boolean).join(" ") });
+  }
+  if (!materias.length) throw new Error(`Nenhuma grade pôde ser importada. ${relatorio.pendencias.slice(0, 3).map(p => `${p.nome}: ${p.motivo}`).join(" ")}`);
+  return { id, nome, origem: "captura-json", urlOrigem: origem, criadoEm: agora, atualizadoEm: agora, materias, relatorioCaptura: relatorio };
 }
 
 export function capturaDeTexto(textoOriginal: string, titulo = "Curso importado"): CapturaCurso {
@@ -205,14 +267,7 @@ export function sincronizarProgressoCursos(cursos: CursoImportado[], materias: M
 }
 
 export function criarCodigoCapturadorCurso(): string {
-  const codigo = `(function(){
-const clean=s=>(s||'').replace(/\\s+/g,' ').trim();
-const area=e=>{if(e.closest('nav,aside,[role="navigation"],[class*="sidebar"],[class*="menu"]'))return'menu';if(e.closest('header,[role="banner"]'))return'cabecalho';if(e.closest('footer,[role="contentinfo"]'))return'rodape';if(e.closest('main,article,[role="main"],[class*="content"],[class*="course"],[class*="lesson"]'))return'conteudo';return'desconhecida'};
-const container=e=>{const c=e.closest('[id],[data-id],[data-module],[data-section],[class*="module"],[class*="modulo"],[class*="accordion"],[class*="section"],[class*="lesson"],[class*="aula"]');if(!c)return;return clean(c.id||c.getAttribute('data-id')||c.getAttribute('data-module')||c.getAttribute('data-section')||c.className).slice(0,180)};
-const q='h1,h2,h3,h4,h5,h6,[role="heading"],a[href],button,[data-title],[class*="aula"],[class*="lesson"],[class*="modulo"],[class*="module"]';const seen=new Set(),itens=[];
-[...document.querySelectorAll(q)].slice(0,7000).forEach(e=>{const t=clean(e.innerText||e.textContent||e.getAttribute('data-title'));if(!t||t.length<2||t.length>260)return;const tag=e.tagName.toLowerCase();let href;if(tag==='a'){try{href=new URL(e.getAttribute('href'),location.href).href}catch(_){}}const tipo=/^h[1-6]$/.test(tag)||e.getAttribute('role')==='heading'?'cabecalho':href?'link':'texto';const p=e.parentElement;const k=[tipo,t,href||'',container(e)||''].join('|');if(seen.has(k))return;seen.add(k);itens.push({tipo,texto:t,href,nivel:/^h[1-6]$/.test(tag)?Number(tag.slice(1)):undefined,tag,role:e.getAttribute('role')||undefined,classes:clean(typeof e.className==='string'?e.className:'').slice(0,240)||undefined,parentTag:p?p.tagName.toLowerCase():undefined,parentClasses:p&&typeof p.className==='string'?clean(p.className).slice(0,240)||undefined:undefined,containerKey:container(e),area:area(e),top:Math.round(e.getBoundingClientRect().top+scrollY)})});
-const dados={versao:2,titulo:document.title,urlOrigem:location.href,capturadoEm:new Date().toISOString(),itens};const blob=new Blob([JSON.stringify(dados,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='study-pro-curso-v2.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)})();`;
-  return `javascript:${codigo}`;
+  return `javascript:${CODIGO_CAPTURADOR_CURSO}`;
 }
 
 function pontuarMateria(item: ItemCapturaCurso, texto: string, materia?: string) {
@@ -290,7 +345,10 @@ function itemDeElemento(elemento: Element, base?: string): ItemCapturaCurso | un
 }
 
 function detectarArea(e: Element): ItemCapturaCurso["area"] {
-  if (e.closest("nav,aside,[role='navigation'],[class*='sidebar'],[class*='menu']")) return "menu";
+  if (e.closest(".tutor-course-topic")) return "conteudo";
+  for (let p: Element | null = e; p && !/^(BODY|HTML)$/.test(p.tagName); p = p.parentElement) {
+    if (p.matches("nav,aside,[role='navigation']") || [...p.classList].some(c => /^(menu|sidebar|navigation)(-|$)|^(main|site|primary|nav)-(menu|navigation)$/.test(c))) return "menu";
+  }
   if (e.closest("header,[role='banner']")) return "cabecalho";
   if (e.closest("footer,[role='contentinfo']")) return "rodape";
   if (e.closest("main,article,[role='main'],[class*='content'],[class*='course'],[class*='lesson']")) return "conteudo";
@@ -345,10 +403,23 @@ function pareceModulo(texto: string) { return /\b(m[oó]dulo|unidade|bloco|cap[i
 function pareceAula(texto: string) { return /\b(aula|videoaula|v[ií]deo|parte\s*\d+)\b/i.test(texto) || /^\d+[.)-]\s+/.test(texto); }
 function limparNomeModulo(texto: string, materia: string) { const limpo = limparTexto(texto).replace(/^\s*(m[oó]dulo|unidade|bloco|cap[ií]tulo|trilha|disciplina)\s*\d*\s*[-:–—]?\s*/i, "").trim(); return !limpo || slugCurso(limpo) === slugCurso(materia) ? "Geral" : limpo.slice(0, 160); }
 function limparTexto(valor: string) { return String(valor || "").replace(/\s+/g, " ").trim(); }
-function normalizarUrl(url?: string) { if (!url) return undefined; const x = url.trim(); return /^https?:\/\//i.test(x) ? x.slice(0, 2000) : undefined; }
+function normalizarUrl(url?: string) { if (typeof url !== "string" || url.length > 2000) return undefined; try { const x = new URL(url); if (!/^https?:$/.test(x.protocol) || x.username || x.password) return undefined; x.hash = ""; return x.href; } catch { return undefined; } }
 function resolverUrl(href?: string, base?: string) { if (!href || href.startsWith("javascript:") || href.startsWith("#")) return undefined; try { return base ? new URL(href, base).href : /^https?:\/\//i.test(href) ? href : undefined; } catch { return undefined; } }
 function removerExtensao(nome: string) { return nome.replace(/\.(html?|mhtml|mht|json|txt)$/i, ""); }
-function ehCapturaCurso(valor: unknown): valor is CapturaCurso { if (!valor || typeof valor !== "object") return false; const v = valor as Partial<CapturaCurso>; return (v.versao === 1 || v.versao === 2) && Array.isArray(v.itens); }
+function ehCapturaCurso(valor: unknown): valor is CapturaCurso {
+  if (!valor || typeof valor !== "object") return false;
+  const v = valor as Partial<CapturaCurso>;
+  if (![1, 2, 3].includes(v.versao ?? 0) || !Array.isArray(v.itens) || !v.itens.every(i => i && typeof i.texto === "string")) return false;
+  if (v.avisos !== undefined && (!Array.isArray(v.avisos) || !v.avisos.every(a => typeof a === "string"))) return false;
+  if (v.versao === 3 && v.paginas !== undefined) {
+    if (!Array.isArray(v.paginas)) return false;
+    const validas = v.paginas.every(p => p && typeof p.nome === "string" && typeof p.url === "string"
+      && Array.isArray(p.modulos) && p.modulos.every(m => m && typeof m.nome === "string"
+        && Array.isArray(m.aulas) && m.aulas.every(a => a && typeof a.nome === "string" && typeof a.url === "string")));
+    if (!validas) return false;
+  }
+  return true;
+}
 function ehCursoImportado(valor: unknown): valor is CursoImportado { if (!valor || typeof valor !== "object") return false; const v = valor as Partial<CursoImportado>; return typeof v.nome === "string" && Array.isArray(v.materias); }
 function normalizarCursoRecebido(curso: CursoImportado, nomeArquivo: string): CursoImportado { const agora = new Date().toISOString(); return { ...curso, id: curso.id || `curso-${slugCurso(curso.nome)}-${Date.now()}`, origem: "captura-json", nomeArquivo, criadoEm: curso.criadoEm || agora, atualizadoEm: agora }; }
 
