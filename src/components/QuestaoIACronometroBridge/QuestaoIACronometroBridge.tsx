@@ -27,6 +27,7 @@ type OrigemRevisao = {
 };
 
 type ResultadoQuestoesIA = {
+  revisaoConcluida?: boolean;
   data: string;
   total: number;
   certas: number;
@@ -81,7 +82,7 @@ export default function QuestaoIACronometroBridge() {
       const total = resultado?.total ?? questoes.length;
       const primeiraQuestao = resultado?.questoes?.[0] ?? questoes[0];
 
-      finalizar({
+      const finalizacao = finalizar({
         minutosReais: minutos,
         quantidadeQuestoes: total > 0 ? total : undefined,
         quantidadeAcertos: resultado.certas,
@@ -94,6 +95,7 @@ export default function QuestaoIACronometroBridge() {
           ? `Resultado no Study Pro: ${resultado.certas}/${resultado.total} (${resultado.percentual}%). ${resultado.erradas} erro(s) e ${resultado.emBranco} em branco.`
           : "Sessão de questões finalizada no Study Pro.",
       });
+      resultado.revisaoConcluida = finalizacao?.revisaoConcluida ?? false;
 
       setFinalizadaNestaTela(true);
     }

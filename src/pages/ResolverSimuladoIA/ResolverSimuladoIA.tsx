@@ -125,6 +125,7 @@ export default function ResolverSimuladoIA() {
 
   const [resumoRevisaoFinal, setResumoRevisaoFinal] =
     useState<ResumoRevisoesResultadoIA | null>(null);
+  const [revisaoConcluidaNoTreino, setRevisaoConcluidaNoTreino] = useState(false);
 
   const [
     mensagem,
@@ -175,6 +176,10 @@ export default function ResolverSimuladoIA() {
   const statusRevisaoAutomatica = useMemo(() => {
     if (!finalizado || diagnostico.length === 0) return null;
 
+    if (revisaoConcluidaNoTreino) {
+      return { classe: "agendada", texto: "✅ Revisão concluída. Agenda atualizada conforme seu desempenho." };
+    }
+
     if (
       resumoRevisaoFinal &&
       resumoRevisaoFinal.criadas + resumoRevisaoFinal.atualizadas > 0
@@ -203,7 +208,7 @@ export default function ResolverSimuladoIA() {
       classe: "amostra",
       texto: "ℹ️ São necessárias 5 questões do mesmo assunto para criar revisão",
     };
-  }, [diagnostico, finalizado, resumoRevisaoFinal]);
+  }, [diagnostico, finalizado, resumoRevisaoFinal, revisaoConcluidaNoTreino]);
 
   const questao =
     questoes[questaoAtual];
@@ -392,6 +397,7 @@ export default function ResolverSimuladoIA() {
         );
 
       let avisoSincronizacao = "";
+      let revisaoConcluida = false;
       const registroApp = registrarDesempenhoNoApp(novoResultado);
       const resumoRevisoes = registroApp.resumo;
       setResumoRevisaoFinal(resumoRevisoes);
@@ -400,7 +406,11 @@ export default function ResolverSimuladoIA() {
         await salvarResultado(
           novoResultado,
           registroApp.registros,
-          registroApp.simulado
+          registroApp.simulado,
+          (concluida) => {
+            revisaoConcluida = concluida;
+            setRevisaoConcluidaNoTreino(concluida);
+          }
         );
       } catch (erroSalvamento) {
         avisoSincronizacao =
@@ -414,9 +424,9 @@ export default function ResolverSimuladoIA() {
       const respondidas = novoResultado.certas + novoResultado.erradas;
       const registroSimulado =
         tipoSessao === "simulado" ? " e 1 simulado registrado" : "";
-      const revisaoAutomatica = montarMensagemRevisaoAutomatica(
-        resumoRevisoes
-      );
+      const revisaoAutomatica = revisaoConcluida
+        ? " Revisão concluída. Agenda atualizada conforme seu desempenho."
+        : montarMensagemRevisaoAutomatica(resumoRevisoes);
 
       setMensagem(
         `${respondidas} questão${respondidas === 1 ? "" : "ões"} contabilizada${
@@ -519,7 +529,8 @@ export default function ResolverSimuladoIA() {
     novoResultado:
       ResultadoSimuladoIA,
     registros: RegistroQuestao[],
-    simulado?: Simulado
+    simulado?: Simulado,
+    aoConcluirRevisao?: (concluida: boolean) => void
   ) {
     const salvo =
       localStorage.getItem(
@@ -553,9 +564,12 @@ export default function ResolverSimuladoIA() {
       ])
     );
 
-    window.dispatchEvent(
-      new CustomEvent("pmpe-simulado-ia-finalizado", { detail: novoResultado })
-    );
+    const evento = new CustomEvent("pmpe-simulado-ia-finalizado", {
+      detail: { ...novoResultado, revisaoConcluida: false },
+    });
+    window.dispatchEvent(evento);
+    // O listener do cronômetro confirma a conclusão antes de sincronizar o resultado.
+    aoConcluirRevisao?.(evento.detail.revisaoConcluida);
 
     const gravacoes: Promise<unknown>[] = [
       salvarResultadoQuestoesIA({
