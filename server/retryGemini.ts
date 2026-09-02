@@ -80,7 +80,7 @@ export async function executarComFallbackGemini<T>(
       const status = obterStatusErro(erro);
       const podeTrocar = Boolean(modeloSeguinte) &&
         status !== null &&
-        STATUS_TEMPORARIOS.has(status);
+        (STATUS_TEMPORARIOS.has(status) || modeloGeminiIndisponivel(erro));
 
       if (!podeTrocar || status === null) throw erro;
 
@@ -149,8 +149,23 @@ export function obterStatusErro(erro: unknown) {
   return Number.isInteger(status) ? status : null;
 }
 
+export function modeloGeminiIndisponivel(erro: unknown) {
+  if (obterStatusErro(erro) !== 404 || !(erro instanceof Error)) return false;
+  const mensagem = `${erro.message} ${erro.cause instanceof Error ? erro.cause.message : ""}`;
+  return /\bmodels?\b|modelo/i.test(mensagem) &&
+    /no longer available|not found|not supported|does not exist|unavailable/i.test(mensagem);
+}
+
 function traduzirErroGemini(erro: unknown, maxTentativas: number) {
   const status = obterStatusErro(erro);
+
+  if (modeloGeminiIndisponivel(erro)) {
+    return criarErroComStatus(
+      "O modelo de IA está indisponível para esta integração. A configuração do serviço precisa ser atualizada.",
+      404,
+      erro
+    );
+  }
 
   if (status === 503) {
     return criarErroComStatus(
