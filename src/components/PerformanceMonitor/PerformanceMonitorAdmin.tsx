@@ -47,12 +47,10 @@ export default function PerformanceMonitorAdmin() {
 
   const percentis = useMemo(() => {
     return new Map(
-      METRICAS.map((metrica) => [
-        metrica,
-        calcularPercentil(
-          filtrados.filter((item) => item.metrica === metrica).map((item) => item.valor)
-        ),
-      ])
+      METRICAS.map((metrica) => {
+        const valores = filtrados.filter((item) => item.metrica === metrica).map((item) => item.valor);
+        return [metrica, { valor: calcularPercentil(valores), medicoes: valores.length }];
+      })
     );
   }, [filtrados]);
 
@@ -97,11 +95,11 @@ export default function PerformanceMonitorAdmin() {
   const sessoes = new Set(filtrados.map((item) => item.session_id)).size;
 
   return (
-    <section className="performance-admin">
+    <section className="performance-admin" aria-labelledby="performance-admin-titulo">
       <header className="performance-admin-topo">
         <div>
           <span>PERFORMANCE REAL</span>
-          <h2>Desempenho nos dispositivos dos usuários</h2>
+          <h2 id="performance-admin-titulo">Desempenho nos dispositivos dos usuários</h2>
           <p>Percentil 75 dos últimos 30 dias. O foco padrão é celular.</p>
         </div>
         <div className="performance-admin-controles">
@@ -119,13 +117,16 @@ export default function PerformanceMonitorAdmin() {
 
       <div className="performance-admin-cards">
         {METRICAS.map((metrica) => {
-          const valor = percentis.get(metrica) ?? null;
+          const resumo = percentis.get(metrica);
+          const valor = resumo?.valor ?? null;
+          const medicoes = resumo?.medicoes ?? 0;
           const classificacao = valor === null ? "sem-dados" : classificarMetrica(metrica, valor);
           return (
             <article key={metrica} className={`performance-admin-card ${classificacao}`}>
               <span>{rotuloMetrica(metrica)}</span>
               <strong>{formatarValorMetrica(metrica, valor)}</strong>
               <small>{rotuloClassificacao(classificacao)}</small>
+              <small>{medicoes} {medicoes === 1 ? "medição" : "medições"}</small>
             </article>
           );
         })}
@@ -134,13 +135,16 @@ export default function PerformanceMonitorAdmin() {
       <div className="performance-admin-resumo">
         <strong>{sessoes}</strong> sessões reais · <strong>{filtrados.length}</strong> medições · <strong>{rotas.length}</strong> rotas
       </div>
+      <p className="performance-admin-amostra">
+        Com poucas sessões, uma medição pode mudar bastante o resultado. O status de cada rota considera o pior indicador disponível.
+      </p>
 
       {carregando ? (
         <div className="performance-admin-vazio">Carregando métricas...</div>
       ) : rotas.length === 0 ? (
         <div className="performance-admin-vazio">Ainda não há dados suficientes. As métricas começarão a aparecer conforme usuários acessarem a nova versão em produção.</div>
       ) : (
-        <div className="performance-admin-tabela-area">
+        <div className="performance-admin-tabela-area" role="region" aria-label="Métricas de desempenho por rota" tabIndex={0}>
           <div className="performance-admin-tabela cabecalho">
             <span>Rota</span><span>Sessões</span><span>LCP p75</span><span>INP p75</span><span>CLS p75</span><span>TTFB p75</span><span>Status</span>
           </div>
