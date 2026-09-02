@@ -43,7 +43,7 @@ export default function Cursos() {
     try {
       const curso = await extrairCursoDeArquivo(arquivo);
       setPreview(nomeManual.trim() ? { ...curso, nome: nomeManual.trim() } : curso);
-      setMensagem("Estrutura identificada. Confira e edite antes de importar.");
+      setMensagem(curso.relatorioCaptura?.pendencias.length ? "Captura parcial: confira as pendências e a estrutura antes de importar." : "Estrutura identificada. Confira os avisos e edite antes de importar.");
     } catch (erro) {
       setPreview(null);
       setMensagem(erro instanceof Error ? erro.message : "Não foi possível analisar o arquivo.");
@@ -125,7 +125,7 @@ export default function Cursos() {
   async function copiarCapturador() {
     try {
       await navigator.clipboard.writeText(criarCodigoCapturadorCurso());
-      setMensagem("Capturador copiado. Crie um favorito no navegador e cole esse código no campo URL do favorito.");
+      setMensagem("Capturador V3 copiado. Substitua todo o campo URL do favorito antigo por este código. Execute na página principal da plataforma do curso, não aqui.");
     } catch {
       setMensagem("O navegador bloqueou a cópia automática. Selecione o código abaixo e copie manualmente.");
     }
@@ -186,16 +186,18 @@ export default function Cursos() {
         ) : (
           <div className="cursos-capturador">
             <div>
-              <h2>Capturar uma plataforma de curso</h2>
+              <h2>Capturador V3 · Uma execução, um JSON</h2>
               <p>
-                Use isso em páginas que carregam as aulas por JavaScript. O capturador coleta somente nomes, ordem e links visíveis da página aberta; vídeos e arquivos do curso não são copiados.
+                Na página principal do RDC/Tutor LMS, o capturador percorre os cartões das matérias e reúne suas grades em um único arquivo. Usa o login já aberto no seu navegador e não altera seu progresso.
               </p>
               <ol>
-                <li>Crie um novo favorito no navegador.</li>
-                <li>Clique em “Copiar capturador” e cole o código no campo URL do favorito.</li>
-                <li>Abra a página do curso onde aparecem as aulas e execute o favorito.</li>
-                <li>Será baixado <b>study-pro-curso.json</b>. Volte aqui e importe esse JSON.</li>
+                <li>Crie um favorito ou edite o favorito do capturador antigo.</li>
+                <li>Clique em “Copiar capturador” e substitua todo o campo URL do favorito pelo código novo.</li>
+                <li>Com login feito na plataforma do curso, abra a página principal com todos os cartões das matérias e execute o favorito uma vez.</li>
+                <li>Acompanhe a leitura no painel. Você pode cancelar e salvar o resultado parcial.</li>
+                <li>Será baixado <b>study-pro-curso-v3.json</b>. Se necessário, use “Baixar JSON único”. Volte aqui, analise esse arquivo e confira as pendências antes de confirmar.</li>
               </ol>
+              <p>Captura nomes, módulos e links das aulas; não baixa vídeos nem PDFs internos. Em outras plataformas, captura apenas a página aberta e informa essa limitação.</p>
               <button type="button" onClick={copiarCapturador}>Copiar capturador</button>
             </div>
             <textarea readOnly value={criarCodigoCapturadorCurso()} aria-label="Código do capturador" />
@@ -215,6 +217,20 @@ export default function Cursos() {
             </div>
             <input value={preview.nome} onChange={(e) => setPreview({ ...preview, nome: e.target.value })} aria-label="Nome do curso" />
           </header>
+
+          {preview.relatorioCaptura && (
+            <div className="cursos-mensagem" role="status">
+              <p>{preview.relatorioCaptura.origensLidas}/{preview.relatorioCaptura.origensEncontradas} grades lidas integralmente no HTML · {preview.relatorioCaptura.pendencias.length} pendência(s)</p>
+              {preview.relatorioCaptura.cancelada && <p>Captura cancelada: este arquivo contém apenas o resultado obtido até a interrupção.</p>}
+              {preview.relatorioCaptura.avisos.map((aviso, i) => <p key={i}>{aviso}</p>)}
+              {preview.relatorioCaptura.pendencias.length > 0 && (
+                <details open>
+                  <summary>Matérias que precisam de atenção</summary>
+                  <ul>{preview.relatorioCaptura.pendencias.map((pendencia, i) => <li key={i}><strong>{pendencia.nome}:</strong> {pendencia.motivo}</li>)}</ul>
+                </details>
+              )}
+            </div>
+          )}
 
           <div className="cursos-preview-lista">
             {preview.materias.map((materia, indiceMateria) => (

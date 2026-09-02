@@ -19,11 +19,30 @@ export type ItemCapturaCurso = {
 };
 
 export type CapturaCurso = {
-  versao: 1 | 2;
+  versao: 1 | 2 | 3;
   titulo?: string;
   urlOrigem?: string;
   capturadoEm?: string;
   itens: ItemCapturaCurso[];
+  paginas?: PaginaCapturaCurso[];
+  avisos?: string[];
+  cancelada?: boolean;
+};
+
+export type PaginaCapturaCurso = {
+  nome: string;
+  url: string;
+  estado: "lida" | "parcial" | "pendente";
+  motivo?: string;
+  modulos: Array<{ nome: string; aulas: Array<{ nome: string; url: string }> }>;
+};
+
+export type RelatorioCapturaCurso = {
+  origensEncontradas: number;
+  origensLidas: number;
+  pendencias: Array<{ nome: string; motivo: string }>;
+  avisos: string[];
+  cancelada: boolean;
 };
 
 export type CursoMaterial = {
@@ -68,6 +87,7 @@ export type CursoImportado = {
   criadoEm: string;
   atualizadoEm: string;
   materias: CursoMateria[];
+  relatorioCaptura?: RelatorioCapturaCurso;
 };
 
 export type ConfiguracoesCursosExtras = {
