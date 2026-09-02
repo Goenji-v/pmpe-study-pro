@@ -3,7 +3,8 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { parseHTML, DOMParser } from "linkedom";
 import type { CapturaCurso } from "../src/types/cursos";
-import { capturaDeHtml, criarCodigoCapturadorCurso, extrairCursoDeArquivo, organizarCapturaCurso } from "../src/utils/importacaoCurso";
+import { capturaDeHtml, extrairCursoDeArquivo, organizarCapturaCurso } from "../src/utils/importacaoCurso";
+import { criarCodigoCapturadorCurso } from "../src/utils/capturadorCurso";
 
 const origin = "https://curso.example.test";
 // Sanitized reproduction of the supplied RDC dashboard: Astra body, image cards,
@@ -73,6 +74,15 @@ test("V3 percorre os dez cartões do painel, inclusive percentuais, e lê módul
   assert.equal(course.materias[3].nome, "Língua Portuguesa");
   assert.equal(course.materias[3].modulos[0].nome, "Fonologia");
   assert.ok(course.materias.flatMap(m => m.modulos.flatMap(x => x.aulas)).every(a => !a.concluida && !a.nome.includes("00:20") && !a.nome.includes("%")));
+});
+
+test("rótulo repetido Imagem do curso nunca encobre a disciplina do link", async () => {
+  const generic = dashboard.replaceAll('>44%</a>', ' aria-label="Imagem do curso"><img alt="Imagem do curso">44%</a>');
+  const result = await capture(generic);
+  assert.ok(result.data!.paginas!.every(p => p.nome !== 'Imagem do curso'));
+  const course = organizarCapturaCurso(result.data!);
+  assert.equal(course.materias.find(m => m.nome === 'Língua Portuguesa')?.categoria, 'disciplina');
+  assert.equal(course.materias.filter(m => m.categoria === 'complementar').length, 3);
 });
 
 test("V3 não importa a página do próprio Study Pro", async () => {

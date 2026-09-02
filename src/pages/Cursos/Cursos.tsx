@@ -1,13 +1,16 @@
 import { useState, type ChangeEvent } from "react";
 
 import "./Cursos.css";
+import "./ClassificacaoCursos.css";
 import { useApp } from "../../context/AppContext";
-import type { CursoImportado, ConfiguracoesComCursos } from "../../types/cursos";
+import { criarCodigoCapturadorCurso } from "../../utils/capturadorCurso";
+import type { CategoriaCursoMateria, CursoImportado, ConfiguracoesComCursos } from "../../types/cursos";
 import {
   aplicarCursosAtivosNasMaterias,
   capturaDeTexto,
-  criarCodigoCapturadorCurso,
   extrairCursoDeArquivo,
+  encontrarCursoExistente,
+  mesclarCursoRecebido,
   organizarCapturaCurso,
   sincronizarProgressoCursos,
 } from "../../utils/importacaoCurso";
@@ -22,6 +25,7 @@ export default function Cursos() {
   const [textoColado, setTextoColado] = useState("");
   const [nomeManual, setNomeManual] = useState("");
   const [preview, setPreview] = useState<CursoImportado | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [aba, setAba] = useState<"arquivo" | "capturador">("arquivo");
@@ -39,6 +43,7 @@ export default function Cursos() {
       return;
     }
     setProcessando(true);
+    setEditandoId(null);
     setMensagem("Lendo a página e organizando matérias, módulos, aulas e links...");
     try {
       const curso = await extrairCursoDeArquivo(arquivo);
@@ -59,6 +64,7 @@ export default function Cursos() {
     }
     try {
       const nome = nomeManual.trim() || "Curso importado";
+      setEditandoId(null);
       const curso = organizarCapturaCurso(capturaDeTexto(textoColado, nome), nome);
       setPreview(curso);
       setMensagem("Texto organizado. Confira a estrutura antes de importar.");
@@ -70,7 +76,7 @@ export default function Cursos() {
   function confirmarImportacao() {
     if (!preview || preview.materias.length === 0) return;
     const cursosComProgresso = sincronizarProgressoCursos(cursos, materias);
-    const cursoNovo = { ...preview, atualizadoEm: new Date().toISOString() };
+    const cursoNovo = { ...(editandoId ? preview : mesclarCursoRecebido(cursosComProgresso, preview)), atualizadoEm: new Date().toISOString() };
     const novosCursos = [...cursosComProgresso.filter((item) => item.id !== cursoNovo.id), cursoNovo];
     const novosAtivos = Array.from(new Set([...ativosIds, cursoNovo.id]));
 
@@ -81,10 +87,11 @@ export default function Cursos() {
     }) as ConfiguracoesComCursos);
     setMaterias((atuais) => aplicarCursosAtivosNasMaterias(atuais, novosCursos, novosAtivos));
     setPreview(null);
+    setEditandoId(null);
     setArquivo(null);
     setTextoColado("");
     setNomeManual("");
-    setMensagem(`Curso ${cursoNovo.nome} importado e integrado aos Conteúdos.`);
+    setMensagem(`Curso ${cursoNovo.nome} salvo. Matérias integradas aos Conteúdos; complementares e itens a confirmar ficam aqui em Meus Cursos.`);
   }
 
   function alternarCurso(cursoId: string) {
@@ -198,6 +205,7 @@ export default function Cursos() {
                 <li>Será baixado <b>study-pro-curso-v3.json</b>. Se necessário, use “Baixar JSON único”. Volte aqui, analise esse arquivo e confira as pendências antes de confirmar.</li>
               </ol>
               <p>Captura nomes, módulos e links das aulas; não baixa vídeos nem PDFs internos. Em outras plataformas, captura apenas a página aberta e informa essa limitação.</p>
+              <p>A importação identifica matérias pelos links originais. Mentoria, cronograma e encontros gerais ficam como complementares; itens sem identificação aguardam confirmação.</p>
               <button type="button" onClick={copiarCapturador}>Copiar capturador</button>
             </div>
             <textarea readOnly value={criarCodigoCapturadorCurso()} aria-label="Código do capturador" />
@@ -213,7 +221,7 @@ export default function Cursos() {
             <div>
               <span>CONFIRA ANTES DE IMPORTAR</span>
               <h2>{preview.nome}</h2>
-              <p>{preview.materias.length} matérias · {contarAulas(preview)} aulas encontradas</p>
+              <p>{preview.materias.filter(m => !m.categoria || m.categoria === "disciplina").length} matérias · {preview.materias.filter(m => m.categoria === "complementar").length} grupos complementares · {preview.materias.filter(m => m.categoria === "pendente").length} a confirmar · {contarAulas(preview)} entradas</p>
             </div>
             <input value={preview.nome} onChange={(e) => setPreview({ ...preview, nome: e.target.value })} aria-label="Nome do curso" />
           </header>
@@ -233,8 +241,17 @@ export default function Cursos() {
           )}
 
           <div className="cursos-preview-lista">
+            {!editandoId && encontrarCursoExistente(cursos, preview) && <p className="cursos-mensagem">Este curso já está salvo. A importação acrescentará somente entradas novas, sem duplicar aulas nem apagar o progresso e os conteúdos anteriores.</p>}
+            <p>Somente grupos marcados como “Matéria” entram em Conteúdos. Ajuste a classificação abaixo se necessário.</p>
             {preview.materias.map((materia, indiceMateria) => (
               <article key={materia.id} className="curso-materia-card">
+                <label className="curso-classificacao">Classificação
+                  <select aria-label={`Classificação de ${materia.nome}`} value={materia.categoria ?? "disciplina"} onChange={e => setPreview({ ...preview, materias: preview.materias.map((m, i) => i === indiceMateria ? { ...m, categoria: e.target.value as CategoriaCursoMateria, classificacaoManual: true } : m) })}>
+                    <option value="disciplina">Matéria</option>
+                    <option value="complementar">Complementar (fora dos Conteúdos)</option>
+                    <option value="pendente">A confirmar (fora dos Conteúdos)</option>
+                  </select>
+                </label>
                 <div className="curso-linha-edicao">
                   <input
                     value={materia.nome}
@@ -285,17 +302,23 @@ export default function Cursos() {
               return (
                 <article key={curso.id} className={ativo ? "ativo" : ""}>
                   <div className="curso-card-topo">
-                    <div><strong>{curso.nome}</strong><span>{curso.materias.length} matérias · {contarAulas(curso)} aulas</span></div>
+                    <div><strong>{curso.nome}</strong><span>{curso.materias.filter(m => !m.categoria || m.categoria === "disciplina").length} matérias · {contarAulas(curso)} entradas</span></div>
                     <label className="curso-toggle"><input type="checkbox" checked={ativo} onChange={() => alternarCurso(curso.id)} /><span>{ativo ? "Ativo" : "Inativo"}</span></label>
                   </div>
                   <div className="curso-materias-chips">
-                    {curso.materias.slice(0, 8).map((materia) => <span key={materia.id}>{materia.nome}</span>)}
+                    {curso.materias.slice(0, 8).map((materia) => <span key={materia.id}>{materia.nome}{materia.categoria === "complementar" ? " · Complementar" : materia.categoria === "pendente" ? " · A confirmar" : ""}</span>)}
                     {curso.materias.length > 8 && <span>+{curso.materias.length - 8}</span>}
                   </div>
                   <div className="curso-card-acoes">
+                    <button type="button" onClick={() => { setPreview(structuredClone(curso)); setEditandoId(curso.id); }}>Revisar classificação</button>
                     <button type="button" onClick={() => exportarCurso(curso)}>Exportar JSON</button>
                     <button type="button" className="perigo" onClick={() => excluirCurso(curso.id)}>Remover</button>
                   </div>
+                  {curso.materias.some(m => m.categoria && m.categoria !== "disciplina") && <details className="curso-complementares">
+                    <summary>Complementares e itens a confirmar</summary>
+                    <p>Guardados neste curso, sem entrar no progresso das matérias.</p>
+                    {curso.materias.filter(m => m.categoria && m.categoria !== "disciplina").map(m => <section key={m.id}><h3>{m.nome}</h3>{m.modulos.map(modulo => <details key={modulo.id}><summary>{modulo.nome}</summary><ul>{modulo.aulas.map(a => <li key={a.id}>{a.url ? <a href={a.url} target="_blank" rel="noopener noreferrer">{a.nome}</a> : a.nome}</li>)}</ul></details>)}</section>)}
+                  </details>}
                 </article>
               );
             })}
@@ -311,7 +334,7 @@ function contarAulas(curso: CursoImportado) {
 }
 
 function atualizarPreviewMateria(preview: CursoImportado, setPreview: (curso: CursoImportado | null) => void, indiceMateria: number, nome: string) {
-  const materias = preview.materias.map((materia, indice) => indice === indiceMateria ? { ...materia, nome } : materia);
+  const materias = preview.materias.map((materia, indice) => indice === indiceMateria ? { ...materia, nome, classificacaoManual: true } : materia);
   setPreview({ ...preview, materias });
 }
 
