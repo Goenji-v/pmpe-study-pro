@@ -42,6 +42,12 @@
 
 .error-boundary-card details {
   margin-top: 18px;
+  color: #334155;
+}
+
+.error-boundary-card summary {
+  color: #334155;
+  cursor: pointer;
 }
 
 .error-boundary-card code {
@@ -51,6 +57,7 @@
   overflow-wrap: anywhere;
   border-radius: 10px;
   background: #eef2f7;
+  color: #0f172a;
 }
 
 .error-boundary-acoes {

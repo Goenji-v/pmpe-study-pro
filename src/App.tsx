@@ -13,6 +13,7 @@ import Sidebar from "./components/Sidebar/Sidebar";
 import Header from "./components/Header/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
+import AvisoArmazenamento from "./components/AvisoArmazenamento/AvisoArmazenamento";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
 import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/QuestaoIACronometroBridge";
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
@@ -112,6 +113,7 @@ function LayoutProtegido() {
 
               <div className="content">
                 <Header />
+                <AvisoArmazenamento />
 
                 <main className={`page ${paginaDashboard ? "page-dashboard" : "page-interna"}`}>
                   <Suspense fallback={<CarregandoRota />}>

@@ -976,10 +976,14 @@ export function AppProvider({
   ]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "pmpe_plano_missoes_concluidas",
-      JSON.stringify(missoesConcluidas)
-    );
+    // Espelho legado: o valor principal já é protegido pelo hook da conta.
+    // Falta de espaço neste cache não pode interromper a interface.
+    try {
+      localStorage.setItem(
+        "pmpe_plano_missoes_concluidas",
+        JSON.stringify(missoesConcluidas)
+      );
+    } catch { /* A cópia canônica e a fila de sincronização são preservadas. */ }
 
     window.dispatchEvent(new Event("pmpe-plano-atualizado"));
   }, [missoesConcluidas]);
