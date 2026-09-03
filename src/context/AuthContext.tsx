@@ -214,7 +214,8 @@ export function AuthProvider({
     const {
       error,
     } =
-      await supabase.auth.signOut();
+      // O padrão "global" também revogaria as sessões nos outros aparelhos.
+      await supabase.auth.signOut({ scope: "local" });
 
     if (error) {
       throw new Error(
