@@ -10,7 +10,6 @@ import "./Backup.css";
 import { useApp } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
-import { gerarMateriasDoPlano } from "../../utils/materiasDoPlano";
 import { listarAssuntosDaMateria } from "../../services/conteudos/navegarConteudos";
 import {
   montarEstadoNuvem,
@@ -239,7 +238,7 @@ export default function Backup() {
     );
     if (!segundaConfirmacao) return;
 
-    setMaterias(gerarMateriasDoPlano());
+    setMaterias([]);
     setQuestoes([]);
     setSessoes([]);
     setRevisoes([]);

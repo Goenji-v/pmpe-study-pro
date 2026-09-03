@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage } from "./armazenamentoConta";
 import { API_BASE_URL } from "../config/api";
 import { fetchApiAutenticada } from "./apiAutenticada";
 

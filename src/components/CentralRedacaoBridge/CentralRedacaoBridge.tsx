@@ -65,9 +65,10 @@ export default function CentralRedacaoBridge() {
   const planoCalendario = useMemo(
     () =>
       criarPlanoCalendario(
-        normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1)
+        normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
+        configuracoes.planoPadraoAtivo !== false
       ),
-    [configuracoes.missoesPorDia]
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo]
   );
 
   const semanaAtual = useMemo(

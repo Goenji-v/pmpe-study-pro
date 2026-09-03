@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage, armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -42,8 +43,8 @@ export default function NotificationCenter() {
   const [sumindo, setSumindo] = useState(false);
 
   const plano = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1)),
-    [configuracoes.missoesPorDia]
+    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo]
   );
 
   const missaoHoje = useMemo(() => {

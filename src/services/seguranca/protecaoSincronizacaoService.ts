@@ -51,6 +51,13 @@ export function lerTextoLocalProtegido(chave: string) {
     ?? lerStorage(obterLocalStorage(), chave);
 }
 
+export function removerTextoLocalProtegido(chave: string) {
+  valoresEmMemoria.delete(chave);
+  gravacoesDegradadas.delete(chave);
+  removerStorage(obterSessionStorage(), chave);
+  removerStorage(obterLocalStorage(), chave);
+}
+
 export function repetirGravacoesLocais(usuarioId: string) {
   for (const [chave, registro] of [...gravacoesDegradadas]) {
     if (registro.usuarioId !== usuarioId) continue;

@@ -26,6 +26,9 @@ import {
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao } from "../utils/revisoes";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
+import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, usaPlanoPadrao } from "../utils/contaInicial";
+import ArmazenamentoConta from "../components/ArmazenamentoConta/ArmazenamentoConta";
+import { chaveArmazenamentoConta, criarEscopoArmazenamento } from "../services/armazenamentoConta";
 
 import {
   atualizarAssuntoNaArvore,
@@ -176,17 +179,6 @@ type AppProviderProps = {
   children: ReactNode;
 };
 
-const configuracoesPadrao: ConfiguracoesApp = {
-  nomeUsuario: "Leandro",
-  concurso: "PMPE",
-  bancaPadrao: "AOCP",
-  metaQuestoesDiaria: 100,
-  metaMinutosDiaria: 120,
-  metaRevisoesDiaria: 5,
-  missoesPorDia: 1,
-  tema: "escuro",
-};
-
 function clonar<T>(valor: T): T {
   if (typeof structuredClone === "function") {
     return structuredClone(valor);
@@ -195,37 +187,23 @@ function clonar<T>(valor: T): T {
   return JSON.parse(JSON.stringify(valor)) as T;
 }
 
-function criarEstadoInicialDaConta():
+function criarEstadoInicialDaConta(nome = ""):
   EstadoAppNuvem {
-  return montarEstadoNuvem({
-    materias: clonar(
-      gerarMateriasDoPlano()
-    ),
-    questoes: [],
-    sessoes: [],
-    revisoes: [],
-    simulados: [],
-    bancoQuestoes: [],
-    simuladosGerados: [],
-    configuracoes: clonar(
-      configuracoesPadrao
-    ),
-    missoesConcluidas: [],
-  });
+  return montarEstadoNuvem(criarDadosIniciaisDaConta(nome));
 }
 
 function reconciliarMateriasComPlano(
-  materiasSalvas: Materia[]
+  materiasSalvas: Materia[],
+  planoPadraoAtivo = true
 ): Materia[] {
   const materiasNormalizadas =
     migrarMateriasParaModulos(materiasSalvas);
 
+  // Uma lista vazia é uma escolha válida, nunca um pedido de repor o edital.
+  if (!planoPadraoAtivo || materiasNormalizadas.length === 0) return materiasNormalizadas;
+
   const materiasDoPlano =
     migrarMateriasParaModulos(gerarMateriasDoPlano());
-
-  if (materiasNormalizadas.length === 0) {
-    return clonar(materiasDoPlano);
-  }
 
   const resultado: Materia[] = [];
 
@@ -797,21 +775,21 @@ function reconciliarEstadoComConteudos(
   // Reapply imports after the canonical syllabus so same-label lessons survive.
   const materiasBase = reconciliarCursosImportados({
     ...estadoCursos,
-    materias: reconciliarMateriasComPlano(estadoCursos.materias),
+    materias: reconciliarMateriasComPlano(estadoCursos.materias, usaPlanoPadrao(estadoCursos.configuracoes)),
   }).materias;
-  const materias = recuperarHistoricoPortugues(
+  const materias = usaPlanoPadrao(estadoCursos.configuracoes) ? recuperarHistoricoPortugues(
     materiasBase,
     estado.missoesConcluidas,
     estado.sessoes,
     estado.revisoes
-  );
+  ) : materiasBase;
   const sessoes = reconciliarSessoesComConteudos(materias, estado.sessoes);
   const questoes = reconciliarQuestoesComConteudos(materias, estado.questoes);
   const revisoes = reconciliarRevisoesComConteudos(materias, estado.revisoes);
-  const missoesConcluidas = sincronizarMissoesDeConteudoComMaterias(
+  const missoesConcluidas = usaPlanoPadrao(estadoCursos.configuracoes) ? sincronizarMissoesDeConteudoComMaterias(
     materias,
     estado.missoesConcluidas
-  );
+  ) : estado.missoesConcluidas;
 
   return {
     ...estadoCursos,
@@ -830,7 +808,12 @@ function chaveDaConta(
   return `pmpe:${userId}:${nome}`;
 }
 
-export function AppProvider({
+export function AppProvider({ children }: AppProviderProps) {
+  const { usuario } = useAuth();
+  return <EstadoDaConta key={usuario?.id ?? "sem-usuario"}>{children}</EstadoDaConta>;
+}
+
+function EstadoDaConta({
   children,
 }: AppProviderProps) {
   const { usuario } = useAuth();
@@ -839,15 +822,20 @@ export function AppProvider({
   const userId =
     usuarioId ?? "sem-usuario";
 
+  const nomeCadastro = typeof usuario?.user_metadata?.nome === "string" ? usuario.user_metadata.nome : "";
+  const [configuracoes, setConfiguracoes] = useLocalStorage<ConfiguracoesApp>(
+    chaveDaConta(userId, "configuracoes"), criarConfiguracoesIniciais(nomeCadastro)
+  );
+
   const [materias, setMaterias] =
     useLocalStorage<Materia[]>(
       chaveDaConta(userId, "materias"),
-      gerarMateriasDoPlano()
+      []
     );
 
   useEffect(() => {
     const reconciliadas =
-      reconciliarMateriasComPlano(materias);
+      reconciliarMateriasComPlano(materias, configuracoes.planoPadraoAtivo !== false);
 
     if (
       JSON.stringify(reconciliadas) !==
@@ -855,7 +843,7 @@ export function AppProvider({
     ) {
       setMaterias(reconciliadas);
     }
-  }, [materias, setMaterias]);
+  }, [materias, setMaterias, configuracoes.planoPadraoAtivo]);
 
   const [questoes, setQuestoes] =
     useLocalStorage<RegistroQuestao[]>(
@@ -893,14 +881,6 @@ export function AppProvider({
   ] = useLocalStorage<SimuladoGerado[]>(
     chaveDaConta(userId, "simulados-gerados"),
     []
-  );
-
-  const [
-    configuracoes,
-    setConfiguracoes,
-  ] = useLocalStorage<ConfiguracoesApp>(
-    chaveDaConta(userId, "configuracoes"),
-    configuracoesPadrao
   );
 
   const [
@@ -944,6 +924,7 @@ export function AppProvider({
   // missões só acontece no render seguinte. Assim nenhum histórico antigo é
   // apagado antes de ser convertido para aula/assunto canônico.
   useEffect(() => {
+    if (configuracoes.planoPadraoAtivo === false) return;
     const recuperadas = recuperarHistoricoPortugues(
       materias,
       missoesConcluidas,
@@ -973,6 +954,7 @@ export function AppProvider({
     revisoes,
     setMaterias,
     setMissoesConcluidas,
+    configuracoes.planoPadraoAtivo,
   ]);
 
   useEffect(() => {
@@ -980,13 +962,13 @@ export function AppProvider({
     // Falta de espaço neste cache não pode interromper a interface.
     try {
       localStorage.setItem(
-        "pmpe_plano_missoes_concluidas",
+        chaveArmazenamentoConta("pmpe_plano_missoes_concluidas", criarEscopoArmazenamento(userId, configuracoes)),
         JSON.stringify(missoesConcluidas)
       );
     } catch { /* A cópia canônica e a fila de sincronização são preservadas. */ }
 
     window.dispatchEvent(new Event("pmpe-plano-atualizado"));
-  }, [missoesConcluidas]);
+  }, [missoesConcluidas, userId, configuracoes]);
 
   const [
     statusNuvem,
@@ -1070,7 +1052,7 @@ export function AppProvider({
         if (!ativo) return;
 
         try {
-          const chave = "pmpe_resultados_simulados_ia";
+          const chave = chaveArmazenamentoConta("pmpe_resultados_simulados_ia", criarEscopoArmazenamento(userId, dadosAtuaisRef.current.configuracoes));
           const locais: unknown = JSON.parse(localStorage.getItem(chave) || "[]");
           if (Array.isArray(locais)) {
             const atualizados = aplicarAuditoriasResultadosLocais(locais, resultados);
@@ -1258,6 +1240,18 @@ export function AppProvider({
 
         if (!ativo) return;
 
+        // Uma limpeza solicitada pelo titular prevalece sobre cópias offline antigas.
+        // Conflitos comuns continuam protegidos pelo controle de revisão existente.
+        if (estadoNuvem && houveReinicioDaConta(
+          pendenteLocal?.estado.configuracoes ?? dadosAtuaisRef.current.configuracoes,
+          estadoNuvem.configuracoes
+        )) {
+          aplicarEstadoDaNuvem(estadoNuvem);
+          confirmarSincronizacaoLocal(idDaConta, estadoNuvem);
+          nuvemInicializadaRef.current = true;
+          return;
+        }
+
         // Se havia trabalho offline, ele é enviado primeiro. Isso impede que
         // uma carga da nuvem apague silenciosamente o estado local pendente.
         if (pendenteLocal) {
@@ -1328,7 +1322,7 @@ export function AppProvider({
         } else {
           const agora = new Date().toISOString();
           const estadoInicial = {
-            ...criarEstadoInicialDaConta(),
+            ...criarEstadoInicialDaConta(nomeCadastro),
             syncRevision: 1,
             atualizadoEm: agora,
             salvoEm: agora,
@@ -1392,6 +1386,7 @@ export function AppProvider({
     };
   }, [
     usuarioId,
+    nomeCadastro,
     aplicarEstadoDaNuvem,
   ]);
 
@@ -1576,6 +1571,15 @@ export function AppProvider({
       const assinaturaAtual = assinaturaEstado(estado);
       let pendente = obterEstadoPendenteSincronizacao(usuario.id);
 
+      if (pendente) {
+        const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
+        if (estadoNuvem && houveReinicioDaConta(pendente.estado.configuracoes, estadoNuvem.configuracoes)) {
+          aplicarEstadoDaNuvem(estadoNuvem);
+          confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
+          return;
+        }
+      }
+
       // Sem alteração local pendente, "sincronizar" significa primeiro
       // consultar a nuvem. Assim um aparelho que apenas voltou a ficar online
       // recebe uma revisão mais nova em vez de tentar sobrescrevê-la.
@@ -1647,7 +1651,7 @@ export function AppProvider({
     const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
     const estadoLocal = montarEstadoNuvem(dadosAtuaisRef.current);
 
-    if (preferencia === "nuvem") {
+    if (preferencia === "nuvem" || (estadoNuvem && houveReinicioDaConta(estadoLocal.configuracoes, estadoNuvem.configuracoes))) {
       if (!estadoNuvem) {
         throw new Error("Não existe estado na nuvem para restaurar.");
       }
@@ -2207,7 +2211,7 @@ export function AppProvider({
         importarProgressoMateria,
       }}
     >
-      {children}
+      {statusNuvem === "carregando" ? <div role="status">Carregando seus dados...</div> : <ArmazenamentoConta>{children}</ArmazenamentoConta>}
     </AppContext.Provider>
   );
 }

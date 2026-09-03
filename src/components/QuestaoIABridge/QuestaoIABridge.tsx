@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
 import { useCallback, useEffect } from "react";
 
 import { useApp } from "../../context/AppContext";

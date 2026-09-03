@@ -1,3 +1,4 @@
+import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useMemo,
   useState,
@@ -241,8 +242,8 @@ export default function PlanoEstudos() {
   );
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(missoesPorDia),
-    [missoesPorDia]
+    () => criarPlanoCalendario(missoesPorDia, configuracoes.planoPadraoAtivo !== false),
+    [missoesPorDia, configuracoes.planoPadraoAtivo]
   );
 
   const semanaInicial = getSemanaAtual(

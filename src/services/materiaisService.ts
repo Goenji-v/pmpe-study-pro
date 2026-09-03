@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage, permiteMigracaoLegada } from "./armazenamentoConta";
 import {
   supabase,
 } from "../lib/supabase";
@@ -643,6 +644,7 @@ export async function baixarMaterial(
 async function migrarMateriaisLocais(
   userId: string
 ): Promise<void> {
+  if (!permiteMigracaoLegada()) return;
   const chaveUsuario =
     `${CHAVE_MIGRACAO_LOCAL}_${userId}`;
 

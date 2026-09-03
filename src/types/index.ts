@@ -297,6 +297,11 @@ export type SimuladoGerado = {
 };
 
 export type ConfiguracoesApp = {
+  /** Novas contas não recebem o plano PMPE sem escolha explícita. */
+  planoPadraoAtivo?: boolean;
+  armazenamentoPorConta?: boolean;
+  /** Invalida cópias locais anteriores a uma limpeza confirmada pelo titular. */
+  dadosReiniciadosEm?: string;
   nomeUsuario: string;
   concurso: string;
   bancaPadrao: string;
