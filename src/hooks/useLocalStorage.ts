@@ -4,6 +4,10 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import {
+  lerTextoLocalProtegido,
+  salvarTextoComRecuperacaoDeCota,
+} from "../services/seguranca/protecaoSincronizacaoService";
 
 function clonarValor<T>(valor: T): T {
   if (typeof structuredClone === "function") {
@@ -17,7 +21,7 @@ function carregarValor<T>(
   key: string,
   initialValue: T
 ): T {
-  const saved = localStorage.getItem(key);
+  const saved = lerTextoLocalProtegido(key);
 
   if (!saved) {
     return clonarValor(initialValue);
@@ -42,7 +46,8 @@ export function useLocalStorage<T>(
   );
 
   useEffect(() => {
-    localStorage.setItem(
+    salvarTextoComRecuperacaoDeCota(
+      key.split(":")[1] || "sem-usuario",
       key,
       JSON.stringify(value)
     );

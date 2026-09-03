@@ -21,6 +21,44 @@ export type EstadoPendenteSincronizacao = {
 const PREFIXO_META = "pmpe:seguranca:sync-meta";
 const PREFIXO_PENDENTE = "pmpe:seguranca:sync-pendente";
 
+export type EstadoArmazenamentoLocal = "local" | "sessao" | "memoria";
+const valoresEmMemoria = new Map<string, string>();
+const gravacoesDegradadas = new Map<string, { usuarioId: string; destino: EstadoArmazenamentoLocal }>();
+const ouvintesArmazenamento = new Set<() => void>();
+
+export function observarArmazenamentoLocal(ouvinte: () => void) {
+  ouvintesArmazenamento.add(ouvinte);
+  return () => { ouvintesArmazenamento.delete(ouvinte); };
+}
+
+export function obterEstadoArmazenamentoLocal(usuarioId: string): EstadoArmazenamentoLocal {
+  const destinos = [...gravacoesDegradadas.values()].filter(item => item.usuarioId === usuarioId);
+  if (destinos.some(item => item.destino === "memoria")) return "memoria";
+  return destinos.length ? "sessao" : "local";
+}
+
+function registrarDestino(chave: string, usuarioId: string, destino: EstadoArmazenamentoLocal) {
+  const anterior = gravacoesDegradadas.get(chave)?.destino ?? "local";
+  if (destino === "local") gravacoesDegradadas.delete(chave);
+  else gravacoesDegradadas.set(chave, { usuarioId, destino });
+  if (anterior !== destino) for (const ouvinte of ouvintesArmazenamento) ouvinte();
+}
+
+/** A cópia temporária é mais recente que a cópia local que não pôde ser atualizada. */
+export function lerTextoLocalProtegido(chave: string) {
+  return valoresEmMemoria.get(chave)
+    ?? lerStorage(obterSessionStorage(), chave)
+    ?? lerStorage(obterLocalStorage(), chave);
+}
+
+export function repetirGravacoesLocais(usuarioId: string) {
+  for (const [chave, registro] of [...gravacoesDegradadas]) {
+    if (registro.usuarioId !== usuarioId) continue;
+    const valor = lerTextoLocalProtegido(chave);
+    if (valor !== null) salvarTextoComRecuperacaoDeCota(usuarioId, chave, valor);
+  }
+}
+
 function chaveMeta(usuarioId: string) {
   return `${PREFIXO_META}:${usuarioId}`;
 }
@@ -165,35 +203,39 @@ function parsePendente(
   }
 }
 
-function salvarTextoComRecuperacaoDeCota(
+export function salvarTextoComRecuperacaoDeCota(
   usuarioId: string,
   chave: string,
   serializado: string
-) {
+): EstadoArmazenamentoLocal {
   const local = obterLocalStorage();
   const sessao = obterSessionStorage();
 
   let tentativaLocal = tentarSalvar(local, chave, serializado);
   if (tentativaLocal.salvou) {
+    valoresEmMemoria.delete(chave);
     removerStorage(sessao, chave);
-    return;
+    registrarDestino(chave, usuarioId, "local");
+    return "local";
   }
 
   if (ehErroDeCota(tentativaLocal.erro)) {
     // Backups automáticos são cópias de segurança e não podem impedir o dado
     // operacional pendente de ser salvo. Primeiro preservamos apenas o mais
     // recente; se ainda não couber, liberamos esse cache por completo.
-    reduzirBackupsAutomaticosLocais(usuarioId, 1);
+    try { reduzirBackupsAutomaticosLocais(usuarioId, 1); } catch { /* Storage pode estar bloqueado. */ }
     tentativaLocal = tentarSalvar(local, chave, serializado);
 
     if (!tentativaLocal.salvou && ehErroDeCota(tentativaLocal.erro)) {
-      reduzirBackupsAutomaticosLocais(usuarioId, 0);
+      try { reduzirBackupsAutomaticosLocais(usuarioId, 0); } catch { /* Não interromper o dado atual. */ }
       tentativaLocal = tentarSalvar(local, chave, serializado);
     }
 
     if (tentativaLocal.salvou) {
+      valoresEmMemoria.delete(chave);
       removerStorage(sessao, chave);
-      return;
+      registrarDestino(chave, usuarioId, "local");
+      return "local";
     }
   }
 
@@ -202,19 +244,17 @@ function salvarTextoComRecuperacaoDeCota(
   // pode ser concluída normalmente.
   const tentativaSessao = tentarSalvar(sessao, chave, serializado);
   if (tentativaSessao.salvou) {
+    valoresEmMemoria.delete(chave);
     removerStorage(local, chave);
-    return;
+    registrarDestino(chave, usuarioId, "sessao");
+    return "sessao";
   }
 
-  const detalhe = tentativaLocal.erro instanceof Error
-    ? tentativaLocal.erro.message
-    : tentativaSessao.erro instanceof Error
-      ? tentativaSessao.erro.message
-      : "armazenamento indisponível";
-
-  throw new Error(
-    `O navegador ficou sem espaço para proteger a sincronização local. ${detalhe}`
-  );
+  // Não derruba o React nem impede o envio online. O aviso de armazenamento
+  // deixa explícito que esta última defesa NÃO sobrevive ao recarregamento.
+  valoresEmMemoria.set(chave, serializado);
+  registrarDestino(chave, usuarioId, "memoria");
+  return "memoria";
 }
 
 export function obterMetadadosSincronizacaoLocal(
@@ -229,6 +269,8 @@ export function obterMetadadosSincronizacaoLocal(
   if (typeof window === "undefined") return padrao;
 
   const chave = chaveMeta(usuarioId);
+  const memoria = parseMetadados(valoresEmMemoria.get(chave) ?? null, usuarioId);
+  if (memoria) return memoria;
   const local = parseMetadados(
     lerStorage(obterLocalStorage(), chave),
     usuarioId
@@ -277,6 +319,8 @@ export function obterEstadoPendenteSincronizacao(
   if (typeof window === "undefined") return null;
 
   const chave = chavePendente(usuarioId);
+  const memoria = parsePendente(valoresEmMemoria.get(chave) ?? null, usuarioId);
+  if (memoria) return memoria;
   const local = parsePendente(
     lerStorage(obterLocalStorage(), chave),
     usuarioId
@@ -355,8 +399,10 @@ export function registrarTentativaPendente(usuarioId: string) {
 export function limparEstadoPendenteSincronizacao(usuarioId: string) {
   if (typeof window === "undefined") return;
   const chave = chavePendente(usuarioId);
+  valoresEmMemoria.delete(chave);
   removerStorage(obterLocalStorage(), chave);
   removerStorage(obterSessionStorage(), chave);
+  registrarDestino(chave, usuarioId, "local");
 }
 
 export function navegadorEstaOnline() {
