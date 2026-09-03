@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage, armazenamentoSessaoDaConta as sessionStorage } from "./armazenamentoConta";
 import { supabase } from "../lib/supabase";
 import type {
   QuestaoIA,
@@ -5,6 +6,7 @@ import type {
 } from "../types/index";
 import { inferirTipoSessaoQuestoesIA } from "../utils/resultadoQuestoesIA";
 import { assinaturaCadernoIA } from "./catalogoQuestoesIAUtils";
+import { obterEscopoArmazenamento } from "./armazenamentoConta";
 
 export type CadernoSimuladoIA = {
   id: string;
@@ -42,6 +44,7 @@ const CHAVE_QUESTOES_ATIVAS = "pmpe_questoes_ia";
 const CHAVE_TIPO_SESSAO_ATIVA = "pmpe:sessao-questoes-ia:tipo";
 
 export async function listarCadernosSimuladosIA(): Promise<CadernoSimuladoIA[]> {
+  const escopoInicial = obterEscopoArmazenamento();
   const locais = carregarLocais();
 
   const { data, error } = await supabase
@@ -66,6 +69,7 @@ export async function listarCadernosSimuladosIA(): Promise<CadernoSimuladoIA[]> 
   remotos.forEach((item) => mapa.set(item.id, item));
 
   const unidos = ordenar(Array.from(mapa.values()));
+  if (obterEscopoArmazenamento() !== escopoInicial) return [];
   salvarLocais(unidos);
   return unidos;
 }
@@ -73,6 +77,7 @@ export async function listarCadernosSimuladosIA(): Promise<CadernoSimuladoIA[]> 
 export async function salvarCadernoSimuladoIA(
   caderno: CadernoSimuladoIA
 ): Promise<CadernoSimuladoIA> {
+  const escopoInicial = obterEscopoArmazenamento();
   salvarLocal(caderno);
 
   const {
@@ -80,6 +85,7 @@ export async function salvarCadernoSimuladoIA(
     error: erroUsuario,
   } = await supabase.auth.getUser();
 
+  if (obterEscopoArmazenamento() !== escopoInicial || (escopoInicial && user?.id !== escopoInicial.usuarioId)) return caderno;
   if (erroUsuario || !user) {
     if (erroUsuario) {
       console.error("Erro ao identificar usuário do caderno IA:", erroUsuario);

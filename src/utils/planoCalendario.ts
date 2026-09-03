@@ -37,7 +37,8 @@ export function normalizarMissoesPorDia(valor: number | undefined): number {
  * de segunda a sábado são preservados; só muda em qual dia do calendário
  * cada missão aparece, conforme o ritmo configurado pelo usuário.
  */
-export function criarPlanoCalendario(missoesPorDiaInformadas = 1): SemanaPlano[] {
+export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAtivo = true): SemanaPlano[] {
+  if (!planoPadraoAtivo) return [];
   const missoesPorDia = normalizarMissoesPorDia(missoesPorDiaInformadas);
   const fila: EntradaFila[] = [];
 

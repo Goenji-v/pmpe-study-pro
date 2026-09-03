@@ -1,3 +1,4 @@
+import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useMemo } from "react";
 import { useApp } from "../../context/AppContext";
 import {
@@ -29,8 +30,8 @@ export default function MissaoDoDia({
   } = useApp();
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1)),
-    [configuracoes.missoesPorDia]
+    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo]
   );
 
   const semanaAtual = useMemo(
@@ -126,11 +127,10 @@ export default function MissaoDoDia({
             MISSÃO DO DIA
           </span>
 
-          <h2>Plano concluído</h2>
+          <h2>{planoCalendario.length ? "Plano concluído" : "Nenhum plano configurado"}</h2>
 
           <p>
-            Todas as missões cadastradas
-            foram concluídas.
+            {planoCalendario.length ? "Todas as missões cadastradas foram concluídas." : "Importe seu edital para montar suas missões."}
           </p>
         </div>
 
@@ -264,4 +264,3 @@ function normalizarTexto(
     .toLowerCase()
     .replace(/\s+/g, " ");
 }
-

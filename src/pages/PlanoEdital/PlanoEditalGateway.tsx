@@ -106,6 +106,20 @@ export default function PlanoEditalGateway() {
   );
 
   if (!plano || modo === "anterior") {
+    if (configuracoes.planoPadraoAtivo === false) {
+      return (
+        <section className="plano-edital-wrapper">
+          <h1>Nenhum plano configurado</h1>
+          <p>Sua conta começa vazia. Importe seu edital, adicione um curso ou cadastre seus assuntos para começar.</p>
+          <div className="plano-edital-switch">
+            <button type="button" onClick={() => navigate("/meu-edital")}>Importar edital</button>
+            <button type="button" onClick={() => navigate("/cursos")}>Importar curso</button>
+            <button type="button" onClick={() => navigate("/estudos")}>Cadastrar assuntos</button>
+            {plano && <button type="button" onClick={() => setModo("edital")}>Voltar ao meu plano</button>}
+          </div>
+        </section>
+      );
+    }
     return (
       <section className="plano-edital-wrapper">
         {plano && (

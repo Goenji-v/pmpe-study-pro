@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage } from "./armazenamentoConta";
 import { supabase } from "../lib/supabase";
 import type { CadernoSimuladoIA } from "./cadernosSimuladosIAService";
 import {

@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage } from "../services/armazenamentoConta";
 /* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
 /* oxlint-disable react/only-export-components */
 import {

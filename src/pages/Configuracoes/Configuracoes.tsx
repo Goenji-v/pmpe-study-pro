@@ -103,10 +103,8 @@ export default function Configuracoes() {
     if (!window.confirm("Deseja restaurar as configurações padrão?")) return;
 
     const padrao: ConfiguracoesComEdital = {
-      nomeUsuario: "Leandro",
-      concurso: "PMPE",
-      bancaPadrao: "AOCP",
-      metaQuestoesDiaria: 100,
+      ...formulario,
+      metaQuestoesDiaria: 30,
       metaMinutosDiaria: 120,
       metaRevisoesDiaria: 5,
       missoesPorDia: 1,

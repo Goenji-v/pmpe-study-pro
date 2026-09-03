@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./MeuEdital.css";
 
 import { useApp } from "../../context/AppContext";
+import { gerarMateriasDoPlano } from "../../utils/materiasDoPlano";
 import { useToast } from "../../context/ToastContext";
 import {
   abrirPdfEdital,
@@ -27,7 +28,7 @@ import {
 } from "../../utils/planoEdital";
 
 export default function MeuEdital() {
-  const { configuracoes, setConfiguracoes, setMaterias } = useApp();
+  const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -320,6 +321,14 @@ export default function MeuEdital() {
     navigate("/");
   }
 
+  function usarModeloPMPE() {
+    if (materias.length || config.editalAtivo) return;
+    setMaterias(gerarMateriasDoPlano());
+    const novasConfiguracoes: ConfiguracoesComEdital = { ...config, planoPadraoAtivo: true, concurso: "PMPE", bancaPadrao: "AOCP", editalOnboardingVisto: true };
+    setConfiguracoes(novasConfiguracoes);
+    navigate("/plano");
+  }
+
   return (
     <section className="meu-edital-page">
       <header className="meu-edital-hero">
@@ -599,6 +608,19 @@ export default function MeuEdital() {
           >
             {aplicando ? "Aplicando..." : "Aplicar edital e cronograma"}
           </button>
+        </article>
+      )}
+
+      {!materias.length && !config.editalAtivo && (
+        <article className="edital-previa-card">
+          <h2>Comece do seu jeito</h2>
+          <p>Sua conta está vazia. Você pode importar um edital acima, importar um curso ou cadastrar seus assuntos manualmente.</p>
+          <button type="button" className="edital-pular" onClick={() => {
+            const novasConfiguracoes: ConfiguracoesComEdital = { ...config, editalOnboardingVisto: true };
+            setConfiguracoes(novasConfiguracoes);
+            navigate("/cursos");
+          }}>Importar meu curso</button>
+          <button type="button" className="edital-pular" onClick={usarModeloPMPE}>Usar modelo PMPE (opcional)</button>
         </article>
       )}
 

@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
 import { useMemo, useState } from "react";
 
 import "./DiagnosticoSimuladoIA.css";

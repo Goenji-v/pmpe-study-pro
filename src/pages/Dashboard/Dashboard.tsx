@@ -1,3 +1,4 @@
+import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
   useMemo,
@@ -62,8 +63,8 @@ export default function Dashboard() {
   ] = useState(0);
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1)),
-    [configuracoes.missoesPorDia]
+    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo]
   );
 
   useEffect(() => {
@@ -654,7 +655,11 @@ function iniciarProximaAulaPortugues() {
               </div>
             </div>
           ) : (
-            <div className="dashboard-pro-empty"><h2>Plano concluído</h2><p>Não há missão programada para hoje.</p></div>
+            <div className="dashboard-pro-empty">
+              <h2>{planoCalendario.length ? "Plano concluído" : "Seu plano ainda não foi configurado"}</h2>
+              <p>{planoCalendario.length ? "Não há missão programada para hoje." : "Importe seu edital ou curso para começar. Nenhum assunto é adicionado automaticamente."}</p>
+              {!planoCalendario.length && <button type="button" onClick={() => navigate("/meu-edital")}>Configurar meus estudos</button>}
+            </div>
           )}
         </article>
 

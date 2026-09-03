@@ -1,3 +1,4 @@
+import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
   useMemo,
@@ -143,7 +144,7 @@ export default function CronogramaIA() {
 
   const missoesPendentes = useMemo(
     () =>
-      planoPMPE.flatMap((semana) =>
+      (configuracoes.planoPadraoAtivo === false ? [] : planoPMPE).flatMap((semana) =>
         semana.dias.flatMap((dia) =>
           dia.missoes
             .filter((missao) => !missoesConcluidas.includes(missao.id))
@@ -158,7 +159,7 @@ export default function CronogramaIA() {
             }))
         )
       ),
-    [missoesConcluidas]
+    [missoesConcluidas, configuracoes.planoPadraoAtivo]
   );
 
   const relatorioMensal = useMemo(
