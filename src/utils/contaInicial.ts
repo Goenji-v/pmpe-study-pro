@@ -37,3 +37,19 @@ export function houveReinicioDaConta(
   const dataLocal = Date.parse(local.dadosReiniciadosEm ?? "");
   return Number.isFinite(dataRemota) && (!Number.isFinite(dataLocal) || dataRemota > dataLocal);
 }
+
+export function preservarGeracaoDoReinicio(
+  configuracoes: ConfiguracoesApp,
+  configuracoesAtuais: ConfiguracoesApp
+): ConfiguracoesApp {
+  const atual = configuracoesAtuais.dadosReiniciadosEm;
+  const recebida = configuracoes.dadosReiniciadosEm;
+  if (!atual || (recebida && Date.parse(recebida) >= Date.parse(atual))) {
+    return configuracoes;
+  }
+  return {
+    ...configuracoes,
+    armazenamentoPorConta: true,
+    dadosReiniciadosEm: atual,
+  };
+}

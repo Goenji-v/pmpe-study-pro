@@ -26,7 +26,7 @@ import {
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao } from "../utils/revisoes";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
-import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, usaPlanoPadrao } from "../utils/contaInicial";
+import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
 import ArmazenamentoConta from "../components/ArmazenamentoConta/ArmazenamentoConta";
 import { chaveArmazenamentoConta, criarEscopoArmazenamento } from "../services/armazenamentoConta";
 
@@ -1699,7 +1699,13 @@ function EstadoDaConta({
     validarIntegridadeEstado(estado);
 
     const estadoAtualLocal = montarEstadoNuvem(dadosAtuaisRef.current);
-    const estadoReconciliado = reconciliarEstadoComConteudos(estado);
+    const estadoReconciliado = reconciliarEstadoComConteudos({
+      ...estado,
+      configuracoes: preservarGeracaoDoReinicio(
+        estado.configuracoes,
+        estadoAtualLocal.configuracoes
+      ),
+    });
 
     if (!usuario) {
       criarBackupAutomaticoLocal(
