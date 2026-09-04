@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import BetaMonitor from "../../components/BetaMonitor/BetaMonitor";
 import CuradoriaQuestoes from "../../components/CuradoriaQuestoes/CuradoriaQuestoes";
+import ModeracaoDenuncias from "../../components/ModeracaoDenuncias/ModeracaoDenuncias";
 import PerformanceMonitorAdmin from "../../components/PerformanceMonitor/PerformanceMonitorAdmin";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
 import {
@@ -109,6 +110,8 @@ export default function Admin() {
         <Card titulo="Questões" valor={resumo.questoesNoMes} detalhe="Resolvidas no mês" />
         <Card titulo="Acertos" valor={resumo.acertosNoMes} detalhe="Acertos registrados" />
       </div>
+
+      <ModeracaoDenuncias />
 
       <section className="admin-painel">
         <div className="admin-painel-topo">
