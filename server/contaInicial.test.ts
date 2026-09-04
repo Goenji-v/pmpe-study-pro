@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, usaPlanoPadrao } from "../src/utils/contaInicial";
+import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../src/utils/contaInicial";
 import { criarPlanoCalendario } from "../src/utils/planoCalendario";
 import { armazenamentoLocalDaConta, armazenamentoSessaoDaConta, criarEscopoArmazenamento, definirEscopoArmazenamento, permiteMigracaoLegada } from "../src/services/armazenamentoConta";
 
@@ -11,6 +11,8 @@ test("conta nova não ganha assuntos, plano, curso, histórico ou nome de outra 
   assert.equal(criarConfiguracoesIniciais().nomeUsuario, "");
   assert.equal(estado.configuracoes.concurso, "");
   assert.equal(estado.configuracoes.bancaPadrao, "");
+  assert.equal("editalAtivo" in estado.configuracoes, false);
+  assert.equal("cursos" in estado.configuracoes, false);
   assert.equal(usaPlanoPadrao(estado.configuracoes), false);
   assert.deepEqual(criarPlanoCalendario(1, usaPlanoPadrao(estado.configuracoes)), []);
 });
@@ -28,6 +30,16 @@ test("reinício remoto vence cópia antiga, mas não confunde conflito normal co
   assert.equal(houveReinicioDaConta(remoto, {}), false);
   assert.equal(houveReinicioDaConta({}, { dadosReiniciadosEm: "inválido" }), false);
   assert.equal(houveReinicioDaConta({}, {}), false);
+});
+
+test("restaurar backup antigo não remove a geração criada pelo reinício", () => {
+  const atual = { ...criarConfiguracoesIniciais(), dadosReiniciadosEm: "2026-09-04T15:09:05.554Z" };
+  const backupAntigo = { ...criarConfiguracoesIniciais(), armazenamentoPorConta: false };
+  const restaurada = preservarGeracaoDoReinicio(backupAntigo, atual);
+  assert.equal(restaurada.dadosReiniciadosEm, atual.dadosReiniciadosEm);
+  assert.equal(restaurada.armazenamentoPorConta, true);
+  const maisNova = { ...backupAntigo, dadosReiniciadosEm: "2026-09-05T00:00:00.000Z" };
+  assert.equal(preservarGeracaoDoReinicio(maisNova, atual), maisNova);
 });
 
 test("cadernos, rascunhos e sessões novos ficam isolados por conta e por reinício", () => {

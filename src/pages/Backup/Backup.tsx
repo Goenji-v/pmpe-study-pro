@@ -25,6 +25,8 @@ import {
   listarBackupsAutomaticosLocais,
   type BackupAutomaticoLocal,
 } from "../../services/seguranca/backupAutomaticoService";
+import { criarDadosIniciaisDaConta } from "../../utils/contaInicial";
+import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
 
 import type {
   RegistroQuestao,
@@ -35,22 +37,14 @@ const CHAVE_ULTIMO_BACKUP = "pmpe_ultimo_backup_schema18";
 export default function Backup() {
   const {
     materias,
-    setMaterias,
     questoes,
-    setQuestoes,
     sessoes,
-    setSessoes,
     revisoes,
-    setRevisoes,
     simulados,
-    setSimulados,
     bancoQuestoes,
-    setBancoQuestoes,
     simuladosGerados,
-    setSimuladosGerados,
     configuracoes,
     missoesConcluidas,
-    setMissoesConcluidas,
     restaurarEstadoCompleto,
     statusNuvem,
     alteracoesPendentes,
@@ -227,27 +221,41 @@ export default function Backup() {
     }
   }
 
-  function limparDados() {
+  async function limparDados() {
     const primeiraConfirmacao = window.confirm(
-      "Tem certeza que deseja apagar os dados de estudo deste aparelho?"
+      "Tem certeza que deseja zerar esta conta em todos os aparelhos?"
     );
     if (!primeiraConfirmacao) return;
 
     const segundaConfirmacao = window.confirm(
-      "Faça um backup antes de continuar. Deseja realmente apagar os registros?"
+      "Serão removidos matérias, assuntos, edital, plano, cursos, progresso, questões, revisões e simulados. Um backup automático será criado antes. Deseja continuar?"
     );
     if (!segundaConfirmacao) return;
 
-    setMaterias([]);
-    setQuestoes([]);
-    setSessoes([]);
-    setRevisoes([]);
-    setSimulados([]);
-    setBancoQuestoes([]);
-    setSimuladosGerados([]);
-    setMissoesConcluidas([]);
+    const agora = new Date().toISOString();
+    const dadosVazios = criarDadosIniciaisDaConta(configuracoes.nomeUsuario);
+    const configuracoesVazias: ConfiguracoesComEdital = {
+      ...dadosVazios.configuracoes,
+      dadosReiniciadosEm: agora,
+      editalOnboardingVisto: false,
+    };
 
-    showToast("Dados de estudo redefinidos. A alteração entrará na sincronização normal.", "info");
+    try {
+      setImportando(true);
+      await restaurarEstadoCompleto(montarEstadoNuvem({
+        ...dadosVazios,
+        configuracoes: configuracoesVazias,
+      }));
+      showToast("Conta zerada em todos os aparelhos. O backup anterior foi preservado.", "success");
+    } catch (erro) {
+      console.error("Erro ao zerar a conta:", erro);
+      showToast(
+        erro instanceof Error ? erro.message : "Não foi possível zerar a conta.",
+        "error"
+      );
+    } finally {
+      setImportando(false);
+    }
   }
 
   return (
@@ -407,11 +415,11 @@ export default function Backup() {
         <div className="backup-card backup-danger-card">
           <h2>Zona de risco</h2>
           <p className="backup-card-text">
-            Redefine os registros de estudo e restaura a estrutura atual do plano. Exporte um
-            backup antes de usar.
+            Zera matérias, assuntos, edital, plano, cursos e histórico em todos os aparelhos.
+            Um backup automático é criado antes.
           </p>
-          <button className="backup-button backup-limpar" onClick={limparDados}>
-            🗑 Redefinir dados de estudo
+          <button className="backup-button backup-limpar" disabled={importando} onClick={() => void limparDados()}>
+            🗑 Zerar conta completamente
           </button>
         </div>
       </div>
