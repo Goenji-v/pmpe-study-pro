@@ -37,6 +37,7 @@ import {
 } from "../../services/conteudos/navegarConteudos";
 import { localizarProximaAula } from "../../services/conteudos/localizarConteudo";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
+import { salvarArquivoMaterial } from "../../services/materiaisService";
 import { obterReferenciasDaMissao, planoPMPE } from "../../data/planoPMPE";
 
 type EstadoNavegacaoCentral = {
@@ -145,6 +146,21 @@ const [
 const [
   concluirAssunto,
   setConcluirAssunto,
+] = useState(false);
+
+const [
+  arquivosFinalizacao,
+  setArquivosFinalizacao,
+] = useState<File[]>([]);
+
+const [
+  textoMaterialFinalizacao,
+  setTextoMaterialFinalizacao,
+] = useState("");
+
+const [
+  salvandoFinalizacao,
+  setSalvandoFinalizacao,
 ] = useState(false);
 
   const prefillAplicadoRef = useRef(false);
@@ -581,6 +597,9 @@ const [
     setDificuldade("media");
     setAvaliacaoRevisao("media");
     setConcluirAssunto(false);
+    setArquivosFinalizacao([]);
+    setTextoMaterialFinalizacao("");
+    setSalvandoFinalizacao(false);
 
     setObservacaoFinalizacao(
       estado.observacao || ""
@@ -591,7 +610,71 @@ const [
     );
   }
 
-  function confirmarFinalizacao() {
+  async function salvarMateriaisDaFinalizacao(
+    materia: string,
+    assunto: string,
+    dataSessao: string
+  ) {
+    const itens: Array<{
+      arquivo: File;
+      nome: string;
+    }> = arquivosFinalizacao.map((arquivo) => ({
+      arquivo,
+      nome: nomeSemExtensao(arquivo.name) || "Material da sessão",
+    }));
+
+    const texto = textoMaterialFinalizacao.trim();
+    if (texto) {
+      const nomeBase = `Anotações - ${assunto || "sessão"}`;
+      itens.push({
+        nome: nomeBase,
+        arquivo: new File(
+          [texto],
+          `${slugArquivo(nomeBase)}.txt`,
+          { type: "text/plain;charset=utf-8" }
+        ),
+      });
+    }
+
+    if (itens.length === 0) {
+      return { salvos: 0, falhas: 0 };
+    }
+
+    const resultados = await Promise.allSettled(
+      itens.map(({ arquivo, nome }) =>
+        salvarArquivoMaterial({
+          nome,
+          materia,
+          materiaId: estado.materiaId,
+          modulo: estado.modulo,
+          moduloId: estado.moduloId,
+          assunto,
+          assuntoId: estado.assuntoId,
+          observacao: `Anexado ao finalizar a sessão de ${new Date(dataSessao).toLocaleString("pt-BR")}.`,
+          arquivo,
+        })
+      )
+    );
+
+    return resultados.reduce(
+      (total, resultado) => {
+        if (resultado.status === "fulfilled") {
+          total.salvos += 1;
+        } else {
+          total.falhas += 1;
+          console.error("Falha ao anexar material à sessão:", resultado.reason);
+        }
+        return total;
+      },
+      { salvos: 0, falhas: 0 }
+    );
+  }
+
+  async function confirmarFinalizacao() {
+    if (salvandoFinalizacao) {
+      return;
+    }
+
     const minutos =
       Number(
         minutosFinalizacao
@@ -675,6 +758,8 @@ const [
         acertos;
     }
 
+    setSalvandoFinalizacao(true);
+
     const resultado =
       finalizar({
         minutosReais:
@@ -721,21 +806,38 @@ const [
       });
 
     if (!resultado) {
+      setSalvandoFinalizacao(false);
       return;
     }
 
+    const materiais = await salvarMateriaisDaFinalizacao(
+      resultado.sessao.materia,
+      resultado.sessao.assunto,
+      resultado.sessao.data
+    );
+
+    setSalvandoFinalizacao(false);
     setModalFinalizacaoAberto(
       false
     );
 
-    setMensagem(
+    const mensagemBase =
       estado.tipo === "simulado"
         ? "Simulado salvo no histórico."
         : resultado.revisaoConcluida
           ? "Sessão salva e revisão concluída. Sua agenda foi atualizada automaticamente."
         : resultado.revisaoCriada
           ? "Sessão salva. Assunto concluído e revisão programada."
-          : "Sessão salva sem duplicar o tempo."
+          : "Sessão salva sem duplicar o tempo.";
+
+    const mensagemMateriais = materiais.falhas > 0
+      ? ` ${materiais.salvos} material(is) salvo(s), mas ${materiais.falhas} não puderam ser enviados. Você pode reenviá-los pelo Centro de Materiais.`
+      : materiais.salvos > 0
+        ? ` ${materiais.salvos} material(is) salvo(s) no Centro de Materiais.`
+        : "";
+
+    setMensagem(
+      `${mensagemBase}${mensagemMateriais}`
     );
   }
 
@@ -1171,6 +1273,7 @@ const [
 
           <MateriaisDoAssunto
             materia={estado.materia}
+            modulo={estado.modulo}
             assunto={estado.assunto}
           />
 
@@ -1279,6 +1382,7 @@ const [
           role="presentation"
           onMouseDown={(evento) => {
             if (
+              !salvandoFinalizacao &&
               evento.target ===
               evento.currentTarget
             ) {
@@ -1315,6 +1419,7 @@ const [
                   )
                 }
                 aria-label="Fechar"
+                disabled={salvandoFinalizacao}
               >
                 ×
               </button>
@@ -1538,10 +1643,85 @@ const [
               </label>
             </div>
 
-            <div className="finalizacao-aviso">
-              O envio de PDF, imagem e texto será
-              integrado na próxima etapa pelo Centro
-              de Materiais.
+            <div className="finalizacao-materiais">
+              <div className="finalizacao-materiais-topo">
+                <div>
+                  <strong>Materiais da sessão</strong>
+                  <span>PDF, imagem, documento ou texto</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem(
+                      "pmpe:materiais:prefill",
+                      JSON.stringify({
+                        materia: estado.materia,
+                        modulo: estado.modulo,
+                        assunto: estado.assunto,
+                      })
+                    );
+                    navigate("/materiais");
+                  }}
+                  disabled={salvandoFinalizacao}
+                >
+                  Centro de Materiais
+                </button>
+              </div>
+
+              <label className="finalizacao-arquivo">
+                <span>📎 Selecionar arquivos</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp"
+                  disabled={salvandoFinalizacao}
+                  onChange={(evento) =>
+                    setArquivosFinalizacao(
+                      Array.from(evento.target.files ?? [])
+                    )
+                  }
+                />
+              </label>
+
+              {arquivosFinalizacao.length > 0 && (
+                <div className="finalizacao-arquivos-lista">
+                  {arquivosFinalizacao.map((arquivo, indice) => (
+                    <div key={`${arquivo.name}-${arquivo.size}-${indice}`}>
+                      <span>
+                        {iconeArquivo(arquivo)} {arquivo.name}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Remover ${arquivo.name}`}
+                        onClick={() =>
+                          setArquivosFinalizacao((anteriores) =>
+                            anteriores.filter((_, itemIndice) => itemIndice !== indice)
+                          )
+                        }
+                        disabled={salvandoFinalizacao}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <label className="finalizacao-texto-material">
+                <span>📝 Texto para guardar como material</span>
+                <textarea
+                  value={textoMaterialFinalizacao}
+                  onChange={(evento) =>
+                    setTextoMaterialFinalizacao(evento.target.value)
+                  }
+                  placeholder="Cole aqui um resumo, anotação, bizu ou texto que queira guardar junto deste assunto."
+                  disabled={salvandoFinalizacao}
+                />
+              </label>
+
+              <small>
+                Os anexos são enviados quando você salva a sessão. Depois ficam disponíveis no Centro de Materiais e vinculados a este conteúdo no histórico.
+              </small>
             </div>
 
             <div className="finalizacao-acoes">
@@ -1553,6 +1733,7 @@ const [
                     false
                   )
                 }
+                disabled={salvandoFinalizacao}
               >
                 Voltar
               </button>
@@ -1563,8 +1744,11 @@ const [
                 onClick={
                   confirmarFinalizacao
                 }
+                disabled={salvandoFinalizacao}
               >
-                Salvar sessão
+                {salvandoFinalizacao
+                  ? "Salvando sessão e materiais..."
+                  : "Salvar sessão"}
               </button>
             </div>
           </div>
@@ -1682,4 +1866,24 @@ function formatarSegundos(
       )
     )
     .join(":");
+}
+
+function nomeSemExtensao(nome: string) {
+  return nome.replace(/\.[^.]+$/, "").trim();
+}
+
+function slugArquivo(nome: string) {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "anotacoes-sessao";
+}
+
+function iconeArquivo(arquivo: File) {
+  if (arquivo.type.includes("pdf")) return "📕";
+  if (arquivo.type.includes("image")) return "🖼️";
+  if (arquivo.type.includes("text")) return "📝";
+  return "📄";
 }
