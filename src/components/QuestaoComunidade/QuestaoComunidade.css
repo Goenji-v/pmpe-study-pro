@@ -1,0 +1,191 @@
+.questao-comunidade {
+  margin-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding-top: 14px;
+}
+
+.questao-comunidade-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.questao-comunidade-acoes button,
+.questao-comunidade-editor-acoes button,
+.questao-comunidade-enviar-denuncia {
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.64);
+  color: #e2e8f0;
+  padding: 9px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.questao-comunidade-acoes button:hover {
+  border-color: rgba(96, 165, 250, 0.62);
+}
+
+.questao-comunidade-acoes .questao-comunidade-denunciar {
+  color: #fca5a5;
+}
+
+.questao-comunidade-painel {
+  margin-top: 12px;
+  padding: 15px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.questao-comunidade-painel.denuncia {
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.questao-comunidade-titulo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.questao-comunidade-titulo div {
+  display: grid;
+  gap: 3px;
+}
+
+.questao-comunidade-titulo strong {
+  color: #f8fafc;
+}
+
+.questao-comunidade-titulo span,
+.questao-comunidade-painel small,
+.questao-comunidade-vazio {
+  color: #94a3b8;
+  font-size: 0.86rem;
+}
+
+.questao-comunidade-titulo b {
+  min-width: 28px;
+  text-align: center;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  padding: 4px 8px;
+}
+
+.questao-comunidade-lista {
+  display: grid;
+  gap: 8px;
+  max-height: 290px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+.questao-comunidade-lista article {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(2, 6, 23, 0.32);
+}
+
+.questao-comunidade-lista article.meu {
+  border-color: rgba(96, 165, 250, 0.34);
+}
+
+.questao-comunidade-lista header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #cbd5e1;
+  font-size: 0.84rem;
+}
+
+.questao-comunidade-lista time {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.questao-comunidade-lista p {
+  white-space: pre-wrap;
+  color: #e2e8f0;
+  margin: 7px 0 0;
+  line-height: 1.5;
+}
+
+.questao-comunidade-editor,
+.questao-comunidade-painel.denuncia label {
+  display: grid;
+  gap: 6px;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  margin-top: 10px;
+}
+
+.questao-comunidade textarea,
+.questao-comunidade select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.56);
+  color: #f8fafc;
+  padding: 10px 11px;
+  font: inherit;
+}
+
+.questao-comunidade textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.questao-comunidade-editor small,
+.questao-comunidade-painel.denuncia label small {
+  text-align: right;
+}
+
+.questao-comunidade-editor-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.questao-comunidade-editor-acoes .primario {
+  background: rgba(37, 99, 235, 0.28);
+  border-color: rgba(96, 165, 250, 0.48);
+}
+
+.questao-comunidade-editor-acoes .perigo {
+  color: #fca5a5;
+}
+
+.questao-comunidade-enviar-denuncia {
+  width: 100%;
+  margin-top: 12px;
+  color: #fee2e2;
+  border-color: rgba(248, 113, 113, 0.42);
+  background: rgba(127, 29, 29, 0.24);
+}
+
+.questao-comunidade button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.questao-comunidade.compacto {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .questao-comunidade-acoes,
+  .questao-comunidade-editor-acoes {
+    flex-direction: column;
+  }
+
+  .questao-comunidade-acoes button,
+  .questao-comunidade-editor-acoes button {
+    width: 100%;
+  }
+}
