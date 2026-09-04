@@ -1,11 +1,10 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter,
   Navigate,
   Route,
   Routes,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 
 import "./pages/PlanoEdital/PlanoEditalCursos.css";
@@ -20,11 +19,10 @@ import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedac
 import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 
-import { AppProvider, useApp } from "./context/AppContext";
+import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CronometroProvider } from "./context/CronometroContext";
 import { AuthProvider } from "./context/AuthContext";
-import type { ConfiguracoesComEdital } from "./types/editalInteligente";
 
 const PlanoEditalGateway = lazy(() => import("./pages/PlanoEdital/PlanoEditalGateway"));
 const MeuEdital = lazy(() => import("./pages/MeuEdital/MeuEdital"));
@@ -72,22 +70,6 @@ function CarregandoRota() {
   );
 }
 
-function EditalPrimeiroAcessoGuard() {
-  const { configuracoes, statusNuvem } = useApp();
-  const config = configuracoes as ConfiguracoesComEdital;
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (statusNuvem === "carregando") return;
-    if (config.editalOnboardingVisto) return;
-    if (location.pathname === "/meu-edital") return;
-    navigate("/meu-edital", { replace: true });
-  }, [config.editalOnboardingVisto, location.pathname, navigate, statusNuvem]);
-
-  return null;
-}
-
 function LayoutProtegido() {
   const location = useLocation();
   const paginaDashboard = location.pathname === "/";
@@ -97,7 +79,6 @@ function LayoutProtegido() {
       <ToastProvider>
         <RuntimeErrorGuard />
         <AppProvider>
-          <EditalPrimeiroAcessoGuard />
           <PersonalizacaoBridge />
           {paginaDashboard && (
             <Suspense fallback={null}>
