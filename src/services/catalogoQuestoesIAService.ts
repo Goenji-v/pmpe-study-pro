@@ -22,6 +22,9 @@ type LinhaCatalogoIA = {
   alternativas: Array<{ id: string; texto: string }>;
   resposta_correta_id: string | null;
   explicacao: string | null;
+  fonte_nome?: string | null;
+  norma?: string | null;
+  dispositivo?: string | null;
   fingerprint: string | null;
 };
 
@@ -69,7 +72,7 @@ export async function atualizarQuestoesAntesDoTreino(questoes: QuestaoIA[]) {
   const ativas: QuestaoIA[] = [];
   for (let inicio = 0; inicio < ids.length; inicio += 100) {
     const { data, error } = await supabase.from("questoes_catalogo")
-      .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint")
+      .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,norma,dispositivo,fingerprint")
       .in("id", ids.slice(inicio, inicio + 100))
       .eq("origem", "ia")
       .eq("status", "ativa");
@@ -173,7 +176,7 @@ async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
   let consulta = supabase
     .from("questoes_catalogo")
     .select(
-      "id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint"
+      "id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,norma,dispositivo,fingerprint"
     )
     .eq("origem", "ia")
     .eq("status", "ativa")
@@ -254,6 +257,9 @@ function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
     },
     respostaCorreta: linha.resposta_correta_id as QuestaoIA["respostaCorreta"],
     explicacao: linha.explicacao ?? "",
+    fonteNome: linha.fonte_nome ?? undefined,
+    norma: linha.norma ?? undefined,
+    dispositivo: linha.dispositivo ?? undefined,
   };
 }
 
@@ -287,6 +293,7 @@ function validarQuestaoAntesDePublicar(
   if (
     !questao.enunciado.trim() ||
     !questao.explicacao.trim() ||
+    !questao.fonteNome?.trim() ||
     !["A", "B", "C", "D", "E"].includes(questao.respostaCorreta) ||
     alternativaTextos.length !== 5 ||
     alternativaTextos.some((texto) => !texto) ||

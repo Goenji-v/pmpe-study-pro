@@ -367,6 +367,10 @@ export interface QuestaoIA {
     | "E";
 
   explicacao: string;
+  fonteNome?: string;
+  norma?: string;
+  dispositivo?: string;
+  verificadaEm?: string;
 }
 
 export type TipoSessaoQuestoesIA =

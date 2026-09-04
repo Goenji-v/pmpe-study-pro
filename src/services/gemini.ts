@@ -90,7 +90,8 @@ export async function gerarQuestoesIA(
       banca: parametros.banca,
       etapa: "revisão",
     }),
-    parametros.quantidade
+    parametros.quantidade,
+    assuntoCompleto
   );
 
   const questoes = normalizarQuestoes(loteRevisado, parametros);
@@ -127,6 +128,7 @@ async function solicitarLoteIA({
         quantidade,
         banca,
         enunciadosEvitar,
+        etapa,
       }),
     });
   } catch (erro) {
@@ -261,6 +263,11 @@ function normalizarQuestoes(
       questao.explicacao,
       `Questão ${indice + 1}: explicação ausente.`
     );
+    const auditoria = objetoSeguro(questao.auditoria);
+    const fonteNome = textoObrigatorio(
+      questao.fonteNome,
+      `Questão ${indice + 1}: fonte verificável ausente.`
+    );
 
     const dificuldade = normalizarDificuldade(
       questao.dificuldade,
@@ -297,6 +304,10 @@ function normalizarQuestoes(
       alternativas,
       respostaCorreta,
       explicacao,
+      fonteNome,
+      norma: textoOpcional(questao.norma),
+      dispositivo: textoOpcional(questao.dispositivo),
+      verificadaEm: textoOpcional(auditoria.dataReferencia),
     };
   });
 }
