@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import { useNavigate } from "react-router-dom";
+import QuestaoComunidade from "../../components/QuestaoComunidade/QuestaoComunidade";
 
 import "./ResolverSimuladoIA.css";
 import "./ResolverSimuladoIADescartar.css";
@@ -497,8 +498,6 @@ export default function ResolverSimuladoIA() {
 
     const revisaoDaSessao = cronometroAtivo && sessaoAtiva.objetivo.startsWith("[Questões IA]")
       ? revisoes.find((item) => revisaoCorrespondeASessao(item, sessaoAtiva)) : undefined;
-    // A revisão vinculada será concluída pelo cronômetro com a regra 80% / 50%.
-    // Os demais assuntos continuam recebendo o diagnóstico de treino habitual.
     const diagnosticoAtual = calcularDiagnosticoQuestoesIA(
       novoResultado.questoes,
       novoResultado.respostas
@@ -569,7 +568,6 @@ export default function ResolverSimuladoIA() {
       detail: { ...novoResultado, revisaoConcluida: false },
     });
     window.dispatchEvent(evento);
-    // O listener do cronômetro confirma a conclusão antes de sincronizar o resultado.
     aoConcluirRevisao?.(evento.detail.revisaoConcluida);
 
     const gravacoes: Promise<unknown>[] = [
@@ -735,6 +733,24 @@ export default function ResolverSimuladoIA() {
     setFinalizado(false);
     setMensagem("");
     setResumoRevisaoFinal(null);
+  }
+
+  function retirarQuestaoDenunciada(questaoId: string) {
+    const proximas = questoes.filter((item) => item.id !== questaoId);
+    localStorage.setItem(CHAVE_QUESTOES_IA, JSON.stringify(proximas));
+    setQuestoes(proximas);
+    setRespostas((anteriores) => {
+      const novas = { ...anteriores };
+      delete novas[questaoId];
+      return novas;
+    });
+    setAlternativasEliminadas((anteriores) => {
+      const novas = { ...anteriores };
+      delete novas[questaoId];
+      return novas;
+    });
+    setQuestaoAtual((atual) => Math.min(atual, Math.max(0, proximas.length - 1)));
+    setMensagem("Questão denunciada e retirada deste treino. Ela não entra na sua nota e ficará em quarentena até a análise do administrador.");
   }
 
   if (carregando) {
@@ -1270,6 +1286,13 @@ export default function ResolverSimuladoIA() {
               }
             )}
           </div>
+
+          {!finalizado && (
+            <QuestaoComunidade
+              questaoId={questao.id}
+              onDenunciada={() => retirarQuestaoDenunciada(questao.id)}
+            />
+          )}
 
           {finalizado && (
             <div className="resolver-ia-explicacao">
