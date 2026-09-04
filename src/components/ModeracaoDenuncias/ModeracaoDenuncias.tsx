@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "../../context/ToastContext";
 import {
   corrigirQuestaoDenunciada,
@@ -16,6 +16,8 @@ const ROTULOS = {
   repetida: "Questão repetida",
   outro: "Outro problema",
 } as const;
+
+const LETRAS = ["A", "B", "C", "D", "E"] as const;
 
 export default function ModeracaoDenuncias() {
   const { showToast } = useToast();
@@ -168,12 +170,10 @@ function EditorDenuncia({
   onConcluida: () => void;
 }) {
   const { showToast } = useToast();
-  const letras = ["A", "B", "C", "D", "E"];
-  const iniciais = useMemo(() => Object.fromEntries(
-    letras.map((letra) => [letra, item.snapshot.alternativas?.find((a) => a.id === letra)?.texto ?? ""])
-  ), [item, letras]);
   const [enunciado, setEnunciado] = useState(item.snapshot.enunciado ?? "");
-  const [alternativas, setAlternativas] = useState<Record<string, string>>(iniciais);
+  const [alternativas, setAlternativas] = useState<Record<string, string>>(() => Object.fromEntries(
+    LETRAS.map((letra) => [letra, item.snapshot.alternativas?.find((a) => a.id === letra)?.texto ?? ""])
+  ));
   const [gabarito, setGabarito] = useState(item.snapshot.resposta_correta_id ?? "A");
   const [explicacao, setExplicacao] = useState(item.snapshot.explicacao ?? "");
   const [respostaAdmin, setRespostaAdmin] = useState("");
@@ -185,7 +185,7 @@ function EditorDenuncia({
       setSalvando(true);
       await corrigirQuestaoDenunciada(item.questaoId, {
         enunciado,
-        alternativas: letras.map((id) => ({ id, texto: alternativas[id] ?? "" })),
+        alternativas: LETRAS.map((id) => ({ id, texto: alternativas[id] ?? "" })),
         respostaCorretaId: gabarito,
         explicacao,
       });
@@ -207,10 +207,10 @@ function EditorDenuncia({
         </header>
 
         <label>Enunciado<textarea value={enunciado} onChange={(e) => setEnunciado(e.target.value)} /></label>
-        {letras.map((letra) => (
+        {LETRAS.map((letra) => (
           <label key={letra}>Alternativa {letra}<input value={alternativas[letra] ?? ""} onChange={(e) => setAlternativas((a) => ({ ...a, [letra]: e.target.value }))} /></label>
         ))}
-        <label>Gabarito<select value={gabarito} onChange={(e) => setGabarito(e.target.value)}>{letras.map((letra) => <option key={letra}>{letra}</option>)}</select></label>
+        <label>Gabarito<select value={gabarito} onChange={(e) => setGabarito(e.target.value)}>{LETRAS.map((letra) => <option key={letra}>{letra}</option>)}</select></label>
         <label>Comentário do gabarito<textarea value={explicacao} onChange={(e) => setExplicacao(e.target.value)} /></label>
         <label>Resposta ao denunciante (opcional)<textarea value={respostaAdmin} maxLength={1200} onChange={(e) => setRespostaAdmin(e.target.value)} /></label>
 
