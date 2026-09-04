@@ -460,8 +460,8 @@ export default function GerarSimuladoIA() {
 
       setSucesso(
         origem === "assunto"
-          ? `${questoesFinais.length} questões prontas em ${assuntosParaGerar.length} subassunto(s): ${totalReutilizadas} reutilizadas do banco e ${totalNovas} novas geradas por IA.`
-          : `${questoesFinais.length} questões prontas para o simulado da semana.`
+          ? `${questoesFinais.length} questões prontas em ${assuntosParaGerar.length} subassunto(s): ${totalReutilizadas} reutilizadas do banco e ${totalNovas} novas geradas por IA.${salvarNoBanco && totalNovas > 0 ? " As novas aguardam curadoria antes de entrarem no banco compartilhado." : ""}`
+          : `${questoesFinais.length} questões prontas para o simulado da semana.${salvarNoBanco && totalNovas > 0 ? " As novas aguardam curadoria antes de entrarem no banco compartilhado." : ""}`
       );
 
       window.dispatchEvent(
@@ -845,7 +845,7 @@ export default function GerarSimuladoIA() {
             onChange={(evento) => setSalvarNoBanco(evento.target.checked)}
             disabled={gerando}
           />
-          <span>Salvar automaticamente no banco compartilhado de questões IA</span>
+          <span>Enviar as novas para curadoria do banco compartilhado</span>
         </label>
 
         {gerando && (

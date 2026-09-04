@@ -14,6 +14,9 @@ type Questao = {
   alternativas?: Record<string, string>;
   respostaCorreta?: string;
   explicacao?: string;
+  fonteNome?: string;
+  norma?: string;
+  dispositivo?: string;
 };
 
 type Contexto = {
@@ -86,10 +89,13 @@ Deno.serve(async (req: Request) => {
         alternativas,
         resposta_correta_id: q.respostaCorreta,
         explicacao: texto(q.explicacao),
-        status: "ativa",
+        status: "pendente",
         compatibilidade_edital: "direta",
-        confianca_classificacao: "alta",
-        fonte_nome: "Gerada pela IA do Study Pro",
+        confianca_classificacao: "media",
+        motivo_status: "Aguardando curadoria humana após geração e revisão automáticas.",
+        fonte_nome: texto(q.fonteNome),
+        norma: texto(q.norma) || null,
+        dispositivo: texto(q.dispositivo) || null,
         origem: "ia",
         criado_por: userData.user.id,
         fingerprint,
@@ -105,7 +111,7 @@ Deno.serve(async (req: Request) => {
     const fingerprints = preparadas.map((item) => item.fingerprint);
     const { data, error: readError } = await admin
       .from("questoes_catalogo")
-      .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fingerprint")
+      .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,norma,dispositivo,status,fingerprint")
       .eq("origem", "ia")
       .in("fingerprint", fingerprints);
     if (readError) throw new Error(`Falha ao recarregar catálogo: ${readError.message}`);
@@ -121,11 +127,17 @@ Deno.serve(async (req: Request) => {
 
 function validarQuestao(q: Questao, numero: number) {
   const alternativas = LETRAS.map((letra) => texto(q.alternativas?.[letra]));
-  if (!texto(q.materia) || !texto(q.assunto) || !texto(q.banca) || !texto(q.enunciado) || !texto(q.explicacao)) {
+  if (!texto(q.materia) || !texto(q.assunto) || !texto(q.banca) || !texto(q.enunciado) || !texto(q.explicacao) || !texto(q.fonteNome)) {
     throw new Error(`Questão ${numero}: campos obrigatórios ausentes.`);
   }
   if (!LETRAS.includes(q.respostaCorreta as (typeof LETRAS)[number])) {
     throw new Error(`Questão ${numero}: gabarito inválido.`);
+  }
+  if (
+    /(constitucional|direitos humanos|leis?\s|lei |direito)/i.test(texto(q.materia)) &&
+    (!texto(q.norma) || !texto(q.dispositivo))
+  ) {
+    throw new Error(`Questão ${numero}: norma ou dispositivo jurídico ausente.`);
   }
   if (alternativas.some((item) => !item) || new Set(alternativas.map(normalizar)).size !== 5) {
     throw new Error(`Questão ${numero}: alternativas inválidas ou duplicadas.`);

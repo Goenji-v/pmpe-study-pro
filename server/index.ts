@@ -13,6 +13,7 @@ import {
 } from "./jsonIa.ts";
 import { executarComFallbackGemini } from "./retryGemini.ts";
 import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
+import { montarPromptGeracaoQuestoesIA } from "./promptQuestoesIA.ts";
 
 const app = express();
 
@@ -119,6 +120,7 @@ app.post(
         quantidade = 5,
         banca = "AOCP",
         enunciadosEvitar = [],
+        etapa = "geração",
       } = req.body;
 
       const listaEvitar = Array.isArray(enunciadosEvitar)
@@ -129,61 +131,20 @@ app.post(
             .slice(0, 120)
         : [];
 
-      const restricaoRepeticao = listaEvitar.length > 0
-        ? `\nNão repita nem parafraseie estas questões já selecionadas:\n${listaEvitar
-            .map((item, indice) => `${indice + 1}. ${item}`)
-            .join("\n")}\n`
-        : "";
+      const prompt = etapa === "revisão"
+        ? String(assunto)
+        : montarPromptGeracaoQuestoesIA({
+            assunto: String(assunto),
+            quantidade: Number(quantidade),
+            banca: String(banca),
+            enunciadosEvitar: listaEvitar,
+          });
 
       const resposta =
         await ai.models.generateContent({
           model: modelo,
 
-          contents: `
-Você é um especialista em concursos públicos brasileiros.
-
-Crie exatamente ${quantidade} questões.
-
-Matéria:
-${assunto}
-
-Banca:
-${banca}
-
-${restricaoRepeticao}
-
-Retorne SOMENTE um JSON válido.
-
-Formato obrigatório:
-
-[
-  {
-    "id": "1",
-    "materia": "Português",
-    "assunto": "Crase",
-    "banca": "AOCP",
-    "dificuldade": "Média",
-    "enunciado": "texto",
-    "alternativas": {
-      "A": "texto",
-      "B": "texto",
-      "C": "texto",
-      "D": "texto",
-      "E": "texto"
-    },
-    "respostaCorreta": "A",
-    "explicacao": "texto"
-  }
-]
-
-Regras:
-- não escreva markdown;
-- não escreva blocos com crases;
-- não escreva comentários;
-- retorne apenas o JSON;
-- use exatamente cinco alternativas;
-- use apenas uma resposta correta.
-`,
+          contents: prompt,
         });
 
       if (!resposta.text) {
