@@ -114,6 +114,9 @@ export default function BancoQuestoes() {
   const [materiaId, setMateriaId] = useState("");
   const [moduloId, setModuloId] = useState("");
   const [assuntoId, setAssuntoId] = useState("");
+  const [materiaLivre, setMateriaLivre] = useState("");
+  const [moduloLivre, setModuloLivre] = useState("");
+  const [assuntoLivre, setAssuntoLivre] = useState("");
   const [banca, setBanca] = useState("AOCP");
   const [dificuldade, setDificuldade] = useState<Dificuldade>("media");
   const [enunciado, setEnunciado] = useState("");
@@ -176,6 +179,8 @@ export default function BancoQuestoes() {
   const moduloSelecionado = modulosDisponiveis.find(
     (modulo) => modulo.id === moduloId
   );
+
+  const cadastroLivre = materias.length === 0;
 
   // bancoQuestoes invalida a leitura das estatísticas persistidas no storage.
   /* oxlint-disable react-hooks/exhaustive-deps */
@@ -264,16 +269,20 @@ export default function BancoQuestoes() {
       (assunto: Assunto) => assunto.id === assuntoId
     );
 
-    if (!materiaSelecionada) {
-      showToast("Selecione uma matéria.", "warning");
+    const materiaNome = cadastroLivre ? materiaLivre.trim() : materiaSelecionada?.nome ?? "";
+    const moduloNome = cadastroLivre ? moduloLivre.trim() : moduloSelecionado?.nome ?? "";
+    const assuntoNome = cadastroLivre ? assuntoLivre.trim() : assuntoSelecionado?.nome ?? "";
+
+    if (!materiaNome) {
+      showToast(cadastroLivre ? "Informe a matéria." : "Selecione uma matéria.", "warning");
       return;
     }
-    if (!moduloSelecionado) {
-      showToast("Selecione um módulo.", "warning");
+    if (!moduloNome) {
+      showToast(cadastroLivre ? "Informe o módulo." : "Selecione um módulo.", "warning");
       return;
     }
-    if (!assuntoSelecionado) {
-      showToast("Selecione um assunto.", "warning");
+    if (!assuntoNome) {
+      showToast(cadastroLivre ? "Informe o assunto." : "Selecione um assunto.", "warning");
       return;
     }
     if (!enunciado.trim()) {
@@ -299,14 +308,18 @@ export default function BancoQuestoes() {
       return;
     }
 
+    const materiaQuestaoId = materiaSelecionada?.id ?? `manual-materia-${slugLocal(materiaNome)}`;
+    const moduloQuestaoId = moduloSelecionado?.id ?? `manual-modulo-${slugLocal(moduloNome)}`;
+    const assuntoQuestaoId = assuntoSelecionado?.id ?? `manual-assunto-${slugLocal(assuntoNome)}`;
+
     const novaQuestao: QuestaoBiblioteca = {
       id: crypto.randomUUID(),
-      materiaId: materiaSelecionada.id,
-      materia: materiaSelecionada.nome,
-      moduloId: moduloSelecionado.id,
-      modulo: moduloSelecionado.nome,
-      assuntoId: assuntoSelecionado.id,
-      assunto: assuntoSelecionado.nome,
+      materiaId: materiaQuestaoId,
+      materia: materiaNome,
+      moduloId: moduloQuestaoId,
+      modulo: moduloNome,
+      assuntoId: assuntoQuestaoId,
+      assunto: assuntoNome,
       banca,
       dificuldade,
       enunciado: enunciado.trim(),
@@ -325,7 +338,7 @@ export default function BancoQuestoes() {
 
     setBancoQuestoes((anteriores) => [novaQuestao, ...anteriores]);
     limparFormulario();
-    showToast("Questão adicionada à biblioteca.", "success");
+    showToast("Questão pessoal adicionada à sua biblioteca.", "success");
   }
 
   function excluirQuestao(id: string) {
@@ -398,6 +411,9 @@ export default function BancoQuestoes() {
     setMateriaId("");
     setModuloId("");
     setAssuntoId("");
+    setMateriaLivre("");
+    setModuloLivre("");
+    setAssuntoLivre("");
     setBanca("AOCP");
     setDificuldade("media");
     setEnunciado("");
@@ -610,53 +626,73 @@ export default function BancoQuestoes() {
         <div className="banco-card banco-cadastro-conteudo">
           <h2>Nova questão</h2>
 
-          <div className="banco-form-group">
-            <label>Matéria</label>
-            <select
-              value={materiaId}
-              onChange={(evento) => {
-                setMateriaId(evento.target.value);
-                setModuloId("");
-                setAssuntoId("");
-              }}
-            >
-              <option value="">Selecione uma matéria</option>
-              {materias.map((materia: Materia) => (
-                <option key={materia.id} value={materia.id}>{materia.nome}</option>
-              ))}
-            </select>
-          </div>
+          {cadastroLivre ? (
+            <>
+              <p className="banco-subtitle">Sua conta está sem edital carregado. A questão continuará pessoal; informe a classificação manualmente.</p>
+              <div className="banco-form-group">
+                <label>Matéria</label>
+                <input value={materiaLivre} onChange={(evento) => setMateriaLivre(evento.target.value)} placeholder="Ex.: Língua Portuguesa" />
+              </div>
+              <div className="banco-form-group">
+                <label>Módulo</label>
+                <input value={moduloLivre} onChange={(evento) => setModuloLivre(evento.target.value)} placeholder="Ex.: Morfologia" />
+              </div>
+              <div className="banco-form-group">
+                <label>Assunto</label>
+                <input value={assuntoLivre} onChange={(evento) => setAssuntoLivre(evento.target.value)} placeholder="Ex.: Substantivos" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="banco-form-group">
+                <label>Matéria</label>
+                <select
+                  value={materiaId}
+                  onChange={(evento) => {
+                    setMateriaId(evento.target.value);
+                    setModuloId("");
+                    setAssuntoId("");
+                  }}
+                >
+                  <option value="">Selecione uma matéria</option>
+                  {materias.map((materia: Materia) => (
+                    <option key={materia.id} value={materia.id}>{materia.nome}</option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="banco-form-group">
-            <label>Módulo</label>
-            <select
-              value={moduloId}
-              onChange={(evento) => {
-                setModuloId(evento.target.value);
-                setAssuntoId("");
-              }}
-              disabled={!materiaId}
-            >
-              <option value="">Selecione um módulo</option>
-              {modulosDisponiveis.map((modulo) => (
-                <option key={modulo.id} value={modulo.id}>{modulo.nome}</option>
-              ))}
-            </select>
-          </div>
+              <div className="banco-form-group">
+                <label>Módulo</label>
+                <select
+                  value={moduloId}
+                  onChange={(evento) => {
+                    setModuloId(evento.target.value);
+                    setAssuntoId("");
+                  }}
+                  disabled={!materiaId}
+                >
+                  <option value="">Selecione um módulo</option>
+                  {modulosDisponiveis.map((modulo) => (
+                    <option key={modulo.id} value={modulo.id}>{modulo.nome}</option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="banco-form-group">
-            <label>Assunto</label>
-            <select
-              value={assuntoId}
-              onChange={(evento) => setAssuntoId(evento.target.value)}
-              disabled={!moduloId}
-            >
-              <option value="">Selecione um assunto</option>
-              {moduloSelecionado?.assuntos.map((assunto: Assunto) => (
-                <option key={assunto.id} value={assunto.id}>{assunto.nome}</option>
-              ))}
-            </select>
-          </div>
+              <div className="banco-form-group">
+                <label>Assunto</label>
+                <select
+                  value={assuntoId}
+                  onChange={(evento) => setAssuntoId(evento.target.value)}
+                  disabled={!moduloId}
+                >
+                  <option value="">Selecione um assunto</option>
+                  {moduloSelecionado?.assuntos.map((assunto: Assunto) => (
+                    <option key={assunto.id} value={assunto.id}>{assunto.nome}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           <div className="banco-form-row">
             <div className="banco-form-group">
@@ -842,6 +878,10 @@ function normalizar(texto: string) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function slugLocal(texto: string) {
+  return normalizar(texto).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "geral";
 }
 
 function rotuloDificuldade(dificuldade: Dificuldade) {
