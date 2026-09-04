@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 
 import "./HistoricoSessoes.css";
 
+import MateriaisDoAssunto from "../../components/MateriaisDoAssunto/MateriaisDoAssunto";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 
@@ -646,6 +647,12 @@ export default function HistoricoSessoes() {
                           </p>
                         </div>
                       )}
+
+                      <MateriaisDoAssunto
+                        materia={sessao.materia}
+                        modulo={sessao.modulo}
+                        assunto={sessao.assunto}
+                      />
 
                       <div className="historico-sessao-acoes">
                         <button
