@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useApp } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
+import { useAdminStatus } from "../../hooks/useAdminStatus";
 import { calcularGamificacao } from "../../services/gamificacaoService";
 import { obterEstadoEconomia } from "../../services/economiaGamificacao";
 import {
@@ -28,6 +29,7 @@ export default function UserProfileMenu() {
     configuracoes,
   } = useApp();
   const { usuario, sair } = useAuth();
+  const { administrador } = useAdminStatus();
   const navigate = useNavigate();
   const location = useLocation();
   const raizRef = useRef<HTMLDivElement>(null);
@@ -206,9 +208,14 @@ export default function UserProfileMenu() {
 
           <div className="user-profile-links">
             <Link to="/perfil" role="menuitem">Meu Perfil</Link>
-            <Link to="/conquistas" role="menuitem">Conquistas</Link>
             <Link to="/ranking" role="menuitem">Ranking</Link>
+            <Link to="/conquistas" role="menuitem">Conquistas</Link>
+            <Link to="/loja" role="menuitem">Loja & Inventário</Link>
+            <Link to="/backup" role="menuitem">Backup e Segurança</Link>
             <Link to="/configuracoes" role="menuitem">Configurações</Link>
+            {administrador && (
+              <Link to="/admin" role="menuitem">Administração</Link>
+            )}
           </div>
 
           <button
