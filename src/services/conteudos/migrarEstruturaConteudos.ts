@@ -6,22 +6,31 @@ import type {
 
 import {
   criarIdModuloGeral,
+  ehAssuntoVisaoCurso,
+  ehModuloVisaoCurso,
   listarModulosDaMateria,
   NOME_MODULO_GERAL,
+  obterModuloOriginalDoAssuntoVisaoCurso,
+  obterOrigemDaAulaVisaoCurso,
 } from "./navegarConteudos";
+import { registrarMateriasPlanoRuntime } from "../../utils/planoMateriasRuntime";
 
 export function migrarMateriasParaModulos(
   valor: unknown
 ): Materia[] {
   if (!Array.isArray(valor)) {
+    registrarMateriasPlanoRuntime([]);
     return [];
   }
 
-  return valor
+  const materias = valor
     .map(migrarMateriaParaModulos)
     .filter((materia): materia is Materia =>
       Boolean(materia)
     );
+
+  registrarMateriasPlanoRuntime(materias);
+  return materias;
 }
 
 export function migrarMateriaParaModulos(
@@ -86,7 +95,30 @@ export function atualizarAssuntoNaArvore(
   atualizar: (assunto: Assunto) => Assunto,
   moduloId?: string
 ): Materia {
-  const modulos = listarModulosDaMateria(materia).map((modulo) => {
+  const modulosVisiveis = listarModulosDaMateria(materia);
+  const moduloVisivel = moduloId
+    ? modulosVisiveis.find((modulo) => modulo.id === moduloId)
+    : modulosVisiveis.find((modulo) =>
+        modulo.assuntos.some((assunto) => assunto.id === assuntoId)
+      );
+
+  if (
+    moduloVisivel &&
+    ehModuloVisaoCurso(moduloVisivel.id) &&
+    ehAssuntoVisaoCurso(assuntoId)
+  ) {
+    const assuntoVisivel = moduloVisivel.assuntos.find(
+      (assunto) => assunto.id === assuntoId
+    );
+    if (!assuntoVisivel) return materia;
+    return aplicarAtualizacaoDaVisaoCurso(
+      materia,
+      assuntoId,
+      atualizar(assuntoVisivel)
+    );
+  }
+
+  const modulos = modulosVisiveis.map((modulo) => {
     if (moduloId && modulo.id !== moduloId) {
       return modulo;
     }
@@ -109,6 +141,80 @@ export function atualizarAssuntoNaArvore(
     ...materia,
     modulos,
     assuntos,
+  };
+}
+
+function aplicarAtualizacaoDaVisaoCurso(
+  materia: Materia,
+  assuntoIdVisao: string,
+  assuntoAtualizado: Assunto
+): Materia {
+  const moduloOriginalId =
+    obterModuloOriginalDoAssuntoVisaoCurso(assuntoIdVisao);
+  if (!moduloOriginalId || !Array.isArray(materia.modulos)) {
+    return materia;
+  }
+
+  const modulos = materia.modulos.map((modulo) => {
+    if (modulo.id !== moduloOriginalId) return modulo;
+
+    return {
+      ...modulo,
+      assuntos: modulo.assuntos.map((assuntoOriginal) => {
+        const aulasDaEntrada = (assuntoAtualizado.aulas ?? [])
+          .map((aula) => ({
+            aula,
+            origem: obterOrigemDaAulaVisaoCurso(aula.id),
+          }))
+          .filter((item) =>
+            item.origem?.assuntoId === assuntoOriginal.id
+          );
+
+        if (aulasDaEntrada.length === 0) return assuntoOriginal;
+
+        const concluido = aulasDaEntrada.every(
+          ({ aula }) => aula.concluida
+        );
+        const concluidoEm = concluido
+          ? aulasDaEntrada
+              .map(({ aula }) => aula.concluidaEm)
+              .filter((valor): valor is string => Boolean(valor))
+              .sort()
+              .at(-1)
+          : undefined;
+
+        const aulas = (assuntoOriginal.aulas ?? []).map((aulaOriginal) => {
+          const atualizada = aulasDaEntrada.find(
+            ({ origem }) => origem?.aulaId === aulaOriginal.id
+          )?.aula;
+          return atualizada
+            ? {
+                ...aulaOriginal,
+                concluida: atualizada.concluida,
+                concluidaEm: atualizada.concluidaEm,
+              }
+            : aulaOriginal;
+        });
+
+        return {
+          ...assuntoOriginal,
+          concluido,
+          concluidoEm,
+          prioridade: assuntoAtualizado.prioridade ?? assuntoOriginal.prioridade,
+          aulas,
+          atualizadoEm:
+            assuntoAtualizado.atualizadoEm ?? assuntoOriginal.atualizadoEm,
+        };
+      }),
+    };
+  });
+
+  return {
+    ...materia,
+    modulos,
+    assuntos: deduplicarAssuntos(
+      modulos.flatMap((modulo) => modulo.assuntos)
+    ),
   };
 }
 
