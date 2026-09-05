@@ -1,0 +1,148 @@
+.primeiros-passos {
+  position: fixed;
+  right: 18px;
+  bottom: 76px;
+  z-index: 940;
+  width: min(420px, calc(100vw - 36px));
+  padding: 16px;
+  color: #eaf2ff;
+  border: 1px solid rgba(96, 165, 250, .34);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(18, 32, 57, .98), rgba(9, 20, 36, .98));
+  box-shadow: 0 22px 56px rgba(2, 6, 23, .38), inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+.primeiros-passos header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.primeiros-passos header span {
+  color: #67aaf7;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.primeiros-passos h2 {
+  margin: 4px 0 5px;
+  font-size: 20px;
+}
+
+.primeiros-passos p {
+  margin: 0;
+  color: #9eb0c8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.primeiros-passos-fechar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+  color: #a9bbd1;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  background: #0d1828;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.primeiros-passos ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin: 14px 0;
+  list-style: none;
+}
+
+.primeiros-passos li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 10px;
+  background: rgba(8, 19, 34, .72);
+}
+
+.primeiros-passos li strong {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #1f73df;
+  font-size: 10px;
+}
+
+.primeiros-passos li span {
+  color: #cbd8e8;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.primeiros-passos-acoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.primeiros-passos-acoes button {
+  min-height: 40px;
+  padding: 8px 10px;
+  color: #d8e5f5;
+  border: 1px solid #3a4c64;
+  border-radius: 9px;
+  background: #101d30;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primeiros-passos-acoes .primario {
+  grid-column: 1 / -1;
+  color: #fff;
+  border-color: rgba(255, 255, 255, .1);
+  background: linear-gradient(180deg, #3998ff, #176bd7);
+}
+
+.primeiros-passos button:focus-visible {
+  outline: 3px solid rgba(96, 165, 250, .45);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .primeiros-passos {
+    right: 10px;
+    left: 10px;
+    bottom: 64px;
+    width: auto;
+    padding: 14px;
+  }
+
+  .primeiros-passos ol {
+    grid-template-columns: 1fr;
+  }
+
+  .primeiros-passos-acoes {
+    grid-template-columns: 1fr;
+  }
+
+  .primeiros-passos-acoes .primario {
+    grid-column: auto;
+  }
+
+  .primeiros-passos-acoes button {
+    min-height: 44px;
+    font-size: 12px;
+  }
+}
