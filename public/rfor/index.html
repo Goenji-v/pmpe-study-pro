@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>R-FOR | Vendas Online</title>
+  <meta name="description" content="R-FOR — loja online de variedades." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="top-strip">R-FOR • ESTOQUE PRÓPRIO • CATÁLOGO DE VARIEDADES</div>
+  <header class="site-header">
+    <a class="brand" href="#loja" aria-label="R-FOR início"><span class="brand-mark">R</span><span><strong>R-FOR</strong><small>VENDAS ONLINE</small></span></a>
+    <div class="header-search"><input id="search" placeholder="Buscar produtos" /><button id="searchBtn">Buscar</button></div>
+    <nav><button class="link-btn" data-view="loja">Loja</button><button class="link-btn" data-view="pedido">Rastrear pedido</button><button class="cart-btn" id="cartBtn">Carrinho <b id="cartCount">0</b></button><button class="admin-link" data-view="admin">Administração</button></nav>
+  </header>
+
+  <main>
+    <section id="view-loja" class="view active">
+      <div class="hero">
+        <div><span class="eyebrow">NOVA LOJA • NOVAS ESCOLHAS</span><h1>SEU ESTILO.<br/>SUA ESCOLHA.<br/><em>A UM CLIQUE.</em></h1><p>Produtos selecionados para unir qualidade, confiança e praticidade no seu dia a dia.</p><button class="primary" id="shopNow">COMPRAR AGORA</button></div>
+        <div class="hero-card"><div class="hero-r">R</div><strong>R-FOR</strong><span>VARIEDADES • ESTOQUE • ENTREGA</span></div>
+      </div>
+      <div class="trust-grid">
+        <article><b>✓</b><span><strong>COMPRA SEGURA</strong><small>Seus dados protegidos</small></span></article>
+        <article><b>★</b><span><strong>PRODUTOS DE QUALIDADE</strong><small>Selecionados com cuidado</small></span></article>
+        <article><b>→</b><span><strong>ENVIO RÁPIDO</strong><small>Prazo informado na compra</small></span></article>
+        <article><b>♢</b><span><strong>GARANTIA E CONFIANÇA</strong><small>Atendimento R-FOR</small></span></article>
+      </div>
+      <section class="catalog" id="catalog"><div class="section-title"><div><span class="eyebrow">CATÁLOGO</span><h2>Produtos</h2></div><select id="category"><option value="">Todas as categorias</option></select></div><div id="products" class="product-grid"></div></section>
+    </section>
+
+    <section id="view-checkout" class="view">
+      <div class="page-head"><button class="back" data-view="loja">← Voltar</button><div><span class="eyebrow">FINALIZAÇÃO</span><h2>Checkout</h2></div></div>
+      <div class="checkout-grid">
+        <form id="checkoutForm" class="panel">
+          <h3>1. Seus dados</h3>
+          <div class="form-grid"><label>Nome completo<input name="name" required /></label><label>Telefone<input name="phone" required /></label><label>E-mail<input type="email" name="email" required /></label><label>CEP<input name="zip" /></label></div>
+          <h3>2. Entrega</h3>
+          <div class="shipping-options"><label><input type="radio" name="shippingMethod" value="delivery" checked /> Entrega</label><label><input type="radio" name="shippingMethod" value="pickup" /> Retirada no local</label></div>
+          <div id="addressFields" class="form-grid"><label>Endereço<input name="street" /></label><label>Número<input name="number" /></label><label>Bairro<input name="district" /></label><label>Complemento<input name="complement" /></label><label>Cidade<input name="city" /></label><label>UF<input name="state" maxlength="2" value="PE" /></label></div>
+          <h3>3. Pagamento</h3>
+          <p class="notice">Integração financeira ficará para a próxima etapa. O pedido será criado como <strong>Aguardando pagamento</strong> e o administrador poderá confirmar manualmente.</p>
+          <div class="shipping-options"><label><input type="radio" name="paymentMethod" value="pix" checked /> Pix</label><label><input type="radio" name="paymentMethod" value="card" /> Cartão</label></div>
+          <button class="primary wide" type="submit">CRIAR PEDIDO</button>
+        </form>
+        <aside class="panel sticky"><h3>Resumo</h3><div id="checkoutItems"></div><div class="totals"><span>Subtotal <b id="subtotal">R$ 0,00</b></span><span>Frete <b id="shipping">R$ 0,00</b></span><span class="grand">Total <b id="total">R$ 0,00</b></span></div></aside>
+      </div>
+    </section>
+
+    <section id="view-pedido" class="view">
+      <div class="page-head"><div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Rastrear pedido</h2></div></div>
+      <div class="track-box panel"><form id="trackForm"><input id="trackId" placeholder="Ex.: RF-001001" required /><button class="primary">BUSCAR</button></form><div id="trackResult"></div></div>
+    </section>
+
+    <section id="view-admin" class="view">
+      <div class="page-head"><div><span class="eyebrow">PAINEL R-FOR</span><h2>Pedidos e estoque</h2></div><button id="resetDemo" class="danger-outline">Resetar dados de teste</button></div>
+      <div class="demo-banner">MODO DE TESTE: os dados ficam neste navegador. Antes de vender de verdade, conectar Supabase/Auth.</div>
+      <div id="adminStats" class="stats"></div>
+      <div class="admin-grid"><section class="panel"><div class="panel-head"><h3>Pedidos</h3><select id="statusFilter"><option value="">Todos</option><option value="awaiting_payment">Aguardando pagamento</option><option value="paid">Pagos</option><option value="preparing">Preparando</option><option value="shipped">Enviados</option><option value="delivered">Entregues</option><option value="cancelled">Cancelados</option><option value="expired">Expirados</option></select></div><div id="ordersTable" class="orders"></div></section><section class="panel"><h3>Estoque</h3><div id="stockTable"></div></section></div>
+    </section>
+  </main>
+
+  <dialog id="cartDialog"><div class="dialog-head"><h3>Seu carrinho</h3><button id="closeCart">✕</button></div><div id="cartItems"></div><div class="totals"><span class="grand">Subtotal <b id="cartSubtotal">R$ 0,00</b></span></div><button id="checkoutBtn" class="primary wide">FINALIZAR COMPRA</button></dialog>
+  <div id="toast" class="toast"></div>
+  <footer><strong>R-FOR</strong><span>© 2026 R-FOR. Todos os direitos reservados.</span></footer>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
