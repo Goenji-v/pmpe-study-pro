@@ -23,6 +23,7 @@ export default function EconomiaGamificacaoBridge() {
     questoes,
     revisoes,
     simulados,
+    materias,
     missoesConcluidas,
     configuracoes,
     setConfiguracoes,
@@ -57,6 +58,7 @@ export default function EconomiaGamificacaoBridge() {
         questoes,
         revisoes,
         simulados,
+        materias,
         missoesConcluidas,
         configuracoes,
         nivelAtual: gamificacao.nivel,
@@ -66,6 +68,7 @@ export default function EconomiaGamificacaoBridge() {
       questoes,
       revisoes,
       simulados,
+      materias,
       missoesConcluidas,
       configuracoes,
       gamificacao.nivel,
@@ -83,7 +86,8 @@ export default function EconomiaGamificacaoBridge() {
     const hoje = chaveDataLocal(new Date());
     const marcadorAcesso = `acesso:${hoje}`;
     const migracao = migrarTitulosRetiradosDaLoja(economia);
-    const acessoRegistrado = migracao.estado.recompensasRecebidas.includes(marcadorAcesso);
+    const acessoRegistrado =
+      migracao.estado.recompensasRecebidas.includes(marcadorAcesso);
 
     if (!migracao.mudou && acessoRegistrado) return;
 
@@ -98,14 +102,19 @@ export default function EconomiaGamificacaoBridge() {
           atualizadoEm: new Date().toISOString(),
         };
 
-    setConfiguracoes((atuais) => ({
-      ...atuais,
-      economia: estadoFinal,
-    }) as ConfiguracoesComEconomia);
+    setConfiguracoes(
+      (atuais) =>
+        ({
+          ...atuais,
+          economia: estadoFinal,
+        }) as ConfiguracoesComEconomia
+    );
 
     if (migracao.moedasReembolsadas > 0 && !reembolsoAvisado.current) {
       reembolsoAvisado.current = true;
-      setAviso(`🪙 +${migracao.moedasReembolsadas} moedas reembolsadas por títulos retirados da Loja`);
+      setAviso(
+        `🪙 +${migracao.moedasReembolsadas} moedas reembolsadas por títulos retirados da Loja`
+      );
     }
   }, [economia, setConfiguracoes, statusNuvem]);
 
@@ -117,6 +126,9 @@ export default function EconomiaGamificacaoBridge() {
       .sort()
       .join("|");
     const total = pendentes.reduce((soma, item) => soma + item.moedas, 0);
+    const novasConquistas = pendentes.filter(
+      (item) => item.categoria === "conquista"
+    ).length;
 
     setConfiguracoes((atuais) => {
       const estadoAtual = obterEstadoEconomia(atuais);
@@ -135,7 +147,13 @@ export default function EconomiaGamificacaoBridge() {
 
     if (chaveLote && ultimoLoteAvisado.current !== chaveLote) {
       ultimoLoteAvisado.current = chaveLote;
-      setAviso(`🪙 +${total} moedas pelas suas conquistas`);
+      if (novasConquistas > 0) {
+        setAviso(
+          `🏆 ${novasConquistas} nova${novasConquistas > 1 ? "s" : ""} conquista${novasConquistas > 1 ? "s" : ""} · 🪙 +${total}`
+        );
+      } else {
+        setAviso(`🪙 +${total} moedas pelas suas conquistas`);
+      }
     }
   }, [
     pendentes,
@@ -220,7 +238,10 @@ export default function EconomiaGamificacaoBridge() {
               <span>moedas</span>
             </div>
 
-            <div className="economia-login-dias" aria-label="Progresso da sequência de login">
+            <div
+              className="economia-login-dias"
+              aria-label="Progresso da sequência de login"
+            >
               {Array.from({ length: 7 }, (_, indice) => {
                 const dia = indice + 1;
                 return (
