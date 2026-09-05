@@ -5,6 +5,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";
+import {
+  materiaTemCursoImportado,
+  moduloGerenciadoPorCurso,
+  prepararMateriaParaConteudos,
+} from "./estudosHierarquia";
 
 import type {
   Assunto,
@@ -72,7 +77,7 @@ export default function Estudos() {
   const [assuntosExpandidos, setAssuntosExpandidos] = useState<Record<string, boolean>>({});
 
   const materiasComModulos = useMemo(
-    () => materias.map(normalizarMateriaComModulos),
+    () => materias.map(prepararMateriaParaConteudos),
     [materias]
   );
 
@@ -236,6 +241,9 @@ export default function Estudos() {
       return showToast("Português usa a trilha oficial do curso e não aceita aulas extras.", "warning");
     }
     if (!modulo) return showToast("Selecione um módulo.", "warning");
+    if (moduloGerenciadoPorCurso(modulo)) {
+      return showToast("Esse módulo é gerenciado pelo curso importado. Use Meus Cursos para alterar a estrutura.", "warning");
+    }
     if (!nome) return showToast("Informe o nome do assunto.", "warning");
     if (modulo.assuntos.some((a) => normalizarTexto(a.nome) === normalizarTexto(nome))) {
       return showToast("Esse assunto já existe nesse módulo.", "warning");
@@ -427,6 +435,7 @@ export default function Estudos() {
 
       {materiasFiltradas.map((materia) => {
         const trilhaFixa = normalizarTexto(materia.nome) === "portugues";
+        const cursoImportado = materiaTemCursoImportado(materia);
         const todos = (materia.modulos ?? []).flatMap((m) => m.assuntos);
         const concluidos = todos.filter((a) => a.concluido).length;
         const progresso = calcularProgressoAssuntos(todos).percentual;
@@ -436,10 +445,11 @@ export default function Estudos() {
               <div><h2>{materia.nome}</h2><p>{concluidos} de {todos.length} assuntos concluídos · {progresso}% das aulas</p></div>
               <div className="conteudos-materia-acoes">
                 <strong>{progresso}%</strong>
+                {cursoImportado && <span className="conteudos-trilha-fixa">Curso importado</span>}
                 {trilhaFixa && (
                   <button type="button" className="conteudos-importar" onClick={() => abrirImportacao(materia)}>Importar progresso</button>
                 )}
-                {!trilhaFixa && (
+                {!trilhaFixa && !cursoImportado && (
                   <button type="button" className="conteudos-excluir" onClick={() => excluirMateria(materia)}>Excluir matéria</button>
                 )}
               </div>
@@ -448,6 +458,7 @@ export default function Estudos() {
 
             <div className="conteudos-modulos">
               {(materia.modulos ?? []).map((modulo) => {
+                const moduloCurso = moduloGerenciadoPorCurso(modulo);
                 const feitos = modulo.assuntos.filter((a) => a.concluido).length;
                 const pct = calcularProgressoAssuntos(modulo.assuntos).percentual;
                 const chaveModulo = `${materia.id}:${modulo.id}`;
@@ -469,8 +480,8 @@ export default function Estudos() {
                         </span>
                       </button>
                       <div className="conteudos-modulo-acoes">
-                        {trilhaFixa ? (
-                          <span className="conteudos-trilha-fixa">Trilha oficial</span>
+                        {trilhaFixa || moduloCurso ? (
+                          <span className="conteudos-trilha-fixa">{trilhaFixa ? "Trilha oficial" : "Curso importado"}</span>
                         ) : (
                           <>
                             <button type="button" onClick={() => renomearModulo(materia, modulo)}>Editar</button>
@@ -552,16 +563,18 @@ export default function Estudos() {
                               )}>🎥 Próxima aula</button>
                             )}
 
-                            <button
-                              type="button"
-                              onClick={() => setEditor({ materiaId: materia.id, moduloId: modulo.id, assuntoId: assunto.id })}
-                            >
-                              📝 Notas
-                            </button>
+                            {!moduloCurso && (
+                              <button
+                                type="button"
+                                onClick={() => setEditor({ materiaId: materia.id, moduloId: modulo.id, assuntoId: assunto.id })}
+                              >
+                                📝 Notas
+                              </button>
+                            )}
 
                             <button type="button" onClick={() => abrirIA(materia, modulo, assunto)}>🤖 IA</button>
 
-                            {!trilhaFixa && (materia.modulos ?? []).length > 1 && (
+                            {!trilhaFixa && !moduloCurso && (materia.modulos ?? []).length > 1 && (
                               <select
                                 className="conteudos-mover conteudos-mover-compacto"
                                 value={modulo.id}
@@ -574,7 +587,7 @@ export default function Estudos() {
                               </select>
                             )}
 
-                            {!trilhaFixa && (
+                            {!trilhaFixa && !moduloCurso && (
                               <button
                                 type="button"
                                 className="conteudos-excluir-compacto"
