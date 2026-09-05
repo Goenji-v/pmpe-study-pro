@@ -69,17 +69,35 @@ export async function selecionarDoCatalogoIA(
 export async function atualizarQuestoesAntesDoTreino(questoes: QuestaoIA[]) {
   if (questoes.length === 0) return [];
   const ids = [...new Set(questoes.map((q) => q.id).filter(ehUuid))];
+  if (ids.length === 0) return questoes;
+
+  const { data: authData } = await supabase.auth.getUser();
+  const usuarioId = authData.user?.id;
   const ativas: QuestaoIA[] = [];
+
   for (let inicio = 0; inicio < ids.length; inicio += 100) {
-    const { data, error } = await supabase.from("questoes_catalogo")
+    let consulta = supabase.from("questoes_catalogo")
       .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,norma,dispositivo,fingerprint")
       .in("id", ids.slice(inicio, inicio + 100))
-      .eq("origem", "ia")
-      .eq("status", "ativa");
+      .eq("origem", "ia");
+
+    consulta = usuarioId
+      ? consulta.or(
+          `status.eq.ativa,and(status.eq.pendente,criado_por.eq.${usuarioId})`
+        )
+      : consulta.eq("status", "ativa");
+
+    const { data, error } = await consulta;
     if (error) throw new Error("Não foi possível verificar a validade das questões. Conecte-se e tente novamente.");
     ativas.push(...((data ?? []) as LinhaCatalogoIA[]).filter(ehQuestaoValida).map(converterLinha));
   }
-  return reconciliarQuestoesComCatalogo(questoes, ativas);
+
+  const idsCatalogados = new Set(ids);
+  const locaisSemCatalogo = questoes.filter((q) => !idsCatalogados.has(q.id));
+  return [
+    ...reconciliarQuestoesComCatalogo(questoes.filter((q) => idsCatalogados.has(q.id)), ativas),
+    ...locaisSemCatalogo,
+  ];
 }
 
 export async function salvarQuestoesGeradasNoCatalogo(
