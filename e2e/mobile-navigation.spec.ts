@@ -34,6 +34,18 @@ async function entrar(page: Page) {
   await fecharRecompensaDiariaSeAberta(page);
 }
 
+async function verificarSemOverflowHorizontal(page: Page) {
+  const dimensoes = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    pagina: Math.max(
+      document.documentElement.scrollWidth,
+      document.body.scrollWidth
+    ),
+  }));
+
+  expect(dimensoes.pagina).toBeLessThanOrEqual(dimensoes.viewport + 2);
+}
+
 async function navegarPeloMenu(
   page: Page,
   grupo: string,
@@ -59,15 +71,26 @@ async function navegarPeloMenu(
   await expect(page.locator(".sidebar-mobile-overlay")).toHaveCount(0);
   await expect(page.locator("body")).not.toHaveClass(/menu-mobile-aberto/);
 
-  const dimensoes = await page.evaluate(() => ({
-    viewport: window.innerWidth,
-    pagina: Math.max(
-      document.documentElement.scrollWidth,
-      document.body.scrollWidth
-    ),
-  }));
+  await verificarSemOverflowHorizontal(page);
+}
 
-  expect(dimensoes.pagina).toBeLessThanOrEqual(dimensoes.viewport + 2);
+async function navegarPeloPerfil(
+  page: Page,
+  item: string,
+  destino: RegExp
+) {
+  const trigger = page.locator(".user-profile-trigger");
+
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await expect(page.locator(".user-profile-dropdown")).toBeVisible();
+  await page.getByRole("link", { name: item, exact: true }).click();
+
+  await expect(page).toHaveURL(destino, { timeout: 15_000 });
+  await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".user-profile-dropdown")).toHaveCount(0);
+
+  await verificarSemOverflowHorizontal(page);
 }
 
 test.describe("navegação mobile autenticada", () => {
@@ -95,9 +118,8 @@ test.describe("navegação mobile autenticada", () => {
       /\/simulados(?:$|\?)/
     );
 
-    await navegarPeloMenu(
+    await navegarPeloPerfil(
       page,
-      "Sistema",
       "Configurações",
       /\/configuracoes(?:$|\?)/
     );
