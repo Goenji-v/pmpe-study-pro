@@ -1,0 +1,1 @@
+R-FOR preview estático. Banco de dados será conectado a um projeto Supabase separado do PMPE.
