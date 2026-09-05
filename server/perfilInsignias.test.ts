@@ -6,15 +6,20 @@ import {
   alternarInsigniaPerfil,
   LIMITE_INSIGNIAS_PERFIL,
   normalizarInsigniasPerfil,
+  obterInsigniaDestaque,
 } from "../src/services/perfilInsignias";
 
-function insignia(id: string, desbloqueada = true): ConquistaPermanente {
+function insignia(
+  id: string,
+  desbloqueada = true,
+  raridade: ConquistaPermanente["raridade"] = "bronze"
+): ConquistaPermanente {
   return {
     id,
     icone: "🏅",
     titulo: id,
     descricao: id,
-    raridade: "bronze",
+    raridade,
     categoria: "inicio",
     moedas: 5,
     desbloqueada,
@@ -25,10 +30,10 @@ function insignia(id: string, desbloqueada = true): ConquistaPermanente {
 
 const conquistas = [
   insignia("a"),
-  insignia("b"),
-  insignia("c"),
-  insignia("d"),
-  insignia("bloqueada", false),
+  insignia("b", true, "ouro"),
+  insignia("c", true, "prata"),
+  insignia("d", true, "lendaria"),
+  insignia("bloqueada", false, "lendaria"),
 ];
 
 test("perfil aceita no máximo três insígnias desbloqueadas", () => {
@@ -91,4 +96,14 @@ test("normalização remove duplicadas, bloqueadas e ids desconhecidos", () => {
   );
 
   assert.deepEqual(resultado, ["a", "b", "c"]);
+});
+
+test("header destaca a insígnia equipada de maior raridade", () => {
+  const destaque = obterInsigniaDestaque(["a", "b", "d"], conquistas);
+  assert.equal(destaque?.id, "d");
+});
+
+test("insígnia bloqueada nunca vira destaque", () => {
+  const destaque = obterInsigniaDestaque(["bloqueada", "b"], conquistas);
+  assert.equal(destaque?.id, "b");
 });

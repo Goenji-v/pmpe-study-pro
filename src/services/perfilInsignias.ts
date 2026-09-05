@@ -32,6 +32,27 @@ export function normalizarInsigniasPerfil(
     .slice(0, Math.max(0, limite));
 }
 
+export function obterInsigniaDestaque(
+  ids: string[] | undefined,
+  conquistas: ConquistaPermanente[]
+) {
+  const pesos = {
+    bronze: 1,
+    prata: 2,
+    ouro: 3,
+    lendaria: 4,
+  } as const;
+
+  const equipadas = normalizarInsigniasPerfil(ids, conquistas)
+    .map((id) => conquistas.find((item) => item.id === id))
+    .filter((item): item is ConquistaPermanente => Boolean(item));
+
+  return equipadas.reduce<ConquistaPermanente | undefined>((melhor, atual) => {
+    if (!melhor) return atual;
+    return pesos[atual.raridade] > pesos[melhor.raridade] ? atual : melhor;
+  }, undefined);
+}
+
 export function alternarInsigniaPerfil(params: {
   atuais: string[] | undefined;
   insigniaId: string;
