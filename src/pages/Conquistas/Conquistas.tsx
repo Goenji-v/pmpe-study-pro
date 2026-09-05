@@ -15,6 +15,13 @@ import {
   type CategoriaConquistaPermanente,
   type RaridadeConquistaPermanente,
 } from "../../services/conquistasPermanentes";
+import {
+  alternarInsigniaPerfil,
+  LIMITE_INSIGNIAS_PERFIL,
+  normalizarInsigniasPerfil,
+  obterInsigniasConfiguradas,
+  type ConfiguracoesComPerfil,
+} from "../../services/perfilInsignias";
 import "./Conquistas.css";
 
 type FiltroCategoria = "todas" | CategoriaConquistaPermanente;
@@ -95,6 +102,15 @@ export default function Conquistas() {
     ]
   );
 
+  const idsEquipadas = useMemo(
+    () =>
+      normalizarInsigniasPerfil(
+        obterInsigniasConfiguradas(configuracoes),
+        conquistas
+      ),
+    [configuracoes, conquistas]
+  );
+
   const conquistasFiltradas = useMemo(
     () =>
       filtro === "todas"
@@ -136,6 +152,40 @@ export default function Conquistas() {
       return { ...atuais, economia: proximo } as ConfiguracoesComEconomia;
     });
     showToast("Título padrão do nível restaurado.", "info");
+  }
+
+  function alternarInsignia(insigniaId: string) {
+    const resultado = alternarInsigniaPerfil({
+      atuais: idsEquipadas,
+      insigniaId,
+      conquistas,
+    });
+
+    if (!resultado.alterou) {
+      if (resultado.motivo === "bloqueada") {
+        showToast("Essa insígnia ainda não foi conquistada.", "warning");
+      } else if (resultado.motivo === "limite") {
+        showToast(
+          `O perfil exibe no máximo ${LIMITE_INSIGNIAS_PERFIL} insígnias. Remova uma antes de adicionar outra.`,
+          "warning"
+        );
+      }
+      return;
+    }
+
+    setConfiguracoes((atuais) => ({
+      ...atuais,
+      perfil: {
+        ...((atuais as ConfiguracoesComPerfil).perfil ?? {}),
+        insigniasEquipadas: resultado.ids,
+      },
+    }) as ConfiguracoesComPerfil);
+
+    showToast(
+      resultado.motivo === "adicionada"
+        ? "Insígnia adicionada ao seu perfil."
+        : "Insígnia removida do seu perfil."
+    );
   }
 
   return (
@@ -226,8 +276,11 @@ export default function Conquistas() {
           <span>MARCOS PERMANENTES</span>
           <h2>{desbloqueadas}/{conquistas.length} conquistas</h2>
           <p>
-            Uma vez desbloqueado, o marco fica no seu histórico. Cada conquista também entrega moedas uma única vez.
+            Uma vez desbloqueado, o marco fica no seu histórico. Cada conquista também entrega moedas uma única vez e pode virar uma insígnia do perfil.
           </p>
+        </div>
+        <div className="conquistas-perfil-resumo">
+          {idsEquipadas.length}/{LIMITE_INSIGNIAS_PERFIL} no perfil
         </div>
       </section>
 
@@ -245,35 +298,47 @@ export default function Conquistas() {
       </nav>
 
       <div className="conquistas-grid">
-        {conquistasFiltradas.map((conquista) => (
-          <article
-            key={conquista.id}
-            className={`conquista-card conquista-marco raridade-marco-${conquista.raridade} ${conquista.desbloqueada ? "ativa" : "bloqueada"}`}
-          >
-            <div className="conquista-icone">{conquista.icone}</div>
-            <div className="conquista-info">
-              <div className="conquista-titulo-topo">
-                <span>
-                  {conquista.desbloqueada ? "DESBLOQUEADA" : "EM PROGRESSO"}
-                </span>
-                <em
-                  className={`conquista-raridade raridade-marco-${conquista.raridade}`}
-                >
-                  {nomeRaridadeMarco(conquista.raridade)}
-                </em>
+        {conquistasFiltradas.map((conquista) => {
+          const exibindoNoPerfil = idsEquipadas.includes(conquista.id);
+          return (
+            <article
+              key={conquista.id}
+              className={`conquista-card conquista-marco raridade-marco-${conquista.raridade} ${conquista.desbloqueada ? "ativa" : "bloqueada"} ${exibindoNoPerfil ? "insignia-equipada" : ""}`}
+            >
+              <div className="conquista-icone">{conquista.icone}</div>
+              <div className="conquista-info">
+                <div className="conquista-titulo-topo">
+                  <span>
+                    {conquista.desbloqueada ? "DESBLOQUEADA" : "EM PROGRESSO"}
+                  </span>
+                  <em
+                    className={`conquista-raridade raridade-marco-${conquista.raridade}`}
+                  >
+                    {nomeRaridadeMarco(conquista.raridade)}
+                  </em>
+                </div>
+                <h2>{conquista.titulo}</h2>
+                <p>{conquista.descricao}</p>
+                <div className="conquista-barra">
+                  <div style={{ width: `${conquista.progresso}%` }} />
+                </div>
+                <div className="conquista-rodape">
+                  <small>{conquista.atual}</small>
+                  <strong>🪙 +{conquista.moedas}</strong>
+                </div>
+                {conquista.desbloqueada && (
+                  <button
+                    type="button"
+                    className="conquista-perfil-botao"
+                    onClick={() => alternarInsignia(conquista.id)}
+                  >
+                    {exibindoNoPerfil ? "✓ Exibindo no perfil" : "Exibir como insígnia"}
+                  </button>
+                )}
               </div>
-              <h2>{conquista.titulo}</h2>
-              <p>{conquista.descricao}</p>
-              <div className="conquista-barra">
-                <div style={{ width: `${conquista.progresso}%` }} />
-              </div>
-              <div className="conquista-rodape">
-                <small>{conquista.atual}</small>
-                <strong>🪙 +{conquista.moedas}</strong>
-              </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </section>
   );
