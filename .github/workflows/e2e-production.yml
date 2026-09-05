@@ -46,6 +46,16 @@ jobs:
       - name: Fluxo autenticado crítico
         if: steps.conta.outputs.disponivel == 'true'
         run: npm run e2e:auth
+      - name: Preservar diagnóstico Playwright em falha
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-production-diagnostico-${{ github.run_number }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Publicar diagnóstico no resumo
         if: always()
         shell: bash
