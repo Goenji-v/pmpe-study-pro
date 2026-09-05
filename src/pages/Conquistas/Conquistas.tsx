@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -10,16 +10,25 @@ import {
   calcularTitulosConquista,
   type RaridadeConquista,
 } from "../../services/conquistasTitulos";
+import {
+  calcularConquistasPermanentes,
+  type CategoriaConquistaPermanente,
+  type RaridadeConquistaPermanente,
+} from "../../services/conquistasPermanentes";
 import "./Conquistas.css";
 
-type Conquista = {
-  icone: string;
-  titulo: string;
-  descricao: string;
-  desbloqueada: boolean;
-  progresso: number;
-  atual: string;
-};
+type FiltroCategoria = "todas" | CategoriaConquistaPermanente;
+
+const FILTROS: Array<{ id: FiltroCategoria; label: string }> = [
+  { id: "todas", label: "Todas" },
+  { id: "questoes", label: "Questões" },
+  { id: "foco", label: "Foco" },
+  { id: "constancia", label: "Constância" },
+  { id: "revisao", label: "Revisões" },
+  { id: "simulado", label: "Simulados" },
+  { id: "missao", label: "Missões" },
+  { id: "dominio", label: "Domínio" },
+];
 
 export default function Conquistas() {
   const {
@@ -33,6 +42,7 @@ export default function Conquistas() {
     setConfiguracoes,
   } = useApp();
   const { showToast } = useToast();
+  const [filtro, setFiltro] = useState<FiltroCategoria>("todas");
 
   const economia = useMemo(
     () => obterEstadoEconomia(configuracoes),
@@ -61,43 +71,43 @@ export default function Conquistas() {
     ]
   );
 
-  const dados = useMemo(() => {
-    const totalQuestoes = questoes.reduce((t, q) => t + q.certas + q.erradas, 0);
-    const totalCertas = questoes.reduce((t, q) => t + q.certas, 0);
-    const minutos = sessoes.reduce((t, s) => t + s.minutos, 0);
-    const revisoesConcluidas = revisoes.filter((r) => r.concluida).length;
-    const assuntos = materias.flatMap((m) =>
-      m.modulos?.length ? m.modulos.flatMap((mod) => mod.assuntos) : m.assuntos
-    );
-    const assuntosConcluidos = assuntos.filter((a) => a.concluido).length;
-    const aproveitamento = totalQuestoes
-      ? Math.round((totalCertas / totalQuestoes) * 100)
-      : 0;
+  const conquistas = useMemo(
+    () =>
+      calcularConquistasPermanentes({
+        questoes,
+        sessoes,
+        revisoes,
+        simulados,
+        materias,
+        missoesConcluidas,
+        configuracoes,
+        recompensasRecebidas: economia.recompensasRecebidas,
+      }),
+    [
+      questoes,
+      sessoes,
+      revisoes,
+      simulados,
+      materias,
+      missoesConcluidas,
+      configuracoes,
+      economia.recompensasRecebidas,
+    ]
+  );
 
-    return {
-      totalQuestoes,
-      minutos,
-      revisoesConcluidas,
-      assuntosConcluidos,
-      simulados: simulados.length,
-      aproveitamento,
-    };
-  }, [questoes, sessoes, revisoes, simulados, materias]);
+  const conquistasFiltradas = useMemo(
+    () =>
+      filtro === "todas"
+        ? conquistas
+        : conquistas.filter((item) => item.categoria === filtro),
+    [conquistas, filtro]
+  );
 
-  const conquistas: Conquista[] = [
-    criar("🎯", "Primeiros passos", "Resolva 100 questões", dados.totalQuestoes, 100, `${dados.totalQuestoes}/100`),
-    criar("⚡", "Ritmo forte", "Resolva 500 questões", dados.totalQuestoes, 500, `${dados.totalQuestoes}/500`),
-    criar("🏹", "Mil questões", "Alcance 1.000 questões resolvidas", dados.totalQuestoes, 1000, `${dados.totalQuestoes}/1000`),
-    criar("⏱️", "10 horas de foco", "Acumule 10 horas de estudo", dados.minutos, 600, `${Math.floor(dados.minutos / 60)}h/10h`),
-    criar("🔥", "50 horas de foco", "Acumule 50 horas de estudo", dados.minutos, 3000, `${Math.floor(dados.minutos / 60)}h/50h`),
-    criar("🔁", "Revisor", "Conclua 30 revisões", dados.revisoesConcluidas, 30, `${dados.revisoesConcluidas}/30`),
-    criar("📚", "Avanço no edital", "Conclua 25 assuntos", dados.assuntosConcluidos, 25, `${dados.assuntosConcluidos}/25`),
-    criar("🧪", "Simulador", "Finalize 10 simulados", dados.simulados, 10, `${dados.simulados}/10`),
-    criar("🏆", "Alta precisão", "Alcance 80% de aproveitamento geral", dados.aproveitamento, 80, `${dados.aproveitamento}%/80%`),
-  ];
-
-  const desbloqueadas = conquistas.filter((c) => c.desbloqueada).length;
+  const desbloqueadas = conquistas.filter((item) => item.desbloqueada).length;
   const titulosDesbloqueados = titulos.filter((titulo) => titulo.desbloqueada).length;
+  const moedasConquistadas = conquistas
+    .filter((item) => item.desbloqueada)
+    .reduce((total, item) => total + item.moedas, 0);
 
   function equiparTitulo(id: string, nome: string) {
     const titulo = titulos.find((item) => item.id === id);
@@ -108,7 +118,11 @@ export default function Conquistas() {
 
     setConfiguracoes((atuais) => {
       const atual = obterEstadoEconomia(atuais);
-      const proximo = { ...atual, tituloEquipado: id, atualizadoEm: new Date().toISOString() };
+      const proximo = {
+        ...atual,
+        tituloEquipado: id,
+        atualizadoEm: new Date().toISOString(),
+      };
       return { ...atuais, economia: proximo } as ConfiguracoesComEconomia;
     });
     showToast(`${nome} agora é o seu título ativo.`);
@@ -130,11 +144,19 @@ export default function Conquistas() {
         <div>
           <span>PROGRESSO</span>
           <h1>Conquistas</h1>
-          <p>Marcos e títulos desbloqueados pelo desempenho real no Study Pro.</p>
+          <p>
+            Marcos permanentes, recompensas e títulos desbloqueados pelo seu desempenho real.
+          </p>
         </div>
-        <div className="conquistas-contador">
-          <strong>{desbloqueadas + titulosDesbloqueados}</strong>
-          <span>desbloqueadas</span>
+        <div className="conquistas-resumo">
+          <div className="conquistas-contador">
+            <strong>{desbloqueadas + titulosDesbloqueados}</strong>
+            <span>desbloqueadas</span>
+          </div>
+          <div className="conquistas-contador conquistas-contador-moedas">
+            <strong>{moedasConquistadas}</strong>
+            <span>moedas em marcos</span>
+          </div>
         </div>
       </header>
 
@@ -147,13 +169,16 @@ export default function Conquistas() {
           </p>
         </div>
         {economia.tituloEquipado && (
-          <button type="button" onClick={usarTituloPadrao}>Usar título padrão</button>
+          <button type="button" onClick={usarTituloPadrao}>
+            Usar título padrão
+          </button>
         )}
       </section>
 
       <div className="conquistas-grid conquistas-grid-titulos">
         {titulos.map((titulo) => {
-          const equipado = economia.tituloEquipado === titulo.id && titulo.desbloqueada;
+          const equipado =
+            economia.tituloEquipado === titulo.id && titulo.desbloqueada;
           return (
             <article
               key={titulo.id}
@@ -162,17 +187,23 @@ export default function Conquistas() {
               <div className="conquista-icone">{titulo.icone}</div>
               <div className="conquista-info">
                 <div className="conquista-titulo-topo">
-                  <span>{titulo.desbloqueada ? "TÍTULO DESBLOQUEADO" : "EM PROGRESSO"}</span>
+                  <span>
+                    {titulo.desbloqueada ? "TÍTULO DESBLOQUEADO" : "EM PROGRESSO"}
+                  </span>
                   <em className={`conquista-raridade raridade-${titulo.raridade}`}>
                     {nomeRaridade(titulo.raridade)}
                   </em>
                 </div>
                 <h2>{titulo.nome}</h2>
                 <p>{titulo.descricao}</p>
-                <div className="conquista-barra"><div style={{ width: `${titulo.progresso}%` }} /></div>
+                <div className="conquista-barra">
+                  <div style={{ width: `${titulo.progresso}%` }} />
+                </div>
                 <small>{titulo.atual}</small>
                 {titulo.detalheValidade && (
-                  <small className="conquista-validade">{titulo.detalheValidade}</small>
+                  <small className="conquista-validade">
+                    {titulo.detalheValidade}
+                  </small>
                 )}
                 {titulo.desbloqueada && (
                   <button
@@ -193,20 +224,53 @@ export default function Conquistas() {
       <section className="conquistas-titulos-cabecalho conquistas-marcos-cabecalho">
         <div>
           <span>MARCOS PERMANENTES</span>
-          <h2>Seu histórico de progresso</h2>
+          <h2>{desbloqueadas}/{conquistas.length} conquistas</h2>
+          <p>
+            Uma vez desbloqueado, o marco fica no seu histórico. Cada conquista também entrega moedas uma única vez.
+          </p>
         </div>
       </section>
 
+      <nav className="conquistas-filtros" aria-label="Filtrar conquistas">
+        {FILTROS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={filtro === item.id ? "ativo" : ""}
+            onClick={() => setFiltro(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
       <div className="conquistas-grid">
-        {conquistas.map((c) => (
-          <article key={c.titulo} className={`conquista-card ${c.desbloqueada ? "ativa" : "bloqueada"}`}>
-            <div className="conquista-icone">{c.icone}</div>
+        {conquistasFiltradas.map((conquista) => (
+          <article
+            key={conquista.id}
+            className={`conquista-card conquista-marco raridade-marco-${conquista.raridade} ${conquista.desbloqueada ? "ativa" : "bloqueada"}`}
+          >
+            <div className="conquista-icone">{conquista.icone}</div>
             <div className="conquista-info">
-              <span>{c.desbloqueada ? "DESBLOQUEADA" : "EM PROGRESSO"}</span>
-              <h2>{c.titulo}</h2>
-              <p>{c.descricao}</p>
-              <div className="conquista-barra"><div style={{ width: `${c.progresso}%` }} /></div>
-              <small>{c.atual}</small>
+              <div className="conquista-titulo-topo">
+                <span>
+                  {conquista.desbloqueada ? "DESBLOQUEADA" : "EM PROGRESSO"}
+                </span>
+                <em
+                  className={`conquista-raridade raridade-marco-${conquista.raridade}`}
+                >
+                  {nomeRaridadeMarco(conquista.raridade)}
+                </em>
+              </div>
+              <h2>{conquista.titulo}</h2>
+              <p>{conquista.descricao}</p>
+              <div className="conquista-barra">
+                <div style={{ width: `${conquista.progresso}%` }} />
+              </div>
+              <div className="conquista-rodape">
+                <small>{conquista.atual}</small>
+                <strong>🪙 +{conquista.moedas}</strong>
+              </div>
             </div>
           </article>
         ))}
@@ -215,27 +279,16 @@ export default function Conquistas() {
   );
 }
 
-function criar(
-  icone: string,
-  titulo: string,
-  descricao: string,
-  valor: number,
-  meta: number,
-  atual: string
-): Conquista {
-  return {
-    icone,
-    titulo,
-    descricao,
-    desbloqueada: valor >= meta,
-    progresso: Math.min(100, Math.round((valor / meta) * 100)),
-    atual,
-  };
-}
-
 function nomeRaridade(raridade: RaridadeConquista) {
   if (raridade === "lendario") return "Lendária";
   if (raridade === "epico") return "Épica";
   if (raridade === "raro") return "Rara";
   return "Comum";
+}
+
+function nomeRaridadeMarco(raridade: RaridadeConquistaPermanente) {
+  if (raridade === "lendaria") return "Lendária";
+  if (raridade === "ouro") return "Ouro";
+  if (raridade === "prata") return "Prata";
+  return "Bronze";
 }
