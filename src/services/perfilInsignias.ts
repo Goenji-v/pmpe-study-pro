@@ -1,6 +1,22 @@
+import type { ConfiguracoesApp } from "../types";
 import type { ConquistaPermanente } from "./conquistasPermanentes";
 
 export const LIMITE_INSIGNIAS_PERFIL = 3;
+
+export type PerfilGamificado = {
+  insigniasEquipadas?: string[];
+};
+
+export type ConfiguracoesComPerfil = ConfiguracoesApp & {
+  perfil?: PerfilGamificado;
+};
+
+export function obterInsigniasConfiguradas(configuracoes: ConfiguracoesApp) {
+  const perfil = (configuracoes as ConfiguracoesComPerfil).perfil;
+  return Array.isArray(perfil?.insigniasEquipadas)
+    ? perfil.insigniasEquipadas.filter(Boolean)
+    : [];
+}
 
 export function normalizarInsigniasPerfil(
   ids: string[] | undefined,
