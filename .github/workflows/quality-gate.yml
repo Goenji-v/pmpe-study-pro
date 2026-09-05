@@ -45,10 +45,10 @@ jobs:
           done
           cat /tmp/pmpe-vite.log
           exit 1
-      - name: Smoke real no navegador
+      - name: Smoke real do build no navegador
         env:
           E2E_BASE_URL: http://127.0.0.1:4173
-        run: npx playwright test e2e/smoke.spec.ts --project=desktop-chrome
+        run: npx playwright test e2e/local-build.spec.ts --project=desktop-chrome
       - name: Publicar diagnóstico Playwright em falha
         if: failure()
         uses: actions/upload-artifact@v6
