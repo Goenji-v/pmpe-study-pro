@@ -5,7 +5,7 @@ import {
 } from "../../context/AppContext";
 
 import CloudStatus from "../CloudStatus/CloudStatus";
-import LogoutButton from "../LogoutButton/LogoutButton";
+import UserProfileMenu from "../UserProfileMenu/UserProfileMenu";
 
 export default function Header() {
   const {
@@ -26,8 +26,7 @@ export default function Header() {
 
       <div className="header-acoes">
         <CloudStatus />
-
-        <LogoutButton />
+        <UserProfileMenu />
       </div>
     </header>
   );
