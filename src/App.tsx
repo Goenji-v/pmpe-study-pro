@@ -58,6 +58,7 @@ const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Ranking = lazy(() => import("./pages/Ranking/Ranking"));
 const Admin = lazy(() => import("./pages/Admin/Admin"));
 const Conquistas = lazy(() => import("./pages/Conquistas/Conquistas"));
+const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
 const DashboardGamificacaoSpotlight = lazy(
   () => import("./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight")
 );
@@ -136,6 +137,7 @@ function LayoutProtegido() {
                       <Route path="/desempenho" element={<CentralDesempenho />} />
                       <Route path="/historico-sessoes" element={<HistoricoSessoes />} />
                       <Route path="/estatisticas-sessoes" element={<EstatisticasSessoes />} />
+                      <Route path="/perfil" element={<Perfil />} />
                       <Route path="/ranking" element={<Ranking />} />
                       <Route path="/conquistas" element={<Conquistas />} />
                       <Route path="/loja" element={<Loja />} />

@@ -70,6 +70,7 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/estatisticas",
   ],
   sistema: [
+    "/perfil",
     "/loja",
     "/conquistas",
     "/ranking",
@@ -229,6 +230,7 @@ export default function Sidebar() {
             aberto={grupoAberto === "sistema"}
             onToggle={alternarGrupo}
           >
+            <ItemMenu to="/perfil" texto="Meu Perfil" />
             <ItemMenu to="/ranking" texto="Ranking" />
             <ItemMenu to="/conquistas" texto="Conquistas" />
             <ItemMenu to="/loja" texto="Loja & Inventário" />
