@@ -24,7 +24,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { CronometroProvider } from "./context/CronometroContext";
 import { AuthProvider } from "./context/AuthContext";
 
-const PlanoEditalGateway = lazy(() => import("./pages/PlanoEdital/PlanoEditalGateway"));
+const PlanoEditalGateway = lazy(() => import("./pages/PlanoEdital/PlanoEditalGatewayCursos"));
 const MeuEdital = lazy(() => import("./pages/MeuEdital/MeuEdital"));
 const Cursos = lazy(() => import("./pages/Cursos/Cursos"));
 const Loja = lazy(() => import("./pages/Loja/Loja"));
