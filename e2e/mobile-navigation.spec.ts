@@ -84,7 +84,7 @@ async function navegarPeloPerfil(
   await expect(trigger).toBeVisible();
   await trigger.click();
   await expect(page.locator(".user-profile-dropdown")).toBeVisible();
-  await page.getByRole("link", { name: item, exact: true }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
 
   await expect(page).toHaveURL(destino, { timeout: 15_000 });
   await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
