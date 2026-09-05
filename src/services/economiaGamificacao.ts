@@ -1,11 +1,19 @@
 import type {
   ConfiguracoesApp,
+  Materia,
   RegistroQuestao,
   Revisao,
   SessaoEstudo,
   Simulado,
 } from "../types";
-import { calcularMetricasConsolidadas, resumirSimulado } from "../utils/metricasConsolidadas";
+import {
+  calcularMetricasConsolidadas,
+  resumirSimulado,
+} from "../utils/metricasConsolidadas";
+import {
+  calcularConquistasPermanentes,
+  idRecompensaConquista,
+} from "./conquistasPermanentes";
 
 export type CompraEconomia = {
   id: string;
@@ -45,7 +53,8 @@ export type RecompensaMoedas = {
     | "sequencia"
     | "nivel"
     | "redacao"
-    | "login";
+    | "login"
+    | "conquista";
 };
 
 export type RecompensaLogin = RecompensaMoedas & {
@@ -58,6 +67,7 @@ type EntradaEconomia = {
   questoes: RegistroQuestao[];
   revisoes: Revisao[];
   simulados: Simulado[];
+  materias?: Materia[];
   missoesConcluidas: string[];
   configuracoes: ConfiguracoesApp;
   nivelAtual: number;
@@ -76,7 +86,10 @@ export function obterEstadoEconomia(
       ? [...new Set(economia.recompensasRecebidas.filter(Boolean))]
       : [],
     ultimoLoginResgatado: economia?.ultimoLoginResgatado,
-    sequenciaLoginAtual: Math.max(0, Math.floor(Number(economia?.sequenciaLoginAtual) || 0)),
+    sequenciaLoginAtual: Math.max(
+      0,
+      Math.floor(Number(economia?.sequenciaLoginAtual) || 0)
+    ),
     inventario: Array.isArray(economia?.inventario)
       ? [...new Set(economia.inventario.filter(Boolean))]
       : [],
@@ -155,8 +168,14 @@ export function listarRecompensasConquistadas(
     });
 
   const dias = listarDiasComAtividade(entrada);
-  const metaMinutos = Math.max(30, Math.floor(Number(entrada.configuracoes.metaMinutosDiaria) || 0));
-  const metaQuestoes = Math.max(10, Math.floor(Number(entrada.configuracoes.metaQuestoesDiaria) || 0));
+  const metaMinutos = Math.max(
+    30,
+    Math.floor(Number(entrada.configuracoes.metaMinutosDiaria) || 0)
+  );
+  const metaQuestoes = Math.max(
+    10,
+    Math.floor(Number(entrada.configuracoes.metaQuestoesDiaria) || 0)
+  );
 
   dias.forEach(({ data, minutos, questoes }) => {
     if (questoes >= 20) {
@@ -230,6 +249,28 @@ export function listarRecompensasConquistadas(
     });
   }
 
+  const economia = obterEstadoEconomia(entrada.configuracoes);
+  calcularConquistasPermanentes({
+    sessoes: entrada.sessoes,
+    questoes: entrada.questoes,
+    revisoes: entrada.revisoes,
+    simulados: entrada.simulados,
+    materias: entrada.materias ?? [],
+    missoesConcluidas: entrada.missoesConcluidas,
+    configuracoes: entrada.configuracoes,
+    recompensasRecebidas: economia.recompensasRecebidas,
+  })
+    .filter((conquista) => conquista.desbloqueada)
+    .forEach((conquista) => {
+      recompensas.push({
+        id: idRecompensaConquista(conquista.id),
+        moedas: conquista.moedas,
+        titulo: `Conquista: ${conquista.titulo}`,
+        detalhe: conquista.descricao,
+        categoria: "conquista",
+      });
+    });
+
   return deduplicarRecompensas(recompensas);
 }
 
@@ -239,14 +280,19 @@ export function aplicarRecompensasPendentes(
   agora = new Date()
 ) {
   const recebidas = new Set(estado.recompensasRecebidas);
-  const novas = recompensas.filter((recompensa) => !recebidas.has(recompensa.id));
+  const novas = recompensas.filter(
+    (recompensa) => !recebidas.has(recompensa.id)
+  );
 
   if (novas.length === 0) {
     return { estado, novas: [] as RecompensaMoedas[], totalMoedas: 0 };
   }
 
   novas.forEach((recompensa) => recebidas.add(recompensa.id));
-  const totalMoedas = novas.reduce((total, recompensa) => total + recompensa.moedas, 0);
+  const totalMoedas = novas.reduce(
+    (total, recompensa) => total + recompensa.moedas,
+    0
+  );
 
   return {
     novas,
@@ -269,7 +315,9 @@ export function obterRecompensaLogin(
 
   const ontem = deslocarData(hoje, -1);
   const manteveSequencia = estado.ultimoLoginResgatado === ontem;
-  const sequencia = manteveSequencia ? (estado.sequenciaLoginAtual ?? 0) + 1 : 1;
+  const sequencia = manteveSequencia
+    ? (estado.sequenciaLoginAtual ?? 0) + 1
+    : 1;
   const diaCiclo = ((sequencia - 1) % 7) + 1;
   const moedas = RECOMPENSA_LOGIN[diaCiclo - 1];
 
@@ -293,14 +341,18 @@ export function resgatarRecompensaLogin(
   agora = new Date()
 ) {
   const recompensa = obterRecompensaLogin(estado, hoje);
-  if (!recompensa) return { estado, recompensa: null as RecompensaLogin | null };
+  if (!recompensa) {
+    return { estado, recompensa: null as RecompensaLogin | null };
+  }
 
   return {
     recompensa,
     estado: {
       ...estado,
       moedas: estado.moedas + recompensa.moedas,
-      recompensasRecebidas: [...new Set([...estado.recompensasRecebidas, recompensa.id])],
+      recompensasRecebidas: [
+        ...new Set([...estado.recompensasRecebidas, recompensa.id]),
+      ],
       ultimoLoginResgatado: hoje,
       sequenciaLoginAtual: recompensa.sequencia,
       atualizadoEm: agora.toISOString(),
@@ -322,7 +374,9 @@ function listarDiasComAtividade(entrada: EntradaEconomia) {
   entrada.questoes.forEach((item) => adicionarData(chaves, item.data));
   entrada.simulados.forEach((item) => adicionarData(chaves, item.data));
   entrada.revisoes.forEach((item) => {
-    if (item.concluida && item.dataConclusao) adicionarData(chaves, item.dataConclusao);
+    if (item.concluida && item.dataConclusao) {
+      adicionarData(chaves, item.dataConclusao);
+    }
   });
 
   return [...chaves]
@@ -364,7 +418,8 @@ function listarRecompensasSequencia(
   let anterior: string | null = null;
 
   dias.forEach((dia) => {
-    sequencia = anterior && deslocarData(anterior, 1) === dia.data ? sequencia + 1 : 1;
+    sequencia =
+      anterior && deslocarData(anterior, 1) === dia.data ? sequencia + 1 : 1;
     anterior = dia.data;
 
     const premio = premioDaSequencia(sequencia);
