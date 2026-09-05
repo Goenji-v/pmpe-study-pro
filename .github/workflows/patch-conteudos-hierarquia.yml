@@ -1,0 +1,104 @@
+name: Aplicar correção temporária da tela Conteúdos
+
+on:
+  push:
+    branches:
+      - fix/conteudos-hierarquia-curso
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/conteudos-hierarquia-curso
+          fetch-depth: 0
+
+      - name: Aplicar patch em Estudos.tsx
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/Estudos/Estudos.tsx')
+          source = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str):
+              global source
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'Esperava 1 ocorrência, encontrei {count}: {old[:120]!r}')
+              source = source.replace(old, new, 1)
+
+          replace_once(
+              'import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";\n',
+              'import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";\nimport {\n  materiaTemCursoImportado,\n  moduloGerenciadoPorCurso,\n  prepararMateriaParaConteudos,\n} from "./estudosHierarquia";\n'
+          )
+
+          replace_once(
+              '  const materiasComModulos = useMemo(\n    () => materias.map(normalizarMateriaComModulos),\n    [materias]\n  );',
+              '  const materiasComModulos = useMemo(\n    () => materias.map(prepararMateriaParaConteudos),\n    [materias]\n  );'
+          )
+
+          replace_once(
+              '    if (!modulo) return showToast("Selecione um módulo.", "warning");\n    if (!nome) return showToast("Informe o nome do assunto.", "warning");',
+              '    if (!modulo) return showToast("Selecione um módulo.", "warning");\n    if (moduloGerenciadoPorCurso(modulo)) {\n      return showToast("Esse módulo é gerenciado pelo curso importado. Use Meus Cursos para alterar a estrutura.", "warning");\n    }\n    if (!nome) return showToast("Informe o nome do assunto.", "warning");'
+          )
+
+          replace_once(
+              '      {materiasFiltradas.map((materia) => {\n        const trilhaFixa = normalizarTexto(materia.nome) === "portugues";\n        const todos = (materia.modulos ?? []).flatMap((m) => m.assuntos);',
+              '      {materiasFiltradas.map((materia) => {\n        const trilhaFixa = normalizarTexto(materia.nome) === "portugues";\n        const cursoImportado = materiaTemCursoImportado(materia);\n        const todos = (materia.modulos ?? []).flatMap((m) => m.assuntos);'
+          )
+
+          replace_once(
+              '                <strong>{progresso}%</strong>\n                {trilhaFixa && (',
+              '                <strong>{progresso}%</strong>\n                {cursoImportado && <span className="conteudos-trilha-fixa">Curso importado</span>}\n                {trilhaFixa && ('
+          )
+
+          replace_once(
+              '                {!trilhaFixa && (\n                  <button type="button" className="conteudos-excluir" onClick={() => excluirMateria(materia)}>Excluir matéria</button>\n                )}',
+              '                {!trilhaFixa && !cursoImportado && (\n                  <button type="button" className="conteudos-excluir" onClick={() => excluirMateria(materia)}>Excluir matéria</button>\n                )}'
+          )
+
+          replace_once(
+              '              {(materia.modulos ?? []).map((modulo) => {\n                const feitos = modulo.assuntos.filter((a) => a.concluido).length;',
+              '              {(materia.modulos ?? []).map((modulo) => {\n                const moduloCurso = moduloGerenciadoPorCurso(modulo);\n                const feitos = modulo.assuntos.filter((a) => a.concluido).length;'
+          )
+
+          replace_once(
+              '                        {trilhaFixa ? (\n                          <span className="conteudos-trilha-fixa">Trilha oficial</span>\n                        ) : (',
+              '                        {trilhaFixa || moduloCurso ? (\n                          <span className="conteudos-trilha-fixa">{trilhaFixa ? "Trilha oficial" : "Curso importado"}</span>\n                        ) : ('
+          )
+
+          replace_once(
+              '                            <button\n                              type="button"\n                              onClick={() => setEditor({ materiaId: materia.id, moduloId: modulo.id, assuntoId: assunto.id })}\n                            >\n                              📝 Notas\n                            </button>',
+              '                            {!moduloCurso && (\n                              <button\n                                type="button"\n                                onClick={() => setEditor({ materiaId: materia.id, moduloId: modulo.id, assuntoId: assunto.id })}\n                              >\n                                📝 Notas\n                              </button>\n                            )}'
+          )
+
+          replace_once(
+              '                            {!trilhaFixa && (materia.modulos ?? []).length > 1 && (',
+              '                            {!trilhaFixa && !moduloCurso && (materia.modulos ?? []).length > 1 && ('
+          )
+
+          replace_once(
+              '                            {!trilhaFixa && (\n                              <button\n                                type="button"\n                                className="conteudos-excluir-compacto"',
+              '                            {!trilhaFixa && !moduloCurso && (\n                              <button\n                                type="button"\n                                className="conteudos-excluir-compacto"'
+          )
+
+          path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Remover workflow temporário e publicar patch na branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/patch-conteudos-hierarquia.yml
+          git add src/pages/Estudos/Estudos.tsx
+          git diff --cached --check
+          git commit -m "Usar hierarquia canônica de cursos em Conteúdos"
+          git push origin HEAD:fix/conteudos-hierarquia-curso
