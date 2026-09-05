@@ -4,8 +4,15 @@ const email = process.env.E2E_TEST_EMAIL;
 const senha = process.env.E2E_TEST_PASSWORD;
 
 const rotasCriticas = [
+  "/plano",
+  "/cursos",
+  "/conteudos",
   "/cronograma-ia",
   "/central-estudos",
+  "/materiais",
+  "/questoes",
+  "/resolver-simulado-ia",
+  "/revisoes",
   "/simulados",
   "/desempenho",
   "/",
@@ -66,6 +73,8 @@ test.describe("fluxo crítico autenticado", () => {
       const texto = await page.locator("body").innerText();
       expect(texto).not.toContain("Algo deu errado");
       expect(texto).not.toContain("Erro inesperado");
+      expect(texto).not.toContain('"status":"UNAVAILABLE"');
+      expect(texto).not.toContain('{"error":{"code":503');
       await verificarSemOverflowHorizontal(page, rota);
     }
 

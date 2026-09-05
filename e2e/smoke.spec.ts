@@ -2,9 +2,17 @@ import { expect, test } from "@playwright/test";
 
 const rotasProtegidas = [
   "/",
+  "/plano",
+  "/cursos",
+  "/conteudos",
   "/cronograma-ia",
   "/central-estudos",
+  "/materiais",
+  "/questoes",
+  "/revisoes",
   "/simulados",
+  "/resolver-simulado-ia",
+  "/gerar-simulado-ia",
 ];
 
 test.describe("smoke de autenticação e produção", () => {

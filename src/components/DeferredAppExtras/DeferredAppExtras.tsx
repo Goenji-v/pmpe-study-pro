@@ -12,6 +12,9 @@ const BetaFeedback = lazy(
 const NotificationCenter = lazy(
   () => import("../NotificationCenter/NotificationCenter")
 );
+const PrimeirosPassos = lazy(
+  () => import("../PrimeirosPassos/PrimeirosPassos")
+);
 
 type JanelaComIdle = Window & {
   requestIdleCallback?: (
@@ -50,6 +53,7 @@ export default function DeferredAppExtras() {
       <EconomiaGamificacaoBridge />
       <BetaFeedback />
       <NotificationCenter />
+      <PrimeirosPassos />
     </Suspense>
   );
 }
