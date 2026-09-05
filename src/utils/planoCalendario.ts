@@ -4,6 +4,7 @@ import {
   type MissaoPlano,
   type SemanaPlano,
 } from "../data/planoPMPE";
+import { criarPlanoMateriasRuntime } from "./planoMateriasRuntime";
 
 export const NOMES_DIAS_PLANO: Record<number, string> = {
   1: "Segunda",
@@ -36,10 +37,17 @@ export function normalizarMissoesPorDia(valor: number | undefined): number {
  * Reorganiza apenas a apresentação do plano. Os IDs e a ordem das missões
  * de segunda a sábado são preservados; só muda em qual dia do calendário
  * cada missão aparece, conforme o ritmo configurado pelo usuário.
+ *
+ * Contas sem o plano PMPE padrão usam os conteúdos realmente cadastrados
+ * (curso importado ou cadastro manual) como fonte do cronograma.
  */
 export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAtivo = true): SemanaPlano[] {
-  if (!planoPadraoAtivo) return [];
   const missoesPorDia = normalizarMissoesPorDia(missoesPorDiaInformadas);
+
+  if (!planoPadraoAtivo) {
+    return criarPlanoMateriasRuntime(missoesPorDia);
+  }
+
   const fila: EntradaFila[] = [];
 
   planoPMPE.forEach((semana) => {
