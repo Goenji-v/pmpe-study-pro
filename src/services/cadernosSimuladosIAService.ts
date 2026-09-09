@@ -42,6 +42,7 @@ type RegistroBanco = {
 const CHAVE_LOCAL = "pmpe_cadernos_simulados_ia";
 const CHAVE_QUESTOES_ATIVAS = "pmpe_questoes_ia";
 const CHAVE_TIPO_SESSAO_ATIVA = "pmpe:sessao-questoes-ia:tipo";
+export const CHAVE_RASCUNHO_QUESTOES_IA = "pmpe:questoes-ia:rascunho";
 
 export async function listarCadernosSimuladosIA(): Promise<CadernoSimuladoIA[]> {
   const escopoInicial = obterEscopoArmazenamento();
@@ -183,6 +184,7 @@ export async function registrarQuestoesAtuaisComoCaderno(
 }
 
 export function ativarCadernoSimuladoIA(caderno: CadernoSimuladoIA) {
+  sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
   localStorage.setItem(
     CHAVE_QUESTOES_ATIVAS,
     JSON.stringify(caderno.questoes)
