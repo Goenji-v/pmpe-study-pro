@@ -57,7 +57,7 @@ jobs:
             (s) => s.includes("discriminacao racial") && s.includes("religios"),
             (s) => s.includes("subestimar"),
             (s) => s.includes("monossilab") && s.includes("dissilab") && s.includes("trissilab"),
-            (s) => s.includes("arquitetura") && s.includes("integral") && (s.includes("separacao") || s.includes("silab")),
+            (s) => s.includes("arquitetura"),
           ];
 
           const ruleCounts = archiveRules.map((rule) => cohort.filter((row) => rule(corpus(row))).length);
