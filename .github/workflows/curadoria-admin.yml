@@ -39,7 +39,11 @@ jobs:
           }
 
           const pending = await request("/rest/v1/questoes_catalogo?status=eq.pendente&select=id,enunciado,alternativas,resposta_correta_id&order=created_at.desc&limit=100");
-          if (pending.length !== 36) throw new Error(`Proteção acionada: esperadas 36 pendentes, encontradas ${pending.length}`);
+          const recentActive = await request("/rest/v1/questoes_catalogo?status=eq.ativa&revisada_em=gte.2026-09-09T18%3A16%3A00Z&select=id,enunciado,alternativas,resposta_correta_id&order=revisada_em.desc&limit=20");
+          if (pending.length !== 32) throw new Error(`Proteção acionada: esperadas 32 pendentes, encontradas ${pending.length}`);
+          if (recentActive.length !== 4) throw new Error(`Proteção acionada: esperadas 4 publicações recentes, encontradas ${recentActive.length}`);
+          const cohort = [...pending, ...recentActive];
+          if (new Set(cohort.map((row) => row.id)).size !== 36) throw new Error("Proteção acionada: o lote reconstruído não contém 36 questões únicas");
 
           const norm = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
           const corpus = (row) => norm(row.enunciado + " " + JSON.stringify(row.alternativas));
@@ -52,8 +56,8 @@ jobs:
             (s) => s.includes("arquitetura") && s.includes("subsidiario") && s.includes("acompanhamento"),
           ];
 
-          const archive = pending.filter((row) => archiveRules.some((rule) => rule(corpus(row))));
-          const correction = pending.filter((row) => {
+          const archive = cohort.filter((row) => archiveRules.some((rule) => rule(corpus(row))));
+          const correction = cohort.filter((row) => {
             const s = corpus(row);
             return s.includes("efeitos da condenacao") && s.includes("interdicao") && s.includes("dobro");
           });
@@ -62,13 +66,13 @@ jobs:
           if (archive.some((row) => correction.some((item) => item.id === row.id))) throw new Error("Proteção acionada: conjuntos de arquivamento e correção se sobrepõem");
 
           const archiveIds = new Set(archive.map((row) => row.id));
-          const publish = pending.filter((row) => !archiveIds.has(row.id));
+          const publish = cohort.filter((row) => !archiveIds.has(row.id));
           if (publish.length !== 30) throw new Error(`Proteção acionada: esperadas 30 publicações, identificadas ${publish.length}`);
 
           const now = new Date().toISOString();
           const patchIds = async (ids, payload) => {
             const filter = ids.map(encodeURIComponent).join(",");
-            return request(`/rest/v1/questoes_catalogo?id=in.(${filter})&status=eq.pendente`, {
+            return request(`/rest/v1/questoes_catalogo?id=in.(${filter})`, {
               method: "PATCH",
               body: JSON.stringify({ ...payload, revisada_em: now, updated_at: now }),
             });
