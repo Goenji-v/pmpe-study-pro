@@ -60,6 +60,8 @@ jobs:
             (s) => s.includes("arquitetura") && s.includes("subsidiario") && s.includes("acompanhamento"),
           ];
 
+          const ruleCounts = archiveRules.map((rule) => cohort.filter((row) => rule(corpus(row))).length);
+          console.log(`REGRAS_ARQUIVAMENTO=${ruleCounts.join(",")}`);
           const archive = cohort.filter((row) => archiveRules.some((rule) => rule(corpus(row))));
           const correction = cohort.filter((row) => {
             const s = corpus(row);
