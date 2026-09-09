@@ -171,6 +171,10 @@ export default function QuestaoIACronometroBridge() {
     cancelar(true);
   }
 
+  function retomarQuestoes() {
+    navigate("/resolver-simulado-ia/prova");
+  }
+
   const deveBloquearInicio =
     emTelaDeProva &&
     questoes.length > 0 &&
@@ -230,6 +234,11 @@ export default function QuestaoIACronometroBridge() {
           </div>
           <small>{sessaoAtiva.assunto}</small>
           <div className="questoes-crono-mini-acoes">
+            {!emTelaDeProva && (
+              <button type="button" className="retomar" onClick={retomarQuestoes}>
+                Retomar
+              </button>
+            )}
             {sessaoAtiva.status === "pausado" ? (
               <button type="button" onClick={continuar}>Continuar</button>
             ) : (
@@ -240,6 +249,26 @@ export default function QuestaoIACronometroBridge() {
             </button>
           </div>
         </aside>
+      )}
+
+      {cronometroQuestoesIA && !emTelaDeProva && (
+        <div className="questoes-crono-bloqueio" role="dialog" aria-modal="true">
+          <section className="questoes-crono-inicio questoes-crono-retomar">
+            <span>SESSÃO EM ANDAMENTO</span>
+            <h2>Finalize ou cancele antes de sair</h2>
+            <p>
+              O cronômetro e suas respostas continuam salvos. Retome o caderno para continuar exatamente de onde parou.
+            </p>
+            <div className="questoes-crono-inicio-acoes">
+              <button type="button" className="questoes-crono-agora-nao" onClick={encerrarSemSalvar}>
+                Cancelar sessão
+              </button>
+              <button type="button" onClick={retomarQuestoes}>
+                Retomar questões
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </>
   );
