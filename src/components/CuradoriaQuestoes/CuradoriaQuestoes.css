@@ -302,6 +302,17 @@
   gap: 10px;
 }
 
+.curadoria-carregar-mais {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(96, 165, 250, .38);
+  border-radius: 10px;
+  background: rgba(37, 99, 235, .1);
+  color: #bfdbfe;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .curadoria-item {
   padding: 13px;
   border: 1px solid rgba(79, 106, 142, .35);

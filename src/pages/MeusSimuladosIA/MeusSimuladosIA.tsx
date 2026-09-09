@@ -89,14 +89,6 @@ export default function MeusSimuladosIA() {
     [cadernos]
   );
 
-  if (carregando) {
-    return (
-      <section className="cadernos-ia-container">
-        <div className="cadernos-ia-vazio">Carregando seus cadernos IA...</div>
-      </section>
-    );
-  }
-
   return (
     <section className="cadernos-ia-container">
       <header className="cadernos-ia-cabecalho">
@@ -130,7 +122,13 @@ export default function MeusSimuladosIA() {
 
       {erro && <div className="cadernos-ia-erro">{erro}</div>}
 
-      {cadernos.length === 0 ? (
+      {carregando && (
+        <div className="cadernos-ia-vazio" role="status">
+          Carregando seus cadernos IA...
+        </div>
+      )}
+
+      {!carregando && cadernos.length === 0 ? (
         <div className="cadernos-ia-vazio cadernos-ia-vazio-grande">
           <div className="cadernos-ia-vazio-icone">🤖</div>
           <h2>Nenhum caderno IA salvo</h2>
@@ -139,7 +137,7 @@ export default function MeusSimuladosIA() {
             Gerar questões ou simulado
           </button>
         </div>
-      ) : (
+      ) : !carregando ? (
         <div className="cadernos-ia-grid">
           {cadernos.map((caderno) => {
             const estatisticas = estatisticasPorCaderno.get(caderno.id);
@@ -223,7 +221,7 @@ export default function MeusSimuladosIA() {
             );
           })}
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

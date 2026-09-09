@@ -77,6 +77,7 @@ export default function CuradoriaQuestoes() {
   const [idsSelecionados, setIdsSelecionados] = useState<Set<string>>(new Set());
   const [confirmandoLote, setConfirmandoLote] = useState(false);
   const [publicandoLote, setPublicandoLote] = useState(false);
+  const [limiteVisivel, setLimiteVisivel] = useState(12);
 
   const mapaEdital = useMemo(
     () => materias.flatMap((materia) =>
@@ -101,6 +102,11 @@ export default function CuradoriaQuestoes() {
     [fila, filtroStatus]
   );
 
+  const filaVisivel = useMemo(
+    () => filaFiltrada.slice(0, limiteVisivel),
+    [filaFiltrada, limiteVisivel]
+  );
+
   const contagemStatus = useMemo(() => {
     return Object.fromEntries(
       statusDisponiveis.map((status) => [
@@ -111,11 +117,11 @@ export default function CuradoriaQuestoes() {
   }, [fila]);
 
   const questoesElegiveisVisiveis = useMemo(
-    () => filaFiltrada.filter((questao) =>
+    () => filaVisivel.filter((questao) =>
       !idsAlterados.has(questao.id)
       && questaoElegivelParaPublicacao(questao, true, true)
     ),
-    [filaFiltrada, idsAlterados]
+    [filaVisivel, idsAlterados]
   );
 
   const questoesSelecionadas = useMemo(
@@ -317,6 +323,7 @@ export default function CuradoriaQuestoes() {
 
   function alterarFiltroStatus(valor: StatusEditorialQuestao | "todos") {
     setFiltroStatus(valor);
+    setLimiteVisivel(12);
     setIdsSelecionados(new Set());
     setConfirmandoLote(false);
   }
@@ -523,7 +530,7 @@ export default function CuradoriaQuestoes() {
           <div className="curadoria-vazio">Nenhuma questão neste estado.</div>
         ) : (
           <div className="curadoria-lista">
-            {filaFiltrada.map((questao) => {
+            {filaVisivel.map((questao) => {
               const alterada = idsAlterados.has(questao.id);
               const motivosBloqueio = motivosImpedimentoPublicacao(questao, true, true);
               const elegivel = !alterada && motivosBloqueio.length === 0;
@@ -616,6 +623,15 @@ export default function CuradoriaQuestoes() {
                 </article>
               );
             })}
+            {filaVisivel.length < filaFiltrada.length && (
+              <button
+                type="button"
+                className="curadoria-carregar-mais"
+                onClick={() => setLimiteVisivel((atual) => atual + 12)}
+              >
+                Mostrar mais ({filaFiltrada.length - filaVisivel.length} restantes)
+              </button>
+            )}
           </div>
         )}
       </section>
