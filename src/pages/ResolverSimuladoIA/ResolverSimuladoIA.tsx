@@ -27,6 +27,7 @@ import {
   atualizarQuestoesAntesDoTreino,
 } from "../../services/catalogoQuestoesIAService";
 import {
+  CHAVE_RASCUNHO_QUESTOES_IA,
   definirTipoSessaoQuestoesIAAtiva,
   limparCadernoSimuladoIAAtivo,
   obterCadernoSimuladoIAAtivoId,
@@ -78,6 +79,13 @@ const CHAVE_QUESTOES_IA =
 
 const CHAVE_RESULTADOS_IA =
   "pmpe_resultados_simulados_ia";
+
+type RascunhoQuestoesIA = {
+  assinatura: string;
+  respostas: RespostasUsuario;
+  alternativasEliminadas: AlternativasEliminadas;
+  questaoAtual: number;
+};
 
 export default function ResolverSimuladoIA() {
   const navigate = useNavigate();
@@ -139,6 +147,17 @@ export default function ResolverSimuladoIA() {
     void carregarQuestoes(() => ativo);
     return () => { ativo = false; };
   }, []);
+
+  useEffect(() => {
+    if (carregando || finalizado || questoes.length === 0) return;
+    const rascunho: RascunhoQuestoesIA = {
+      assinatura: assinaturaQuestoes(questoes),
+      respostas,
+      alternativasEliminadas,
+      questaoAtual,
+    };
+    sessionStorage.setItem(CHAVE_RASCUNHO_QUESTOES_IA, JSON.stringify(rascunho));
+  }, [alternativasEliminadas, carregando, finalizado, questaoAtual, questoes, respostas]);
 
   const resultado = useMemo(() => {
     if (!finalizado) {
@@ -250,6 +269,7 @@ export default function ResolverSimuladoIA() {
       const verificadas = await atualizarQuestoesAntesDoTreino(carregadas);
       if (!ativo()) return;
       setQuestoes(verificadas);
+      restaurarRascunho(verificadas);
       if (verificadas.length < carregadas.length) {
         setMensagem(`${carregadas.length - verificadas.length} questão(ões) retirada(s) deste treino por anulação ou indisponibilidade. Elas não entram na sua nota.`);
       }
@@ -262,6 +282,29 @@ export default function ResolverSimuladoIA() {
       setQuestoes([]);
     } finally {
       if (ativo()) setCarregando(false);
+    }
+  }
+
+  function restaurarRascunho(carregadas: QuestaoIA[]) {
+    const salvo = sessionStorage.getItem(CHAVE_RASCUNHO_QUESTOES_IA);
+    if (!salvo) return;
+
+    try {
+      const rascunho = JSON.parse(salvo) as Partial<RascunhoQuestoesIA>;
+      if (rascunho.assinatura !== assinaturaQuestoes(carregadas)) {
+        sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
+        return;
+      }
+
+      setRespostas(rascunho.respostas ?? {});
+      setAlternativasEliminadas(rascunho.alternativasEliminadas ?? {});
+      setQuestaoAtual(Math.min(
+        Math.max(0, Number(rascunho.questaoAtual) || 0),
+        Math.max(0, carregadas.length - 1)
+      ));
+      setMensagem("Seu progresso anterior foi recuperado.");
+    } catch {
+      sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
     }
   }
 
@@ -422,6 +465,7 @@ export default function ResolverSimuladoIA() {
       }
 
       setFinalizado(true);
+      sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
 
       const respondidas = novoResultado.certas + novoResultado.erradas;
       const registroSimulado =
@@ -632,6 +676,7 @@ export default function ResolverSimuladoIA() {
   }
 
   function refazerSimulado() {
+    sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
     setRespostas({});
     setAlternativasEliminadas({});
     setQuestaoAtual(0);
@@ -659,6 +704,7 @@ export default function ResolverSimuladoIA() {
     }
 
     limparCadernoSimuladoIAAtivo();
+    sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
     definirTipoSessaoQuestoesIAAtiva("questoes");
     setTipoSessao("questoes");
 
@@ -726,6 +772,7 @@ export default function ResolverSimuladoIA() {
     localStorage.removeItem(
       CHAVE_QUESTOES_IA
     );
+    sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
 
     setQuestoes([]);
     setRespostas({});
@@ -1390,6 +1437,10 @@ export default function ResolverSimuladoIA() {
       </div>
     </section>
   );
+}
+
+function assinaturaQuestoes(questoes: QuestaoIA[]) {
+  return questoes.map((item) => item.id).join("|");
 }
 
 function montarResultadoSalvo(
