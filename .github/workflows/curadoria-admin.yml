@@ -38,10 +38,14 @@ jobs:
             return text ? JSON.parse(text) : [];
           }
 
-          const pending = await request("/rest/v1/questoes_catalogo?status=eq.pendente&select=id,enunciado,alternativas,resposta_correta_id&order=created_at.desc&limit=100");
-          const recentActive = await request("/rest/v1/questoes_catalogo?status=eq.ativa&revisada_em=gte.2026-09-09T18%3A16%3A00Z&select=id,enunciado,alternativas,resposta_correta_id&order=revisada_em.desc&limit=20");
+          const pending = await request("/rest/v1/questoes_catalogo?status=eq.pendente&select=id,enunciado,alternativas,resposta_correta_id,created_at&order=created_at.desc&limit=100");
           if (pending.length !== 32) throw new Error(`Proteção acionada: esperadas 32 pendentes, encontradas ${pending.length}`);
-          if (recentActive.length !== 4) throw new Error(`Proteção acionada: esperadas 4 publicações recentes, encontradas ${recentActive.length}`);
+          const createdTimes = pending.map((row) => Date.parse(row.created_at)).filter(Number.isFinite);
+          if (createdTimes.length !== 32) throw new Error("Proteção acionada: datas de importação incompletas");
+          const batchStart = encodeURIComponent(new Date(Math.min(...createdTimes) - 60000).toISOString());
+          const batchEnd = encodeURIComponent(new Date(Math.max(...createdTimes) + 60000).toISOString());
+          const recentActive = await request(`/rest/v1/questoes_catalogo?status=eq.ativa&created_at=gte.${batchStart}&created_at=lte.${batchEnd}&select=id,enunciado,alternativas,resposta_correta_id,created_at&order=created_at.desc&limit=20`);
+          if (recentActive.length !== 4) throw new Error(`Proteção acionada: esperadas 4 questões do mesmo lote já publicadas, encontradas ${recentActive.length}`);
           const cohort = [...pending, ...recentActive];
           if (new Set(cohort.map((row) => row.id)).size !== 36) throw new Error("Proteção acionada: o lote reconstruído não contém 36 questões únicas");
 
