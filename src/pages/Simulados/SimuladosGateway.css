@@ -1,0 +1,48 @@
+.simulados-oficiais-atalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(127, 127, 127, 0.22);
+  border-radius: 16px;
+  background: rgba(127, 127, 127, 0.04);
+}
+
+.simulados-oficiais-atalho span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  opacity: 0.62;
+}
+
+.simulados-oficiais-atalho h2 {
+  margin: 5px 0;
+}
+
+.simulados-oficiais-atalho p {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.simulados-oficiais-atalho a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .simulados-oficiais-atalho {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
