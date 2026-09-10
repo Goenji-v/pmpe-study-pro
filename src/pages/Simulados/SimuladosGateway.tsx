@@ -1,9 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
 import Simulados from "./Simulados";
 import SimuladosOficiaisAdminSection from "./SimuladosOficiaisAdminSection";
 import "./SimuladosGateway.css";
 
 export default function SimuladosGateway() {
+  const navigate = useNavigate();
   const { administrador, carregandoAdmin } = useAdminStatus();
 
   return (
@@ -15,7 +17,7 @@ export default function SimuladosGateway() {
           <h2 id="simulados-oficiais-atalho-titulo">Simulados oficiais</h2>
           <p>Resolva provas publicadas para o seu concurso com tempo e correção dentro do Study Pro.</p>
         </div>
-        <a href="/simulados-oficiais">Ver provas oficiais</a>
+        <button type="button" onClick={() => navigate("/simulados-oficiais")}>Ver provas oficiais</button>
       </section>
       {!carregandoAdmin && administrador && <SimuladosOficiaisAdminSection />}
     </>
