@@ -26,16 +26,15 @@
   opacity: 0.7;
 }
 
-.simulados-oficiais-atalho a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.simulados-oficiais-atalho button {
   min-height: 40px;
   padding: 0 15px;
   border-radius: 10px;
   border: 1px solid rgba(127, 127, 127, 0.3);
+  background: transparent;
   color: inherit;
-  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
   font-weight: 800;
   white-space: nowrap;
 }
