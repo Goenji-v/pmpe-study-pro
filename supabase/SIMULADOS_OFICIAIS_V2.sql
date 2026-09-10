@@ -167,6 +167,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.iniciar_simulado_oficial(uuid) from public;
 grant execute on function public.iniciar_simulado_oficial(uuid) to authenticated;
 
 -- Correção server-side. O cliente nunca recebe o gabarito.
@@ -359,6 +360,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.finalizar_simulado_oficial(uuid, jsonb, integer) from public;
 grant execute on function public.finalizar_simulado_oficial(uuid, jsonb, integer) to authenticated;
 
 comment on column public.simulados_oficiais.prova_storage_path is 'Caminho privado do PDF da prova original.';
