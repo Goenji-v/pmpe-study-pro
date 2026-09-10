@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useToast } from "../../context/ToastContext";
 import {
   BANCAS_SIMULADO_OFICIAL,
-  analisarProvaOficial,
   criarSimuladoOficial,
   publicarSimuladoOficial,
   type QuestaoOficial,
 } from "../../services/simuladosOficiaisService";
+import { analisarProvaOficialComContexto } from "../../services/simuladosOficiaisAnaliseService";
 import "./SimuladosOficiaisAdminSection.css";
 
 export default function SimuladosOficiaisAdminSection() {
@@ -37,7 +37,11 @@ export default function SimuladosOficiaisAdminSection() {
     try {
       setAnalisando(true);
       setAlertas([]);
-      const resultado = await analisarProvaOficial(prova, gabarito);
+      const resultado = await analisarProvaOficialComContexto(prova, gabarito, {
+        concurso: concurso.trim(),
+        edital: edital.trim(),
+        banca: bancaFinal,
+      });
       if (!resultado.questoes.length) {
         throw new Error("A IA não encontrou questões na prova.");
       }
@@ -122,46 +126,15 @@ export default function SimuladosOficiaisAdminSection() {
       </div>
 
       <div className="simulados-oficiais-admin__formulario">
-        <label>
-          Nome do simulado
-          <input value={nome} onChange={(evento) => setNome(evento.target.value)} placeholder="Ex.: PMPE 2024 — Soldado" />
-        </label>
-        <label>
-          Concurso / curso
-          <input value={concurso} onChange={(evento) => setConcurso(evento.target.value)} placeholder="Ex.: PMPE" />
-        </label>
-        <label>
-          Edital
-          <input value={edital} onChange={(evento) => setEdital(evento.target.value)} placeholder="Ex.: PMPE 2024" />
-        </label>
-        <label>
-          Banca
-          <select value={banca} onChange={(evento) => setBanca(evento.target.value)}>
-            {BANCAS_SIMULADO_OFICIAL.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        {banca === "Outra" && (
-          <label>
-            Nome da banca
-            <input value={outraBanca} onChange={(evento) => setOutraBanca(evento.target.value)} placeholder="Informe a banca" />
-          </label>
-        )}
-        <label>
-          Data da prova
-          <input type="date" value={dataProva} onChange={(evento) => setDataProva(evento.target.value)} />
-        </label>
-        <label>
-          Duração (minutos)
-          <input type="number" min={1} max={1440} value={duracao} onChange={(evento) => setDuracao(Math.max(1, Math.min(1440, Number(evento.target.value) || 1)))} />
-        </label>
-        <label>
-          PDF da prova
-          <input type="file" accept="application/pdf,.pdf" onChange={(evento) => setProva(evento.target.files?.[0] ?? null)} />
-        </label>
-        <label>
-          PDF do gabarito
-          <input type="file" accept="application/pdf,.pdf" onChange={(evento) => setGabarito(evento.target.files?.[0] ?? null)} />
-        </label>
+        <label>Nome do simulado<input value={nome} onChange={(evento) => setNome(evento.target.value)} placeholder="Ex.: PMPE 2024 — Soldado" /></label>
+        <label>Concurso / curso<input value={concurso} onChange={(evento) => setConcurso(evento.target.value)} placeholder="Ex.: PMPE" /></label>
+        <label>Edital<input value={edital} onChange={(evento) => setEdital(evento.target.value)} placeholder="Ex.: PMPE 2024" /></label>
+        <label>Banca<select value={banca} onChange={(evento) => setBanca(evento.target.value)}>{BANCAS_SIMULADO_OFICIAL.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        {banca === "Outra" && <label>Nome da banca<input value={outraBanca} onChange={(evento) => setOutraBanca(evento.target.value)} placeholder="Informe a banca" /></label>}
+        <label>Data da prova<input type="date" value={dataProva} onChange={(evento) => setDataProva(evento.target.value)} /></label>
+        <label>Duração (minutos)<input type="number" min={1} max={1440} value={duracao} onChange={(evento) => setDuracao(Math.max(1, Math.min(1440, Number(evento.target.value) || 1)))} /></label>
+        <label>PDF da prova<input type="file" accept="application/pdf,.pdf" onChange={(evento) => setProva(evento.target.files?.[0] ?? null)} /></label>
+        <label>PDF do gabarito<input type="file" accept="application/pdf,.pdf" onChange={(evento) => setGabarito(evento.target.files?.[0] ?? null)} /></label>
       </div>
 
       <button className="simulados-oficiais-admin__analisar" type="button" onClick={analisar} disabled={analisando || publicando}>
@@ -178,57 +151,24 @@ export default function SimuladosOficiaisAdminSection() {
       {questoes.length > 0 && (
         <div className="simulados-oficiais-admin__revisao">
           <div className="simulados-oficiais-admin__revisao-topo">
-            <div>
-              <strong>Revisão humana · {questoes.length} questões</strong>
-              <span>A IA apenas extrai e sugere. O administrador confirma o conteúdo antes da publicação.</span>
-            </div>
-            <button type="button" onClick={publicar} disabled={publicando}>
-              {publicando ? "Publicando..." : "Revisar e publicar"}
-            </button>
+            <div><strong>Revisão humana · {questoes.length} questões</strong><span>A IA apenas extrai e sugere. O administrador confirma o conteúdo antes da publicação.</span></div>
+            <button type="button" onClick={publicar} disabled={publicando}>{publicando ? "Publicando..." : "Revisar e publicar"}</button>
           </div>
 
           {questoes.map((questao, index) => (
             <article className="simulados-oficiais-admin__questao" key={`${questao.numero}-${index}`}>
               <div className="simulados-oficiais-admin__questao-numero">Questão {questao.numero}</div>
-              <label>
-                Enunciado
-                <textarea value={questao.enunciado} onChange={(evento) => atualizarQuestao(index, { enunciado: evento.target.value })} rows={5} />
-              </label>
-
+              <label>Enunciado<textarea value={questao.enunciado} onChange={(evento) => atualizarQuestao(index, { enunciado: evento.target.value })} rows={5} /></label>
               <div className="simulados-oficiais-admin__alternativas">
                 {questao.alternativas.map((alternativa) => (
-                  <label key={alternativa.id}>
-                    <span>{alternativa.id}</span>
-                    <input value={alternativa.texto} onChange={(evento) => atualizarAlternativa(index, alternativa.id, evento.target.value)} />
-                  </label>
+                  <label key={alternativa.id}><span>{alternativa.id}</span><input value={alternativa.texto} onChange={(evento) => atualizarAlternativa(index, alternativa.id, evento.target.value)} /></label>
                 ))}
               </div>
-
               <div className="simulados-oficiais-admin__metadados">
-                <label>
-                  Matéria
-                  <input value={questao.materia} onChange={(evento) => atualizarQuestao(index, { materia: evento.target.value })} />
-                </label>
-                <label>
-                  Assunto
-                  <input value={questao.assunto} onChange={(evento) => atualizarQuestao(index, { assunto: evento.target.value })} />
-                </label>
-                <label>
-                  Gabarito
-                  <select value={questao.respostaCorretaId || ""} onChange={(evento) => atualizarQuestao(index, { respostaCorretaId: evento.target.value })} disabled={questao.statusSugerido === "anulada"}>
-                    <option value="">Selecione</option>
-                    {questao.alternativas.map((alternativa) => <option key={alternativa.id} value={alternativa.id}>{alternativa.id}</option>)}
-                  </select>
-                </label>
-                <label>
-                  Status
-                  <select value={questao.statusSugerido || "pendente"} onChange={(evento) => atualizarQuestao(index, { statusSugerido: evento.target.value as QuestaoOficial["statusSugerido"] })}>
-                    <option value="pendente">Pendente</option>
-                    <option value="anulada">Anulada</option>
-                    <option value="desatualizada">Desatualizada</option>
-                    <option value="duvidosa">Duvidosa</option>
-                  </select>
-                </label>
+                <label>Matéria<input value={questao.materia} onChange={(evento) => atualizarQuestao(index, { materia: evento.target.value })} /></label>
+                <label>Assunto<input value={questao.assunto} onChange={(evento) => atualizarQuestao(index, { assunto: evento.target.value })} /></label>
+                <label>Gabarito<select value={questao.respostaCorretaId || ""} onChange={(evento) => atualizarQuestao(index, { respostaCorretaId: evento.target.value })} disabled={questao.statusSugerido === "anulada"}><option value="">Selecione</option>{questao.alternativas.map((alternativa) => <option key={alternativa.id} value={alternativa.id}>{alternativa.id}</option>)}</select></label>
+                <label>Status<select value={questao.statusSugerido || "pendente"} onChange={(evento) => atualizarQuestao(index, { statusSugerido: evento.target.value as QuestaoOficial["statusSugerido"] })}><option value="pendente">Pendente</option><option value="anulada">Anulada</option><option value="desatualizada">Desatualizada</option><option value="duvidosa">Duvidosa</option></select></label>
               </div>
             </article>
           ))}
