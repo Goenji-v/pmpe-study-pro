@@ -8,122 +8,22 @@ import type { Simulado } from "../../types/index";
 import SimuladosOficiaisAdminSection from "./SimuladosOficiaisAdminSection";
 
 const CHAVE_RASCUNHO = "pmpe_rascunho_simulado";
-
-type RascunhoSimulado = {
-  nome: string; banca: string; certas: number; erradas: number; anuladas: number; minutos: number; observacao: string;
-};
-
-function carregarRascunho(): RascunhoSimulado {
-  try {
-    const salvo = localStorage.getItem(CHAVE_RASCUNHO);
-    if (!salvo) throw new Error();
-    return JSON.parse(salvo) as RascunhoSimulado;
-  } catch {
-    return { nome: "", banca: "Instituto AOCP", certas: 0, erradas: 0, anuladas: 0, minutos: 0, observacao: "" };
-  }
-}
+type RascunhoSimulado = { nome: string; banca: string; certas: number; erradas: number; anuladas: number; minutos: number; observacao: string };
+function carregarRascunho(): RascunhoSimulado { try { const salvo = localStorage.getItem(CHAVE_RASCUNHO); if (!salvo) throw new Error(); return JSON.parse(salvo) as RascunhoSimulado; } catch { return { nome: "", banca: "AOCP", certas: 0, erradas: 0, anuladas: 0, minutos: 0, observacao: "" }; } }
 
 export default function Simulados() {
-  const navigate = useNavigate();
-  const { simulados, setSimulados } = useApp();
-  const { showToast } = useToast();
-  const rascunhoInicial = carregarRascunho();
-  const [nome, setNome] = useState(rascunhoInicial.nome);
-  const [banca, setBanca] = useState(rascunhoInicial.banca);
-  const [certas, setCertas] = useState(rascunhoInicial.certas);
-  const [erradas, setErradas] = useState(rascunhoInicial.erradas);
-  const [anuladas, setAnuladas] = useState(rascunhoInicial.anuladas);
-  const [minutos, setMinutos] = useState(rascunhoInicial.minutos);
-  const [observacao, setObservacao] = useState(rascunhoInicial.observacao);
-
-  useEffect(() => {
-    localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({ nome, banca, certas, erradas, anuladas, minutos, observacao }));
-  }, [nome, banca, certas, erradas, anuladas, minutos, observacao]);
-
-  const metricas = useMemo(() => {
-    const totalSimulados = simulados.length;
-    const totalQuestoes = simulados.reduce((total, simulado) => total + simulado.certas + simulado.erradas + simulado.anuladas, 0);
-    const totalCertas = simulados.reduce((total, simulado) => total + simulado.certas, 0);
-    const aproveitamentoGeral = totalQuestoes === 0 ? 0 : Math.round((totalCertas / totalQuestoes) * 100);
-    const tempoTotal = simulados.reduce((total, simulado) => total + simulado.minutos, 0);
-    const melhorSimulado = simulados.length === 0 ? null : [...simulados].sort((a, b) => calcularAproveitamento(b) - calcularAproveitamento(a))[0];
-    return { totalSimulados, totalQuestoes, aproveitamentoGeral, tempoTotal, melhorSimulado };
-  }, [simulados]);
-
-  function calcularAproveitamento(simulado: Simulado) {
-    const total = simulado.certas + simulado.erradas + simulado.anuladas;
-    return total === 0 ? 0 : Math.round((simulado.certas / total) * 100);
-  }
-
-  function salvarSimulado() {
-    const nomeLimpo = nome.trim();
-    if (!nomeLimpo) return showToast("Informe o nome do simulado.", "warning");
-    if (certas < 0 || erradas < 0 || anuladas < 0 || minutos < 0) return showToast("Os valores não podem ser negativos.", "error");
-    if (certas + erradas + anuladas === 0) return showToast("Informe pelo menos uma questão.", "warning");
-    const novoSimulado: Simulado = { id: crypto.randomUUID(), nome: nomeLimpo, banca, certas, erradas, anuladas, minutos, observacao: observacao.trim(), data: new Date().toISOString() };
-    setSimulados((anteriores) => [novoSimulado, ...anteriores]);
-    limparFormulario();
-    showToast("Simulado salvo com sucesso.", "success");
-  }
-
-  function excluirSimulado(id: string) {
-    if (!window.confirm("Deseja excluir este simulado?")) return;
-    setSimulados((anteriores) => anteriores.filter((simulado) => simulado.id !== id));
-    showToast("Simulado excluído.", "info");
-  }
-
-  function duplicarSimulado(simulado: Simulado) {
-    setSimulados((anteriores) => [{ ...simulado, id: crypto.randomUUID(), nome: `${simulado.nome} - cópia`, data: new Date().toISOString() }, ...anteriores]);
-    showToast("Simulado duplicado.", "success");
-  }
-
-  function limparFormulario() {
-    setNome(""); setBanca("Instituto AOCP"); setCertas(0); setErradas(0); setAnuladas(0); setMinutos(0); setObservacao(""); localStorage.removeItem(CHAVE_RASCUNHO);
-  }
-
-  function formatarTempo(minutosTotais: number) {
-    const horas = Math.floor(minutosTotais / 60); const minutosRestantes = minutosTotais % 60;
-    return horas === 0 ? `${minutosRestantes}min` : `${horas}h ${minutosRestantes}min`;
-  }
-
-  function formatarData(data: string) { return new Date(data).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }); }
-  function classeDesempenho(percentual: number) { return percentual >= 80 ? "simulado-bom" : percentual >= 60 ? "simulado-atencao" : "simulado-critico"; }
-
-  return (
-    <section className="simulados-container">
-      <h1 className="simulados-title">🎯 Simulados</h1>
-      <p className="simulados-subtitle">Registre seus simulados e acompanhe sua evolução geral.</p>
-
-      <div className="simulados-central-acoes">
-        <button type="button" className="simulados-central-acao" onClick={() => { sessionStorage.setItem("pmpe:gerar-ia:modo", "simulado"); navigate("/gerar-simulado-ia"); }}><span className="simulados-central-icone">✨</span><div><strong>Gerar simulado com IA</strong><small>Misture os conteúdos da semana e acompanhe a nota geral da prova.</small></div></button>
-        <button type="button" className="simulados-central-acao" onClick={() => navigate("/resolver-simulado-ia")}><span className="simulados-central-icone">🤖</span><div><strong>Resolver Simulado IA</strong><small>Continue ou inicie uma prova gerada pelo sistema.</small></div></button>
-        <button type="button" className="simulados-central-acao" onClick={() => navigate("/estatisticas-simulado-ia")}><span className="simulados-central-icone">📊</span><div><strong>Estatísticas IA</strong><small>Analise acertos, erros e evolução dos simulados inteligentes.</small></div></button>
-        <button type="button" className="simulados-central-acao" onClick={() => navigate("/simulados-oficiais")}><span className="simulados-central-icone">🏛️</span><div><strong>Simulados Oficiais</strong><small>Resolva provas oficiais publicadas pelo administrador.</small></div></button>
-      </div>
-
-      <div className="simulados-resumo">
-        <ResumoCard titulo="Simulados realizados" valor={metricas.totalSimulados} /><ResumoCard titulo="Questões resolvidas" valor={metricas.totalQuestoes} /><ResumoCard titulo="Aproveitamento" valor={`${metricas.aproveitamentoGeral}%`} /><ResumoCard titulo="Tempo total" valor={formatarTempo(metricas.tempoTotal)} />
-      </div>
-
-      <div className="simulados-grid">
-        <div className="simulados-card">
-          <h2>Novo simulado</h2>
-          <div className="simulado-form-group"><label htmlFor="nomeSimulado">Nome</label><input id="nomeSimulado" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Exemplo: Simulado AOCP 01" /></div>
-          <div className="simulado-form-group"><label htmlFor="bancaSimulado">Banca</label><select id="bancaSimulado" value={banca} onChange={(e) => setBanca(e.target.value)}><option>Instituto AOCP</option><option>Cebraspe</option><option>FGV</option><option>FCC</option><option>Vunesp</option><option>IBFC</option><option>Idecan</option><option>Cesgranrio</option><option>Quadrix</option><option>Consulplan</option><option>Outra</option></select></div>
-          <div className="simulado-form-row"><div className="simulado-form-group"><label htmlFor="certasSimulado">Certas</label><input id="certasSimulado" type="number" min={0} value={certas} onChange={(e) => setCertas(Math.max(0, Number(e.target.value)))} /></div><div className="simulado-form-group"><label htmlFor="erradasSimulado">Erradas</label><input id="erradasSimulado" type="number" min={0} value={erradas} onChange={(e) => setErradas(Math.max(0, Number(e.target.value)))} /></div></div>
-          <div className="simulado-form-row"><div className="simulado-form-group"><label htmlFor="anuladasSimulado">Anuladas</label><input id="anuladasSimulado" type="number" min={0} value={anuladas} onChange={(e) => setAnuladas(Math.max(0, Number(e.target.value)))} /></div><div className="simulado-form-group"><label htmlFor="minutosSimulado">Tempo (minutos)</label><input id="minutosSimulado" type="number" min={0} value={minutos} onChange={(e) => setMinutos(Math.max(0, Number(e.target.value)))} /></div></div>
-          <div className="simulado-form-group"><label htmlFor="observacaoSimulado">Observação</label><textarea id="observacaoSimulado" value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Observações sobre a prova" /></div>
-          <button type="button" onClick={salvarSimulado}>Salvar simulado</button>
-        </div>
-
-        <div className="simulados-card"><h2>Melhor desempenho</h2>{metricas.melhorSimulado ? <><strong>{metricas.melhorSimulado.nome}</strong><p>{calcularAproveitamento(metricas.melhorSimulado)}% de aproveitamento</p></> : <p>Nenhum simulado registrado.</p>}</div>
-      </div>
-
-      <div className="simulados-card simulados-historico"><h2>Histórico</h2>{simulados.length === 0 ? <p>Nenhum simulado registrado ainda.</p> : simulados.map((simulado) => { const percentual = calcularAproveitamento(simulado); return <article key={simulado.id} className={`simulado-item ${classeDesempenho(percentual)}`}><div><strong>{simulado.nome}</strong><span>{simulado.banca} · {formatarData(simulado.data)}</span></div><div><b>{percentual}%</b><span>{simulado.certas} certas · {simulado.erradas} erradas · {simulado.anuladas} anuladas</span></div><div><button type="button" onClick={() => duplicarSimulado(simulado)}>Duplicar</button><button type="button" onClick={() => excluirSimulado(simulado.id)}>Excluir</button></div></article>; })}</div>
-
-      <SimuladosOficiaisAdminSection />
-    </section>
-  );
+  const navigate = useNavigate(); const { simulados, setSimulados } = useApp(); const { showToast } = useToast(); const rascunhoInicial = carregarRascunho();
+  const [nome, setNome] = useState(rascunhoInicial.nome); const [banca, setBanca] = useState(rascunhoInicial.banca); const [certas, setCertas] = useState(rascunhoInicial.certas); const [erradas, setErradas] = useState(rascunhoInicial.erradas); const [anuladas, setAnuladas] = useState(rascunhoInicial.anuladas); const [minutos, setMinutos] = useState(rascunhoInicial.minutos); const [observacao, setObservacao] = useState(rascunhoInicial.observacao);
+  useEffect(() => { localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({ nome, banca, certas, erradas, anuladas, minutos, observacao })); }, [nome, banca, certas, erradas, anuladas, minutos, observacao]);
+  const metricas = useMemo(() => { const totalSimulados = simulados.length; const totalQuestoes = simulados.reduce((t,s)=>t+s.certas+s.erradas+s.anuladas,0); const totalCertas = simulados.reduce((t,s)=>t+s.certas,0); const aproveitamentoGeral = totalQuestoes===0?0:Math.round(totalCertas/totalQuestoes*100); const tempoTotal=simulados.reduce((t,s)=>t+s.minutos,0); const melhorSimulado=simulados.length===0?null:[...simulados].sort((a,b)=>calcularAproveitamento(b)-calcularAproveitamento(a))[0]; return {totalSimulados,totalQuestoes,aproveitamentoGeral,tempoTotal,melhorSimulado}; },[simulados]);
+  function calcularAproveitamento(simulado: Simulado){const total=simulado.certas+simulado.erradas+simulado.anuladas; return total===0?0:Math.round(simulado.certas/total*100)}
+  function salvarSimulado(){const nomeLimpo=nome.trim();if(!nomeLimpo)return showToast("Informe o nome do simulado.","warning");if(certas<0||erradas<0||anuladas<0||minutos<0)return showToast("Os valores não podem ser negativos.","error");if(certas+erradas+anuladas===0)return showToast("Informe pelo menos uma questão.","warning");const novoSimulado:Simulado={id:crypto.randomUUID(),nome:nomeLimpo,banca,certas,erradas,anuladas,minutos,observacao:observacao.trim(),data:new Date().toISOString()};setSimulados(a=>[novoSimulado,...a]);limparFormulario();showToast("Simulado salvo com sucesso.","success")}
+  function excluirSimulado(id:string){if(!window.confirm("Deseja excluir este simulado?"))return;setSimulados(a=>a.filter(s=>s.id!==id));showToast("Simulado excluído.","info")}
+  function duplicarSimulado(simulado:Simulado){setSimulados(a=>[{...simulado,id:crypto.randomUUID(),nome:`${simulado.nome} - cópia`,data:new Date().toISOString()},...a]);showToast("Simulado duplicado.","success")}
+  function limparFormulario(){setNome("");setBanca("AOCP");setCertas(0);setErradas(0);setAnuladas(0);setMinutos(0);setObservacao("");localStorage.removeItem(CHAVE_RASCUNHO)}
+  function formatarTempo(m:number){const h=Math.floor(m/60);const r=m%60;return h===0?`${r}min`:`${h}h ${r}min`}
+  function formatarData(data:string){return new Date(data).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}
+  function classeDesempenho(p:number){if(p>=80)return"simulado-bom";if(p>=60)return"simulado-atencao";return"simulado-critico"}
+  return <section className="simulados-container"><h1 className="simulados-title">🎯 Simulados</h1><p className="simulados-subtitle">Registre seus simulados e acompanhe sua evolução geral.</p><div className="simulados-central-acoes"><button type="button" className="simulados-central-acao" onClick={()=>{sessionStorage.setItem("pmpe:gerar-ia:modo","simulado");navigate("/gerar-simulado-ia")}}><span className="simulados-central-icone">✨</span><div><strong>Gerar simulado com IA</strong><small>Misture os conteúdos da semana e acompanhe a nota geral da prova.</small></div></button><button type="button" className="simulados-central-acao" onClick={()=>navigate("/resolver-simulado-ia")}><span className="simulados-central-icone">🤖</span><div><strong>Resolver Simulado IA</strong><small>Continue ou inicie uma prova gerada pelo sistema.</small></div></button><button type="button" className="simulados-central-acao" onClick={()=>navigate("/estatisticas-simulado-ia")}><span className="simulados-central-icone">📊</span><div><strong>Estatísticas IA</strong><small>Analise acertos, erros e evolução dos simulados inteligentes.</small></div></button><button type="button" className="simulados-central-acao" onClick={()=>navigate("/simulados-oficiais")}><span className="simulados-central-icone">🏛️</span><div><strong>Simulados Oficiais</strong><small>Resolva provas oficiais publicadas pelo administrador.</small></div></button></div><div className="simulados-resumo"><ResumoCard titulo="Simulados realizados" valor={metricas.totalSimulados}/><ResumoCard titulo="Questões resolvidas" valor={metricas.totalQuestoes}/><ResumoCard titulo="Aproveitamento" valor={`${metricas.aproveitamentoGeral}%`}/><ResumoCard titulo="Tempo total" valor={formatarTempo(metricas.tempoTotal)}/></div><div className="simulados-grid"><div className="simulados-card"><h2>Novo simulado</h2><div className="simulado-form-group"><label htmlFor="nomeSimulado">Nome</label><input id="nomeSimulado" value={nome} onChange={e=>setNome(e.target.value)} placeholder="Exemplo: Simulado AOCP 01"/></div><div className="simulado-form-group"><label htmlFor="bancaSimulado">Banca</label><select id="bancaSimulado" value={banca} onChange={e=>setBanca(e.target.value)}><option>AOCP</option><option>CEBRASPE</option><option>FGV</option><option>FCC</option><option>VUNESP</option><option>IBFC</option><option>IDECAN</option><option>Outra</option></select></div><div className="simulado-form-row"><div className="simulado-form-group"><label htmlFor="certasSimulado">Certas</label><input id="certasSimulado" type="number" min={0} value={certas} onChange={e=>setCertas(Math.max(0,Number(e.target.value)))}/></div><div className="simulado-form-group"><label htmlFor="erradasSimulado">Erradas</label><input id="erradasSimulado" type="number" min={0} value={erradas} onChange={e=>setErradas(Math.max(0,Number(e.target.value)))}/></div></div><div className="simulado-form-row"><div className="simulado-form-group"><label htmlFor="anuladasSimulado">Anuladas</label><input id="anuladasSimulado" type="number" min={0} value={anuladas} onChange={e=>setAnuladas(Math.max(0,Number(e.target.value)))}/></div><div className="simulado-form-group"><label htmlFor="minutosSimulado">Tempo</label><input id="minutosSimulado" type="number" min={0} value={minutos} onChange={e=>setMinutos(Math.max(0,Number(e.target.value)))}/></div></div><div className="simulado-form-group"><label htmlFor="observacaoSimulado">Observação</label><textarea id="observacaoSimulado" value={observacao} onChange={e=>setObservacao(e.target.value)} placeholder="Observações sobre a prova"/></div><button type="button" onClick={salvarSimulado}>Salvar simulado</button></div><div className="simulados-card"><h2>Melhor desempenho</h2>{metricas.melhorSimulado?<><strong>{metricas.melhorSimulado.nome}</strong><p>{calcularAproveitamento(metricas.melhorSimulado)}% de aproveitamento</p></>:<p>Nenhum simulado registrado.</p>}</div></div><div className="simulados-card simulados-historico"><h2>Histórico</h2>{simulados.length===0?<p>Nenhum simulado registrado ainda.</p>:simulados.map(simulado=>{const percentual=calcularAproveitamento(simulado);return <article key={simulado.id} className={`simulado-item ${classeDesempenho(percentual)}`}><div><strong>{simulado.nome}</strong><span>{simulado.banca} · {formatarData(simulado.data)}</span></div><div><b>{percentual}%</b><span>{simulado.certas} certas · {simulado.erradas} erradas · {simulado.anuladas} anuladas</span></div><div><button type="button" onClick={()=>duplicarSimulado(simulado)}>Duplicar</button><button type="button" onClick={()=>excluirSimulado(simulado.id)}>Excluir</button></div></article>})}</div><SimuladosOficiaisAdminSection/></section>;
 }
-
-function ResumoCard({ titulo, valor }: { titulo: string; valor: string | number }) { return <div className="simulados-resumo-card"><span>{titulo}</span><strong>{valor}</strong></div>; }
+function ResumoCard({titulo,valor}:{titulo:string;valor:string|number}){return <div className="simulados-resumo-card"><span>{titulo}</span><strong>{valor}</strong></div>}
