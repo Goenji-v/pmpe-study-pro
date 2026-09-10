@@ -42,7 +42,9 @@ const Estatisticas = lazy(() => import("./pages/Estatisticas/Estatisticas"));
 const Revisoes = lazy(() => import("./pages/Revisoes/Revisoes"));
 const CentralEstudosGateway = lazy(() => import("./pages/CentralEstudos/CentralEstudosGateway"));
 const HistoricoSessoes = lazy(() => import("./pages/HistoricoSessoes/HistoricoSessoes"));
-const Simulados = lazy(() => import("./pages/Simulados/Simulados"));
+const SimuladosGateway = lazy(() => import("./pages/Simulados/SimuladosGateway"));
+const SimuladosOficiais = lazy(() => import("./pages/SimuladosOficiais/SimuladosOficiais"));
+const SimuladoOficial = lazy(() => import("./pages/SimuladoOficial/SimuladoOficial"));
 const Backup = lazy(() => import("./pages/Backup/Backup"));
 const CentralQuestoes = lazy(() => import("./pages/CentralQuestoes/CentralQuestoes"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes/Configuracoes"));
@@ -127,7 +129,9 @@ function LayoutProtegido() {
                       <Route path="/banco-questoes" element={<BancoQuestoes />} />
                       <Route path="/estatisticas" element={<Estatisticas />} />
 
-                      <Route path="/simulados" element={<Simulados />} />
+                      <Route path="/simulados" element={<SimuladosGateway />} />
+                      <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
+                      <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
                       <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
                       <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
                       <Route path="/resolver-simulado-ia/revisao/:cadernoId" element={<RevisaoCadernoIA />} />
