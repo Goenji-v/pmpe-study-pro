@@ -60,7 +60,7 @@ create index if not exists turmas_parceiro_idx on public.turmas(parceiro_id);
 create table if not exists public.faturamento_parceiros (
   id uuid primary key default gen_random_uuid(),
   parceiro_id uuid not null references public.parceiros(id) on delete restrict,
-  competencia date not null check (competencia = date_trunc('month', competencia)::date),
+  competencia date not null check (extract(day from competencia) = 1),
   alunos_ativos integer not null check (alunos_ativos >= 0),
   valor_unitario_centavos integer not null check (valor_unitario_centavos >= 0),
   valor_total_centavos integer generated always as (alunos_ativos * valor_unitario_centavos) stored,
@@ -87,6 +87,15 @@ alter table public.turmas enable row level security;
 alter table public.licencas_acesso enable row level security;
 alter table public.faturamento_parceiros enable row level security;
 alter table public.auditoria_acesso enable row level security;
+
+grant select, insert, update, delete on public.parceiros to authenticated;
+grant select, insert, update, delete on public.parceiro_usuarios to authenticated;
+grant select, insert, update, delete on public.turmas to authenticated;
+grant select, insert, update, delete on public.licencas_acesso to authenticated;
+grant select, insert, update, delete on public.faturamento_parceiros to authenticated;
+grant select on public.auditoria_acesso to authenticated;
+grant all on public.parceiros, public.parceiro_usuarios, public.turmas,
+  public.licencas_acesso, public.faturamento_parceiros, public.auditoria_acesso to service_role;
 
 create schema if not exists private;
 revoke all on schema private from public, anon;
@@ -118,6 +127,18 @@ drop policy if exists licencas_leitura on public.licencas_acesso;
 create policy licencas_leitura on public.licencas_acesso for select to authenticated using (user_id=auth.uid() or private.sou_gestor_parceiro(parceiro_id) or public.sou_admin());
 drop policy if exists licencas_gestao on public.licencas_acesso;
 create policy licencas_gestao on public.licencas_acesso for all to authenticated using (public.sou_admin() or private.sou_gestor_parceiro(parceiro_id)) with check (public.sou_admin() or private.sou_gestor_parceiro(parceiro_id));
+
+drop policy if exists perfis_leitura_parceiro on public.perfis;
+create policy perfis_leitura_parceiro on public.perfis for select to authenticated
+using (
+  id = auth.uid()
+  or public.sou_admin()
+  or exists (
+    select 1 from public.licencas_acesso l
+    where l.user_id = perfis.id
+      and private.sou_gestor_parceiro(l.parceiro_id)
+  )
+);
 
 drop policy if exists faturamento_leitura on public.faturamento_parceiros;
 create policy faturamento_leitura on public.faturamento_parceiros for select to authenticated using (public.sou_admin() or private.sou_gestor_parceiro(parceiro_id));
