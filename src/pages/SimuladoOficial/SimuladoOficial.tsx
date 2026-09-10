@@ -13,6 +13,13 @@ import {
 } from "../../services/simuladosOficiaisService";
 import "./SimuladoOficial.css";
 
+const RASCUNHO_PREFIXO = "study-pro:simulado-oficial:";
+
+type RascunhoOficial = {
+  respostas: Record<string, string>;
+  eliminadas: Record<string, string[]>;
+};
+
 export default function SimuladoOficial() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -34,6 +41,7 @@ export default function SimuladoOficial() {
     setFinalizando(true);
     try {
       const retorno = await finalizarTentativaOficial(tentativa.id, respostas);
+      localStorage.removeItem(chaveRascunho(tentativa.id));
       setResultado(retorno);
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Não foi possível corrigir o simulado.");
@@ -48,16 +56,21 @@ export default function SimuladoOficial() {
     async function carregar() {
       try {
         setErro("");
-        const [lista, questoesDaProva] = await Promise.all([
-          listarSimuladosOficiais(configuracoes.concurso),
-          listarQuestoesSimuladoOficial(id),
-        ]);
+        const lista = await listarSimuladosOficiais(configuracoes.concurso);
         const atual = lista.find((item) => item.id === id);
         if (!atual) throw new Error("Simulado não encontrado para o seu concurso.");
+
+        const questoesDaProva = await listarQuestoesSimuladoOficial(id);
         if (!questoesDaProva.length) throw new Error("Este simulado ainda não possui questões publicadas.");
 
         const tentativaAtual = await iniciarTentativaOficial(id);
         if (!ativo) return;
+
+        const rascunho = carregarRascunho(tentativaAtual.id);
+        if (rascunho) {
+          setRespostas(rascunho.respostas);
+          setEliminadas(rascunho.eliminadas);
+        }
 
         setSimulado(atual);
         setQuestoes(questoesDaProva);
@@ -74,6 +87,18 @@ export default function SimuladoOficial() {
       ativo = false;
     };
   }, [configuracoes.concurso, id]);
+
+  useEffect(() => {
+    if (!tentativa || resultado) return;
+    try {
+      localStorage.setItem(
+        chaveRascunho(tentativa.id),
+        JSON.stringify({ respostas, eliminadas } satisfies RascunhoOficial)
+      );
+    } catch {
+      // O resultado continua seguro no servidor; o localStorage é apenas um apoio para retomada.
+    }
+  }, [eliminadas, respostas, resultado, tentativa]);
 
   useEffect(() => {
     if (!tentativa || !simulado || resultado) return;
@@ -310,4 +335,23 @@ function formatarSegundos(total: number) {
   return horas > 0
     ? `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`
     : `${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
+}
+
+function chaveRascunho(tentativaId: string) {
+  return `${RASCUNHO_PREFIXO}${tentativaId}`;
+}
+
+function carregarRascunho(tentativaId: string): RascunhoOficial | null {
+  try {
+    const bruto = localStorage.getItem(chaveRascunho(tentativaId));
+    if (!bruto) return null;
+    const valor = JSON.parse(bruto) as Partial<RascunhoOficial>;
+    if (!valor || typeof valor !== "object") return null;
+    return {
+      respostas: valor.respostas && typeof valor.respostas === "object" ? valor.respostas as Record<string, string> : {},
+      eliminadas: valor.eliminadas && typeof valor.eliminadas === "object" ? valor.eliminadas as Record<string, string[]> : {},
+    };
+  } catch {
+    return null;
+  }
 }
