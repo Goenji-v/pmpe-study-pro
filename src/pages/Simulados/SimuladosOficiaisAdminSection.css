@@ -1,0 +1,11 @@
+.simulados-oficiais-admin{margin-top:24px;padding:24px;border:1px solid var(--border-color,#2a2a2a);border-radius:16px;background:var(--card-bg,#111)}
+.simulados-oficiais-admin__eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;opacity:.65}
+.simulados-oficiais-admin__header h2{margin:6px 0}.simulados-oficiais-admin__header p{margin:0 0 20px;opacity:.75}
+.simulados-oficiais-admin__form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.simulados-oficiais-admin label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:700}
+.simulados-oficiais-admin input,.simulados-oficiais-admin select,.simulados-oficiais-admin textarea{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-color,#333);border-radius:10px;background:var(--input-bg,#171717);color:inherit;font:inherit;font-weight:400}
+.simulados-oficiais-admin input[type=file]{padding:8px}
+.simulados-oficiais-admin__analisar{margin-top:18px;padding:12px 18px;border:0;border-radius:10px;cursor:pointer;font-weight:800}.simulados-oficiais-admin button:disabled{opacity:.5;cursor:not-allowed}
+.simulados-oficiais-admin__review{margin-top:24px}.simulados-oficiais-admin__review-head{display:flex;justify-content:space-between;gap:16px;align-items:center}.simulados-oficiais-admin__review-head button{padding:10px 16px;border:0;border-radius:10px;font-weight:800;cursor:pointer}
+.simulados-oficiais-admin__question{margin-top:14px;padding:16px;border:1px solid var(--border-color,#2a2a2a);border-radius:12px}.simulados-oficiais-admin__question textarea{margin:10px 0}.simulados-oficiais-admin__alternativas{display:grid;gap:8px}.simulados-oficiais-admin__alternativas label{display:grid;grid-template-columns:24px 1fr;align-items:center;flex-direction:row}.simulados-oficiais-admin__meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}.simulados-oficiais-admin__published{opacity:.7}
+@media(max-width:720px){.simulados-oficiais-admin__form,.simulados-oficiais-admin__meta{grid-template-columns:1fr}.simulados-oficiais-admin__review-head{align-items:flex-start;flex-direction:column}}
