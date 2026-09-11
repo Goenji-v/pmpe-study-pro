@@ -15,6 +15,7 @@ import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import AvisoArmazenamento from "./components/AvisoArmazenamento/AvisoArmazenamento";
 import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
 import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/QuestaoIACronometroBridge";
+import MentoriaCronometroBridge from "./components/MentoriaCronometroBridge/MentoriaCronometroBridge";
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
 import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
@@ -32,7 +33,7 @@ const Loja = lazy(() => import("./pages/Loja/Loja"));
 const ResolverSimuladoIA = lazy(() => import("./pages/ResolverSimuladoIA/ResolverSimuladoIA"));
 const MeusSimuladosIA = lazy(() => import("./pages/MeusSimuladosIA/MeusSimuladosIA"));
 const RevisaoCadernoIA = lazy(() => import("./pages/RevisaoCadernoIA/RevisaoCadernoIA"));
-const CronogramaIA = lazy(() => import("./pages/CronogramaIA/CronogramaIA"));
+const CronogramaIA = lazy(() => import("./pages/CronogramaIA/CronogramaGateway"));
 const GerarSimuladoIA = lazy(() => import("./pages/GerarSimuladoIA/GerarSimuladoIA"));
 const CentroMateriais = lazy(() => import("./pages/CentroMateriais/CentroMateriais"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
@@ -98,6 +99,7 @@ function LayoutProtegido() {
           <DeferredAppExtras />
           <CronometroProvider>
             <QuestaoIACronometroBridge />
+            <MentoriaCronometroBridge />
             <CentralRedacaoBridge />
             <div className="layout">
               <Sidebar />
@@ -153,14 +155,8 @@ function LayoutProtegido() {
                       <Route path="/conquistas" element={<Conquistas />} />
                       <Route path="/loja" element={<Loja />} />
 
-                      <Route
-                        path="/relatorio-inteligente"
-                        element={<Navigate to="/inteligencia?aba=relatorio" replace />}
-                      />
-                      <Route
-                        path="/ia-coach"
-                        element={<Navigate to="/inteligencia?aba=coach" replace />}
-                      />
+                      <Route path="/relatorio-inteligente" element={<Navigate to="/inteligencia?aba=relatorio" replace />} />
+                      <Route path="/ia-coach" element={<Navigate to="/inteligencia?aba=coach" replace />} />
 
                       <Route path="/backup" element={<Backup />} />
                       <Route path="/configuracoes" element={<Configuracoes />} />
