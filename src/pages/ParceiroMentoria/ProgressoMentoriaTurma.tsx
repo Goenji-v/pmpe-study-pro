@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarAlunosDoParceiro, type AlunoParceiro } from "../../services/parceriasService";
 import {
   cancelarReforcoMentoria,
@@ -26,7 +26,7 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
 
-  async function carregar() {
+  const carregar = useCallback(async () => {
     if (!trilha) {
       setAlunos([]);
       setProgresso([]);
@@ -55,11 +55,11 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
     } finally {
       setCarregando(false);
     }
-  }
+  }, [trilha, turmaId]);
 
   useEffect(() => {
     void carregar();
-  }, [trilha?.id, turmaId]);
+  }, [carregar]);
 
   const progressoPorAluno = useMemo(() => {
     const mapa = new Map<string, Set<string>>();
