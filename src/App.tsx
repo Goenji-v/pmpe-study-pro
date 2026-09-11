@@ -18,6 +18,7 @@ import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/Qu
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
 import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
 import MentoriaProgressoBridge from "./components/MentoriaProgressoBridge/MentoriaProgressoBridge";
+import MentoriaCronometroBridge from "./components/MentoriaCronometroBridge/MentoriaCronometroBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
 
@@ -34,7 +35,7 @@ const Loja = lazy(() => import("./pages/Loja/Loja"));
 const ResolverSimuladoIA = lazy(() => import("./pages/ResolverSimuladoIA/ResolverSimuladoIA"));
 const MeusSimuladosIA = lazy(() => import("./pages/MeusSimuladosIA/MeusSimuladosIA"));
 const RevisaoCadernoIA = lazy(() => import("./pages/RevisaoCadernoIA/RevisaoCadernoIA"));
-const CronogramaIA = lazy(() => import("./pages/CronogramaIA/CronogramaIA"));
+const CronogramaGateway = lazy(() => import("./pages/CronogramaIA/CronogramaGateway"));
 const GerarSimuladoIA = lazy(() => import("./pages/GerarSimuladoIA/GerarSimuladoIA"));
 const CentroMateriais = lazy(() => import("./pages/CentroMateriais/CentroMateriais"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
@@ -104,6 +105,7 @@ function LayoutProtegido() {
           <CronometroProvider>
             <QuestaoIACronometroBridge />
             <CentralRedacaoBridge />
+            <MentoriaCronometroBridge />
             <div className="layout">
               <Sidebar />
 
@@ -123,7 +125,7 @@ function LayoutProtegido() {
                       <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
 
                       <Route path="/calendario" element={<Calendario />} />
-                      <Route path="/cronograma-ia" element={<CronogramaIA />} />
+                      <Route path="/cronograma-ia" element={<CronogramaGateway />} />
                       <Route path="/central-estudos" element={<CentralEstudosGateway />} />
                       <Route path="/materiais" element={<CentroMateriais />} />
                       <Route path="/inteligencia" element={<InteligenciaHub />} />
