@@ -18,6 +18,7 @@ import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/Qu
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
 import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
+import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
 
 import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -61,6 +62,9 @@ const Ranking = lazy(() => import("./pages/Ranking/Ranking"));
 const Admin = lazy(() => import("./pages/Admin/Admin"));
 const Conquistas = lazy(() => import("./pages/Conquistas/Conquistas"));
 const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
+const Parceiro = lazy(() => import("./pages/Parceiro/Parceiro"));
+const Convite = lazy(() => import("./pages/Convite/Convite"));
+const MeuAcesso = lazy(() => import("./pages/MeuAcesso/MeuAcesso"));
 const DashboardGamificacaoSpotlight = lazy(
   () => import("./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight")
 );
@@ -79,6 +83,7 @@ function LayoutProtegido() {
 
   return (
     <ProtectedRoute>
+      <CommercialAccessGate>
       <ToastProvider>
         <RuntimeErrorGuard />
         <AppProvider>
@@ -158,6 +163,8 @@ function LayoutProtegido() {
                       <Route path="/backup" element={<Backup />} />
                       <Route path="/configuracoes" element={<Configuracoes />} />
                       <Route path="/admin" element={<Admin />} />
+                      <Route path="/parceiro" element={<Parceiro />} />
+                      <Route path="/meu-acesso" element={<MeuAcesso />} />
 
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -168,6 +175,7 @@ function LayoutProtegido() {
           </CronometroProvider>
         </AppProvider>
       </ToastProvider>
+      </CommercialAccessGate>
     </ProtectedRoute>
   );
 }
@@ -181,6 +189,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Auth />} />
               <Route path="/demo" element={<Demo />} />
+              <Route path="/convite/:codigo" element={<Convite />} />
               <Route path="/*" element={<LayoutProtegido />} />
             </Routes>
           </Suspense>

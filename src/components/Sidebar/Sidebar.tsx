@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 
 import "./Sidebar.css";
+import { useContextoComercial } from "../../hooks/useContextoComercial";
 
 type GrupoId =
   | "planejamento"
@@ -79,6 +80,7 @@ function obterGrupoDaRota(pathname: string): GrupoId | null {
 }
 
 export default function Sidebar() {
+  const { contexto } = useContextoComercial();
   const location = useLocation();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
@@ -205,6 +207,10 @@ export default function Sidebar() {
             icone="sparkles"
             texto="Inteligência"
           />
+          {(contexto?.papel === "proprietario" || contexto?.papel === "gestor" || contexto?.papel === "professor") && (
+            <ItemMenu to="/parceiro" texto="Painel do parceiro" />
+          )}
+          {contexto?.papel === "aluno" && <ItemMenu to="/meu-acesso" texto="Meu acesso" />}
         </nav>
 
         <div className="sidebar-rodape">
