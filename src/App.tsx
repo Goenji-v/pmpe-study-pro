@@ -64,6 +64,7 @@ const Conquistas = lazy(() => import("./pages/Conquistas/Conquistas"));
 const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
 const Parceiro = lazy(() => import("./pages/Parceiro/Parceiro"));
 const ParceiroMentoria = lazy(() => import("./pages/ParceiroMentoria/ParceiroMentoria"));
+const ParceiroAluno = lazy(() => import("./pages/ParceiroAluno/ParceiroAluno"));
 const Convite = lazy(() => import("./pages/Convite/Convite"));
 const MeuAcesso = lazy(() => import("./pages/MeuAcesso/MeuAcesso"));
 const DashboardGamificacaoSpotlight = lazy(
@@ -166,6 +167,7 @@ function LayoutProtegido() {
                       <Route path="/admin" element={<Admin />} />
                       <Route path="/parceiro" element={<Parceiro />} />
                       <Route path="/parceiro/mentoria" element={<ParceiroMentoria />} />
+                      <Route path="/parceiro/aluno/:userId" element={<ParceiroAluno />} />
                       <Route path="/meu-acesso" element={<MeuAcesso />} />
 
                       <Route path="*" element={<NotFound />} />
