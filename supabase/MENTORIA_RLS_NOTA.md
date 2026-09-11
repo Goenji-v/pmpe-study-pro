@@ -1,0 +1,1 @@
+Os advisors de segurança foram executados após o DDL da mentoria. As tabelas novas não apresentaram alerta de RLS ausente. Avisos restantes pertencem a funções e policies legadas do projeto e não foram alterados nesta entrega para evitar ampliar o escopo de risco.
