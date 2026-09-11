@@ -45,10 +45,12 @@ export default function MentoriaProgressoBridge() {
   );
 
   useEffect(() => {
+    if (!assinatura) return;
+
     void sincronizarMeuProgressoMentoria(conteudos, sessoesRecentes).catch((erro) => {
       console.warn("Não foi possível sincronizar o progresso da mentoria.", erro);
     });
-  }, [assinatura]);
+  }, [assinatura, conteudos, sessoesRecentes]);
 
   return null;
 }
