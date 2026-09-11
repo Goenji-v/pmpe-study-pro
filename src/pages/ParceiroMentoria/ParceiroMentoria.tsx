@@ -7,9 +7,11 @@ import {
   salvarTrilhaMentoria,
   type TrilhaMentoria,
 } from "../../services/mentoriaService";
+import ProgressoMentoriaTurma from "./ProgressoMentoriaTurma";
 import "./ParceiroMentoria.css";
 
 type ItemForm = {
+  id?: string;
   materia: string;
   assunto: string;
 };
@@ -31,9 +33,7 @@ const FORM_INICIAL: FormTrilha = {
   materiasPorDia: 1,
   questoesPorSessao: 20,
   revisoesPorDia: 10,
-  itens: [
-    { materia: "", assunto: "" },
-  ],
+  itens: [{ materia: "", assunto: "" }],
 };
 
 export default function ParceiroMentoria() {
@@ -61,7 +61,6 @@ export default function ParceiroMentoria() {
       setCarregando(false);
       return;
     }
-
     void carregar();
   }, [podeGerenciar]);
 
@@ -86,7 +85,11 @@ export default function ParceiroMentoria() {
       questoesPorSessao: existente.questoesPorSessao,
       revisoesPorDia: existente.revisoesPorDia,
       itens: existente.itens.length
-        ? existente.itens.map((item) => ({ materia: item.materia, assunto: item.assunto }))
+        ? existente.itens.map((item) => ({
+            id: item.id,
+            materia: item.materia,
+            assunto: item.assunto,
+          }))
         : [{ materia: "", assunto: "" }],
     });
   }, [form.turmaId, trilhas]);
@@ -103,7 +106,8 @@ export default function ParceiroMentoria() {
       setTrilhas(trilhasAtuais);
       setForm((anterior) => ({
         ...anterior,
-        turmaId: anterior.turmaId || gestao.turmas.find((turma) => turma.ativa)?.id || "",
+        turmaId:
+          anterior.turmaId || gestao.turmas.find((turma) => turma.ativa)?.id || "",
       }));
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível carregar a mentoria.");
@@ -170,7 +174,7 @@ export default function ParceiroMentoria() {
       });
 
       setMensagem(
-        "Trilha salva. A partir de agora o Cronograma IA dos alunos desta turma priorizará esses assuntos na ordem definida."
+        "Trilha salva. O progresso individual foi preservado nos assuntos que continuam iguais."
       );
       await carregar();
     } catch (e) {
@@ -193,8 +197,8 @@ export default function ParceiroMentoria() {
           <span>MENTORIA</span>
           <h1>Trilha de estudos da turma</h1>
           <p>
-            Você define o que precisa ser estudado e em qual ordem. O aluno informa
-            o tempo disponível, e o sistema adapta a execução no Cronograma IA.
+            Você define o que precisa ser estudado e em qual ordem. Cada aluno avança
+            individualmente conforme conclui os conteúdos no Study Pro.
           </p>
         </div>
         <Link to="/parceiro">Voltar à área do professor</Link>
@@ -210,152 +214,184 @@ export default function ParceiroMentoria() {
           Crie uma turma antes de configurar a trilha da mentoria.
         </div>
       ) : (
-        <div className="mentoria-grid">
-          <form className="mentoria-card" onSubmit={salvar}>
-            <div className="mentoria-card-topo">
-              <div>
-                <span>CONFIGURAÇÃO DA TURMA</span>
-                <h2>{trilhaDaTurma ? "Editar trilha" : "Nova trilha"}</h2>
-              </div>
-              <b>{trilhaDaTurma ? "Ativa" : "Nova"}</b>
-            </div>
-
-            <div className="mentoria-campos">
-              <label>
-                Turma
-                <select
-                  value={form.turmaId}
-                  onChange={(e) => setForm((anterior) => ({ ...anterior, turmaId: e.target.value }))}
-                  required
-                >
-                  {turmas.map((turma) => (
-                    <option key={turma.id} value={turma.id}>{turma.nome}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Nome da trilha
-                <input
-                  value={form.nome}
-                  onChange={(e) => setForm((anterior) => ({ ...anterior, nome: e.target.value }))}
-                  placeholder="Ex.: Rota PMPE 2027"
-                  required
-                />
-              </label>
-
-              <label>
-                Tempo de referência por dia
-                <input
-                  type="number"
-                  min={20}
-                  max={600}
-                  value={form.minutosPadrao}
-                  onChange={(e) => setForm((anterior) => ({ ...anterior, minutosPadrao: Number(e.target.value) }))}
-                />
-                <small>É uma referência. A disponibilidade real do aluno continua prevalecendo.</small>
-              </label>
-
-              <label>
-                Matérias principais por dia
-                <input
-                  type="number"
-                  min={1}
-                  max={4}
-                  value={form.materiasPorDia}
-                  onChange={(e) => setForm((anterior) => ({ ...anterior, materiasPorDia: Number(e.target.value) }))}
-                />
-              </label>
-
-              <label>
-                Questões por sessão
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.questoesPorSessao}
-                  onChange={(e) => setForm((anterior) => ({ ...anterior, questoesPorSessao: Number(e.target.value) }))}
-                />
-              </label>
-
-              <label>
-                Revisões por dia
-                <input
-                  type="number"
-                  min={0}
-                  max={50}
-                  value={form.revisoesPorDia}
-                  onChange={(e) => setForm((anterior) => ({ ...anterior, revisoesPorDia: Number(e.target.value) }))}
-                />
-              </label>
-            </div>
-
-            <div className="mentoria-assuntos-topo">
-              <div>
-                <span>ORDEM DE ESTUDO</span>
-                <h3>Matérias e assuntos</h3>
-                <p>A ordem abaixo vira a trilha-base usada pelo cronograma automático.</p>
-              </div>
-              <button type="button" onClick={adicionarItem}>+ Adicionar assunto</button>
-            </div>
-
-            <div className="mentoria-itens">
-              {form.itens.map((item, indice) => (
-                <div className="mentoria-item" key={`${indice}-${item.materia}-${item.assunto}`}>
-                  <span className="mentoria-ordem">{indice + 1}</span>
-                  <input
-                    value={item.materia}
-                    onChange={(e) => atualizarItem(indice, "materia", e.target.value)}
-                    placeholder="Matéria — ex.: Português"
-                    aria-label={`Matéria ${indice + 1}`}
-                  />
-                  <input
-                    value={item.assunto}
-                    onChange={(e) => atualizarItem(indice, "assunto", e.target.value)}
-                    placeholder="Assunto — ex.: Morfologia"
-                    aria-label={`Assunto ${indice + 1}`}
-                  />
-                  <div className="mentoria-item-acoes">
-                    <button type="button" onClick={() => moverItem(indice, -1)} disabled={indice === 0} aria-label="Mover para cima">↑</button>
-                    <button type="button" onClick={() => moverItem(indice, 1)} disabled={indice === form.itens.length - 1} aria-label="Mover para baixo">↓</button>
-                    <button type="button" className="perigo" onClick={() => removerItem(indice)} aria-label="Remover assunto">×</button>
-                  </div>
+        <>
+          <div className="mentoria-grid">
+            <form className="mentoria-card" onSubmit={salvar}>
+              <div className="mentoria-card-topo">
+                <div>
+                  <span>CONFIGURAÇÃO DA TURMA</span>
+                  <h2>{trilhaDaTurma ? "Editar trilha" : "Nova trilha"}</h2>
                 </div>
-              ))}
-            </div>
-
-            <footer className="mentoria-rodape">
-              <div>
-                <strong>{form.itens.filter((item) => item.materia.trim() && item.assunto.trim()).length} assuntos configurados</strong>
-                <small>Salvar novamente recalcula a fonte dos próximos cronogramas sem apagar o histórico antigo.</small>
+                <b>{trilhaDaTurma ? "Ativa" : "Nova"}</b>
               </div>
-              <button className="principal" disabled={salvando}>
-                {salvando ? "Salvando..." : trilhaDaTurma ? "Salvar alterações" : "Criar trilha"}
-              </button>
-            </footer>
-          </form>
 
-          <aside className="mentoria-resumo">
-            <span>COMO FUNCIONA</span>
-            <h2>Mentor define. Sistema distribui.</h2>
-            <div>
-              <b>1</b>
-              <p><strong>Você define o conteúdo.</strong> Matéria, assunto e ordem de estudo.</p>
-            </div>
-            <div>
-              <b>2</b>
-              <p><strong>O aluno define a rotina.</strong> Tempo disponível e dias de estudo continuam pessoais.</p>
-            </div>
-            <div>
-              <b>3</b>
-              <p><strong>O Cronograma IA adapta.</strong> Ele usa a trilha, revisões atrasadas e desempenho para montar o dia.</p>
-            </div>
-            <div>
-              <b>4</b>
-              <p><strong>Recalcular não apaga o passado.</strong> Um novo plano é salvo e os anteriores permanecem no histórico.</p>
-            </div>
-          </aside>
-        </div>
+              <div className="mentoria-campos">
+                <label>
+                  Turma
+                  <select
+                    value={form.turmaId}
+                    onChange={(e) =>
+                      setForm((anterior) => ({ ...anterior, turmaId: e.target.value }))
+                    }
+                    required
+                  >
+                    {turmas.map((turma) => (
+                      <option key={turma.id} value={turma.id}>{turma.nome}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Nome da trilha
+                  <input
+                    value={form.nome}
+                    onChange={(e) =>
+                      setForm((anterior) => ({ ...anterior, nome: e.target.value }))
+                    }
+                    placeholder="Ex.: Rota PMPE 2027"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Tempo de referência por dia
+                  <input
+                    type="number"
+                    min={20}
+                    max={600}
+                    value={form.minutosPadrao}
+                    onChange={(e) =>
+                      setForm((anterior) => ({
+                        ...anterior,
+                        minutosPadrao: Number(e.target.value),
+                      }))
+                    }
+                  />
+                  <small>É uma referência. A disponibilidade real do aluno continua prevalecendo.</small>
+                </label>
+
+                <label>
+                  Matérias principais por dia
+                  <input
+                    type="number"
+                    min={1}
+                    max={4}
+                    value={form.materiasPorDia}
+                    onChange={(e) =>
+                      setForm((anterior) => ({
+                        ...anterior,
+                        materiasPorDia: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  Questões por sessão
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.questoesPorSessao}
+                    onChange={(e) =>
+                      setForm((anterior) => ({
+                        ...anterior,
+                        questoesPorSessao: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  Revisões por dia
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={form.revisoesPorDia}
+                    onChange={(e) =>
+                      setForm((anterior) => ({
+                        ...anterior,
+                        revisoesPorDia: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+
+              <div className="mentoria-assuntos-topo">
+                <div>
+                  <span>ORDEM DE ESTUDO</span>
+                  <h3>Matérias e assuntos</h3>
+                  <p>A ordem abaixo vira a trilha-base usada pelo cronograma automático.</p>
+                </div>
+                <button type="button" onClick={adicionarItem}>+ Adicionar assunto</button>
+              </div>
+
+              <div className="mentoria-itens">
+                {form.itens.map((item, indice) => (
+                  <div className="mentoria-item" key={item.id || `${indice}-${item.materia}-${item.assunto}`}>
+                    <span className="mentoria-ordem">{indice + 1}</span>
+                    <input
+                      value={item.materia}
+                      onChange={(e) => atualizarItem(indice, "materia", e.target.value)}
+                      placeholder="Matéria — ex.: Português"
+                      aria-label={`Matéria ${indice + 1}`}
+                    />
+                    <input
+                      value={item.assunto}
+                      onChange={(e) => atualizarItem(indice, "assunto", e.target.value)}
+                      placeholder="Assunto — ex.: Morfologia"
+                      aria-label={`Assunto ${indice + 1}`}
+                    />
+                    <div className="mentoria-item-acoes">
+                      <button type="button" onClick={() => moverItem(indice, -1)} disabled={indice === 0} aria-label="Mover para cima">↑</button>
+                      <button type="button" onClick={() => moverItem(indice, 1)} disabled={indice === form.itens.length - 1} aria-label="Mover para baixo">↓</button>
+                      <button type="button" className="perigo" onClick={() => removerItem(indice)} aria-label="Remover assunto">×</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <footer className="mentoria-rodape">
+                <div>
+                  <strong>{form.itens.filter((item) => item.materia.trim() && item.assunto.trim()).length} assuntos configurados</strong>
+                  <small>Reordenar mantém o progresso. Alterar o conteúdo de um assunto cria uma nova etapa para os alunos.</small>
+                </div>
+                <button className="principal" disabled={salvando}>
+                  {salvando ? "Salvando..." : trilhaDaTurma ? "Salvar alterações" : "Criar trilha"}
+                </button>
+              </footer>
+            </form>
+
+            <aside className="mentoria-resumo">
+              <span>COMO FUNCIONA</span>
+              <h2>Mentor define. Cada aluno avança.</h2>
+              <div>
+                <b>1</b>
+                <p><strong>Você define o conteúdo.</strong> Matéria, assunto e ordem de estudo.</p>
+              </div>
+              <div>
+                <b>2</b>
+                <p><strong>O aluno conclui no Study Pro.</strong> O avanço é sincronizado automaticamente.</p>
+              </div>
+              <div>
+                <b>3</b>
+                <p><strong>O Cronograma IA segue em frente.</strong> Assuntos concluídos saem da fila e o próximo entra no plano.</p>
+              </div>
+              <div>
+                <b>4</b>
+                <p><strong>Você pode reforçar.</strong> Um assunto antigo volta ao cronograma somente daquele aluno.</p>
+              </div>
+            </aside>
+          </div>
+
+          <ProgressoMentoriaTurma
+            parceiroId={contexto?.parceiroId || ""}
+            turmaId={form.turmaId}
+            trilha={trilhaDaTurma}
+          />
+        </>
       )}
     </section>
   );
