@@ -1,43 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useCronometro } from "../../context/CronometroContext";
-import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { atualizarStatusTarefaMentoria } from "../../services/mentoriaCronogramaService";
-
-export const CHAVE_TAREFA_MENTORIA_ATIVA = "mentoria:tarefa-ativa";
-
-type TarefaAtiva = {
-  id: string;
-  materia: string;
-  assunto: string;
-  iniciadaEm: string;
-};
-
-export function registrarTarefaMentoriaAtiva(tarefa: TarefaAtiva) {
-  sessionStorage.setItem(CHAVE_TAREFA_MENTORIA_ATIVA, JSON.stringify(tarefa));
-}
-
-export function limparTarefaMentoriaAtiva() {
-  sessionStorage.removeItem(CHAVE_TAREFA_MENTORIA_ATIVA);
-}
-
-function lerTarefaAtiva(): TarefaAtiva | null {
-  const salvo = sessionStorage.getItem(CHAVE_TAREFA_MENTORIA_ATIVA);
-  if (!salvo) return null;
-
-  try {
-    const valor = JSON.parse(salvo) as Partial<TarefaAtiva>;
-    if (!valor.id) return null;
-    return {
-      id: valor.id,
-      materia: valor.materia ?? "",
-      assunto: valor.assunto ?? "",
-      iniciadaEm: valor.iniciadaEm ?? new Date().toISOString(),
-    };
-  } catch {
-    limparTarefaMentoriaAtiva();
-    return null;
-  }
-}
+import {
+  lerTarefaMentoriaAtiva,
+  limparTarefaMentoriaAtiva,
+} from "../../services/tarefaMentoriaAtiva";
 
 export default function MentoriaCronometroBridge() {
   const { cronometroAtivo } = useCronometro();
@@ -45,7 +12,7 @@ export default function MentoriaCronometroBridge() {
 
   useEffect(() => {
     function aoFinalizarSessao() {
-      const tarefa = lerTarefaAtiva();
+      const tarefa = lerTarefaMentoriaAtiva();
       if (!tarefa) return;
 
       limparTarefaMentoriaAtiva();
@@ -60,7 +27,7 @@ export default function MentoriaCronometroBridge() {
 
   useEffect(() => {
     if (estavaAtivo.current && !cronometroAtivo) {
-      const tarefa = lerTarefaAtiva();
+      const tarefa = lerTarefaMentoriaAtiva();
       if (tarefa) limparTarefaMentoriaAtiva();
     }
     estavaAtivo.current = cronometroAtivo;
