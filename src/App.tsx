@@ -29,6 +29,7 @@ import { AuthProvider } from "./context/AuthContext";
 const PlanoEditalGateway = lazy(() => import("./pages/PlanoEdital/PlanoEditalGatewayCursos"));
 const MeuEdital = lazy(() => import("./pages/MeuEdital/MeuEdital"));
 const Cursos = lazy(() => import("./pages/Cursos/Cursos"));
+const CursoMentoria = lazy(() => import("./pages/CursoMentoria/CursoMentoria"));
 const Loja = lazy(() => import("./pages/Loja/Loja"));
 const ResolverSimuladoIA = lazy(() => import("./pages/ResolverSimuladoIA/ResolverSimuladoIA"));
 const MeusSimuladosIA = lazy(() => import("./pages/MeusSimuladosIA/MeusSimuladosIA"));
@@ -66,6 +67,7 @@ const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
 const Parceiro = lazy(() => import("./pages/Parceiro/Parceiro"));
 const ParceiroMentoria = lazy(() => import("./pages/ParceiroMentoria/ParceiroMentoria"));
 const ParceiroMentoriaAluno = lazy(() => import("./pages/ParceiroMentoria/ParceiroMentoriaAluno"));
+const ParceiroCursos = lazy(() => import("./pages/ParceiroCursos/ParceiroCursos"));
 const Convite = lazy(() => import("./pages/Convite/Convite"));
 const MeuAcesso = lazy(() => import("./pages/MeuAcesso/MeuAcesso"));
 const DashboardGamificacaoSpotlight = lazy(
@@ -115,6 +117,7 @@ function LayoutProtegido() {
 
                       <Route path="/meu-edital" element={<MeuEdital />} />
                       <Route path="/cursos" element={<Cursos />} />
+                      <Route path="/curso-mentoria" element={<CursoMentoria />} />
                       <Route path="/plano" element={<PlanoEditalGateway />} />
                       <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
 
@@ -170,6 +173,7 @@ function LayoutProtegido() {
                       <Route path="/parceiro" element={<Parceiro />} />
                       <Route path="/parceiro/mentoria" element={<ParceiroMentoria />} />
                       <Route path="/parceiro/mentoria/aluno/:userId" element={<ParceiroMentoriaAluno />} />
+                      <Route path="/parceiro/cursos" element={<ParceiroCursos />} />
                       <Route path="/meu-acesso" element={<MeuAcesso />} />
 
                       <Route path="*" element={<NotFound />} />

@@ -45,6 +45,7 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
   estudos: [
     "/central-estudos",
     "/cursos",
+    "/curso-mentoria",
     "/materiais",
     "/estudos",
     "/conteudos",
@@ -182,6 +183,7 @@ export default function Sidebar() {
             onToggle={alternarGrupo}
           >
             <ItemMenu to="/central-estudos" texto="Central de Estudos" />
+            {contexto?.papel === "aluno" && <ItemMenu to="/curso-mentoria" texto="Curso da Mentoria" />}
             <ItemMenu to="/cursos" texto="Meus Cursos" />
             <ItemMenu to="/estudos" texto="Conteúdos" />
             <ItemMenu to="/materiais" texto="Materiais" />
@@ -208,7 +210,11 @@ export default function Sidebar() {
             texto="Inteligência"
           />
           {(contexto?.papel === "proprietario" || contexto?.papel === "gestor" || contexto?.papel === "professor") && (
-            <ItemMenu to="/parceiro" texto="Painel do parceiro" />
+            <>
+              <ItemMenu to="/parceiro" texto="Painel do parceiro" />
+              <ItemMenu to="/parceiro/mentoria" texto="Trilha da mentoria" />
+              <ItemMenu to="/parceiro/cursos" texto="Curso do professor" />
+            </>
           )}
           {contexto?.papel === "aluno" && <ItemMenu to="/meu-acesso" texto="Meu acesso" />}
         </nav>
