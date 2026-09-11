@@ -60,6 +60,7 @@ const CentralDesempenho = lazy(() => import("./pages/CentralDesempenho/CentralDe
 const Calendario = lazy(() => import("./pages/Calendario/Calendario"));
 const Auth = lazy(() => import("./pages/Auth/Auth"));
 const Demo = lazy(() => import("./pages/Demo/Demo"));
+const DemoEstatisticas = lazy(() => import("./pages/DemoEstatisticas/DemoEstatisticas"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Ranking = lazy(() => import("./pages/Ranking/Ranking"));
 const Admin = lazy(() => import("./pages/Admin/Admin"));
@@ -203,6 +204,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Auth />} />
               <Route path="/demo" element={<Demo />} />
+              <Route path="/demo-estatisticas" element={<DemoEstatisticas />} />
               <Route path="/convite/:codigo" element={<Convite />} />
               <Route path="/*" element={<LayoutProtegido />} />
             </Routes>
