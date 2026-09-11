@@ -1,0 +1,9 @@
+- [x] RLS sem recursão
+- [x] Trilhas
+- [x] Disponibilidade
+- [x] Cronograma determinístico
+- [x] Reforço do mentor
+- [x] Auditoria
+- [x] Painel individual
+- [x] Gateway de compatibilidade
+- [ ] Quality gate do PR
