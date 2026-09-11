@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { listarAlunosDoParceiro, type AlunoParceiro } from "../../services/parceriasService";
 import {
   cancelarReforcoMentoria,
@@ -9,6 +10,7 @@ import {
   type ReforcoMentoria,
   type TrilhaMentoria,
 } from "../../services/mentoriaService";
+import "./ProgressoMentoriaTurma.css";
 
 type Props = {
   parceiroId: string;
@@ -136,8 +138,8 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
           <span>ACOMPANHAMENTO INDIVIDUAL</span>
           <h2>Progresso dos alunos</h2>
           <p>
-            O avanço vem dos conteúdos concluídos no próprio Study Pro. O próximo assunto
-            é calculado individualmente, sem obrigar toda a turma a andar no mesmo ritmo.
+            O avanço vem dos conteúdos concluídos no próprio Study Pro. Esta lista usa a
+            trilha-base da turma; o painel completo mostra e permite ajustar a rota individual.
           </p>
         </div>
         <strong>{alunos.length} aluno{alunos.length === 1 ? "" : "s"}</strong>
@@ -167,6 +169,9 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
                 <div className="mentoria-aluno-identidade">
                   <strong>{aluno.nome}</strong>
                   <small>{aluno.email || "E-mail não informado"}</small>
+                  <Link className="mentoria-aluno-abrir" to={`/parceiro/mentoria/aluno/${aluno.userId}`}>
+                    Abrir painel completo
+                  </Link>
                 </div>
 
                 <div className="mentoria-aluno-progresso">
@@ -179,7 +184,7 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
                   </div>
                   <small>
                     {proximo
-                      ? `Próximo: ${proximo.materia} — ${proximo.assunto}`
+                      ? `Próximo na trilha-base: ${proximo.materia} — ${proximo.assunto}`
                       : "Trilha-base concluída"}
                   </small>
                 </div>
