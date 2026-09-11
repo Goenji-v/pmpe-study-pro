@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "../config/api";
 import { supabase } from "../lib/supabase";
 import { fetchApiAutenticada } from "./apiAutenticada";
+import { carregarMinhaTrilhaMentoria } from "./mentoriaService";
 
 export type PeriodoCronogramaIA =
   | "hoje"
@@ -125,6 +126,8 @@ type LinhaCronograma = {
 export async function gerarCronogramaIA(
   dados: DadosCronogramaIA
 ): Promise<CronogramaGeradoIA> {
+  const dadosFinais = await enriquecerComTrilhaMentoria(dados);
+
   const resposta = await fetchApiAutenticada(
     `${API_BASE_URL}/api/cronograma`,
     {
@@ -132,7 +135,7 @@ export async function gerarCronogramaIA(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(dados),
+      body: JSON.stringify(dadosFinais),
     }
   );
 
@@ -154,12 +157,12 @@ export async function gerarCronogramaIA(
 
   const cronogramaValidado = validarCronogramaGerado(
     corpo.cronograma,
-    dados
+    dadosFinais
   );
 
   return salvarCronograma(
     cronogramaValidado,
-    dados.tempoDisponivelMinutos
+    dadosFinais.tempoDisponivelMinutos
   );
 }
 
@@ -199,6 +202,55 @@ export async function excluirCronogramaIA(
 
   if (error) {
     throw new Error(`Não foi possível excluir o cronograma: ${error.message}`);
+  }
+}
+
+async function enriquecerComTrilhaMentoria(
+  dados: DadosCronogramaIA
+): Promise<DadosCronogramaIA> {
+  try {
+    const trilha = await carregarMinhaTrilhaMentoria();
+    if (!trilha || trilha.itens.length === 0) return dados;
+
+    const itensDaMentoria = trilha.itens.slice(0, 80).map((item, indice) => ({
+      id: `mentoria:${trilha.id}:${item.id}`,
+      semana: Math.floor(indice / Math.max(1, trilha.materiasPorDia * 7)) + 1,
+      dia: Math.floor(indice / Math.max(1, trilha.materiasPorDia)) + 1,
+      numero: item.ordem,
+      materia: item.materia,
+      assunto: item.assunto,
+      tipo: "misto",
+    }));
+
+    const ids = new Set(itensDaMentoria.map((item) => item.id));
+    const outrasMissoes = dados.missoesPendentes.filter((item) => !ids.has(item.id));
+    const orientacaoMentoria = [
+      `MENTORIA ATIVA: ${trilha.nome}.`,
+      "Os assuntos da mentoria enviados no início das missões pendentes definem a trilha-base e devem ter prioridade de conteúdo.",
+      `Regra do mentor: até ${trilha.materiasPorDia} matéria(s) principal(is) por dia, ${trilha.questoesPorSessao} questões por sessão e ${trilha.revisoesPorDia} revisões por dia.`,
+      "Adapte a carga ao tempo real informado pelo aluno. Não apague nem ignore revisões atrasadas e reforços necessários.",
+    ].join(" ");
+
+    return {
+      ...dados,
+      perfilEstudo: dados.perfilEstudo
+        ? {
+            ...dados.perfilEstudo,
+            observacao: [orientacaoMentoria, dados.perfilEstudo.observacao]
+              .filter(Boolean)
+              .join(" "),
+          }
+        : dados.perfilEstudo,
+      metas: {
+        ...dados.metas,
+        questoesDia: trilha.questoesPorSessao,
+        revisoesDia: trilha.revisoesPorDia,
+      },
+      missoesPendentes: [...itensDaMentoria, ...outrasMissoes].slice(0, 80),
+    };
+  } catch (erro) {
+    console.warn("Não foi possível aplicar a trilha da mentoria ao cronograma.", erro);
+    return dados;
   }
 }
 
