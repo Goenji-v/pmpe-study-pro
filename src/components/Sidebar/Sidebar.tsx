@@ -214,6 +214,7 @@ export default function Sidebar() {
               <ItemMenu to="/parceiro" texto="Painel do parceiro" />
               <ItemMenu to="/parceiro/mentoria" texto="Trilha da mentoria" />
               <ItemMenu to="/parceiro/cursos" texto="Curso do professor" />
+              <ItemMenu to="/parceiro/simulados" texto="Simulados do professor" />
             </>
           )}
           {contexto?.papel === "aluno" && <ItemMenu to="/meu-acesso" texto="Meu acesso" />}

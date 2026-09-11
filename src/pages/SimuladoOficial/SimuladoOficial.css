@@ -14,7 +14,9 @@
 }
 
 .prova-header span,
-.resultado-oficial > header > span {
+.resultado-oficial > header > span,
+.oficial-intro > span,
+.oficial-resultado-pendente > span {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -22,7 +24,9 @@
 }
 
 .prova-header h1,
-.resultado-oficial h1 {
+.resultado-oficial h1,
+.oficial-intro h1,
+.oficial-resultado-pendente h1 {
   margin: 5px 0;
 }
 
@@ -109,7 +113,10 @@
 .texto-alternativa,
 .tesoura-oficial,
 .navegacao-oficial button,
-.resultado-oficial > button {
+.resultado-oficial > button,
+.oficial-intro button,
+.oficial-resultado-pendente button,
+.oficial-erro button {
   border: 0;
   background: transparent;
   color: inherit;
@@ -139,14 +146,25 @@
 }
 
 .navegacao-oficial button,
-.resultado-oficial > button {
+.resultado-oficial > button,
+.oficial-intro button,
+.oficial-resultado-pendente button,
+.oficial-erro button {
   padding: 11px 16px;
   border: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: 10px;
   font-weight: 700;
 }
 
-.navegacao-oficial button:disabled {
+.oficial-intro-acoes button:not(.secundario),
+.oficial-resultado-pendente button {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.navegacao-oficial button:disabled,
+.oficial-intro button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -195,6 +213,78 @@
 .oficial-erro {
   display: grid;
   gap: 14px;
+}
+
+.oficial-intro,
+.oficial-resultado-pendente {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 30px;
+  border: 1px solid rgba(127, 127, 127, 0.22);
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.oficial-intro > p,
+.oficial-resultado-pendente > p {
+  line-height: 1.6;
+  opacity: 0.78;
+}
+
+.oficial-intro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.oficial-intro-grid > div {
+  padding: 18px;
+  border: 1px solid rgba(127, 127, 127, 0.18);
+  border-radius: 14px;
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.oficial-intro-grid strong {
+  font-size: 28px;
+}
+
+.oficial-intro-grid span {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.oficial-intro ul {
+  padding-left: 20px;
+  line-height: 1.7;
+  opacity: 0.8;
+}
+
+.oficial-intro-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.oficial-aviso {
+  margin: 12px 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+}
+
+.oficial-resultado-pendente {
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.oficial-resultado-pendente > strong {
+  color: #93c5fd;
 }
 
 .resultado-oficial {
@@ -291,7 +381,8 @@
     grid-template-columns: repeat(10, 1fr);
   }
 
-  .resultado-materias {
+  .resultado-materias,
+  .oficial-intro-grid {
     grid-template-columns: 1fr;
   }
 
@@ -305,5 +396,15 @@
 
   .resultado-assuntos > div {
     flex-direction: column;
+  }
+
+  .oficial-intro,
+  .oficial-resultado-pendente {
+    margin: 20px auto;
+    padding: 20px;
+  }
+
+  .oficial-intro-acoes {
+    flex-direction: column-reverse;
   }
 }
