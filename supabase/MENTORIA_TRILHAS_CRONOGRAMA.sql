@@ -22,6 +22,10 @@ create unique index if not exists trilhas_mentoria_turma_ativa_unica
   where ativa;
 create index if not exists trilhas_mentoria_parceiro_idx
   on public.trilhas_mentoria(parceiro_id, ativa);
+create index if not exists trilhas_mentoria_turma_idx
+  on public.trilhas_mentoria(turma_id);
+create index if not exists trilhas_mentoria_criado_por_idx
+  on public.trilhas_mentoria(criado_por);
 
 create table if not exists public.trilha_mentoria_itens (
   id uuid primary key default gen_random_uuid(),
