@@ -1,0 +1,25 @@
+-- Este arquivo acompanha MENTORIA_CRONOGRAMA_COMPLETO.md.
+-- O schema completo foi aplicado ao Supabase em migrações controladas em 2026-09-11.
+-- Mantemos aqui as chamadas públicas centrais esperadas pelo frontend, para facilitar
+-- auditoria e recuperação sem duplicar toda a definição de helpers privados.
+--
+-- RPCs esperadas:
+--   public.minha_trilha_mentoria()
+--   public.listar_trilhas_meu_parceiro()
+--   public.painel_cronograma_aluno_meu_parceiro(uuid)
+--   public.salvar_trilha_mentoria(...)
+--   public.criar_reforco_mentoria(...)
+--   public.recalcular_meu_cronograma_mentoria(...)
+--   public.recalcular_cronograma_aluno_mentor(...)
+--   public.atualizar_status_tarefa_mentoria(uuid,text)
+--
+-- Tabelas novas:
+--   public.disponibilidade_estudo_aluno
+--   public.preferencias_cronograma_aluno
+--   public.cronograma_mentoria_tarefas
+--   public.recalculos_cronograma_mentoria
+--   public.auditoria_mentoria
+--
+-- Consulte o arquivo .md ao lado para a arquitetura, regras de prioridade,
+-- segurança/RLS e testes executados. A fonte de verdade do DDL aplicado é o
+-- histórico de migrations do projeto Supabase.
