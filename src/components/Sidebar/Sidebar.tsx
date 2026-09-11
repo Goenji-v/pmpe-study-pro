@@ -210,6 +210,7 @@ export default function Sidebar() {
           {(contexto?.papel === "proprietario" || contexto?.papel === "gestor" || contexto?.papel === "professor") && (
             <ItemMenu to="/parceiro" texto="Painel do parceiro" />
           )}
+          {contexto?.papel === "aluno" && <ItemMenu to="/meu-acesso" texto="Meu acesso" />}
         </nav>
 
         <div className="sidebar-rodape">
