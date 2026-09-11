@@ -1,0 +1,1 @@
+Teste transacional executado no Supabase com rollback: geração de cronograma, conclusão de tarefa, criação de progresso e criação automática de três revisões. Nenhum dado de teste permaneceu no banco.
