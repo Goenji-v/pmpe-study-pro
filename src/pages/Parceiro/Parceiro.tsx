@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
 import { alterarStatusLicenca, carregarGestaoParceiro, carregarResumoParceiro, criarConvite, decidirSolicitacao, listarAlunosDoParceiro, type AlunoParceiro, type GestaoParceiro, type ResumoParceiro } from "../../services/parceriasService";
 import "./Parceiro.css";
@@ -61,7 +61,7 @@ export default function Parceiro() {
   if (verificando) return <div className="parceiro-estado">Verificando perfil do parceiro...</div>;
   if (!podeGerenciar) return <Navigate to="/" replace />;
   return <section className="parceiro-pagina">
-    <header className="parceiro-cabecalho"><div><span>ÁREA DO PROFESSOR</span><h1>{resumo?.parceiroNome || contexto?.parceiroNome || "Minha organização"}</h1><p>Convide alunos, aprove entradas e acompanhe somente os dados autorizados da sua turma.</p></div><div className="parceiro-valor"><small>Estimativa do mês</small><strong>{moeda(resumo?.valorMensal ?? 0)}</strong><span>R$ 20 por aluno ativo</span></div></header>
+    <header className="parceiro-cabecalho"><div><span>ÁREA DO PROFESSOR</span><h1>{resumo?.parceiroNome || contexto?.parceiroNome || "Minha organização"}</h1><p>Convide alunos, organize a mentoria e acompanhe somente os dados autorizados da sua turma.</p><Link className="parceiro-atalho-mentoria" to="/parceiro/mentoria">Configurar trilha da mentoria →</Link></div><div className="parceiro-valor"><small>Estimativa do mês</small><strong>{moeda(resumo?.valorMensal ?? 0)}</strong><span>R$ 20 por aluno ativo</span></div></header>
     {erro && <div className="parceiro-erro" role="alert">{erro}</div>}
     <div className="parceiro-cards"><Card titulo="Alunos ativos" valor={resumo?.alunosAtivos ?? 0} classe="ativo" /><Card titulo="Aguardando aprovação" valor={resumo?.alunosPendentes ?? 0} classe="pendente" /><Card titulo="Bloqueados/expirados" valor={resumo?.alunosBloqueados ?? 0} classe="bloqueado" /></div>
     <nav className="parceiro-abas" aria-label="Seções do painel">{([["alunos", "Alunos"], ["convites", "Turmas e convites"], ["financeiro", "Financeiro"], ["auditoria", "Histórico"]] as [Aba, string][]).map(([id, nome]) => <button key={id} className={aba === id ? "ativo" : ""} onClick={() => setAba(id)}>{nome}{id === "convites" && gestao.solicitacoes.some((s) => s.status === "pendente") ? ` (${gestao.solicitacoes.filter((s) => s.status === "pendente").length})` : ""}</button>)}</nav>
