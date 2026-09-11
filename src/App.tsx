@@ -17,6 +17,7 @@ import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard"
 import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/QuestaoIACronometroBridge";
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
 import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
+import MentoriaProgressoBridge from "./components/MentoriaProgressoBridge/MentoriaProgressoBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
 
@@ -89,6 +90,7 @@ function LayoutProtegido() {
         <RuntimeErrorGuard />
         <AppProvider>
           <PersonalizacaoBridge />
+          <MentoriaProgressoBridge />
           {paginaDashboard && (
             <Suspense fallback={null}>
               <DashboardGamificacaoSpotlight />

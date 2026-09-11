@@ -29,6 +29,7 @@ export type AlunoParceiro = {
   licencaId: string;
   userId: string;
   nome: string;
+  turmaId: string | null;
   turma: string;
   status: StatusLicenca;
   inicioEm: string;
@@ -64,8 +65,6 @@ const CONTEXTO_LEGADO: ContextoComercial = {
 
 export async function carregarContextoComercial(): Promise<ContextoComercial> {
   const { data, error } = await supabase.rpc("meu_contexto_comercial");
-  // Compatibilidade durante o deploy em duas etapas: o frontend novo continua
-  // funcionando até a migration ser aplicada.
   if (error?.code === "PGRST202" || error?.message?.includes("meu_contexto_comercial")) {
     return CONTEXTO_LEGADO;
   }
@@ -88,12 +87,20 @@ export async function carregarResumoParceiro(): Promise<ResumoParceiro> {
 }
 
 export async function listarAlunosDoParceiro(): Promise<AlunoParceiro[]> {
-  const { data, error } = await supabase.rpc("listar_alunos_meu_parceiro_v2");
+  let resposta = await supabase.rpc("listar_alunos_meu_parceiro_v3");
+
+  if (resposta.error?.code === "PGRST202" || resposta.error?.message?.includes("listar_alunos_meu_parceiro_v3")) {
+    resposta = await supabase.rpc("listar_alunos_meu_parceiro_v2");
+  }
+
+  const { data, error } = resposta;
   if (error) throw new Error(`Não foi possível carregar os alunos: ${error.message}`);
+
   return ((data ?? []) as Record<string, unknown>[]).map((item) => ({
     licencaId: texto(item.licenca_id),
     userId: texto(item.user_id),
     nome: texto(item.nome) || "Aluno",
+    turmaId: texto(item.turma_id) || null,
     turma: texto(item.turma) || "Sem turma",
     status: texto(item.status) as StatusLicenca,
     inicioEm: texto(item.inicio_em),

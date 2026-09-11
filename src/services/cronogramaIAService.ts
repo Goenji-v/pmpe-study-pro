@@ -3,9 +3,7 @@ import { supabase } from "../lib/supabase";
 import { fetchApiAutenticada } from "./apiAutenticada";
 import { carregarMinhaTrilhaMentoria } from "./mentoriaService";
 
-export type PeriodoCronogramaIA =
-  | "hoje"
-  | "7-dias";
+export type PeriodoCronogramaIA = "hoje" | "7-dias";
 
 export type TipoTarefaCronogramaIA =
   | "teoria"
@@ -104,16 +102,8 @@ export type DadosCronogramaIA = {
   }>;
 };
 
-type RespostaSucesso = {
-  sucesso: true;
-  cronograma: CronogramaGeradoIA;
-};
-
-type RespostaErro = {
-  sucesso: false;
-  erro: string;
-};
-
+type RespostaSucesso = { sucesso: true; cronograma: CronogramaGeradoIA };
+type RespostaErro = { sucesso: false; erro: string };
 type LinhaCronograma = {
   id: string;
   titulo: string;
@@ -123,24 +113,16 @@ type LinhaCronograma = {
   created_at: string;
 };
 
-export async function gerarCronogramaIA(
-  dados: DadosCronogramaIA
-): Promise<CronogramaGeradoIA> {
+export async function gerarCronogramaIA(dados: DadosCronogramaIA): Promise<CronogramaGeradoIA> {
   const dadosFinais = await enriquecerComTrilhaMentoria(dados);
 
-  const resposta = await fetchApiAutenticada(
-    `${API_BASE_URL}/api/cronograma`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(dadosFinais),
-    }
-  );
+  const resposta = await fetchApiAutenticada(`${API_BASE_URL}/api/cronograma`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dadosFinais),
+  });
 
   let corpo: RespostaSucesso | RespostaErro;
-
   try {
     corpo = await resposta.json();
   } catch {
@@ -148,27 +130,15 @@ export async function gerarCronogramaIA(
   }
 
   if (!resposta.ok || !corpo.sucesso) {
-    throw new Error(
-      "erro" in corpo
-        ? corpo.erro
-        : `Erro HTTP ${resposta.status}`
-    );
+    throw new Error("erro" in corpo ? corpo.erro : `Erro HTTP ${resposta.status}`);
   }
 
-  const cronogramaValidado = validarCronogramaGerado(
-    corpo.cronograma,
-    dadosFinais
-  );
-
-  return salvarCronograma(
-    cronogramaValidado,
-    dadosFinais.tempoDisponivelMinutos
-  );
+  const cronogramaValidado = validarCronogramaGerado(corpo.cronograma, dadosFinais);
+  return salvarCronograma(cronogramaValidado, dadosFinais.tempoDisponivelMinutos);
 }
 
 export async function listarCronogramasIA(): Promise<CronogramaGeradoIA[]> {
   const usuario = await exigirUsuario();
-
   const { data, error } = await supabase
     .from("cronogramas_ia")
     .select("id, titulo, periodo, tempo_disponivel_minutos, dados, created_at")
@@ -176,9 +146,7 @@ export async function listarCronogramasIA(): Promise<CronogramaGeradoIA[]> {
     .order("created_at", { ascending: false })
     .limit(20);
 
-  if (error) {
-    throw new Error(`Não foi possível carregar os cronogramas: ${error.message}`);
-  }
+  if (error) throw new Error(`Não foi possível carregar os cronogramas: ${error.message}`);
 
   return ((data ?? []) as LinhaCronograma[]).map((linha) => ({
     ...linha.dados,
@@ -189,30 +157,36 @@ export async function listarCronogramasIA(): Promise<CronogramaGeradoIA[]> {
   }));
 }
 
-export async function excluirCronogramaIA(
-  id: string
-): Promise<void> {
+export async function excluirCronogramaIA(id: string): Promise<void> {
   const usuario = await exigirUsuario();
-
   const { error } = await supabase
     .from("cronogramas_ia")
     .delete()
     .eq("id", id)
     .eq("user_id", usuario.id);
 
-  if (error) {
-    throw new Error(`Não foi possível excluir o cronograma: ${error.message}`);
-  }
+  if (error) throw new Error(`Não foi possível excluir o cronograma: ${error.message}`);
 }
 
-async function enriquecerComTrilhaMentoria(
-  dados: DadosCronogramaIA
-): Promise<DadosCronogramaIA> {
+async function enriquecerComTrilhaMentoria(dados: DadosCronogramaIA): Promise<DadosCronogramaIA> {
   try {
     const trilha = await carregarMinhaTrilhaMentoria();
     if (!trilha || trilha.itens.length === 0) return dados;
 
-    const itensDaMentoria = trilha.itens.slice(0, 80).map((item, indice) => ({
+    const pendentes = trilha.itens.filter((item) => !item.concluido);
+    const concluidos = trilha.itens.length - pendentes.length;
+
+    const reforcos = trilha.reforcos.slice(0, 20).map((item, indice) => ({
+      id: `reforco:${item.id}`,
+      semana: 0,
+      dia: Math.floor(indice / Math.max(1, trilha.materiasPorDia)) + 1,
+      numero: indice + 1,
+      materia: item.materia,
+      assunto: item.assunto,
+      tipo: "revisao",
+    }));
+
+    const itensDaMentoria = pendentes.slice(0, 80).map((item, indice) => ({
       id: `mentoria:${trilha.id}:${item.id}`,
       semana: Math.floor(indice / Math.max(1, trilha.materiasPorDia * 7)) + 1,
       dia: Math.floor(indice / Math.max(1, trilha.materiasPorDia)) + 1,
@@ -222,13 +196,22 @@ async function enriquecerComTrilhaMentoria(
       tipo: "misto",
     }));
 
-    const ids = new Set(itensDaMentoria.map((item) => item.id));
+    const ids = new Set([...reforcos, ...itensDaMentoria].map((item) => item.id));
     const outrasMissoes = dados.missoesPendentes.filter((item) => !ids.has(item.id));
+    const proximo = pendentes[0];
+
     const orientacaoMentoria = [
       `MENTORIA ATIVA: ${trilha.nome}.`,
-      "Os assuntos da mentoria enviados no início das missões pendentes definem a trilha-base e devem ter prioridade de conteúdo.",
+      `PROGRESSO: ${concluidos} de ${trilha.itens.length} assuntos concluídos.`,
+      proximo
+        ? `PRÓXIMO ASSUNTO DA TRILHA: ${proximo.materia} — ${proximo.assunto}.`
+        : "TRILHA-BASE CONCLUÍDA: priorize revisões, simulados e eventuais reforços do mentor.",
+      trilha.reforcos.length > 0
+        ? `HÁ ${trilha.reforcos.length} REFORÇO(S) PENDENTE(S) DO MENTOR. Eles têm prioridade antes de avançar conteúdo novo.`
+        : "Não há reforço individual pendente.",
       `Regra do mentor: até ${trilha.materiasPorDia} matéria(s) principal(is) por dia, ${trilha.questoesPorSessao} questões por sessão e ${trilha.revisoesPorDia} revisões por dia.`,
-      "Adapte a carga ao tempo real informado pelo aluno. Não apague nem ignore revisões atrasadas e reforços necessários.",
+      "Use somente assuntos ainda pendentes da trilha. Não faça o aluno voltar para assuntos já concluídos, exceto quando houver reforço explícito ou revisão atrasada.",
+      "Adapte a carga ao tempo real informado pelo aluno e preserve revisões atrasadas e necessidades de desempenho.",
     ].join(" ");
 
     return {
@@ -246,7 +229,7 @@ async function enriquecerComTrilhaMentoria(
         questoesDia: trilha.questoesPorSessao,
         revisoesDia: trilha.revisoesPorDia,
       },
-      missoesPendentes: [...itensDaMentoria, ...outrasMissoes].slice(0, 80),
+      missoesPendentes: [...reforcos, ...itensDaMentoria, ...outrasMissoes].slice(0, 80),
     };
   } catch (erro) {
     console.warn("Não foi possível aplicar a trilha da mentoria ao cronograma.", erro);
@@ -314,10 +297,7 @@ function validarCronogramaGerado(
       throw new Error(`A IA ultrapassou o limite de 5 tarefas no dia ${dia}.`);
     }
 
-    const minutosDia = tarefasDia.reduce(
-      (total, tarefa) => total + tarefa.duracaoMinutos,
-      0
-    );
+    const minutosDia = tarefasDia.reduce((total, tarefa) => total + tarefa.duracaoMinutos, 0);
     if (minutosDia > limiteDiario) {
       throw new Error(
         `O plano do dia ${dia} exige ${minutosDia} minutos, acima dos ${limiteDiario} minutos disponíveis.`
@@ -325,10 +305,7 @@ function validarCronogramaGerado(
     }
   }
 
-  const tempoTotalMinutos = tarefas.reduce(
-    (total, tarefa) => total + tarefa.duracaoMinutos,
-    0
-  );
+  const tempoTotalMinutos = tarefas.reduce((total, tarefa) => total + tarefa.duracaoMinutos, 0);
 
   return {
     ...cronograma,
@@ -344,7 +321,6 @@ async function salvarCronograma(
   tempoDisponivelMinutos: number
 ): Promise<CronogramaGeradoIA> {
   const usuario = await exigirUsuario();
-
   const { data, error } = await supabase
     .from("cronogramas_ia")
     .insert({
@@ -362,7 +338,6 @@ async function salvarCronograma(
   }
 
   const linha = data as LinhaCronograma;
-
   return {
     ...linha.dados,
     id: linha.id,
@@ -374,14 +349,7 @@ async function salvarCronograma(
 
 async function exigirUsuario() {
   const { data, error } = await supabase.auth.getUser();
-
-  if (error) {
-    throw new Error(`Não foi possível identificar o usuário: ${error.message}`);
-  }
-
-  if (!data.user) {
-    throw new Error("Faça login para usar o cronograma.");
-  }
-
+  if (error) throw new Error(`Não foi possível identificar o usuário: ${error.message}`);
+  if (!data.user) throw new Error("Faça login para usar o cronograma.");
   return data.user;
 }
