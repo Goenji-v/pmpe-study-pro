@@ -382,16 +382,13 @@ function listarDiasComAtividade(entrada: EntradaEconomia) {
   return [...chaves]
     .sort()
     .map((data) => {
-      const inicio = inicioDoDia(data);
-      const fim = new Date(inicio);
-      fim.setHours(23, 59, 59, 999);
       const metricas = calcularMetricasConsolidadas({
-        sessoes: entrada.sessoes,
-        questoes: entrada.questoes,
-        revisoes: entrada.revisoes,
-        simulados: entrada.simulados,
-        inicio,
-        fim,
+        sessoes: entrada.sessoes.filter((item) => chaveDataAtividade(item.data) === data),
+        questoes: entrada.questoes.filter((item) => chaveDataAtividade(item.data) === data),
+        revisoes: entrada.revisoes.filter(
+          (item) => item.concluida && chaveDataAtividade(item.dataConclusao) === data
+        ),
+        simulados: entrada.simulados.filter((item) => chaveDataAtividade(item.data) === data),
       });
 
       return {
@@ -453,8 +450,18 @@ function deduplicarRecompensas(recompensas: RecompensaMoedas[]) {
 }
 
 function adicionarData(destino: Set<string>, valor: string) {
+  const chave = chaveDataAtividade(valor);
+  if (chave) destino.add(chave);
+}
+
+/** Preserva o dia civil informado pelo dispositivo, mesmo quando os testes ou
+ * o servidor executam em outro fuso horário. */
+function chaveDataAtividade(valor?: string) {
+  if (!valor) return "";
+  const dataCivil = valor.match(/^(\d{4}-\d{2}-\d{2})(?:T|$)/)?.[1];
+  if (dataCivil) return dataCivil;
   const data = new Date(valor);
-  if (!Number.isNaN(data.getTime())) destino.add(chaveDataLocal(data));
+  return Number.isNaN(data.getTime()) ? "" : chaveDataLocal(data);
 }
 
 function inicioDoDia(chave: string) {

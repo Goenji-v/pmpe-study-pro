@@ -8,6 +8,7 @@ import Estatisticas from "../Estatisticas/Estatisticas";
 import HistoricoSessoes from "../HistoricoSessoes/HistoricoSessoes";
 import EstatisticasSessoes from "../EstatisticasSessoes/EstatisticasSessoes";
 import EstatisticasSimuladoIA from "../EstatisticasSimuladoIA/EstatisticasSimuladoIA";
+import SimuladosOficiaisDesempenho from "../../components/SimuladosOficiaisDesempenho/SimuladosOficiaisDesempenho";
 
 type AbaDesempenho =
   | "geral"
@@ -45,82 +46,45 @@ export default function CentralDesempenho() {
         aria-label="Áreas de desempenho"
       >
         <BotaoAba
-          ativo={
-            abaAtiva ===
-            "geral"
-          }
+          ativo={abaAtiva === "geral"}
           icone="📈"
           texto="Visão geral"
-          onClick={() =>
-            setAbaAtiva(
-              "geral"
-            )
-          }
+          onClick={() => setAbaAtiva("geral")}
         />
 
         <BotaoAba
-          ativo={
-            abaAtiva ===
-            "historico"
-          }
+          ativo={abaAtiva === "historico"}
           icone="📅"
           texto="Histórico"
-          onClick={() =>
-            setAbaAtiva(
-              "historico"
-            )
-          }
+          onClick={() => setAbaAtiva("historico")}
         />
 
         <BotaoAba
-          ativo={
-            abaAtiva ===
-            "sessoes"
-          }
+          ativo={abaAtiva === "sessoes"}
           icone="⏱"
           texto="Sessões"
-          onClick={() =>
-            setAbaAtiva(
-              "sessoes"
-            )
-          }
+          onClick={() => setAbaAtiva("sessoes")}
         />
 
         <BotaoAba
-          ativo={
-            abaAtiva ===
-            "ia"
-          }
+          ativo={abaAtiva === "ia"}
           icone="🤖"
           texto="Simulados IA"
-          onClick={() =>
-            setAbaAtiva(
-              "ia"
-            )
-          }
+          onClick={() => setAbaAtiva("ia")}
         />
       </div>
 
       <div className="central-desempenho-conteudo">
-        {abaAtiva ===
-          "geral" && (
-          <Estatisticas />
+        {abaAtiva === "geral" && (
+          <>
+            <Estatisticas />
+            <SimuladosOficiaisDesempenho />
+          </>
         )}
 
-        {abaAtiva ===
-          "historico" && (
-          <HistoricoSessoes />
-        )}
-
-        {abaAtiva ===
-          "sessoes" && (
-          <EstatisticasSessoes />
-        )}
-
-        {abaAtiva ===
-          "ia" && (
-          <EstatisticasSimuladoIA />
-        )}
+        {abaAtiva === "historico" && <HistoricoSessoes />}
+        {abaAtiva === "sessoes" && <EstatisticasSessoes />}
+        {abaAtiva === "ia" && <EstatisticasSimuladoIA />}
       </div>
     </section>
   );
@@ -141,9 +105,7 @@ function BotaoAba({
     <button
       type="button"
       role="tab"
-      aria-selected={
-        ativo
-      }
+      aria-selected={ativo}
       className={
         ativo
           ? "central-desempenho-aba central-desempenho-aba-ativa"

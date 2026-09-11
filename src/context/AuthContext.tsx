@@ -31,7 +31,8 @@ type AuthContextValue = {
   cadastrar: (
     nome: string,
     email: string,
-    senha: string
+    senha: string,
+    redirectTo?: string
   ) => Promise<{
     precisaConfirmarEmail: boolean;
   }>;
@@ -149,7 +150,8 @@ export function AuthProvider({
   async function cadastrar(
     nome: string,
     email: string,
-    senha: string
+    senha: string,
+    redirectTo?: string
   ) {
     const {
       data,
@@ -163,6 +165,7 @@ export function AuthProvider({
           senha,
 
         options: {
+          emailRedirectTo: redirectTo,
           data: {
             nome:
               nome.trim(),

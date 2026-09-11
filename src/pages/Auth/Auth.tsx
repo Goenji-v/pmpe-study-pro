@@ -8,6 +8,7 @@ import {
   Navigate,
   useLocation,
   useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 
 import "./Auth.css";
@@ -36,11 +37,14 @@ export default function Auth() {
   const location =
     useLocation();
 
+  const [searchParams] = useSearchParams();
+  const convite = searchParams.get("convite");
+
   const [
     modo,
     setModo,
   ] = useState<Modo>(
-    "login"
+    searchParams.get("modo") === "cadastro" ? "cadastro" : "login"
   );
 
   const [
@@ -84,7 +88,7 @@ export default function Auth() {
   ) {
     return (
       <Navigate
-        to="/"
+        to={convite ? `/convite/${encodeURIComponent(convite)}` : "/"}
         replace
       />
     );
@@ -97,7 +101,7 @@ export default function Auth() {
             origem?: string;
           }
         | null
-    )?.origem ?? "/";
+    )?.origem ?? (convite ? `/convite/${encodeURIComponent(convite)}` : "/");
 
   async function enviar(
     evento:
@@ -144,7 +148,8 @@ export default function Auth() {
           await cadastrar(
             nome,
             email,
-            senha
+            senha,
+            convite ? `${window.location.origin}/convite/${encodeURIComponent(convite)}` : undefined
           );
 
         if (
@@ -160,7 +165,7 @@ export default function Auth() {
           );
         } else {
           navigate(
-            "/",
+            origem,
             {
               replace: true,
             }

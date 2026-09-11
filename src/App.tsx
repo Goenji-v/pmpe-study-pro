@@ -18,6 +18,7 @@ import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/Qu
 import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
 import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
+import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
 
 import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -42,7 +43,9 @@ const Estatisticas = lazy(() => import("./pages/Estatisticas/Estatisticas"));
 const Revisoes = lazy(() => import("./pages/Revisoes/Revisoes"));
 const CentralEstudosGateway = lazy(() => import("./pages/CentralEstudos/CentralEstudosGateway"));
 const HistoricoSessoes = lazy(() => import("./pages/HistoricoSessoes/HistoricoSessoes"));
-const Simulados = lazy(() => import("./pages/Simulados/Simulados"));
+const SimuladosGateway = lazy(() => import("./pages/Simulados/SimuladosGateway"));
+const SimuladosOficiais = lazy(() => import("./pages/SimuladosOficiais/SimuladosOficiais"));
+const SimuladoOficial = lazy(() => import("./pages/SimuladoOficial/SimuladoOficial"));
 const Backup = lazy(() => import("./pages/Backup/Backup"));
 const CentralQuestoes = lazy(() => import("./pages/CentralQuestoes/CentralQuestoes"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes/Configuracoes"));
@@ -59,6 +62,9 @@ const Ranking = lazy(() => import("./pages/Ranking/Ranking"));
 const Admin = lazy(() => import("./pages/Admin/Admin"));
 const Conquistas = lazy(() => import("./pages/Conquistas/Conquistas"));
 const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
+const Parceiro = lazy(() => import("./pages/Parceiro/Parceiro"));
+const Convite = lazy(() => import("./pages/Convite/Convite"));
+const MeuAcesso = lazy(() => import("./pages/MeuAcesso/MeuAcesso"));
 const DashboardGamificacaoSpotlight = lazy(
   () => import("./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight")
 );
@@ -77,6 +83,7 @@ function LayoutProtegido() {
 
   return (
     <ProtectedRoute>
+      <CommercialAccessGate>
       <ToastProvider>
         <RuntimeErrorGuard />
         <AppProvider>
@@ -127,7 +134,9 @@ function LayoutProtegido() {
                       <Route path="/banco-questoes" element={<BancoQuestoes />} />
                       <Route path="/estatisticas" element={<Estatisticas />} />
 
-                      <Route path="/simulados" element={<Simulados />} />
+                      <Route path="/simulados" element={<SimuladosGateway />} />
+                      <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
+                      <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
                       <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
                       <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
                       <Route path="/resolver-simulado-ia/revisao/:cadernoId" element={<RevisaoCadernoIA />} />
@@ -154,6 +163,8 @@ function LayoutProtegido() {
                       <Route path="/backup" element={<Backup />} />
                       <Route path="/configuracoes" element={<Configuracoes />} />
                       <Route path="/admin" element={<Admin />} />
+                      <Route path="/parceiro" element={<Parceiro />} />
+                      <Route path="/meu-acesso" element={<MeuAcesso />} />
 
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -164,6 +175,7 @@ function LayoutProtegido() {
           </CronometroProvider>
         </AppProvider>
       </ToastProvider>
+      </CommercialAccessGate>
     </ProtectedRoute>
   );
 }
@@ -177,6 +189,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Auth />} />
               <Route path="/demo" element={<Demo />} />
+              <Route path="/convite/:codigo" element={<Convite />} />
               <Route path="/*" element={<LayoutProtegido />} />
             </Routes>
           </Suspense>
