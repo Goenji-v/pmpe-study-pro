@@ -13,7 +13,7 @@
     "start:api": "tsx server/secureEntry.ts",
     "test": "node --import tsx --test server/*.test.ts",
     "lint": "oxlint src server",
-    "build": "tsc -b && vite build",
+    "build": "npm run lint -- --deny-warnings --format=agent && tsc -b && vite build",
     "check": "npm run lint && npm test && npm run build",
     "e2e": "playwright test",
     "e2e:smoke": "playwright test e2e/smoke.spec.ts",
