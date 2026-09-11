@@ -138,8 +138,8 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
           <span>ACOMPANHAMENTO INDIVIDUAL</span>
           <h2>Progresso dos alunos</h2>
           <p>
-            O avanço vem dos conteúdos concluídos no próprio Study Pro. O próximo assunto
-            é calculado individualmente, sem obrigar toda a turma a andar no mesmo ritmo.
+            O avanço vem dos conteúdos concluídos no próprio Study Pro. Esta lista usa a
+            trilha-base da turma; o painel completo mostra e permite ajustar a rota individual.
           </p>
         </div>
         <strong>{alunos.length} aluno{alunos.length === 1 ? "" : "s"}</strong>
@@ -184,7 +184,7 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
                   </div>
                   <small>
                     {proximo
-                      ? `Próximo: ${proximo.materia} — ${proximo.assunto}`
+                      ? `Próximo na trilha-base: ${proximo.materia} — ${proximo.assunto}`
                       : "Trilha-base concluída"}
                   </small>
                 </div>
