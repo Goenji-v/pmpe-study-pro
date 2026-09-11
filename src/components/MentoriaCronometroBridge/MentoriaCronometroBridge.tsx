@@ -1,9 +1,16 @@
+/* O bridge expõe helpers de sessão usados pela página do cronograma. */
+/* oxlint-disable react/only-export-components */
 import { useEffect, useRef } from "react";
 import { useCronometro } from "../../context/CronometroContext";
 import { atualizarStatusTarefaMentoria } from "../../services/mentoriaCronogramaService";
 import {
   lerTarefaMentoriaAtiva,
   limparTarefaMentoriaAtiva,
+} from "../../services/tarefaMentoriaAtiva";
+
+export {
+  limparTarefaMentoriaAtiva,
+  registrarTarefaMentoriaAtiva,
 } from "../../services/tarefaMentoriaAtiva";
 
 export default function MentoriaCronometroBridge() {
