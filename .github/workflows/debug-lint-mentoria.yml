@@ -1,0 +1,30 @@
+name: Debug Lint Mentoria
+
+on:
+  push:
+    branches: [feat/mentoria-progresso-reforco]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Gerar relatório
+        shell: bash
+        run: |
+          set +e
+          npm run lint -- --deny-warnings --format=agent > lint-report.txt 2>&1
+          echo "exit_code=$?" >> lint-report.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lint-report-mentoria
+          path: lint-report.txt
