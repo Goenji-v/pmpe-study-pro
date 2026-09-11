@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { listarAlunosDoParceiro, type AlunoParceiro } from "../../services/parceriasService";
 import {
   cancelarReforcoMentoria,
@@ -9,6 +10,7 @@ import {
   type ReforcoMentoria,
   type TrilhaMentoria,
 } from "../../services/mentoriaService";
+import "./ProgressoMentoriaTurma.css";
 
 type Props = {
   parceiroId: string;
@@ -167,6 +169,9 @@ export default function ProgressoMentoriaTurma({ parceiroId, turmaId, trilha }: 
                 <div className="mentoria-aluno-identidade">
                   <strong>{aluno.nome}</strong>
                   <small>{aluno.email || "E-mail não informado"}</small>
+                  <Link className="mentoria-aluno-abrir" to={`/parceiro/mentoria/aluno/${aluno.userId}`}>
+                    Abrir painel completo
+                  </Link>
                 </div>
 
                 <div className="mentoria-aluno-progresso">
