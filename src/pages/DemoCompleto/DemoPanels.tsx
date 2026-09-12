@@ -87,6 +87,7 @@ function ReviewSession({ id }: { id: string }) {
   const linkedMaterials = materials.filter(material => material.subject === item.subject);
   const timeKey = `review-time:${item.id}`;
   const savedSeconds = Number(lab.notes[timeKey] ?? 0) || 0;
+  const [showChoices, setShowChoices] = useState(false);
   const [mode, setMode] = useState<ReviewMode>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -100,7 +101,7 @@ function ReviewSession({ id }: { id: string }) {
       const sessionSeconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
       if (sessionSeconds > 0) lab.setNote(timeKey, String(savedSeconds + sessionSeconds));
     };
-  // A revisão só passa a contar depois que o aluno escolhe videoaula ou questões.
+  // O cronômetro só começa depois do segundo passo: escolher Aula ou Questões.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, item.id, startedAt]);
 
@@ -113,12 +114,10 @@ function ReviewSession({ id }: { id: string }) {
       lab.notify('Ainda não há link cadastrado para esta opção de revisão.');
       return;
     }
-    if (startedAt === null) {
-      const started = Date.now();
-      setStartedAt(started);
-      setNow(started);
-    }
+    const started = Date.now();
     setMode(nextMode);
+    setStartedAt(started);
+    setNow(started);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -132,26 +131,37 @@ function ReviewSession({ id }: { id: string }) {
   const clockLabel = done
     ? 'tempo registrado'
     : startedAt !== null
-      ? mode === 'video' ? 'videoaula' : 'questões'
-      : savedSeconds > 0 ? 'tempo acumulado · parado' : 'aguardando início';
+      ? mode === 'video' ? 'revisão por aula' : 'revisão por questões'
+      : showChoices ? 'escolha aula ou questões' : savedSeconds > 0 ? 'tempo acumulado · parado' : 'aguardando início';
 
   return <Modal title={item.title} close={lab.close} wide>
     <div className="sp-section-line"><span className="sp-pill">{item.subject}</span><span className={`sp-pill ${done ? 'green' : ''}`}>{done ? 'REVISÃO CONCLUÍDA' : 'REVISÃO'}</span></div>
-    <Card title={done ? 'Revisão concluída' : startedAt !== null ? 'Revisão em andamento' : 'Como você quer revisar?'} subtitle={done ? 'Este assunto já foi revisado.' : startedAt !== null ? 'O cronômetro está registrando somente o tempo desta atividade.' : 'O cronômetro só começa depois que você escolher Videoaula ou Questões.'} action={<div className={`sp-mission-clock ${startedAt !== null && !done ? 'running' : ''}`}><Clock3 size={17}/><span><strong>{formatElapsed(elapsed)}</strong><small>{clockLabel}</small></span></div>}>
-      <div className="sp-subject-detail"><h3>{item.title}</h3><p>{startedAt === null && !done ? 'Escolha abaixo o que você vai usar para fazer esta revisão.' : mode === 'video' ? 'Você escolheu revisar pela videoaula. O tempo continuará contando enquanto esta revisão estiver aberta.' : mode === 'questions' ? 'Você escolheu revisar por questões. O tempo continuará contando enquanto esta revisão estiver aberta.' : 'Esta revisão já foi finalizada.'}</p></div>
+    <Card title={done ? 'Revisão concluída' : startedAt !== null ? 'Revisão em andamento' : showChoices ? 'Escolha o tipo de revisão' : 'Revisão pronta para começar'} subtitle={done ? 'Este assunto já foi revisado.' : startedAt !== null ? 'Agora ficou claro: o cronômetro começou e está contando esta revisão.' : showChoices ? 'Agora escolha Aula ou Questões. Só esse segundo clique inicia o cronômetro e abre o conteúdo.' : 'Entrar nesta tela não conta tempo. Primeiro aperte o botão abaixo para escolher como você vai revisar.'} action={<div className={`sp-mission-clock ${startedAt !== null && !done ? 'running' : ''}`}><Clock3 size={17}/><span><strong>{formatElapsed(elapsed)}</strong><small>{clockLabel}</small></span></div>}>
+      <div className="sp-subject-detail"><h3>{item.title}</h3><p>{startedAt !== null ? mode === 'video' ? `Revisão por aula iniciada: ${item.subject} · ${item.title}.` : `Revisão por questões iniciada: ${item.subject} · ${item.title}.` : showChoices ? `Você vai revisar ${item.subject} · ${item.title}. Escolha abaixo qual atividade deseja fazer.` : `A revisão é de ${item.subject} · ${item.title}. O tempo continua parado até você escolher a atividade.`}</p></div>
     </Card>
 
-    {!done && <Card title="Escolha uma opção" subtitle="Como no site anterior: primeiro você escolhe a atividade, depois o tempo começa.">
+    {!done && startedAt === null && !showChoices && <button className="sp-primary full" onClick={() => setShowChoices(true)}><Play size={17}/>Escolher como revisar</button>}
+
+    {!done && startedAt === null && showChoices && <Card title="Como você quer revisar?" subtitle="Escolha uma opção. Ao clicar, a atividade abre e o cronômetro começa na mesma hora.">
       <div className="sp-study-controls">
-        <button className={mode === 'video' ? 'sp-primary' : 'sp-secondary'} onClick={() => startReview('video', subject?.lessonUrl)}><Play size={16}/>{startedAt !== null && mode === 'video' ? 'Abrir videoaula novamente' : 'Assistir videoaula'}</button>
-        <button className={mode === 'questions' ? 'sp-primary' : 'sp-secondary'} onClick={() => startReview('questions', subject?.questionsUrl)}><FileQuestion size={16}/>{startedAt !== null && mode === 'questions' ? 'Abrir questões novamente' : 'Resolver questões'}</button>
+        <button className="sp-primary" onClick={() => startReview('video', subject?.lessonUrl)}><Play size={16}/>Aula · {item.title}</button>
+        <button className="sp-secondary" onClick={() => startReview('questions', subject?.questionsUrl)}><FileQuestion size={16}/>Questões · {item.title}</button>
       </div>
+      <button className="sp-text-button" onClick={() => setShowChoices(false)}>Voltar</button>
     </Card>}
 
-    {(startedAt !== null || done) && <Card title="Recursos para revisar" subtitle="Você pode reabrir os recursos sem reiniciar o cronômetro.">
-      {subject && <div className="sp-external-links">
-        <a className="sp-external-link" href={subject.lessonUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><Play size={18}/></span><span><b>Abrir videoaula</b><small>Link cadastrado pelo professor</small></span><ExternalLink size={16}/></a>
-        <a className="sp-external-link" href={subject.questionsUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><FileQuestion size={18}/></span><span><b>Abrir questões</b><small>Banco de questões vinculado</small></span><ExternalLink size={16}/></a>
+    {!done && startedAt !== null && <div className="sp-insight"><Clock3 size={20}/><p><strong>{mode === 'video' ? 'Revisão por aula iniciada' : 'Revisão por questões iniciada'}.</strong><br/>O cronômetro está contando agora. Se precisar voltar ao conteúdo, use o botão abaixo.</p></div>}
+
+    {(startedAt !== null || done) && <Card title={done ? 'Recursos usados na revisão' : 'Recurso em uso'} subtitle={done ? 'A revisão ficou registrada.' : 'Reabrir o link não reinicia o cronômetro.'}>
+      {subject && mode === 'video' && <div className="sp-external-links">
+        <a className="sp-external-link" href={subject.lessonUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><Play size={18}/></span><span><b>Abrir aula novamente</b><small>{item.subject} · {item.title}</small></span><ExternalLink size={16}/></a>
+      </div>}
+      {subject && mode === 'questions' && <div className="sp-external-links">
+        <a className="sp-external-link" href={subject.questionsUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><FileQuestion size={18}/></span><span><b>Abrir questões novamente</b><small>{item.subject} · {item.title}</small></span><ExternalLink size={16}/></a>
+      </div>}
+      {done && subject && mode === null && <div className="sp-external-links">
+        <a className="sp-external-link" href={subject.lessonUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><Play size={18}/></span><span><b>Abrir aula</b><small>{item.subject} · {item.title}</small></span><ExternalLink size={16}/></a>
+        <a className="sp-external-link" href={subject.questionsUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><FileQuestion size={18}/></span><span><b>Abrir questões</b><small>{item.subject} · {item.title}</small></span><ExternalLink size={16}/></a>
       </div>}
       {linkedMaterials.length > 0 && <div className="sp-list">
         {linkedMaterials.map(material => <div className="sp-list-row" key={material.id}><FileQuestion size={18}/><span><b>{material.title}</b><small>{material.type} · {material.subject}</small></span><button className="sp-text-button" onClick={() => lab.download(material)}>Baixar<Download size={14}/></button></div>)}
@@ -159,7 +169,7 @@ function ReviewSession({ id }: { id: string }) {
       {!subject && linkedMaterials.length === 0 && <p className="sp-muted">Ainda não há material ou link cadastrado para esta revisão.</p>}
     </Card>}
 
-    {done ? <div className="sp-insight"><Check size={20}/><p><strong>Revisão finalizada.</strong><br/>Ela permanece no histórico como concluída.</p></div> : <button className="sp-primary full" disabled={startedAt === null} onClick={finish}><Check size={17}/>{startedAt === null ? 'Escolha como revisar para começar' : 'Concluir revisão'}</button>}
+    {done ? <div className="sp-insight"><Check size={20}/><p><strong>Revisão finalizada.</strong><br/>Ela permanece no histórico como concluída.</p></div> : <button className="sp-primary full" disabled={startedAt === null} onClick={finish}><Check size={17}/>{startedAt === null ? 'Inicie uma atividade para concluir depois' : 'Concluir revisão'}</button>}
   </Modal>;
 }
 
