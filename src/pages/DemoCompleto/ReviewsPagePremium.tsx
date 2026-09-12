@@ -214,6 +214,27 @@ function ReviewWorkspace({ id, initialMode, onBack, onFinalize }: { id: string; 
     onBack();
   };
 
+  const openLessonActivity = () => {
+    if (!subject) {
+      lab.notify('Não encontrei a disciplina desta aula na demonstração.');
+      return;
+    }
+    lab.open({ kind: 'lesson', subject });
+  };
+
+  const openQuestionActivity = () => {
+    if (internalQuestions.length > 0) {
+      lab.open({ kind: 'quiz', items: internalQuestions });
+      return;
+    }
+    lab.go('questoes');
+  };
+
+  const openSimulationActivity = () => {
+    const simulationQuestions = internalQuestions.length > 0 ? internalQuestions : questions;
+    lab.open({ kind: 'quiz', items: simulationQuestions, simulation: true });
+  };
+
   const destinationLabel = mode === 'questions'
     ? hasExternalQuestionLink ? 'Link externo cadastrado (QConcursos ou outro banco)' : 'Banco de questões interno do Studio Pro'
     : subject?.lessonUrl ? 'Link da aula cadastrado pelo professor' : linkedMaterials.length ? 'Material interno vinculado ao assunto' : 'Nenhum recurso cadastrado ainda';
@@ -221,12 +242,12 @@ function ReviewWorkspace({ id, initialMode, onBack, onFinalize }: { id: string; 
   return <>
     <PageTitle title="Central da revisão" subtitle="Escolha o formato, confira o conteúdo e só então inicie a sessão." action={<button className="sp-secondary" onClick={onBack}><ArrowLeft size={16}/>Voltar para revisões</button>}/>
     <div className="sp-grid two" style={{ alignItems: 'start' }}>
-      <Card title="Tipo de atividade" subtitle="A revisão já vem preenchida com a matéria e o assunto da sua fila.">
+      <Card title="Tipo de atividade" subtitle="Acesse qualquer atividade sem sair da sua preparação.">
         <div className="sp-button-row" style={{ marginBottom: 18 }}>
-          <button className="sp-secondary" disabled><BookOpen size={16}/>Aula</button>
-          <button className="sp-primary"><RotateCcw size={16}/>Revisão</button>
-          <button className="sp-secondary" disabled><FileQuestion size={16}/>Questões</button>
-          <button className="sp-secondary" disabled><FileText size={16}/>Simulado</button>
+          <button type="button" className="sp-secondary" onClick={openLessonActivity}><BookOpen size={16}/>Aula</button>
+          <button type="button" className="sp-primary" onClick={() => lab.notify('Revisão selecionada. Escolha Teoria ou Questões abaixo.')}><RotateCcw size={16}/>Revisão</button>
+          <button type="button" className="sp-secondary" onClick={openQuestionActivity}><FileQuestion size={16}/>Questões</button>
+          <button type="button" className="sp-secondary" onClick={openSimulationActivity}><FileText size={16}/>Simulado</button>
         </div>
         <div className="sp-form">
           <label className="sp-field"><span>Matéria</span><input value={item.subject} readOnly/></label>
