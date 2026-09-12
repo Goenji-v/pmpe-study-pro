@@ -77,6 +77,8 @@ function Lesson({ subject }: { subject: Subject }) {
   </>;
 }
 
+type ReviewMode = 'video' | 'questions' | null;
+
 function ReviewSession({ id }: { id: string }) {
   const lab = useLab();
   const item = reviewItems.find(review => review.id === id)!;
@@ -85,11 +87,12 @@ function ReviewSession({ id }: { id: string }) {
   const linkedMaterials = materials.filter(material => material.subject === item.subject);
   const timeKey = `review-time:${item.id}`;
   const savedSeconds = Number(lab.notes[timeKey] ?? 0) || 0;
-  const [startedAt] = useState(() => Date.now());
+  const [mode, setMode] = useState<ReviewMode>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    if (done) return;
+    if (done || startedAt === null) return;
     setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => {
@@ -97,35 +100,66 @@ function ReviewSession({ id }: { id: string }) {
       const sessionSeconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
       if (sessionSeconds > 0) lab.setNote(timeKey, String(savedSeconds + sessionSeconds));
     };
-  // The review id defines one timing session; saving on unmount keeps a pending review resumable.
+  // A revisão só passa a contar depois que o aluno escolhe videoaula ou questões.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done, item.id]);
+  }, [done, item.id, startedAt]);
 
-  const elapsed = done ? savedSeconds : savedSeconds + Math.max(0, Math.floor((now - startedAt) / 1000));
+  const liveSeconds = !done && startedAt !== null ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
+  const elapsed = savedSeconds + liveSeconds;
+
+  const startReview = (nextMode: Exclude<ReviewMode, null>, url?: string) => {
+    if (done) return;
+    if (!url) {
+      lab.notify('Ainda não há link cadastrado para esta opção de revisão.');
+      return;
+    }
+    if (startedAt === null) {
+      const started = Date.now();
+      setStartedAt(started);
+      setNow(started);
+    }
+    setMode(nextMode);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const finish = () => {
+    if (startedAt === null) return;
     const finalSeconds = savedSeconds + Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
     lab.setNote(timeKey, String(finalSeconds));
     lab.completeReview(item.id);
   };
 
+  const clockLabel = done
+    ? 'tempo registrado'
+    : startedAt !== null
+      ? mode === 'video' ? 'videoaula' : 'questões'
+      : savedSeconds > 0 ? 'tempo acumulado · parado' : 'aguardando início';
+
   return <Modal title={item.title} close={lab.close} wide>
     <div className="sp-section-line"><span className="sp-pill">{item.subject}</span><span className={`sp-pill ${done ? 'green' : ''}`}>{done ? 'REVISÃO CONCLUÍDA' : 'REVISÃO'}</span></div>
-    <Card title={done ? 'Revisão concluída' : 'Revisão em andamento'} subtitle={done ? 'Este assunto já foi revisado.' : 'Sem limite de tempo. O Studio Pro registra o tempo que você realmente usar.'} action={<div className={`sp-mission-clock ${done ? '' : 'running'}`}><Clock3 size={17}/><span><strong>{formatElapsed(elapsed)}</strong><small>{done ? 'tempo registrado' : 'tempo real'}</small></span></div>}>
-      <div className="sp-subject-detail"><h3>{item.title}</h3><p>Revise o conteúdo no material que você já usa. O Studio Pro apenas organiza os acessos e registra quando a revisão foi concluída.</p></div>
+    <Card title={done ? 'Revisão concluída' : startedAt !== null ? 'Revisão em andamento' : 'Como você quer revisar?'} subtitle={done ? 'Este assunto já foi revisado.' : startedAt !== null ? 'O cronômetro está registrando somente o tempo desta atividade.' : 'O cronômetro só começa depois que você escolher Videoaula ou Questões.'} action={<div className={`sp-mission-clock ${startedAt !== null && !done ? 'running' : ''}`}><Clock3 size={17}/><span><strong>{formatElapsed(elapsed)}</strong><small>{clockLabel}</small></span></div>}>
+      <div className="sp-subject-detail"><h3>{item.title}</h3><p>{startedAt === null && !done ? 'Escolha abaixo o que você vai usar para fazer esta revisão.' : mode === 'video' ? 'Você escolheu revisar pela videoaula. O tempo continuará contando enquanto esta revisão estiver aberta.' : mode === 'questions' ? 'Você escolheu revisar por questões. O tempo continuará contando enquanto esta revisão estiver aberta.' : 'Esta revisão já foi finalizada.'}</p></div>
     </Card>
 
-    <Card title="Recursos para revisar" subtitle="Use apenas o que estiver vinculado a este conteúdo.">
+    {!done && <Card title="Escolha uma opção" subtitle="Como no site anterior: primeiro você escolhe a atividade, depois o tempo começa.">
+      <div className="sp-study-controls">
+        <button className={mode === 'video' ? 'sp-primary' : 'sp-secondary'} onClick={() => startReview('video', subject?.lessonUrl)}><Play size={16}/>{startedAt !== null && mode === 'video' ? 'Abrir videoaula novamente' : 'Assistir videoaula'}</button>
+        <button className={mode === 'questions' ? 'sp-primary' : 'sp-secondary'} onClick={() => startReview('questions', subject?.questionsUrl)}><FileQuestion size={16}/>{startedAt !== null && mode === 'questions' ? 'Abrir questões novamente' : 'Resolver questões'}</button>
+      </div>
+    </Card>}
+
+    {(startedAt !== null || done) && <Card title="Recursos para revisar" subtitle="Você pode reabrir os recursos sem reiniciar o cronômetro.">
       {subject && <div className="sp-external-links">
-        <a className="sp-external-link" href={subject.lessonUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><BookOpen size={18}/></span><span><b>Abrir conteúdo da disciplina</b><small>Link cadastrado pelo professor</small></span><ExternalLink size={16}/></a>
+        <a className="sp-external-link" href={subject.lessonUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><Play size={18}/></span><span><b>Abrir videoaula</b><small>Link cadastrado pelo professor</small></span><ExternalLink size={16}/></a>
         <a className="sp-external-link" href={subject.questionsUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><FileQuestion size={18}/></span><span><b>Abrir questões</b><small>Banco de questões vinculado</small></span><ExternalLink size={16}/></a>
       </div>}
       {linkedMaterials.length > 0 && <div className="sp-list">
         {linkedMaterials.map(material => <div className="sp-list-row" key={material.id}><FileQuestion size={18}/><span><b>{material.title}</b><small>{material.type} · {material.subject}</small></span><button className="sp-text-button" onClick={() => lab.download(material)}>Baixar<Download size={14}/></button></div>)}
       </div>}
       {!subject && linkedMaterials.length === 0 && <p className="sp-muted">Ainda não há material ou link cadastrado para esta revisão.</p>}
-    </Card>
+    </Card>}
 
-    {done ? <div className="sp-insight"><Check size={20}/><p><strong>Revisão finalizada.</strong><br/>Ela permanece no histórico como concluída.</p></div> : <button className="sp-primary full" onClick={finish}><Check size={17}/>Concluir revisão</button>}
+    {done ? <div className="sp-insight"><Check size={20}/><p><strong>Revisão finalizada.</strong><br/>Ela permanece no histórico como concluída.</p></div> : <button className="sp-primary full" disabled={startedAt === null} onClick={finish}><Check size={17}/>{startedAt === null ? 'Escolha como revisar para começar' : 'Concluir revisão'}</button>}
   </Modal>;
 }
 
