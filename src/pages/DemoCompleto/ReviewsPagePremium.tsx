@@ -29,6 +29,8 @@ const examBoards = [
   'Consulplan',
 ];
 
+const customBoardPrefix = 'Personalizada:';
+
 function formatElapsed(seconds: number) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -62,6 +64,9 @@ function ReviewFinalizationModal({ id, initialSeconds, onClose, onSaved }: { id:
   const percentage = validCounts ? Math.round((correct / total) * 100) : 0;
   const labels: Record<ReviewEvaluation, string> = { facil: 'Fácil', media: 'Média', dificil: 'Difícil' };
   const currentStage = Math.min(4, Math.max(1, Number(lab.notes[`review-stage:${id}`] ?? 1) || 1));
+  const isCustomBoard = board.startsWith(customBoardPrefix);
+  const customBoardName = isCustomBoard ? board.slice(customBoardPrefix.length) : '';
+  const resolvedBoard = isCustomBoard ? customBoardName.trim() : board.trim();
 
   const schedule = (() => {
     if (!evaluation) return null;
@@ -84,10 +89,14 @@ function ReviewFinalizationModal({ id, initialSeconds, onClose, onSaved }: { id:
       lab.notify('Confira a quantidade de questões e acertos antes de salvar.');
       return;
     }
+    if (isCustomBoard && !resolvedBoard) {
+      lab.notify('Digite o nome da banca personalizada antes de salvar.');
+      return;
+    }
 
     const result = {
       mode: 'questions', minutes: Math.round(realMinutes), questions: total, correct, errors,
-      board: board.trim(), evaluation, percentage, stage: currentStage,
+      board: resolvedBoard, evaluation, percentage, stage: currentStage,
       nextStage: schedule.nextStage, nextDays: schedule.days, observation: observation.trim(), savedAt: new Date().toISOString(),
     };
 
@@ -113,7 +122,7 @@ function ReviewFinalizationModal({ id, initialSeconds, onClose, onSaved }: { id:
         <label className="sp-field"><span>Acertos</span><input type="number" min={0} max={questionCount || undefined} value={correctCount} onChange={event => setCorrectCount(event.target.value)}/></label>
         <label className="sp-field"><span>Erros calculados</span><input type="number" readOnly value={validCounts ? errors : ''}/></label>
       </div>
-      <label className="sp-field"><span>Banca</span><select value={board} onChange={event => setBoard(event.target.value)}><option value="">Selecione a banca</option>{examBoards.map(name => <option key={name} value={name}>{name}</option>)}</select><small>Seleção padronizada para evitar nomes duplicados ou escritos de formas diferentes.</small></label>
+      <label className="sp-field"><span>Banca</span><select value={isCustomBoard ? 'Personalizada' : board} onChange={event => setBoard(event.target.value === 'Personalizada' ? customBoardPrefix : event.target.value)}><option value="">Selecione a banca</option>{examBoards.map(name => <option key={name} value={name}>{name}</option>)}<option value="Personalizada">Personalizada</option></select>{isCustomBoard && <input autoFocus value={customBoardName} onChange={event => setBoard(`${customBoardPrefix}${event.target.value}`)} placeholder="Digite o nome da banca"/>}<small>{isCustomBoard ? 'O nome digitado será salvo como a banca desta sessão.' : 'Seleção padronizada para evitar nomes duplicados ou escritos de formas diferentes.'}</small></label>
       <Card title="Avaliação automática da revisão" subtitle={evaluation ? `${labels[evaluation]} · ${correct} de ${total} acertos (${percentage}%)` : 'Preencha questões e acertos para calcular.'}>
         <p><strong>Fácil:</strong> 80% ou mais · <strong>Média:</strong> 50% a menos de 80% · <strong>Difícil:</strong> abaixo de 50%.</p>
         <p style={{ marginTop: 10 }}>{evaluation && schedule ? `Ao salvar, esta revisão será concluída e a próxima ${schedule.text}.` : 'O agendamento aparece automaticamente assim que o resultado for válido.'}</p>
