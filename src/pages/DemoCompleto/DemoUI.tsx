@@ -21,7 +21,8 @@ export function Metric({ icon, value, label, hint, tone = 'blue', onClick }: { i
   return onClick ? <button className="sp-metric" onClick={onClick}>{body}</button> : <div className="sp-metric">{body}</div>;
 }
 export function Tabs({ options, value, onChange, label = 'Filtrar' }: { options: readonly string[]; value: string; onChange: (value: string) => void; label?: string }) {
-  return <div className="sp-tabs" role="group" aria-label={label}>{options.map(option => <button key={option} aria-pressed={value === option} className={value === option ? 'active' : ''} onClick={() => onChange(option)}>{option}</button>)}</div>;
+  const visibleOptions = options.filter(option => option !== 'Videoaulas');
+  return <div className="sp-tabs" role="group" aria-label={label}>{visibleOptions.map(option => <button key={option} aria-pressed={value === option} className={value === option ? 'active' : ''} onClick={() => onChange(option)}>{option}</button>)}</div>;
 }
 export function Select({ label, value, options, onChange }: { label: string; value: string; options: readonly string[]; onChange: (value: string) => void }) {
   return <label className="sp-select"><span>{label}</span><select value={value} onChange={event => onChange(event.target.value)}>{options.map(option => <option key={option}>{option}</option>)}</select></label>;
