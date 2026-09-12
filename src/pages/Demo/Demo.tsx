@@ -3,7 +3,6 @@ import {
   BarChart3,
   Bell,
   BookOpen,
-  BrainCircuit,
   CalendarDays,
   Check,
   ChevronLeft,

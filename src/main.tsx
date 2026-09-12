@@ -1,7 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import App from "./App";
+import { BrowserRouter } from "react-router-dom";
+
+// The visual laboratory has no dependency on account providers or live services.
+// All other entry points keep the existing application and authentication intact.
+const isDemo = /^\/demo(?:\/|$|-(?:completo|plano|estudos|questoes|revisoes|simulados|desempenho|estatisticas|materiais|cronograma|mentoria)\/?$)/.test(window.location.pathname);
+const App = React.lazy(() => import("./App"));
+const DemoCompleto = React.lazy(() => import("./pages/DemoCompleto/DemoCompleto"));
 
 import "./global.css";
 import "./styles/mobile.css";
@@ -20,6 +26,8 @@ ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(
   <React.StrictMode>
-    <App />
+    <React.Suspense fallback={<div role="status" style={{ padding: 32 }}>Preparando Studio Pro…</div>}>
+      {isDemo ? <BrowserRouter><DemoCompleto /></BrowserRouter> : <App />}
+    </React.Suspense>
   </React.StrictMode>
 );
