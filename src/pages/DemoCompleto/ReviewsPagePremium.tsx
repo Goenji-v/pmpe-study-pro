@@ -16,6 +16,19 @@ const moduleBySubject: Record<string, string> = {
   'História de Pernambuco': 'Módulo 1 · Formação histórica',
 };
 
+const examBoards = [
+  'IBFC',
+  'Vunesp',
+  'Cebraspe',
+  'FGV',
+  'FCC',
+  'Instituto AOCP',
+  'Idecan',
+  'IADES',
+  'Quadrix',
+  'Consulplan',
+];
+
 function formatElapsed(seconds: number) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -100,7 +113,7 @@ function ReviewFinalizationModal({ id, initialSeconds, onClose, onSaved }: { id:
         <label className="sp-field"><span>Acertos</span><input type="number" min={0} max={questionCount || undefined} value={correctCount} onChange={event => setCorrectCount(event.target.value)}/></label>
         <label className="sp-field"><span>Erros calculados</span><input type="number" readOnly value={validCounts ? errors : ''}/></label>
       </div>
-      <label className="sp-field"><span>Banca</span><input value={board} onChange={event => setBoard(event.target.value)} placeholder="Ex.: IBFC"/></label>
+      <label className="sp-field"><span>Banca</span><select value={board} onChange={event => setBoard(event.target.value)}><option value="">Selecione a banca</option>{examBoards.map(name => <option key={name} value={name}>{name}</option>)}</select><small>Seleção padronizada para evitar nomes duplicados ou escritos de formas diferentes.</small></label>
       <Card title="Avaliação automática da revisão" subtitle={evaluation ? `${labels[evaluation]} · ${correct} de ${total} acertos (${percentage}%)` : 'Preencha questões e acertos para calcular.'}>
         <p><strong>Fácil:</strong> 80% ou mais · <strong>Média:</strong> 50% a menos de 80% · <strong>Difícil:</strong> abaixo de 50%.</p>
         <p style={{ marginTop: 10 }}>{evaluation && schedule ? `Ao salvar, esta revisão será concluída e a próxima ${schedule.text}.` : 'O agendamento aparece automaticamente assim que o resultado for válido.'}</p>
