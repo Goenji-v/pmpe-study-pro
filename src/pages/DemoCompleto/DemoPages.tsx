@@ -33,7 +33,44 @@ export function ReviewsPage() {
   const lab = useLab();
   const [filter, setFilter] = useState('Todas');
   const shown = reviewItems.filter(r => filter === 'Todas' || (filter === 'Concluídas' ? lab.completedReviews.includes(r.id) : r.status === filter && !lab.completedReviews.includes(r.id)));
-  return <><PageTitle title="Revisões" subtitle="Relembrar no momento certo faz o conhecimento ficar."/><div className="sp-metrics four">{[{ title: 'Para hoje', filter: 'Hoje', icon: Clock3, tone: 'gold' }, { title: 'Atrasadas', filter: 'Atrasadas', icon: RotateCcw, tone: 'red' }, { title: 'Concluídas', filter: 'Concluídas', icon: CheckCheck, tone: 'green' }, { title: 'Próximas', filter: 'Próximas', icon: CalendarDays, tone: 'blue' }].map(item => <Metric key={item.filter} icon={<item.icon/>} label={item.title} tone={item.tone} value={String(item.filter === 'Concluídas' ? lab.completedReviews.length : reviewItems.filter(r => r.status === item.filter && !lab.completedReviews.includes(r.id)).length)} onClick={() => setFilter(item.filter)}/>)}</div><Card title="Sua fila de revisão" subtitle="Comece pelas pendências e siga no seu ritmo."><Tabs options={['Todas', 'Hoje', 'Atrasadas', 'Próximas', 'Concluídas']} value={filter} onChange={setFilter}/><div className="sp-review-list">{shown.map(r => <div key={r.id} className="sp-review-row"><div className="sp-review-date"><b>{r.date.split(' ')[0]}</b><small>SET</small></div><div><span className={`sp-pill ${lab.completedReviews.includes(r.id) ? 'green' : r.status === 'Atrasadas' ? 'red' : ''}`}>{lab.completedReviews.includes(r.id) ? 'Concluída' : r.status}</span><h3>{r.title}</h3><p>{r.subject}</p></div><button className="sp-secondary" onClick={() => lab.open({ kind: 'review', id: r.id })}>{lab.completedReviews.includes(r.id) ? 'Ver revisão' : 'Revisar'}<ArrowRight size={15}/></button></div>)}</div>{!shown.length && <div className="sp-empty">Tudo em dia por aqui. Suas próximas revisões aparecerão nesta lista.</div>}</Card></>;
+
+  const bankRunningReview = (id: string) => {
+    const activeKey = `review-active:${id}`;
+    const running = lab.notes[activeKey];
+    if (!running) return;
+    const [, startedText] = running.split('|');
+    const started = Number(startedText);
+    if (!Number.isFinite(started)) return;
+    const seconds = Math.max(0, Math.floor((Date.now() - started) / 1000));
+    const timeKey = `review-time:${id}`;
+    lab.setNote(timeKey, String((Number(lab.notes[timeKey] ?? 0) || 0) + seconds));
+  };
+
+  const startReview = (id: string, subjectName: string, mode: 'study' | 'questions') => {
+    const subject = subjects.find(item => item.name === subjectName);
+    const target = mode === 'study' ? subject?.lessonUrl : subject?.questionsUrl;
+    if (!target) {
+      lab.notify('Ainda não há link cadastrado para esta opção de revisão.');
+      return;
+    }
+    bankRunningReview(id);
+    lab.setNote(`review-active:${id}`, `${mode}|${Date.now()}`);
+    lab.notify(mode === 'study' ? 'Revisão por aula iniciada. O tempo está contando.' : 'Revisão por questões iniciada. O tempo está contando.');
+    window.open(target, '_blank', 'noopener,noreferrer');
+  };
+
+  const finishReview = (id: string) => {
+    bankRunningReview(id);
+    lab.setNote(`review-active:${id}`, '');
+    lab.completeReview(id);
+  };
+
+  return <><PageTitle title="Revisões" subtitle="Relembrar no momento certo faz o conhecimento ficar."/><div className="sp-metrics four">{[{ title: 'Para hoje', filter: 'Hoje', icon: Clock3, tone: 'gold' }, { title: 'Atrasadas', filter: 'Atrasadas', icon: RotateCcw, tone: 'red' }, { title: 'Concluídas', filter: 'Concluídas', icon: CheckCheck, tone: 'green' }, { title: 'Próximas', filter: 'Próximas', icon: CalendarDays, tone: 'blue' }].map(item => <Metric key={item.filter} icon={<item.icon/>} label={item.title} tone={item.tone} value={String(item.filter === 'Concluídas' ? lab.completedReviews.length : reviewItems.filter(r => r.status === item.filter && !lab.completedReviews.includes(r.id)).length)} onClick={() => setFilter(item.filter)}/>)}</div><Card title="Sua fila de revisão" subtitle="Aula, questões ou conclusão: escolha direto no card."><Tabs options={['Todas', 'Hoje', 'Atrasadas', 'Próximas', 'Concluídas']} value={filter} onChange={setFilter}/><div className="sp-review-list">{shown.map(r => {
+    const completed = lab.completedReviews.includes(r.id);
+    const running = lab.notes[`review-active:${r.id}`];
+    const runningMode = running?.split('|')[0];
+    return <div key={r.id} className="sp-review-row" style={{display:'grid', gridTemplateColumns:'minmax(0,1fr)', gap:14, alignItems:'stretch'}}><div style={{display:'flex', gap:14, alignItems:'flex-start'}}><div className="sp-review-date"><b>{r.date.split(' ')[0]}</b><small>SET</small></div><div style={{minWidth:0}}><span className={`sp-pill ${completed ? 'green' : r.status === 'Atrasadas' ? 'red' : ''}`}>{completed ? 'Concluída' : runningMode === 'study' ? 'Aula em andamento' : runningMode === 'questions' ? 'Questões em andamento' : r.status}</span><h3 style={{marginTop:8}}>{r.title}</h3><p>{r.subject}</p>{runningMode && !completed && <small style={{display:'block', marginTop:5, color:'#90a8c0'}}>Cronômetro iniciado ao escolher {runningMode === 'study' ? 'Estudar' : 'Questões'}.</small>}</div></div>{completed ? <button className="sp-secondary" onClick={() => lab.open({ kind: 'review', id: r.id })}>Ver revisão<ArrowRight size={15}/></button> : <div style={{display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:10}}><button className="sp-secondary" style={{background:'#1769e8', borderColor:'#4385f0'}} onClick={() => startReview(r.id, r.subject, 'study')}><Play size={16}/>Estudar</button><button className="sp-secondary" style={{background:'#7134df', borderColor:'#8d5cf0'}} onClick={() => startReview(r.id, r.subject, 'questions')}><FileQuestion size={16}/>Questões</button><button className="sp-secondary" style={{background:'#138a49', borderColor:'#32a765'}} onClick={() => finishReview(r.id)}><Check size={16}/>Concluir</button><button className="sp-secondary" aria-label={`Mais opções para ${r.title}`} onClick={() => lab.open({ kind: 'review', id: r.id })}>•••</button></div>}</div>;
+  })}</div>{!shown.length && <div className="sp-empty">Tudo em dia por aqui. Suas próximas revisões aparecerão nesta lista.</div>}</Card></>;
 }
 
 export function SimulationsPage() {
@@ -61,7 +98,7 @@ export function MaterialsPage() {
   const [query, setQuery] = useState('');
   const [subject, setSubject] = useState('Todas');
   const shown = materials.filter(m => (tab === 'Todos' || tab === m.type || (tab === 'Favoritos' && lab.favorites.includes(m.id)) || (tab === 'Downloads' && lab.downloads.includes(m.id))) && normalize(`${m.title} ${m.subject}`).includes(normalize(query)) && (subject === 'Todas' || subject === m.subject));
-  return <><PageTitle title="Materiais" subtitle="Tudo o que você precisa, organizado para o seu próximo passo."/><div className="sp-material-search"><label className="sp-search-field"><Search size={18}/><input aria-label="Buscar material" placeholder="Buscar material, assunto ou disciplina…" value={query} onChange={e => setQuery(e.target.value)}/></label><Select label="Disciplina" value={subject} options={['Todas', 'Método de estudo', 'Português', 'Raciocínio Lógico']} onChange={setSubject}/></div><Tabs options={['Todos', 'PDFs', 'Resumos', 'Mapas mentais', 'Videoaulas', 'Favoritos', 'Downloads']} value={tab} onChange={setTab}/><div className="sp-grid three">{shown.map(m => <Card className="sp-material" key={m.id}><div className={`sp-material-cover ${m.type === 'Mapas mentais' ? 'gold' : ''}`}>{m.type === 'Videoaulas' ? <Play size={44}/> : m.type === 'Mapas mentais' ? <Layers size={44}/> : <FileText size={44}/>}<span>{m.type}</span></div><span className="sp-eyebrow">{m.subject}</span><h2>{m.title}</h2><p>{m.pages} · Conteúdo demonstrativo</p><div className="sp-button-row"><button className="sp-secondary" onClick={() => lab.open({ kind: 'material', material: m })}>Abrir material<ArrowUpRight size={15}/></button><button className={`sp-icon-button ${lab.favorites.includes(m.id) ? 'favorited' : ''}`} aria-label={`Favoritar ${m.title}`} aria-pressed={lab.favorites.includes(m.id)} onClick={() => lab.toggleFavorite(m.id)}><Star size={18} fill={lab.favorites.includes(m.id) ? 'currentColor' : 'none'}/></button><button className="sp-icon-button" aria-label={`Baixar ${m.title}`} onClick={() => lab.download(m)}><Download size={18}/></button></div></Card>)}</div>{!shown.length && <div className="sp-empty">Nenhum material encontrado.<br/>{tab === 'Favoritos' ? 'Toque na estrela de um material para guardá-lo aqui.' : tab === 'Downloads' ? 'Os materiais baixados aparecerão aqui.' : 'Experimente outro termo ou categoria.'}</div>}</>;
+  return <><PageTitle title="Materiais" subtitle="Tudo o que você precisa, organizado para o seu próximo passo."/><div className="sp-material-search"><label className="sp-search-field"><Search size={18}/><input aria-label="Buscar material" placeholder="Buscar material, assunto ou disciplina…" value={query} onChange={e => setQuery(e.target.value)}/></label><Select label="Disciplina" value={subject} options={['Todas', 'Método de estudo', 'Português', 'Raciocínio Lógico']} onChange={setSubject}/></div><Tabs options={['Todos', 'PDFs', 'Resumos', 'Mapas mentais', 'Favoritos', 'Downloads']} value={tab} onChange={setTab}/><div className="sp-grid three">{shown.map(m => <Card className="sp-material" key={m.id}><div className={`sp-material-cover ${m.type === 'Mapas mentais' ? 'gold' : ''}`}>{m.type === 'Mapas mentais' ? <Layers size={44}/> : <FileText size={44}/>}<span>{m.type}</span></div><span className="sp-eyebrow">{m.subject}</span><h2>{m.title}</h2><p>{m.pages} · Conteúdo demonstrativo</p><div className="sp-button-row"><button className="sp-secondary" onClick={() => lab.open({ kind: 'material', material: m })}>Abrir material<ArrowUpRight size={15}/></button><button className={`sp-icon-button ${lab.favorites.includes(m.id) ? 'favorited' : ''}`} aria-label={`Favoritar ${m.title}`} aria-pressed={lab.favorites.includes(m.id)} onClick={() => lab.toggleFavorite(m.id)}><Star size={18} fill={lab.favorites.includes(m.id) ? 'currentColor' : 'none'}/></button><button className="sp-icon-button" aria-label={`Baixar ${m.title}`} onClick={() => lab.download(m)}><Download size={18}/></button></div></Card>)}</div>{!shown.length && <div className="sp-empty">Nenhum material encontrado.<br/>{tab === 'Favoritos' ? 'Toque na estrela de um material para guardá-lo aqui.' : tab === 'Downloads' ? 'Os materiais baixados aparecerão aqui.' : 'Experimente outro termo ou categoria.'}</div>}</>;
 }
 
 export function SchedulePage() {
