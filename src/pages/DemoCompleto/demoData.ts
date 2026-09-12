@@ -16,7 +16,7 @@ export const weekly = [
 export const initialTasks = [
   { id: 't1', title: 'Revisar Princípios Fundamentais', subject: 'Direito Constitucional', time: '08:00', date: '2026-09-11', done: true },
   { id: 't2', title: 'Resolver 20 questões de Português', subject: 'Português', time: '14:00', date: '2026-09-11', done: false },
-  { id: 't3', title: 'Aula de Sequências numéricas', subject: 'Raciocínio Lógico', time: '19:00', date: '2026-09-11', done: false },
+  { id: 't3', title: 'Estudar Sequências numéricas', subject: 'Raciocínio Lógico', time: '19:00', date: '2026-09-11', done: false },
   { id: 't4', title: 'Revisão da semana', subject: 'Todas as disciplinas', time: '09:00', date: '2026-09-12', done: false },
   { id: 't5', title: 'Simulado PMPE', subject: 'Treino de prova', time: '09:00', date: '2026-09-13', done: false },
   { id: 't6', title: 'Revisar erros do simulado', subject: 'Raciocínio Lógico', time: '18:00', date: '2026-09-14', done: false },
@@ -40,7 +40,6 @@ export const materials = [
   { id: 'm1', title: 'Guia de revisão ativa', subject: 'Método de estudo', type: 'PDFs', pages: '3 tópicos', body: 'REVISÃO ATIVA\n\n1. Recorde antes de consultar\nFeche o material e escreva três ideias que você lembra da última aula.\n\n2. Pratique e compare\nResolva uma questão e explique por que escolheu a alternativa.\n\n3. Planeje a próxima revisão\nRegistre suas dúvidas e reserve um horário no cronograma.\n\nMaterial demonstrativo do Studio Pro.' },
   { id: 'm2', title: 'Conectivos: conclusão e concessão', subject: 'Português', type: 'Resumos', pages: '2 tópicos', body: 'CONECTIVOS\n\nConclusão: portanto, logo, por isso.\nExemplo: Estudei; portanto, estou preparado.\n\nConcessão: embora, ainda que.\nExemplo: Embora cansado, continuei.\n\nMaterial demonstrativo do Studio Pro.' },
   { id: 'm3', title: 'Sua rota de estudo', subject: 'Método de estudo', type: 'Mapas mentais', pages: '1 mapa', body: 'SUA ROTA\n\nPlanejar → Estudar → Praticar → Revisar\n\nPlanejar: escolher uma meta possível.\nEstudar: compreender uma ideia por vez.\nPraticar: testar o que aprendeu.\nRevisar: voltar aos pontos de dificuldade.\n\nMaterial demonstrativo do Studio Pro.' },
-  { id: 'm4', title: 'Sequências numéricas', subject: 'Raciocínio Lógico', type: 'Videoaulas', pages: 'Aula demonstrativa', body: 'SEQUÊNCIAS NUMÉRICAS\n\nObserve a relação entre termos consecutivos.\nNa sequência 2, 4, 8, 16 cada termo é o dobro do anterior. O próximo termo é 32.\n\nRoteiro textual para avaliação do player. O vídeo não está conectado nesta demonstração.' },
 ];
 export type DemoMaterial = typeof materials[number];
 export function normalize(text: string) { return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }

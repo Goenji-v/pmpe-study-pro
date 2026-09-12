@@ -42,6 +42,8 @@ export default function DemoCompleto() {
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedDate, selectDate] = useState('2026-09-11');
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+  const [activeStudy, setActiveStudy] = useState<string | null>(null);
+  const [studyStartedAt, setStudyStartedAt] = useState<number | null>(null);
   const [completedReviews, setCompletedReviews] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [downloads, setDownloads] = useState<string[]>([]);
@@ -65,11 +67,19 @@ export default function DemoCompleto() {
     const anchor = document.createElement('a'); anchor.href = address; anchor.download = `studio-pro-${material.id}.${material.type === 'PDFs' ? 'pdf' : 'txt'}`; anchor.click(); setTimeout(() => URL.revokeObjectURL(address), 1000);
     setDownloads(old => old.includes(material.id) ? old : [...old, material.id]); notify('Amostra baixada. Ela também está na aba Downloads.');
   }
-  const lab: LabState = { tasks, selectedDate, selectDate, completedLessons, completedReviews, favorites, downloads, answers, goal, setGoal, open: setPanel, close, go, notify, download,
+  function startStudy(id: string) {
+    if (activeStudy === id && studyStartedAt) { notify('Seu estudo já está em andamento. Continue de onde parou.'); return; }
+    setActiveStudy(id); setStudyStartedAt(Date.now()); notify('Estudo iniciado. O cronômetro está acompanhando sua sessão.');
+  }
+  function skipStudy(id: string) {
+    if (activeStudy === id) { setActiveStudy(null); setStudyStartedAt(null); }
+    setPanel(null); notify('Tarefa pulada. No sistema conectado, o cronograma reorganiza os próximos estudos.');
+  }
+  const lab: LabState = { tasks, selectedDate, selectDate, completedLessons, activeStudy, studyStartedAt, completedReviews, favorites, downloads, answers, goal, setGoal, open: setPanel, close, go, notify, download, startStudy, skipStudy,
     notes, setNote: (id, text) => setNotes(old => ({ ...old, [id]: text })),
     toggleTask: id => setTasks(old => old.map(task => task.id === id ? { ...task, done: !task.done } : task)),
     addTask: task => { setTasks(old => [...old, task]); selectDate(task.date); },
-    completeLesson: id => { setCompletedLessons(old => old.includes(id) ? old : [...old, id]); notify('Aula concluída! Seu progresso foi atualizado na demonstração.'); },
+    completeLesson: id => { setCompletedLessons(old => old.includes(id) ? old : [...old, id]); if (activeStudy === id) { setActiveStudy(null); setStudyStartedAt(null); } notify('Estudo concluído! Seu progresso foi atualizado na demonstração.'); },
     completeReview: id => { setCompletedReviews(old => old.includes(id) ? old : [...old, id]); notify('Revisão concluída. Mais um passo na sua preparação.'); },
     toggleFavorite: id => setFavorites(old => old.includes(id) ? old.filter(item => item !== id) : [...old, id]),
     answer: (id, correct) => setAnswers(old => ({ ...old, [id]: correct })),
