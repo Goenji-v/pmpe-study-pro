@@ -6,6 +6,7 @@ import { useLab } from './demoState';
 
 type ReviewMode = 'study' | 'questions';
 type ReviewEvaluation = 'facil' | 'media' | 'dificil';
+type ActivityType = 'lesson' | 'review';
 
 const moduleBySubject: Record<string, string> = {
   'Português': 'Módulo 2 · Classes de Palavras',
@@ -30,6 +31,7 @@ const examBoards = [
 ];
 
 const customBoardPrefix = 'Personalizada:';
+const customTopicValue = '__custom__';
 
 function formatElapsed(seconds: number) {
   const hours = Math.floor(seconds / 3600);
@@ -142,19 +144,31 @@ function ReviewWorkspace({ id, initialMode, onBack, onFinalize }: { id: string; 
   const lab = useLab();
   const item = reviewItems.find(review => review.id === id)!;
   const subject = subjects.find(entry => entry.name === item.subject);
-  const linkedMaterials = materials.filter(material => material.subject === item.subject);
+  const currentStage = Math.min(4, Math.max(1, Number(lab.notes[`review-stage:${id}`] ?? 1) || 1));
+
+  const [activityType, setActivityType] = useState<ActivityType>('review');
   const [mode, setMode] = useState<ReviewMode>(initialMode);
   const [objective, setObjective] = useState(`Revisar ${item.title}`);
-  const [observation, setObservation] = useState(`Revisão etapa ${lab.notes[`review-stage:${id}`] ?? '1'}`);
+  const [observation, setObservation] = useState(`Revisão etapa ${currentStage}`);
   const [now, setNow] = useState(Date.now());
+
+  const [lessonSubjectName, setLessonSubjectName] = useState(item.subject);
+  const [lessonModule, setLessonModule] = useState(moduleBySubject[item.subject] ?? 'Geral');
+  const [lessonTopicSelection, setLessonTopicSelection] = useState(item.title);
+  const [lessonCustomTopic, setLessonCustomTopic] = useState('');
+  const [lessonObjective, setLessonObjective] = useState(`Estudar ${item.title}`);
+  const [lessonObservation, setLessonObservation] = useState(`Etapa ${currentStage} · conteúdo sugerido pelo cronograma.`);
+  const [lessonSavedSeconds, setLessonSavedSeconds] = useState(0);
+  const [lessonStartedAt, setLessonStartedAt] = useState<number | null>(null);
+  const [lessonFinished, setLessonFinished] = useState(false);
 
   useEffect(() => setMode(initialMode), [id, initialMode]);
   useEffect(() => {
-    const active = lab.notes[`review-active:${id}`];
-    if (!active) return;
+    const reviewActive = lab.notes[`review-active:${id}`];
+    if (!reviewActive && !lessonStartedAt) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [id, lab.notes]);
+  }, [id, lab.notes, lessonStartedAt]);
 
   const active = lab.notes[`review-active:${id}`];
   const [activeMode, activeStartedText] = active ? active.split('|') : ['', ''];
@@ -166,12 +180,33 @@ function ReviewWorkspace({ id, initialMode, onBack, onFinalize }: { id: string; 
   const finalizationPending = lab.notes[`review-finalizing:${id}`] === 'questions';
   const internalQuestions = questions.filter(question => question.subject === item.subject);
   const hasExternalQuestionLink = Boolean(subject?.questionsUrl?.trim());
-  const currentStage = Math.min(4, Math.max(1, Number(lab.notes[`review-stage:${id}`] ?? 1) || 1));
+  const linkedMaterials = materials.filter(material => material.subject === item.subject);
+
+  const selectedLessonSubject = subjects.find(entry => entry.name === lessonSubjectName);
+  const lessonModules = lessonSubjectName ? [moduleBySubject[lessonSubjectName] ?? 'Geral'] : [];
+  const lessonTopics = Array.from(new Set([
+    selectedLessonSubject?.topic,
+    selectedLessonSubject?.last,
+    ...reviewItems.filter(review => review.subject === lessonSubjectName).map(review => review.title),
+  ].filter(Boolean) as string[]));
+  const isCustomLessonTopic = lessonTopicSelection === customTopicValue;
+  const resolvedLessonTopic = isCustomLessonTopic ? lessonCustomTopic.trim() : lessonTopicSelection;
+  const lessonLinkedMaterials = materials.filter(material => material.subject === lessonSubjectName);
+  const lessonLiveSeconds = lessonStartedAt ? Math.max(0, Math.floor((now - lessonStartedAt) / 1000)) : 0;
+  const lessonElapsed = lessonSavedSeconds + lessonLiveSeconds;
 
   const bank = () => {
     if (!active || !Number.isFinite(activeStarted)) return savedSeconds;
     const total = savedSeconds + Math.max(0, Math.floor((Date.now() - activeStarted) / 1000));
     lab.setNote(`review-time:${id}`, String(total));
+    return total;
+  };
+
+  const bankLesson = () => {
+    if (!lessonStartedAt) return lessonSavedSeconds;
+    const total = lessonSavedSeconds + Math.max(0, Math.floor((Date.now() - lessonStartedAt) / 1000));
+    setLessonSavedSeconds(total);
+    setLessonStartedAt(null);
     return total;
   };
 
@@ -236,52 +271,144 @@ function ReviewWorkspace({ id, initialMode, onBack, onFinalize }: { id: string; 
     onBack();
   };
 
-  const openLessonActivity = () => {
-    if (!subject) {
-      lab.notify('Não encontrei a disciplina desta aula na demonstração.');
+  const changeActivity = (next: ActivityType) => {
+    if (next === activityType) return;
+    if (active || lessonStartedAt) {
+      lab.notify('Pause a sessão atual antes de trocar o tipo de atividade.');
       return;
     }
-    lab.open({ kind: 'lesson', subject });
+    setActivityType(next);
   };
 
-  const openQuestionActivity = () => {
-    if (internalQuestions.length > 0) {
-      lab.open({ kind: 'quiz', items: internalQuestions });
+  const changeLessonSubject = (name: string) => {
+    setLessonSubjectName(name);
+    const nextSubject = subjects.find(entry => entry.name === name);
+    const nextModule = name ? moduleBySubject[name] ?? 'Geral' : '';
+    const nextTopic = nextSubject?.topic ?? '';
+    setLessonModule(nextModule);
+    setLessonTopicSelection(nextTopic);
+    setLessonCustomTopic('');
+    setLessonObjective(nextTopic ? `Estudar ${nextTopic}` : '');
+    setLessonObservation(name ? `Etapa ${currentStage} · conteúdo selecionado em ${name}.` : '');
+    setLessonSavedSeconds(0);
+    setLessonStartedAt(null);
+    setLessonFinished(false);
+  };
+
+  const changeLessonTopic = (value: string) => {
+    setLessonTopicSelection(value);
+    setLessonCustomTopic('');
+    setLessonObjective(value === customTopicValue ? '' : value ? `Estudar ${value}` : '');
+    setLessonFinished(false);
+  };
+
+  const startLesson = () => {
+    if (!lessonSubjectName || !lessonModule || !resolvedLessonTopic) {
+      lab.notify('Selecione matéria, módulo e assunto antes de iniciar a aula.');
       return;
     }
-    lab.go('questoes');
+    setLessonStartedAt(Date.now());
+    setLessonFinished(false);
+    setNow(Date.now());
+    lab.setNote(`lesson-draft:${id}`, JSON.stringify({
+      subject: lessonSubjectName,
+      module: lessonModule,
+      topic: resolvedLessonTopic,
+      objective: lessonObjective.trim(),
+      observation: lessonObservation.trim(),
+    }));
+
+    if (selectedLessonSubject?.lessonUrl) {
+      window.open(selectedLessonSubject.lessonUrl, '_blank', 'noopener,noreferrer');
+      lab.notify('Aula iniciada. O conteúdo cadastrado foi aberto e o cronômetro está contando.');
+      return;
+    }
+    if (lessonLinkedMaterials[0]) {
+      lab.open({ kind: 'material', material: lessonLinkedMaterials[0] });
+      lab.notify('Sem link de aula. O material vinculado foi aberto e o cronômetro está contando.');
+      return;
+    }
+    lab.notify('Aula iniciada. Ainda não há link ou material cadastrado para este assunto.');
   };
 
-  const openSimulationActivity = () => {
-    const simulationQuestions = internalQuestions.length > 0 ? internalQuestions : questions;
-    lab.open({ kind: 'quiz', items: simulationQuestions, simulation: true });
+  const pauseLesson = () => {
+    if (!lessonStartedAt) return;
+    bankLesson();
+    lab.notify('Aula pausada. O tempo acumulado foi salvo.');
   };
 
-  const destinationLabel = mode === 'questions'
+  const finishLesson = () => {
+    const total = bankLesson();
+    if (total <= 0) return;
+    lab.setNote(`lesson-session:${id}`, JSON.stringify({
+      subject: lessonSubjectName,
+      module: lessonModule,
+      topic: resolvedLessonTopic,
+      objective: lessonObjective.trim(),
+      observation: lessonObservation.trim(),
+      seconds: total,
+      savedAt: new Date().toISOString(),
+    }));
+    setLessonFinished(true);
+    lab.notify('Aula finalizada e registrada na demonstração.');
+  };
+
+  const reviewDestinationLabel = mode === 'questions'
     ? hasExternalQuestionLink ? 'Link externo cadastrado (QConcursos ou outro banco)' : 'Banco de questões interno do Studio Pro'
     : subject?.lessonUrl ? 'Link da aula cadastrado pelo professor' : linkedMaterials.length ? 'Material interno vinculado ao assunto' : 'Nenhum recurso cadastrado ainda';
 
+  const lessonDestinationLabel = selectedLessonSubject?.lessonUrl
+    ? 'Link da aula cadastrado para a matéria selecionada'
+    : lessonLinkedMaterials.length
+      ? 'Material interno vinculado à matéria selecionada'
+      : 'Nenhum recurso cadastrado ainda';
+
   return <>
-    <PageTitle title="Central da revisão" subtitle="Escolha o formato, confira o conteúdo e só então inicie a sessão." action={<button className="sp-secondary" onClick={onBack}><ArrowLeft size={16}/>Voltar para revisões</button>}/>
+    <PageTitle title="Central da revisão" subtitle="Escolha Aula ou Revisão, configure a sessão e só então inicie o cronômetro." action={<button className="sp-secondary" onClick={onBack}><ArrowLeft size={16}/>Voltar para revisões</button>}/>
     <div className="sp-grid two" style={{ alignItems: 'start' }}>
-      <Card title="Tipo de atividade" subtitle="Acesse qualquer atividade sem sair da sua preparação.">
+      <Card title="Tipo de atividade" subtitle="Escolha o que você vai fazer nesta sessão.">
         <div className="sp-button-row" style={{ marginBottom: 18 }}>
-          <button type="button" className="sp-secondary" onClick={openLessonActivity}><BookOpen size={16}/>Aula</button>
-          <button type="button" className="sp-primary" onClick={() => lab.notify('Revisão selecionada. Escolha Teoria ou Questões abaixo.')}><RotateCcw size={16}/>Revisão</button>
-          <button type="button" className="sp-secondary" onClick={openQuestionActivity}><FileQuestion size={16}/>Questões</button>
-          <button type="button" className="sp-secondary" onClick={openSimulationActivity}><FileText size={16}/>Simulado</button>
+          <button type="button" className={activityType === 'lesson' ? 'sp-primary' : 'sp-secondary'} onClick={() => changeActivity('lesson')}><BookOpen size={16}/>Aula</button>
+          <button type="button" className={activityType === 'review' ? 'sp-primary' : 'sp-secondary'} onClick={() => changeActivity('review')}><RotateCcw size={16}/>Revisão</button>
         </div>
-        <div className="sp-form">
+
+        {activityType === 'lesson' ? <div className="sp-form">
+          <label className="sp-field"><span>Matéria</span><select value={lessonSubjectName} onChange={event => changeLessonSubject(event.target.value)} disabled={Boolean(lessonStartedAt)}><option value="">Selecione a matéria</option>{subjects.map(entry => <option key={entry.id} value={entry.name}>{entry.name}</option>)}</select></label>
+          <label className="sp-field"><span>Módulo</span><select value={lessonModule} onChange={event => setLessonModule(event.target.value)} disabled={!lessonSubjectName || Boolean(lessonStartedAt)}><option value="">{lessonSubjectName ? 'Selecione o módulo' : 'Selecione primeiro a matéria'}</option>{lessonModules.map(module => <option key={module} value={module}>{module}</option>)}</select></label>
+          <label className="sp-field"><span>Assunto</span><select value={lessonTopicSelection} onChange={event => changeLessonTopic(event.target.value)} disabled={!lessonSubjectName || Boolean(lessonStartedAt)}><option value="">{lessonSubjectName ? 'Selecione o assunto' : 'Selecione primeiro a matéria'}</option>{lessonTopics.map(topic => <option key={topic} value={topic}>{topic}</option>)}<option value={customTopicValue}>Personalizar assunto</option></select>{isCustomLessonTopic && <input autoFocus value={lessonCustomTopic} onChange={event => { setLessonCustomTopic(event.target.value); setLessonFinished(false); }} disabled={Boolean(lessonStartedAt)} placeholder="Digite um assunto que não está no edital"/>}<small>{isCustomLessonTopic ? 'Esse nome será usado como assunto personalizado desta aula.' : 'Se o assunto não existir no edital, escolha “Personalizar assunto”.'}</small></label>
+          <label className="sp-field"><span>Objetivo <small>(opcional)</small></span><input value={lessonObjective} onChange={event => setLessonObjective(event.target.value)} disabled={Boolean(lessonStartedAt)} placeholder="Objetivo da sessão"/></label>
+          <label className="sp-field"><span>Observações <small>(opcional)</small></span><textarea rows={4} value={lessonObservation} onChange={event => setLessonObservation(event.target.value)} disabled={Boolean(lessonStartedAt)} placeholder="Anotações sobre a sessão..."/></label>
+        </div> : <div className="sp-form">
           <label className="sp-field"><span>Matéria</span><input value={item.subject} readOnly/></label>
           <label className="sp-field"><span>Módulo</span><input value={moduleBySubject[item.subject] ?? 'Geral'} readOnly/></label>
           <label className="sp-field"><span>Assunto</span><input value={item.title} readOnly/></label>
           <div className="sp-field"><span>Formato da revisão</span><div className="sp-study-controls"><button type="button" className={mode === 'study' ? 'sp-primary' : 'sp-secondary'} disabled={Boolean(active)} onClick={() => setMode('study')}><BookOpen size={16}/>Teoria</button><button type="button" className={mode === 'questions' ? 'sp-primary' : 'sp-secondary'} disabled={Boolean(active)} onClick={() => setMode('questions')}><FileQuestion size={16}/>Questões</button></div><small>{mode === 'study' ? 'Releitura, aula, resumo ou material vinculado.' : 'Questões externas quando houver link; caso contrário, banco interno do Studio Pro.'}</small></div>
           <label className="sp-field"><span>Objetivo <small>(opcional)</small></span><input value={objective} onChange={event => setObjective(event.target.value)} disabled={Boolean(active)}/></label>
           <label className="sp-field"><span>Observações <small>(opcional)</small></span><textarea rows={4} value={observation} onChange={event => setObservation(event.target.value)} disabled={Boolean(active)}/></label>
-        </div>
+        </div>}
       </Card>
 
-      <div style={{ display: 'grid', gap: 18 }}>
+      {activityType === 'lesson' ? <div style={{ display: 'grid', gap: 18 }}>
+        <Card title={lessonFinished ? 'Aula finalizada' : lessonStartedAt ? 'Aula em andamento' : lessonElapsed > 0 ? 'Aula pausada' : 'Pronto para iniciar'} subtitle="Aula">
+          <div style={{ textAlign: 'center', padding: '14px 0 20px' }}><div style={{ fontSize: 'clamp(40px,6vw,68px)', fontWeight: 800, letterSpacing: 2 }}>{formatElapsed(lessonElapsed)}</div><small className="sp-muted">{lessonStartedAt ? 'cronômetro em andamento' : lessonElapsed > 0 ? 'tempo acumulado' : 'o tempo só começa ao iniciar a sessão'}</small></div>
+          <div className="sp-subject-detail" style={{ textAlign: 'center' }}><span className="sp-pill">AULA</span><h3 style={{ marginTop: 10 }}>{lessonSubjectName || 'Selecione uma matéria'}</h3><p>{lessonModule || 'Selecione o módulo'}</p><p>{resolvedLessonTopic || 'Selecione o assunto'}</p>{lessonObjective && <p><strong>Objetivo:</strong> {lessonObjective}</p>}</div>
+        </Card>
+
+        <Card title="Materiais vinculados" subtitle={lessonSubjectName ? `${lessonSubjectName} → ${lessonModule || 'Módulo'} → ${resolvedLessonTopic || 'Assunto'}` : 'Selecione a matéria para ver os materiais'} action={<button className="sp-secondary" onClick={() => lab.go('materiais')}>Centro de Materiais</button>}>
+          {lessonLinkedMaterials.length ? <div className="sp-list">{lessonLinkedMaterials.map(material => <button className="sp-list-row" key={material.id} onClick={() => lab.open({ kind: 'material', material })}><FileText size={18}/><span><b>{material.title}</b><small>{material.type}</small></span><ArrowRight size={15}/></button>)}</div> : <div className="sp-empty">Nenhum material foi cadastrado para esta matéria.</div>}
+        </Card>
+
+        <Card title="Destino da atividade" subtitle={lessonDestinationLabel}>
+          <div className="sp-insight"><ExternalLink size={18}/><p>{selectedLessonSubject?.lessonUrl ? 'Ao iniciar, a aula cadastrada abre em uma nova aba e o cronômetro começa.' : lessonLinkedMaterials.length ? 'Sem link externo, o Studio usa o material interno vinculado.' : 'A sessão pode ser registrada mesmo sem link ou material cadastrado.'}</p></div>
+        </Card>
+
+        <div className="sp-study-controls">
+          {!lessonStartedAt && !lessonFinished && <button className="sp-primary" onClick={startLesson}><Play size={16}/>{lessonElapsed > 0 ? 'Retomar aula' : 'Iniciar sessão'}</button>}
+          {lessonStartedAt && <button className="sp-secondary" onClick={pauseLesson}><Pause size={16}/>Pausar</button>}
+          {!lessonFinished && lessonElapsed > 0 && <button className="sp-primary" onClick={finishLesson}><Check size={16}/>Finalizar aula</button>}
+          {lessonFinished && <button className="sp-secondary" onClick={() => { setLessonSavedSeconds(0); setLessonFinished(false); }}><RotateCcw size={16}/>Nova sessão</button>}
+        </div>
+      </div> : <div style={{ display: 'grid', gap: 18 }}>
         <Card title={done ? 'Revisão concluída' : finalizationPending ? 'Finalização pendente' : active ? 'Revisão em andamento' : 'Pronto para iniciar'} subtitle={`Etapa ${currentStage} · ${mode === 'study' ? 'Teoria' : 'Questões'}`}>
           <div style={{ textAlign: 'center', padding: '14px 0 20px' }}><div style={{ fontSize: 'clamp(40px,6vw,68px)', fontWeight: 800, letterSpacing: 2 }}>{formatElapsed(elapsed)}</div><small className="sp-muted">{active ? 'cronômetro em andamento' : elapsed > 0 ? 'tempo acumulado' : 'o tempo só começa ao iniciar a sessão'}</small></div>
           <div className="sp-subject-detail" style={{ textAlign: 'center' }}><span className="sp-pill">REVISÃO</span><h3 style={{ marginTop: 10 }}>{item.subject}</h3><p>{moduleBySubject[item.subject] ?? 'Geral'}</p><p>{item.title}</p><p><strong>Objetivo:</strong> {objective || `Revisar ${item.title}`}</p></div>
@@ -291,7 +418,7 @@ function ReviewWorkspace({ id, initialMode, onBack, onFinalize }: { id: string; 
           {linkedMaterials.length ? <div className="sp-list">{linkedMaterials.map(material => <button className="sp-list-row" key={material.id} onClick={() => lab.open({ kind: 'material', material })}><FileText size={18}/><span><b>{material.title}</b><small>{material.type}</small></span><ArrowRight size={15}/></button>)}</div> : <div className="sp-empty">Nenhum material foi cadastrado para este assunto.</div>}
         </Card>
 
-        <Card title="Destino da atividade" subtitle={destinationLabel}>
+        <Card title="Destino da atividade" subtitle={reviewDestinationLabel}>
           <div className="sp-insight"><ExternalLink size={18}/><p>{mode === 'questions' ? hasExternalQuestionLink ? 'Ao iniciar, o Studio abre o link de questões cadastrado pelo professor.' : 'Não há link externo. O Studio usa automaticamente as questões internas deste assunto.' : subject?.lessonUrl ? 'Ao iniciar, a aula cadastrada pelo professor abre em uma nova aba.' : 'Sem aula externa, o Studio tenta usar o material interno do assunto.'}</p></div>
         </Card>
 
@@ -301,7 +428,7 @@ function ReviewWorkspace({ id, initialMode, onBack, onFinalize }: { id: string; 
           {!done && elapsed > 0 && <button className="sp-primary" onClick={finishSession}><Check size={16}/>{mode === 'questions' || activeMode === 'questions' ? 'Finalizar sessão' : 'Concluir revisão'}</button>}
           {finalizationPending && <button className="sp-primary" onClick={() => onFinalize(savedSeconds)}><Check size={16}/>Continuar finalização</button>}
         </div>
-      </div>
+      </div>}
     </div>
   </>;
 }
