@@ -77,6 +77,58 @@ function Lesson({ subject }: { subject: Subject }) {
   </>;
 }
 
+function ReviewSession({ id }: { id: string }) {
+  const lab = useLab();
+  const item = reviewItems.find(review => review.id === id)!;
+  const done = lab.completedReviews.includes(item.id);
+  const subject = subjects.find(entry => entry.name === item.subject);
+  const linkedMaterials = materials.filter(material => material.subject === item.subject);
+  const timeKey = `review-time:${item.id}`;
+  const savedSeconds = Number(lab.notes[timeKey] ?? 0) || 0;
+  const [startedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (done) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      window.clearInterval(timer);
+      const sessionSeconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+      if (sessionSeconds > 0) lab.setNote(timeKey, String(savedSeconds + sessionSeconds));
+    };
+  // The review id defines one timing session; saving on unmount keeps a pending review resumable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done, item.id]);
+
+  const elapsed = done ? savedSeconds : savedSeconds + Math.max(0, Math.floor((now - startedAt) / 1000));
+  const finish = () => {
+    const finalSeconds = savedSeconds + Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+    lab.setNote(timeKey, String(finalSeconds));
+    lab.completeReview(item.id);
+  };
+
+  return <Modal title={item.title} close={lab.close} wide>
+    <div className="sp-section-line"><span className="sp-pill">{item.subject}</span><span className={`sp-pill ${done ? 'green' : ''}`}>{done ? 'REVISÃO CONCLUÍDA' : 'REVISÃO'}</span></div>
+    <Card title={done ? 'Revisão concluída' : 'Revisão em andamento'} subtitle={done ? 'Este assunto já foi revisado.' : 'Sem limite de tempo. O Studio Pro registra o tempo que você realmente usar.'} action={<div className={`sp-mission-clock ${done ? '' : 'running'}`}><Clock3 size={17}/><span><strong>{formatElapsed(elapsed)}</strong><small>{done ? 'tempo registrado' : 'tempo real'}</small></span></div>}>
+      <div className="sp-subject-detail"><h3>{item.title}</h3><p>Revise o conteúdo no material que você já usa. O Studio Pro apenas organiza os acessos e registra quando a revisão foi concluída.</p></div>
+    </Card>
+
+    <Card title="Recursos para revisar" subtitle="Use apenas o que estiver vinculado a este conteúdo.">
+      {subject && <div className="sp-external-links">
+        <a className="sp-external-link" href={subject.lessonUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><BookOpen size={18}/></span><span><b>Abrir conteúdo da disciplina</b><small>Link cadastrado pelo professor</small></span><ExternalLink size={16}/></a>
+        <a className="sp-external-link" href={subject.questionsUrl} target="_blank" rel="noreferrer"><span className="sp-external-link-icon"><FileQuestion size={18}/></span><span><b>Abrir questões</b><small>Banco de questões vinculado</small></span><ExternalLink size={16}/></a>
+      </div>}
+      {linkedMaterials.length > 0 && <div className="sp-list">
+        {linkedMaterials.map(material => <div className="sp-list-row" key={material.id}><FileQuestion size={18}/><span><b>{material.title}</b><small>{material.type} · {material.subject}</small></span><button className="sp-text-button" onClick={() => lab.download(material)}>Baixar<Download size={14}/></button></div>)}
+      </div>}
+      {!subject && linkedMaterials.length === 0 && <p className="sp-muted">Ainda não há material ou link cadastrado para esta revisão.</p>}
+    </Card>
+
+    {done ? <div className="sp-insight"><Check size={20}/><p><strong>Revisão finalizada.</strong><br/>Ela permanece no histórico como concluída.</p></div> : <button className="sp-primary full" onClick={finish}><Check size={17}/>Concluir revisão</button>}
+  </Modal>;
+}
+
 function Quiz({ items, simulation }: { items: DemoQuestion[]; simulation?: boolean }) {
   const lab = useLab();
   const [index, setIndex] = useState(0);
@@ -117,11 +169,7 @@ export default function DemoPanels({ panel }: { panel: Panel }) {
   if (panel.kind === 'search') return <Modal title="O que vamos encontrar hoje?" close={lab.close} wide><SearchPanel/></Modal>;
   if (panel.kind === 'subject') return <Modal title={panel.subject.name} close={lab.close}><div className="sp-subject-detail"><span className={`sp-subject-symbol ${panel.subject.color}`}>{panel.subject.short}</span><p>{panel.subject.completed + Number(lab.completedLessons.includes(panel.subject.id))} de {panel.subject.lessons} conteúdos concluídos · {panel.subject.review} revisões pendentes</p><Progress value={Math.round((panel.subject.completed + Number(lab.completedLessons.includes(panel.subject.id))) / panel.subject.lessons * 100)}/><Card title="Seu próximo passo"><h3>{panel.subject.topic}</h3><p>{(lab.studyParts[panel.subject.id] ?? 0) > 0 ? `Retome na parte ${Math.min((lab.studyParts[panel.subject.id] ?? 0) + 1, panel.subject.parts.length)} de ${panel.subject.parts.length}.` : 'Retome sua preparação de onde parou.'}</p><button className="sp-primary" onClick={() => lab.open({ kind: 'lesson', subject: panel.subject })}><Play size={16}/>Continuar estudo</button></Card><button className="sp-secondary full" onClick={() => { lab.close(); lab.go('revisoes'); }}>Ver minhas revisões<ArrowRight size={16}/></button></div></Modal>;
   if (panel.kind === 'material') return <Modal title={panel.material.title} close={lab.close} wide><span className="sp-pill">{panel.material.type} · AMOSTRA</span>{panel.material.type === 'Mapas mentais' && <div className="sp-map">{['Planejar', 'Estudar', 'Praticar', 'Revisar'].map((name, i) => <span key={name}><b>0{i + 1}</b>{name}</span>)}</div>}<div className="sp-reader sp-material-reader">{panel.material.body.split('\n\n').map((p, i) => i === 0 ? <h3 key={i}>{p}</h3> : <p key={i}>{p}</p>)}</div><button className="sp-primary" onClick={() => lab.download(panel.material)}><Download size={16}/>Baixar {panel.material.type === 'PDFs' ? 'amostra PDF' : 'roteiro em texto'}</button></Modal>;
-  if (panel.kind === 'review') {
-    const item = reviewItems.find(r => r.id === panel.id)!;
-    const done = lab.completedReviews.includes(item.id);
-    return <Modal title={item.title} close={lab.close}><span className="sp-pill">{item.subject} · {item.minutes} min</span><div className="sp-reader"><h3>Revisão ativa em três passos</h3><ol><li>Sem consultar, escreva o que você lembra sobre {item.title.toLowerCase()}.</li><li>Compare suas anotações com seu material de estudo.</li><li>Registre uma dúvida e uma ideia que você já domina.</li></ol><label className="sp-field"><span>O que preciso reforçar?</span><textarea rows={4} placeholder="Anote os pontos para a próxima revisão…" value={lab.notes["review:" + item.id] ?? ""} onChange={e => lab.setNote("review:" + item.id, e.target.value)}/></label></div><button className="sp-primary full" disabled={done} onClick={() => lab.completeReview(item.id)}><Check size={17}/>{done ? 'Revisão concluída' : 'Concluir revisão'}</button></Modal>;
-  }
+  if (panel.kind === 'review') return <ReviewSession id={panel.id}/>;
   if (panel.kind === 'profile') return <Modal title="Seu perfil" close={lab.close}><div className="sp-profile-detail"><span className="sp-avatar">L</span><h3>Leandro</h3><p>Concurseiro PMPE · Nível 12</p><span className="sp-pill">PERFIL DEMONSTRATIVO</span></div><div className="sp-profile-stats"><span><b>12</b>dias de constância</span><span><b>2.480</b>XP conquistados</span></div><button className="sp-secondary full" onClick={() => { lab.close(); lab.go('plano'); }}>Ver meu plano<ArrowRight size={16}/></button></Modal>;
   if (panel.kind === 'notifications') return <Modal title="Notificações" close={lab.close}><div className="sp-list">{[{ title: 'É hora de consolidar seu conhecimento', sub: `${reviewItems.length - lab.completedReviews.length} revisões aguardam você.`, page: 'revisoes' }, { title: 'Seu próximo desafio está pronto', sub: 'Experimente o simulado de demonstração.', page: 'simulados' }, { title: 'Uma orientação para a sua semana', sub: 'Veja o recado do professor Renato.', page: 'mentoria' }].map(n => <button className="sp-list-row" key={n.title} onClick={() => { lab.close(); lab.go(n.page); }}><span className="sp-notification-dot"/><span><b>{n.title}</b><small>{n.sub}</small></span><ArrowRight size={16}/></button>)}</div></Modal>;
   if (panel.kind === 'result') return <Modal title={panel.title} close={lab.close}><Donut value={panel.score} review={0}/><p>Resultado histórico demonstrativo. Aproveitamento de {panel.score}%.</p><Card title="Seu próximo foco"><p>Reforce sequências numéricas e conectivos. Revise cada erro antes de começar um novo simulado.</p></Card><button className="sp-primary full" onClick={() => lab.open({ kind: 'quiz', items: questions.slice(0, 2) })}>Revisar erros · amostra<ArrowRight size={16}/></button></Modal>;
