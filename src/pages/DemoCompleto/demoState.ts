@@ -17,7 +17,10 @@ export interface LabState {
   tasks: DemoTask[]; toggleTask: (id: string) => void; addTask: (task: DemoTask) => void;
   selectedDate: string; selectDate: (date: string) => void;
   completedLessons: string[]; completeLesson: (id: string) => void;
-  activeStudy: string | null; studyStartedAt: number | null; startStudy: (id: string) => void; skipStudy: (id: string) => void;
+  activeStudy: string | null; studyStartedAt: number | null; studyPaused: boolean;
+  studyElapsed: Record<string, number>; studyParts: Record<string, number>;
+  startStudy: (id: string) => void; pauseStudy: (id: string) => void; finishStudy: (id: string, complete: boolean) => void;
+  advanceStudyPart: (id: string, totalParts: number) => void; skipStudy: (id: string) => void;
   completedReviews: string[]; completeReview: (id: string) => void;
   favorites: string[]; toggleFavorite: (id: string) => void;
   downloads: string[]; download: (material: DemoMaterial) => void;
