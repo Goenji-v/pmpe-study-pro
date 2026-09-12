@@ -5,9 +5,10 @@ import DemoDashboard from './DemoDashboard';
 import { MaterialsPage, MentorshipPage, PerformancePage, PlanPage, QuestionsPage, ReviewsPage, SchedulePage, SimulationsPage, StudiesPage } from './DemoPages';
 import DemoPanels from './DemoPanels';
 import { Logo, Modal } from './DemoUI';
-import { initialTasks, type DemoMaterial } from './demoData';
+import { initialTasks, subjects, type DemoMaterial } from './demoData';
 import { LabContext, type LabState, type Panel } from './demoState';
 import './DemoCompleto.css';
+import './StudySession.css';
 
 const navigation = [
   { id: 'inicio', title: 'Início', icon: Home }, { id: 'plano', title: 'Meu Plano', icon: Target },
@@ -44,6 +45,9 @@ export default function DemoCompleto() {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [activeStudy, setActiveStudy] = useState<string | null>(null);
   const [studyStartedAt, setStudyStartedAt] = useState<number | null>(null);
+  const [studyPaused, setStudyPaused] = useState(false);
+  const [studyElapsed, setStudyElapsed] = useState<Record<string, number>>({});
+  const [studyParts, setStudyParts] = useState<Record<string, number>>({});
   const [completedReviews, setCompletedReviews] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [downloads, setDownloads] = useState<string[]>([]);
@@ -67,19 +71,53 @@ export default function DemoCompleto() {
     const anchor = document.createElement('a'); anchor.href = address; anchor.download = `studio-pro-${material.id}.${material.type === 'PDFs' ? 'pdf' : 'txt'}`; anchor.click(); setTimeout(() => URL.revokeObjectURL(address), 1000);
     setDownloads(old => old.includes(material.id) ? old : [...old, material.id]); notify('Amostra baixada. Ela também está na aba Downloads.');
   }
+  function bankStudyTime(id: string) {
+    if (activeStudy !== id || !studyStartedAt) return;
+    const seconds = Math.max(0, Math.floor((Date.now() - studyStartedAt) / 1000));
+    setStudyElapsed(old => ({ ...old, [id]: (old[id] ?? 0) + seconds }));
+  }
   function startStudy(id: string) {
-    if (activeStudy === id && studyStartedAt) { notify('Seu estudo já está em andamento. Continue de onde parou.'); return; }
-    setActiveStudy(id); setStudyStartedAt(Date.now()); notify('Estudo iniciado. O cronômetro está acompanhando sua sessão.');
+    if (activeStudy === id && studyStartedAt && !studyPaused) { notify('Seu estudo já está em andamento.'); return; }
+    if (activeStudy && activeStudy !== id && studyStartedAt) bankStudyTime(activeStudy);
+    setActiveStudy(id);
+    setStudyPaused(false);
+    setStudyStartedAt(Date.now());
+    notify((studyElapsed[id] ?? 0) > 0 || (studyParts[id] ?? 0) > 0 ? 'Estudo retomado do ponto em que você parou.' : 'Estudo iniciado. O cronômetro está acompanhando sua sessão.');
+  }
+  function pauseStudy(id: string) {
+    if (activeStudy !== id || !studyStartedAt) return;
+    bankStudyTime(id);
+    setStudyStartedAt(null);
+    setStudyPaused(true);
+    notify('Cronômetro pausado. Seu tempo e seu progresso foram salvos.');
+  }
+  function finishStudy(id: string, complete: boolean) {
+    if (activeStudy === id && studyStartedAt) bankStudyTime(id);
+    if (complete) {
+      setCompletedLessons(old => old.includes(id) ? old : [...old, id]);
+      const subject = subjects.find(item => item.id === id);
+      if (subject) setStudyParts(old => ({ ...old, [id]: subject.parts.length }));
+    }
+    setActiveStudy(null);
+    setStudyStartedAt(null);
+    setStudyPaused(false);
+    setPanel(null);
+    notify(complete ? 'Assunto concluído! O progresso foi atualizado.' : 'Sessão encerrada. O assunto ficou em aberto para você retomar depois.');
   }
   function skipStudy(id: string) {
-    if (activeStudy === id) { setActiveStudy(null); setStudyStartedAt(null); }
-    setPanel(null); notify('Tarefa pulada. No sistema conectado, o cronograma reorganiza os próximos estudos.');
+    if (activeStudy === id && studyStartedAt) bankStudyTime(id);
+    if (activeStudy === id) { setActiveStudy(null); setStudyStartedAt(null); setStudyPaused(false); }
+    setPanel(null); notify('Estudo pulado. No sistema conectado, a rota reorganiza este conteúdo para outro momento.');
   }
-  const lab: LabState = { tasks, selectedDate, selectDate, completedLessons, activeStudy, studyStartedAt, completedReviews, favorites, downloads, answers, goal, setGoal, open: setPanel, close, go, notify, download, startStudy, skipStudy,
+  function advanceStudyPart(id: string, totalParts: number) {
+    setStudyParts(old => ({ ...old, [id]: Math.min(totalParts, (old[id] ?? 0) + 1) }));
+    notify('Parte concluída. Seu ponto de retomada foi salvo.');
+  }
+  const completeLesson = (id: string) => finishStudy(id, true);
+  const lab: LabState = { tasks, selectedDate, selectDate, completedLessons, activeStudy, studyStartedAt, studyPaused, studyElapsed, studyParts, completedReviews, favorites, downloads, answers, goal, setGoal, open: setPanel, close, go, notify, download, startStudy, pauseStudy, finishStudy, advanceStudyPart, skipStudy, completeLesson,
     notes, setNote: (id, text) => setNotes(old => ({ ...old, [id]: text })),
     toggleTask: id => setTasks(old => old.map(task => task.id === id ? { ...task, done: !task.done } : task)),
     addTask: task => { setTasks(old => [...old, task]); selectDate(task.date); },
-    completeLesson: id => { setCompletedLessons(old => old.includes(id) ? old : [...old, id]); if (activeStudy === id) { setActiveStudy(null); setStudyStartedAt(null); } notify('Estudo concluído! Seu progresso foi atualizado na demonstração.'); },
     completeReview: id => { setCompletedReviews(old => old.includes(id) ? old : [...old, id]); notify('Revisão concluída. Mais um passo na sua preparação.'); },
     toggleFavorite: id => setFavorites(old => old.includes(id) ? old.filter(item => item !== id) : [...old, id]),
     answer: (id, correct) => setAnswers(old => ({ ...old, [id]: correct })),
