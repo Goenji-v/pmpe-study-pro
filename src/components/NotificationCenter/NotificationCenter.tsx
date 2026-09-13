@@ -21,6 +21,7 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { getSemanaAtual } from "../../utils/planoUtils";
+import { statusDaRevisao } from "../../utils/revisoes";
 
 import "./NotificationCenter.css";
 
@@ -34,7 +35,7 @@ export default function NotificationCenter() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const { administrador } = useAdminStatus();
-  const { configuracoes, missoesConcluidas } = useApp();
+  const { configuracoes, missoesConcluidas, revisoes } = useApp();
 
   const [aberto, setAberto] = useState(false);
   const [notificacoes, setNotificacoes] = useState<NotificacaoInterna[]>([]);
@@ -56,6 +57,27 @@ export default function NotificationCenter() {
     const missao = diaAtual?.missoes.find((item) => !concluidas.has(item.id));
     return missao ? { semana, dia, missao } : null;
   }, [configuracoes.semanaAtualPlano, missoesConcluidas, plano]);
+
+  const revisoesPendentes = useMemo(
+    () => revisoes.filter((revisao) => !revisao.concluida),
+    [revisoes]
+  );
+
+  const revisoesAtrasadas = useMemo(
+    () =>
+      revisoesPendentes
+        .filter((revisao) => statusDaRevisao(revisao.dataPrevista) === "atrasada")
+        .sort((a, b) => new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()),
+    [revisoesPendentes]
+  );
+
+  const revisoesHoje = useMemo(
+    () =>
+      revisoesPendentes
+        .filter((revisao) => statusDaRevisao(revisao.dataPrevista) === "hoje")
+        .sort((a, b) => a.materia.localeCompare(b.materia, "pt-BR")),
+    [revisoesPendentes]
+  );
 
   const carregar = useCallback(async () => {
     if (!usuario?.id) return;
@@ -104,6 +126,32 @@ export default function NotificationCenter() {
     sessionStorage.setItem(chaveSessao, "1");
 
     const timer = window.setTimeout(() => {
+      if (revisoesAtrasadas.length > 0) {
+        const primeira = revisoesAtrasadas[0];
+        mostrarAviso({
+          titulo: "Atenção, revisão atrasada",
+          mensagem:
+            revisoesAtrasadas.length === 1
+              ? `${primeira.materia} — ${primeira.assunto}`
+              : `Você tem ${revisoesAtrasadas.length} revisões atrasadas. Comece por ${primeira.materia} — ${primeira.assunto}.`,
+          rota: "/revisoes",
+        });
+        return;
+      }
+
+      if (revisoesHoje.length > 0) {
+        const primeira = revisoesHoje[0];
+        mostrarAviso({
+          titulo: "Revisões para hoje",
+          mensagem:
+            revisoesHoje.length === 1
+              ? `${primeira.materia} — ${primeira.assunto}`
+              : `Você tem ${revisoesHoje.length} revisões programadas para hoje.`,
+          rota: "/revisoes",
+        });
+        return;
+      }
+
       if (missaoHoje) {
         mostrarAviso({
           titulo: "Missão de hoje",
@@ -114,7 +162,7 @@ export default function NotificationCenter() {
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [missaoHoje, usuario?.id]);
+  }, [missaoHoje, revisoesAtrasadas, revisoesHoje, usuario?.id]);
 
   useEffect(() => {
     if (!administrador || !usuario?.id || feedbacksPendentes.length === 0) return;
@@ -146,9 +194,7 @@ export default function NotificationCenter() {
       if (!item.lida) {
         await marcarNotificacaoLida(item.id);
         setNotificacoes((atuais) =>
-          atuais.map((notificacao) =>
-            notificacao.id === item.id ? { ...notificacao, lida: true } : notificacao
-          )
+          atuais.filter((notificacao) => notificacao.id !== item.id)
         );
       }
     } catch (error) {
@@ -162,14 +208,21 @@ export default function NotificationCenter() {
   async function marcarTodas() {
     try {
       await marcarTodasNotificacoesLidas();
-      setNotificacoes((atuais) => atuais.map((item) => ({ ...item, lida: true })));
+      setNotificacoes([]);
     } catch (error) {
       console.warn("Falha ao marcar notificações como lidas:", error);
     }
   }
 
-  const naoLidas = notificacoes.filter((item) => !item.lida).length;
-  const totalPendencias = naoLidas + (administrador ? feedbacksPendentes.length : 0);
+  const naoLidas = notificacoes.length;
+  const alertasRotina =
+    (missaoHoje ? 1 : 0) +
+    (revisoesHoje.length > 0 ? 1 : 0) +
+    (revisoesAtrasadas.length > 0 ? 1 : 0);
+  const totalPendencias =
+    naoLidas +
+    alertasRotina +
+    (administrador ? feedbacksPendentes.length : 0);
 
   useEffect(() => {
     function clicarNoSino(evento: MouseEvent) {
@@ -225,6 +278,26 @@ export default function NotificationCenter() {
               <button type="button" onClick={() => setAberto(false)} aria-label="Fechar">×</button>
             </header>
 
+            {revisoesAtrasadas.length > 0 && (
+              <button className="notificacao-item revisao-atrasada" type="button" onClick={() => { setAberto(false); navigate("/revisoes"); }}>
+                <strong>⚠️ Atenção, revisão atrasada</strong>
+                <span>
+                  Você tem {revisoesAtrasadas.length} revisão{revisoesAtrasadas.length === 1 ? "" : "ões"} atrasada{revisoesAtrasadas.length === 1 ? "" : "s"}.
+                </span>
+                <small>{revisoesAtrasadas[0].materia} — {revisoesAtrasadas[0].assunto}</small>
+              </button>
+            )}
+
+            {revisoesHoje.length > 0 && (
+              <button className="notificacao-item revisao-hoje" type="button" onClick={() => { setAberto(false); navigate("/revisoes"); }}>
+                <strong>Revisões para hoje</strong>
+                <span>
+                  {revisoesHoje.length} revisão{revisoesHoje.length === 1 ? "" : "ões"} programada{revisoesHoje.length === 1 ? "" : "s"} para hoje.
+                </span>
+                <small>{revisoesHoje[0].materia} — {revisoesHoje[0].assunto}</small>
+              </button>
+            )}
+
             {missaoHoje && (
               <button className="notificacao-item destaque" type="button" onClick={() => { setAberto(false); navigate("/plano"); }}>
                 <strong>Missão de hoje</strong>
@@ -243,13 +316,13 @@ export default function NotificationCenter() {
 
             <div className="notificacoes-lista">
               {notificacoes.length === 0 ? (
-                <div className="notificacoes-vazio">Nenhuma outra notificação.</div>
+                <div className="notificacoes-vazio">Nenhuma outra notificação pendente.</div>
               ) : (
                 notificacoes.map((item) => (
                   <button
                     type="button"
                     key={item.id}
-                    className={`notificacao-item ${item.lida ? "lida" : "nao-lida"}`}
+                    className="notificacao-item nao-lida"
                     onClick={() => void abrirNotificacao(item)}
                   >
                     <strong>{item.titulo}</strong>
@@ -262,7 +335,7 @@ export default function NotificationCenter() {
 
             {naoLidas > 0 && (
               <footer>
-                <button type="button" onClick={() => void marcarTodas()}>Marcar todas como lidas</button>
+                <button type="button" onClick={() => void marcarTodas()}>Limpar notificações lidas</button>
               </footer>
             )}
           </aside>
