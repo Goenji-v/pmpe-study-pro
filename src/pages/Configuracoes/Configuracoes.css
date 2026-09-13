@@ -109,6 +109,27 @@
   letter-spacing: 0.04em;
 }
 
+.configuracoes-tema-loja-aviso {
+  display: grid;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--study-accent-border, #3b82f6);
+  border-radius: 11px;
+  background: var(--study-accent-soft, rgba(59, 130, 246, 0.12));
+}
+
+.configuracoes-tema-loja-aviso strong {
+  color: var(--study-text, #f8fafc);
+  font-size: 13px;
+}
+
+.configuracoes-tema-loja-aviso span {
+  color: var(--study-muted, #94a3b8);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .configuracoes-preview {
   margin-top: 20px;
 }
@@ -130,14 +151,28 @@
   margin-top: 6px;
 }
 
+.tema-azul {
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(59, 130, 246, 0.2), transparent 42%),
+    #0f172a;
+}
+
 .tema-escuro {
   color: #ffffff;
-  background: #0f172a;
+  background: #080a0e;
+  border-color: #2a313b;
 }
 
 .tema-claro {
   color: #0f172a;
   background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.tema-claro strong,
+.tema-claro p {
+  color: #0f172a;
 }
 
 .configuracoes-resumo-item {

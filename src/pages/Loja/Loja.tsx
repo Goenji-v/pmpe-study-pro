@@ -23,6 +23,7 @@ import {
 
 type Aba = "loja" | "inventario";
 type Filtro = "todos" | TipoItemLoja;
+type TemaBasico = "azul" | "escuro" | "claro";
 
 const FILTROS: Array<{ id: Filtro; nome: string }> = [
   { id: "todos", nome: "Todos" },
@@ -48,6 +49,9 @@ export default function Loja() {
 
   const moldura = encontrarItemLoja(economia.molduraEquipada);
   const tema = encontrarItemLoja(economia.temaEquipado);
+  const configTema = configuracoes as typeof configuracoes & { temaBasico?: TemaBasico };
+  const temaBasico: TemaBasico =
+    configTema.temaBasico ?? (configuracoes.tema === "claro" ? "claro" : "azul");
 
   function salvarEconomia(proximaEconomia: ReturnType<typeof obterEstadoEconomia>) {
     setConfiguracoes((atuais) => ({
@@ -91,8 +95,8 @@ export default function Loja() {
           <span className="loja-kicker">ECONOMIA STUDY PRO</span>
           <h1>Loja & Inventário</h1>
           <p>
-            Use as moedas conquistadas estudando para personalizar detalhes do Study Pro.
-            Molduras e temas ficam no inventário depois da compra.
+            Estude, acumule moedas e desbloqueie visuais especiais para o Study Pro.
+            Os temas básicos azul, claro e escuro continuam gratuitos nas Configurações.
           </p>
         </div>
 
@@ -111,7 +115,7 @@ export default function Loja() {
           <strong>🏆 Desbloqueado em Conquistas</strong>
         </button>
         <ResumoEquipado rotulo="Moldura" item={moldura} fallback="Moldura padrão" />
-        <ResumoEquipado rotulo="Tema" item={tema} fallback="Azul padrão" />
+        <ResumoEquipado rotulo="Tema" item={tema} fallback={`Grátis: ${nomeTemaBasico(temaBasico)}`} />
       </section>
 
       <div className="loja-controles">
@@ -219,7 +223,10 @@ export default function Loja() {
 
       <section className="loja-regra">
         <strong>Como funciona</strong>
-        <p>Molduras e temas são comprados uma única vez e ficam no inventário. Eles alteram apenas detalhes visuais da interface, mantendo o fundo padrão e a leitura limpa.</p>
+        <p>
+          Temas especiais são comprados uma única vez, ficam no inventário e podem ser equipados ou desequipados quando quiser.
+          Ao desequipar, o site volta para o tema básico escolhido nas Configurações.
+        </p>
       </section>
     </div>
   );
@@ -234,6 +241,12 @@ function PreviewItem({ item }: { item: ItemLoja }) {
     return <div className={`loja-preview loja-preview-moldura moldura-${item.valorVisual}`}><span>Nível 4</span><strong>808 XP</strong></div>;
   }
   return <div className={`loja-preview loja-preview-tema tema-${item.valorVisual}`}><i /><span>Prévia do tema</span></div>;
+}
+
+function nomeTemaBasico(tema: TemaBasico) {
+  if (tema === "claro") return "Claro / branco";
+  if (tema === "escuro") return "Escuro / preto";
+  return "Azul padrão";
 }
 
 function nomeTipo(tipo: TipoItemLoja) {

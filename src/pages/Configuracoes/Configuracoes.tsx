@@ -4,24 +4,35 @@ import "./Configuracoes.css";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
-import type { Tema } from "../../types/index";
+import { obterEstadoEconomia } from "../../services/economiaGamificacao";
+import { encontrarItemLoja } from "../../services/lojaGamificacao";
 import {
   DIAS_SEMANA,
   type ConfiguracoesComEdital,
   type DiaSemanaId,
 } from "../../types/editalInteligente";
 
+type TemaBasico = "azul" | "escuro" | "claro";
+type ConfiguracoesFormulario = ConfiguracoesComEdital & {
+  temaBasico?: TemaBasico;
+};
+
 export default function Configuracoes() {
   const { configuracoes, setConfiguracoes } = useApp();
   const { showToast } = useToast();
-  const configInicial = configuracoes as ConfiguracoesComEdital;
+  const configInicial = configuracoes as ConfiguracoesFormulario;
+  const economia = obterEstadoEconomia(configuracoes);
+  const temaLojaEquipado = encontrarItemLoja(economia.temaEquipado);
   const ritmoInicial = Math.max(
     1,
     Math.min(4, configInicial.materiasPorDia ?? configInicial.missoesPorDia ?? 1)
   );
+  const temaBasicoInicial: TemaBasico =
+    configInicial.temaBasico ?? (configInicial.tema === "claro" ? "claro" : "azul");
 
-  const [formulario, setFormulario] = useState<ConfiguracoesComEdital>({
+  const [formulario, setFormulario] = useState<ConfiguracoesFormulario>({
     ...configInicial,
+    temaBasico: temaBasicoInicial,
     diasEstudo:
       configInicial.diasEstudo?.length
         ? configInicial.diasEstudo
@@ -30,9 +41,9 @@ export default function Configuracoes() {
     missoesPorDia: ritmoInicial,
   });
 
-  function atualizarCampo<K extends keyof ConfiguracoesComEdital>(
+  function atualizarCampo<K extends keyof ConfiguracoesFormulario>(
     campo: K,
-    valor: ConfiguracoesComEdital[K]
+    valor: ConfiguracoesFormulario[K]
   ) {
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
   }
@@ -65,6 +76,7 @@ export default function Configuracoes() {
       1,
       Math.min(4, formulario.materiasPorDia ?? formulario.missoesPorDia ?? 1)
     );
+    const temaBasico = formulario.temaBasico ?? "azul";
 
     if (!nomeLimpo) {
       showToast("Informe o nome do usuário.", "warning");
@@ -87,12 +99,14 @@ export default function Configuracoes() {
       return;
     }
 
-    const dadosAtualizados: ConfiguracoesComEdital = {
+    const dadosAtualizados: ConfiguracoesFormulario = {
       ...formulario,
       nomeUsuario: nomeLimpo,
       concurso: concursoLimpo,
       materiasPorDia: ritmoDiario,
       missoesPorDia: ritmoDiario,
+      temaBasico,
+      tema: temaBasico === "claro" ? "claro" : "escuro",
     };
 
     setConfiguracoes(dadosAtualizados);
@@ -102,7 +116,7 @@ export default function Configuracoes() {
   function restaurarPadrao() {
     if (!window.confirm("Deseja restaurar as configurações padrão?")) return;
 
-    const padrao: ConfiguracoesComEdital = {
+    const padrao: ConfiguracoesFormulario = {
       ...formulario,
       metaQuestoesDiaria: 30,
       metaMinutosDiaria: 120,
@@ -111,6 +125,7 @@ export default function Configuracoes() {
       materiasPorDia: 1,
       diasEstudo: ["seg", "ter", "qua", "qui", "sex", "sab"],
       tema: "escuro",
+      temaBasico: "azul",
       editalOnboardingVisto: formulario.editalOnboardingVisto,
       editalAtivo: formulario.editalAtivo,
     };
@@ -121,6 +136,7 @@ export default function Configuracoes() {
   }
 
   const diasSelecionados = formulario.diasEstudo ?? [];
+  const temaBasico = formulario.temaBasico ?? "azul";
 
   return (
     <section className="configuracoes-container">
@@ -262,22 +278,33 @@ export default function Configuracoes() {
         <div className="configuracoes-card">
           <h2>Aparência</h2>
           <div className="configuracoes-form-group">
-            <label htmlFor="tema">Tema</label>
+            <label htmlFor="temaBasico">Tema básico gratuito</label>
             <select
-              id="tema"
-              value={formulario.tema}
-              onChange={(evento) => atualizarCampo("tema", evento.target.value as Tema)}
+              id="temaBasico"
+              value={temaBasico}
+              onChange={(evento) => atualizarCampo("temaBasico", evento.target.value as TemaBasico)}
             >
-              <option value="escuro">Escuro</option>
-              <option value="claro">Claro</option>
+              <option value="azul">Azul padrão</option>
+              <option value="claro">Claro / branco</option>
+              <option value="escuro">Escuro / preto</option>
             </select>
+            <small>
+              Azul, branco e preto são gratuitos. Temas especiais ficam disponíveis na Loja por moedas.
+            </small>
           </div>
 
+          {temaLojaEquipado?.tipo === "tema" && (
+            <div className="configuracoes-tema-loja-aviso">
+              <strong>{temaLojaEquipado.icone} {temaLojaEquipado.nome} está equipado pela Loja.</strong>
+              <span>Ele tem prioridade visual. Para voltar ao tema básico, desequipe o tema no Inventário.</span>
+            </div>
+          )}
+
           <div className="configuracoes-preview">
-            <span>Pré-visualização</span>
-            <div className={`configuracoes-tema-preview tema-${formulario.tema}`}>
+            <span>Pré-visualização do tema básico</span>
+            <div className={`configuracoes-tema-preview tema-${temaBasico}`}>
               <strong>{formulario.concurso || "Concurso"}</strong>
-              <p>Tema {formulario.tema}</p>
+              <p>{nomeTemaBasico(temaBasico)}</p>
             </div>
           </div>
         </div>
@@ -295,6 +322,9 @@ export default function Configuracoes() {
           </div>
           <div className="configuracoes-resumo-item">
             <span>Matérias por dia</span><strong>{formulario.materiasPorDia ?? 1}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Tema básico</span><strong>{nomeTemaBasico(temaBasico)}</strong>
           </div>
           <div className="configuracoes-resumo-item">
             <span>Tempo</span>
@@ -325,4 +355,10 @@ export default function Configuracoes() {
       </div>
     </section>
   );
+}
+
+function nomeTemaBasico(tema: TemaBasico) {
+  if (tema === "claro") return "Claro / branco";
+  if (tema === "escuro") return "Escuro / preto";
+  return "Azul padrão";
 }
