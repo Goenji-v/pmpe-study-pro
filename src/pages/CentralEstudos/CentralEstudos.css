@@ -1,5 +1,6 @@
 .central-estudos-container {
   width: 100%;
+  color: var(--studio-text, #f6f8fc);
 }
 
 .central-estudos-cabecalho {
@@ -12,87 +13,126 @@
 
 .central-estudos-cabecalho h1 {
   margin-bottom: 7px;
-  font-size: 34px;
+  color: #f6f8fc;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.8px;
 }
 
 .central-estudos-cabecalho p {
-  color: #94a3b8;
+  color: var(--studio-muted, #a7b7ca);
+  font-size: 13px;
 }
 
 .central-estudos-total {
   min-width: 160px;
-  padding: 15px 19px;
+  padding: 14px 17px;
   text-align: right;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 14px;
+  background: linear-gradient(130deg, rgba(16, 36, 58, .96), rgba(11, 26, 45, .96));
+  border: 1px solid var(--studio-border, rgba(75, 113, 151, .30));
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .12);
 }
 
 .central-estudos-total span {
   display: block;
-  margin-bottom: 5px;
-  color: #94a3b8;
-  font-size: 12px;
+  margin-bottom: 4px;
+  color: #8fa3bb;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
 }
 
 .central-estudos-total strong {
-  color: #60a5fa;
-  font-size: 25px;
+  color: var(--studio-gold, #edc677);
+  font-size: 24px;
+  font-weight: 750;
 }
 
 .central-estudos-mensagem {
-  padding: 13px 16px;
+  padding: 12px 15px;
   margin-bottom: 18px;
-  color: #dbeafe;
-  background: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.45);
-  border-radius: 11px;
+  color: #d8e4ef;
+  background: rgba(83, 167, 255, .08);
+  border: 1px solid rgba(83, 167, 255, .25);
+  border-radius: 9px;
 }
 
 .central-estudos-grid {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    minmax(360px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, .82fr);
   gap: 22px;
+  align-items: start;
 }
 
 .central-estudos-configuracao,
 .central-estudos-cronometro {
   padding: 22px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 17px;
+  background: linear-gradient(125deg, #0d1f33, #0a192b);
+  border: 1px solid var(--studio-border, rgba(75, 113, 151, .30));
+  border-radius: 10px;
+  box-shadow: 0 18px 46px rgba(2, 6, 23, .14);
 }
 
-.central-estudos-configuracao h2 {
+.central-estudos-configuracao {
+  position: relative;
+  overflow: hidden;
+}
+
+.central-estudos-configuracao::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, #edc677, #53a7ff 48%, transparent 90%);
+  opacity: .75;
+}
+
+.central-estudos-configuracao h2,
+.central-estudos-cronometro h2 {
   margin-bottom: 17px;
+  color: #f6f8fc;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .central-estudos-tipos {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 9px;
   margin-bottom: 22px;
 }
 
 .central-tipo {
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 12px 8px;
-  color: #94a3b8;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 11px;
+  padding: 11px 8px;
+  color: #9fb1c6;
+  background: #0b1b2d;
+  border: 1px solid rgba(75, 113, 151, .30);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.central-tipo:hover:not(.central-tipo-ativo) {
+  transform: translateY(-1px);
+  color: #f6f8fc;
+  background: #11263a;
+  border-color: rgba(99, 127, 154, .58);
 }
 
 .central-tipo-ativo {
-  color: #ffffff;
-  background: rgba(37, 99, 235, 0.24);
-  border-color: #3b82f6;
+  color: #172333;
+  background: linear-gradient(120deg, #efcf88, #ddb45e);
+  border-color: rgba(237, 207, 146, .42);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .16);
 }
 
 .central-estudos-formulario {
@@ -108,13 +148,13 @@
 
 .central-estudos-campo label {
   margin-bottom: 7px;
-  color: #cbd5e1;
-  font-size: 13px;
+  color: #c7d2df;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .central-estudos-campo label small {
-  color: #64748b;
+  color: #7188a2;
   font-weight: 400;
 }
 
@@ -122,11 +162,21 @@
 .central-estudos-campo select,
 .central-estudos-campo textarea {
   width: 100%;
-  padding: 12px;
-  color: #ffffff;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 10px;
+  padding: 12px 13px;
+  color: #eef4fb;
+  background: #081728;
+  border: 1px solid rgba(75, 113, 151, .35);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.central-estudos-campo input:focus,
+.central-estudos-campo select:focus,
+.central-estudos-campo textarea:focus {
+  background: #0a1b2e;
+  border-color: rgba(237, 198, 119, .62);
+  box-shadow: 0 0 0 3px rgba(237, 198, 119, .08);
 }
 
 .central-estudos-campo input + input,
@@ -135,14 +185,15 @@
 }
 
 .central-estudos-campo textarea {
-  min-height: 90px;
+  min-height: 92px;
   resize: vertical;
 }
 
 .central-estudos-campo input:disabled,
-.central-estudos-campo select:disabled {
+.central-estudos-campo select:disabled,
+.central-estudos-campo textarea:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: .58;
 }
 
 .central-estudos-cronometro {
@@ -156,45 +207,48 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #94a3b8;
+  color: #9eb0c5;
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .central-estudos-status > span {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
 }
 
 .central-estudos-status .parado {
-  background: #64748b;
+  background: #71849a;
 }
 
 .central-estudos-status .ativo {
-  background: #22c55e;
-  box-shadow:
-    0 0 12px
-    rgba(34, 197, 94, 0.7);
+  background: #34dc83;
+  box-shadow: 0 0 12px rgba(52, 220, 131, .55);
 }
 
 .central-estudos-status .pausado {
-  background: #f59e0b;
+  background: #edc677;
+  box-shadow: 0 0 12px rgba(237, 198, 119, .25);
 }
 
 .central-estudos-tempo {
-  margin: 30px 0 20px;
-  color: #f8fafc;
-  font-family: monospace;
-  font-size: clamp(43px, 6vw, 72px);
+  margin: 28px 0 20px;
+  color: #f8fbff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(44px, 6vw, 72px);
   font-weight: 800;
   letter-spacing: 2px;
+  line-height: 1;
+  text-shadow: 0 0 28px rgba(83, 167, 255, .10);
 }
 
 .central-estudos-resumo {
   width: 100%;
   padding: 18px;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 13px;
+  background: rgba(8, 23, 40, .78);
+  border: 1px solid rgba(75, 113, 151, .30);
+  border-radius: 9px;
 }
 
 .central-estudos-resumo span,
@@ -205,41 +259,60 @@
 }
 
 .central-estudos-resumo span {
-  color: #60a5fa;
-  font-weight: 700;
+  color: #d8bc82;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
 }
 
 .central-estudos-resumo strong {
   margin-top: 8px;
-  font-size: 20px;
+  color: #f6f8fc;
+  font-size: 19px;
 }
 
 .central-estudos-resumo p {
   margin-top: 7px;
-  color: #cbd5e1;
+  color: #c0cfdd;
+  font-size: 12px;
 }
 
 .central-estudos-resumo small {
   margin-top: 9px;
-  color: #94a3b8;
+  color: #8fa3bb;
+  font-size: 10px;
 }
 
-.central-estudos-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+.central-estudos-links,
+.central-materiais {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
   margin-top: 15px;
 }
 
-.central-estudos-links button {
-  padding: 9px 13px;
-  color: white;
-  background: #7c3aed;
-  border: none;
-  border-radius: 9px;
+.central-estudos-links button,
+.central-materiais button {
+  min-height: 42px;
+  padding: 10px 12px;
+  color: #dfe8f2;
+  background: #10243a;
+  border: 1px solid rgba(75, 113, 151, .36);
+  border-radius: 7px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform .18s ease, background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.central-estudos-links button:hover,
+.central-materiais button:hover {
+  transform: translateY(-1px);
+  color: #172333;
+  background: linear-gradient(120deg, #efcf88, #ddb45e);
+  border-color: rgba(237, 207, 146, .42);
 }
 
 .central-estudos-acoes {
@@ -251,32 +324,114 @@
 }
 
 .central-estudos-acoes button {
-  padding: 11px 15px;
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  font-weight: 800;
+  min-height: 40px;
+  padding: 10px 16px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 750;
   cursor: pointer;
+  transition: transform .18s ease, filter .18s ease, background .18s ease;
 }
 
-.central-botao-iniciar {
-  background: #2563eb;
+.central-estudos-acoes button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.central-botao-iniciar,
+.central-botao-continuar {
+  color: #172333;
+  background: linear-gradient(120deg, #efcf88, #ddb45e);
+  border: 1px solid rgba(237, 207, 146, .42);
 }
 
 .central-botao-pausar {
-  background: #d97706;
-}
-
-.central-botao-continuar {
-  background: #2563eb;
+  color: #1d2430;
+  background: #e7b95c;
+  border: 1px solid rgba(244, 211, 139, .35);
 }
 
 .central-botao-finalizar {
-  background: #16a34a;
+  color: #07190f;
+  background: #34dc83;
+  border: 1px solid rgba(52, 220, 131, .35);
 }
 
 .central-botao-cancelar {
-  background: #475569;
+  color: #c7d3df;
+  background: #172b40;
+  border: 1px solid rgba(75, 113, 151, .40);
+}
+
+.central-estudos-revisao-formato small {
+  margin-top: 8px;
+  color: #8fa3bb;
+  line-height: 1.45;
+}
+
+.central-revisao-opcoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.central-revisao-opcoes button {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(75, 113, 151, .34);
+  background: #081728;
+  color: #c1cedc;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.central-revisao-opcoes button.ativo {
+  border-color: rgba(237, 198, 119, .48);
+  background: linear-gradient(120deg, rgba(237, 198, 119, .16), rgba(83, 167, 255, .08));
+  color: #f0d394;
+}
+
+.central-revisao-opcoes button:disabled {
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+.finalizacao-concluir {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 15px;
+  background: rgba(52, 220, 131, .07);
+  border: 1px solid rgba(52, 220, 131, .24);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.finalizacao-concluir input {
+  width: 20px !important;
+  height: 20px;
+  margin: 0;
+  accent-color: #34dc83;
+  flex: 0 0 auto;
+}
+
+.finalizacao-concluir span {
+  display: grid;
+  gap: 3px;
+}
+
+.finalizacao-concluir strong {
+  color: #e6eef6;
+  font-size: 12px;
+}
+
+.finalizacao-concluir small {
+  color: #8fa3bb;
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 @media (max-width: 1000px) {
@@ -295,119 +450,13 @@
     text-align: left;
   }
 
-  .central-estudos-tipos {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-.central-materiais{
-display:grid;
-grid-template-columns:repeat(2,1fr);
-gap:12px;
-margin-top:15px;
-}
-
-.central-materiais button{
-padding:15px;
-background:#1e293b;
-border:1px solid #334155;
-border-radius:10px;
-color:white;
-font-weight:700;
-cursor:pointer;
-transition:.2s;
-}
-
-.central-materiais button:hover{
-background:#2563eb;
-border-color:#2563eb;
-}
-
-/* Central de Estudos 2.0 */
-.central-estudos-configuracao,
-.central-estudos-cronometro {
-  background:
-    linear-gradient(145deg, rgba(30,41,59,.98), rgba(15,23,42,.98));
-  border-color: rgba(71,85,105,.72);
-  box-shadow: 0 18px 45px rgba(2,6,23,.16);
-}
-
-.central-estudos-configuracao {
-  position: relative;
-  overflow: hidden;
-}
-
-.central-estudos-configuracao::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 3px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6, transparent);
-}
-
-.central-tipo {
-  min-height: 54px;
-  transition: transform .18s ease, border-color .18s ease, background .18s ease;
-}
-
-.central-tipo:hover:not(.central-tipo-ativo) {
-  transform: translateY(-1px);
-  border-color: #475569;
-  background: #172033;
-}
-
-.central-tipo-ativo {
-  box-shadow: inset 0 0 0 1px rgba(96,165,250,.16), 0 8px 24px rgba(37,99,235,.12);
-}
-
-.central-estudos-tempo {
-  text-shadow: 0 0 30px rgba(96,165,250,.10);
-}
-
-.central-estudos-resumo {
-  background: rgba(15,23,42,.72);
-}
-
-.finalizacao-concluir {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 15px;
-  background: rgba(34,197,94,.08);
-  border: 1px solid rgba(34,197,94,.28);
-  border-radius: 12px;
-  cursor: pointer;
-}
-
-.finalizacao-concluir input {
-  width: 20px !important;
-  height: 20px;
-  margin: 0;
-  accent-color: #22c55e;
-  flex: 0 0 auto;
-}
-
-.finalizacao-concluir span {
-  display: grid;
-  gap: 3px;
-}
-
-.finalizacao-concluir strong {
-  color: #e2e8f0;
-  font-size: 13px;
-}
-
-.finalizacao-concluir small {
-  color: #94a3b8;
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-@media (max-width: 700px) {
   .central-estudos-configuracao,
   .central-estudos-cronometro {
     padding: 17px;
+  }
+
+  .central-estudos-tipos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .central-estudos-tempo {
@@ -415,35 +464,20 @@ border-color:#2563eb;
   }
 }
 
-.central-estudos-revisao-formato small {
-  margin-top: 8px;
-  color: #94a3b8;
-  line-height: 1.45;
-}
+@media (max-width: 480px) {
+  .central-estudos-links,
+  .central-materiais,
+  .central-revisao-opcoes {
+    grid-template-columns: 1fr;
+  }
 
-.central-revisao-opcoes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
+  .central-estudos-acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
 
-.central-revisao-opcoes button {
-  padding: 11px 12px;
-  border-radius: 10px;
-  border: 1px solid #334155;
-  background: #0f172a;
-  color: #cbd5e1;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.central-revisao-opcoes button.ativo {
-  border-color: #3b82f6;
-  background: rgba(37, 99, 235, 0.2);
-  color: #ffffff;
-}
-
-.central-revisao-opcoes button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
+  .central-estudos-acoes button {
+    width: 100%;
+  }
 }
