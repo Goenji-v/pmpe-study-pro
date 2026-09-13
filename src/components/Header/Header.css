@@ -78,4 +78,11 @@
     justify-content: space-between;
     gap: 7px;
   }
+
+  .header-acoes .user-profile-menu {
+    position: fixed;
+    top: 7px;
+    right: 8px;
+    z-index: 1301;
+  }
 }
