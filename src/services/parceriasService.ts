@@ -147,6 +147,14 @@ export async function criarConvite(turmaId: string, validadeDias: number, maxUso
   return texto(data);
 }
 
+export async function alterarStatusConvite(id: string, ativo: boolean) {
+  const { error } = await supabase.rpc("alterar_status_convite_meu_parceiro", {
+    p_convite_id: id,
+    p_ativo: ativo,
+  });
+  if (error) throw new Error(`Não foi possível ${ativo ? "reativar" : "revogar"} o convite: ${error.message}`);
+}
+
 export async function decidirSolicitacao(id: string, decisao: "aprovar" | "recusar", duracaoMeses = 12) {
   const { error } = await supabase.rpc("decidir_solicitacao", { p_solicitacao_id: id, p_decisao: decisao, p_duracao_meses: duracaoMeses });
   if (error) throw new Error(`Não foi possível responder à solicitação: ${error.message}`);
@@ -155,6 +163,14 @@ export async function decidirSolicitacao(id: string, decisao: "aprovar" | "recus
 export async function alterarStatusLicenca(id: string, status: "ativa" | "suspensa" | "cancelada", motivo?: string) {
   const { error } = await supabase.rpc("alterar_status_licenca", { p_licenca_id: id, p_status: status, p_motivo: motivo || null, p_expira_em: null });
   if (error) throw new Error(`Não foi possível alterar a licença: ${error.message}`);
+}
+
+export async function moverAlunoEntreTurmas(licencaId: string, turmaDestinoId: string) {
+  const { error } = await supabase.rpc("mover_aluno_entre_turmas_meu_parceiro", {
+    p_licenca_id: licencaId,
+    p_turma_destino_id: turmaDestinoId,
+  });
+  if (error) throw new Error(`Não foi possível mover o aluno: ${error.message}`);
 }
 
 export function normalizarContexto(data: unknown): ContextoComercial {
