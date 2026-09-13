@@ -16,6 +16,7 @@ export async function listarNotificacoes(limite = 40): Promise<NotificacaoIntern
   const { data, error } = await supabase
     .from("notificacoes")
     .select("id,user_id,tipo,titulo,mensagem,rota,feedback_id,lida,created_at")
+    .eq("lida", false)
     .order("created_at", { ascending: false })
     .limit(limite);
 
