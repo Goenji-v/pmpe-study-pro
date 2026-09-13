@@ -63,7 +63,6 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/estatisticas-simulado-ia",
     "/desempenho",
     "/historico",
-    "/estatisticas",
   ],
 };
 
@@ -201,7 +200,6 @@ export default function Sidebar() {
             <ItemMenu to="/questoes" texto="Questões" />
             <ItemMenu to="/simulados" texto="Simulados" />
             <ItemMenu to="/desempenho" texto="Desempenho" />
-            <ItemMenu to="/estatisticas" texto="Estatísticas" />
           </GrupoMenu>
 
           <ItemMenu
