@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
 import { supabase } from "../../lib/supabase";
@@ -10,10 +10,12 @@ import {
   criarDisciplinaCurso,
   criarModuloCurso,
   definirTurmasCurso,
+  excluirItemCurso,
   type AulaCursoParceiro,
   type CursoParceiro,
   type PainelCursosParceiro,
 } from "../../services/cursoParceiroService";
+import CursoImportador from "./CursoImportador";
 import "./ParceiroCursos.css";
 
 const VAZIO: PainelCursosParceiro = { parceiroId: "", turmas: [], cursos: [] };
@@ -26,6 +28,7 @@ export default function ParceiroCursos() {
   const [processando, setProcessando] = useState("");
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
+  const travaAcao = useRef(false);
 
   const podeGerenciar =
     contexto?.papel === "proprietario" ||
@@ -63,6 +66,8 @@ export default function ParceiroCursos() {
   );
 
   async function executar(chave: string, tarefa: () => Promise<void>, sucesso?: string) {
+    if (travaAcao.current) return;
+    travaAcao.current = true;
     try {
       setProcessando(chave);
       setErro("");
@@ -73,6 +78,7 @@ export default function ParceiroCursos() {
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível salvar.");
     } finally {
+      travaAcao.current = false;
       setProcessando("");
     }
   }
@@ -83,7 +89,8 @@ export default function ParceiroCursos() {
     const nome = String(form.get("nome") || "").trim();
     if (!nome) return;
     await executar("curso-novo", async () => {
-      await criarCursoParceiro(painel.parceiroId, nome, String(form.get("descricao") || ""));
+      const novoId = await criarCursoParceiro(painel.parceiroId, nome, String(form.get("descricao") || ""));
+      setCursoId(novoId);
       evento.currentTarget.reset();
     }, "Curso criado.");
   }
@@ -134,7 +141,12 @@ export default function ParceiroCursos() {
     const form = new FormData(evento.currentTarget);
     const titulo = String(form.get("titulo") || "").trim();
     const url = String(form.get("url") || "").trim();
+    const duracaoTexto = String(form.get("duracao") || "").trim();
     if (!titulo || !url) return;
+    if (!/^https:\/\//i.test(url)) {
+      setErro("O link da aula precisa começar com https://.");
+      return;
+    }
 
     await executar(`aula-${moduloId}`, async () => {
       await criarAulaCurso(
@@ -143,7 +155,7 @@ export default function ParceiroCursos() {
         String(form.get("descricao") || ""),
         String(form.get("tipo") || "video") as AulaCursoParceiro["tipo"],
         url,
-        Number(form.get("duracao") || 0),
+        duracaoTexto ? Number(duracaoTexto) : null,
         ordem
       );
       evento.currentTarget.reset();
@@ -169,15 +181,8 @@ export default function ParceiroCursos() {
     );
     if (novoLink === null) return;
     const url = novoLink.trim();
-    if (!url) {
-      setErro("Informe o link externo da aula.");
-      return;
-    }
-
-    try {
-      new URL(url);
-    } catch {
-      setErro("Informe uma URL válida, começando com http:// ou https://.");
+    if (!/^https:\/\//i.test(url)) {
+      setErro("Informe uma URL HTTPS válida, começando com https://.");
       return;
     }
 
@@ -188,6 +193,20 @@ export default function ParceiroCursos() {
         .eq("id", aula.id);
       if (error) throw new Error(`Não foi possível atualizar o link: ${error.message}`);
     }, "Link atualizado. Todos os acessos passam a usar o novo endereço.");
+  }
+
+  async function excluir(
+    entidade: "curso" | "disciplina" | "modulo" | "aula",
+    id: string,
+    nome: string,
+    avisoExtra = "",
+  ) {
+    const alvo = entidade === "curso" ? "curso" : entidade === "disciplina" ? "disciplina" : entidade === "modulo" ? "módulo" : "aula";
+    const confirmado = window.confirm(
+      `Excluir ${alvo} “${nome}”?${avisoExtra ? `\n\n${avisoExtra}` : ""}\n\nEssa ação não pode ser desfeita.`
+    );
+    if (!confirmado) return;
+    await executar(`excluir-${entidade}-${id}`, () => excluirItemCurso(entidade, id), `${nome} excluído.`);
   }
 
   if (verificando) return <div className="pc-estado">Verificando acesso à parceria...</div>;
@@ -244,10 +263,13 @@ export default function ParceiroCursos() {
 
           <main className="pc-conteudo">
             {!curso ? (
-              <div className="pc-vazio">
-                <h2>Crie o primeiro curso</h2>
-                <p>Depois adicione disciplinas, módulos e os links externos de cada aula.</p>
-              </div>
+              <>
+                <div className="pc-vazio">
+                  <h2>Crie o primeiro curso</h2>
+                  <p>Você também pode usar o importador para trazer uma estrutura pronta e revisar antes de publicar.</p>
+                </div>
+                <CursoImportador parceiroId={painel.parceiroId} cursoAtual={null} onImportado={async (id) => { setCursoId(id); await carregar(); }} />
+              </>
             ) : (
               <>
                 <section className="pc-topo-curso">
@@ -256,28 +278,45 @@ export default function ParceiroCursos() {
                     <h2>{curso.nome}</h2>
                     <p>{curso.descricao || "Sem descrição."}</p>
                   </div>
-                  <button
-                    type="button"
-                    className={curso.ativo ? "secundario" : "primario"}
-                    disabled={processando === `curso-${curso.id}`}
-                    onClick={() => void executar(
-                      `curso-${curso.id}`,
-                      () => alternarAtivoCurso("curso", curso.id, !curso.ativo)
-                    )}
-                  >
-                    {curso.ativo ? "Pausar curso" : "Ativar curso"}
-                  </button>
+                  <div className="pc-topo-acoes">
+                    <button
+                      type="button"
+                      className={curso.ativo ? "secundario" : "primario"}
+                      disabled={processando === `curso-${curso.id}`}
+                      onClick={() => void executar(
+                        `curso-${curso.id}`,
+                        () => alternarAtivoCurso("curso", curso.id, !curso.ativo)
+                      )}
+                    >
+                      {curso.ativo ? "Pausar curso" : "Ativar curso"}
+                    </button>
+                    <button
+                      type="button"
+                      className="perigo"
+                      disabled={processando === `excluir-curso-${curso.id}`}
+                      onClick={() => void excluir(
+                        "curso",
+                        curso.id,
+                        curso.nome,
+                        `Serão excluídas ${curso.disciplinas.length} disciplinas, ${contarModulos(curso)} módulos e ${contarAulas(curso)} aulas, além do progresso ligado a essas aulas.`
+                      )}
+                    >
+                      Excluir curso
+                    </button>
+                  </div>
                 </section>
 
                 <section className="pc-resumo">
                   <Resumo titulo="Disciplinas" valor={curso.disciplinas.length} />
                   <Resumo
                     titulo="Módulos"
-                    valor={curso.disciplinas.reduce((n, d) => n + d.modulos.length, 0)}
+                    valor={contarModulos(curso)}
                   />
                   <Resumo titulo="Aulas externas" valor={contarAulas(curso)} />
                   <Resumo titulo="Alunos liberados" valor={curso.progresso.length} />
                 </section>
+
+                <CursoImportador parceiroId={painel.parceiroId} cursoAtual={curso} onImportado={async (id) => { setCursoId(id); await carregar(); }} />
 
                 <section className="pc-card">
                   <div className="pc-card-cabecalho">
@@ -329,16 +368,30 @@ export default function ParceiroCursos() {
                             <h4>{disciplina.titulo}</h4>
                             <p>{disciplina.descricao}</p>
                           </div>
-                          <button
-                            type="button"
-                            className="mini"
-                            onClick={() => void executar(
-                              `ativo-disc-${disciplina.id}`,
-                              () => alternarAtivoCurso("disciplina", disciplina.id, !disciplina.ativo)
-                            )}
-                          >
-                            {disciplina.ativo ? "Pausar" : "Ativar"}
-                          </button>
+                          <div className="pc-item-acoes">
+                            <button
+                              type="button"
+                              className="mini"
+                              onClick={() => void executar(
+                                `ativo-disc-${disciplina.id}`,
+                                () => alternarAtivoCurso("disciplina", disciplina.id, !disciplina.ativo)
+                              )}
+                            >
+                              {disciplina.ativo ? "Pausar" : "Ativar"}
+                            </button>
+                            <button
+                              type="button"
+                              className="mini perigo"
+                              onClick={() => void excluir(
+                                "disciplina",
+                                disciplina.id,
+                                disciplina.titulo,
+                                `Os ${disciplina.modulos.length} módulos e ${disciplina.modulos.reduce((n, modulo) => n + modulo.aulas.length, 0)} aulas desta disciplina também serão excluídos.`
+                              )}
+                            >
+                              Excluir
+                            </button>
+                          </div>
                         </header>
 
                         <form
@@ -347,7 +400,7 @@ export default function ParceiroCursos() {
                         >
                           <input name="titulo" required placeholder="Novo módulo" />
                           <input name="descricao" placeholder="Descrição" />
-                          <button>+ Módulo</button>
+                          <button disabled={processando === `mod-${disciplina.id}`}>+ Módulo</button>
                         </form>
 
                         <div className="pc-modulos">
@@ -358,19 +411,31 @@ export default function ParceiroCursos() {
                                   <b>Módulo {modulo.ordem} · {modulo.titulo}</b>
                                   <small>{modulo.aulas.length} aulas</small>
                                 </span>
-                                <button
-                                  type="button"
-                                  className="mini"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    void executar(
-                                      `ativo-mod-${modulo.id}`,
-                                      () => alternarAtivoCurso("modulo", modulo.id, !modulo.ativo)
-                                    );
-                                  }}
-                                >
-                                  {modulo.ativo ? "Pausar" : "Ativar"}
-                                </button>
+                                <div className="pc-item-acoes">
+                                  <button
+                                    type="button"
+                                    className="mini"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      void executar(
+                                        `ativo-mod-${modulo.id}`,
+                                        () => alternarAtivoCurso("modulo", modulo.id, !modulo.ativo)
+                                      );
+                                    }}
+                                  >
+                                    {modulo.ativo ? "Pausar" : "Ativar"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="mini perigo"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      void excluir("modulo", modulo.id, modulo.titulo, `As ${modulo.aulas.length} aulas deste módulo também serão excluídas.`);
+                                    }}
+                                  >
+                                    Excluir
+                                  </button>
+                                </div>
                               </summary>
 
                               <div className="pc-aulas">
@@ -407,6 +472,13 @@ export default function ParceiroCursos() {
                                       >
                                         {aula.ativo ? "Pausar" : "Ativar"}
                                       </button>
+                                      <button
+                                        type="button"
+                                        className="mini perigo"
+                                        onClick={() => void excluir("aula", aula.id, aula.titulo, "O progresso associado a esta aula também será removido.")}
+                                      >
+                                        Excluir
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -423,10 +495,10 @@ export default function ParceiroCursos() {
                                   <option value="link">Link</option>
                                   <option value="texto">Texto</option>
                                 </select>
-                                <input name="url" type="url" required placeholder="https://plataforma-do-parceiro/..." />
-                                <input name="duracao" type="number" min="0" max="1000" placeholder="Min" />
+                                <input name="url" type="url" required pattern="https://.*" placeholder="https://plataforma-do-parceiro/..." />
+                                <input name="duracao" type="number" min="1" max="1440" placeholder="Min (opcional)" />
                                 <input name="descricao" placeholder="Descrição" />
-                                <button>Adicionar</button>
+                                <button disabled={processando === `aula-${modulo.id}`}>Adicionar</button>
                               </form>
                             </details>
                           ))}
@@ -481,6 +553,10 @@ function contarAulas(curso: CursoParceiro) {
     (total, disciplina) => total + disciplina.modulos.reduce((n, modulo) => n + modulo.aulas.length, 0),
     0
   );
+}
+
+function contarModulos(curso: CursoParceiro) {
+  return curso.disciplinas.reduce((n, disciplina) => n + disciplina.modulos.length, 0);
 }
 
 function mediaProgresso(curso: CursoParceiro) {

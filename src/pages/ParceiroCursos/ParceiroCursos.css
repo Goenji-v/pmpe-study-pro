@@ -52,13 +52,17 @@
 
 .pc-form{display:flex;flex-direction:column;gap:9px}
 .pc-form h3{margin:0 0 4px;color:var(--pc-text)}
-.pc-form input,.pc-form textarea,.pc-form-inline input,.pc-form-inline select,.pc-aula-form input,.pc-aula-form select{
+.pc-form input,.pc-form textarea,.pc-form-inline input,.pc-form-inline select,.pc-aula-form input,.pc-aula-form select,
+.pc-importador input,.pc-importador select,.pc-importador textarea{
   width:100%;box-sizing:border-box;border:1px solid var(--pc-border);background:var(--pc-input);color:var(--pc-text);border-radius:10px;padding:10px
 }
-.pc-form input::placeholder,.pc-form textarea::placeholder,.pc-form-inline input::placeholder,.pc-aula-form input::placeholder{color:#64748b}
-.pc-form input:focus,.pc-form textarea:focus,.pc-form-inline input:focus,.pc-form-inline select:focus,.pc-aula-form input:focus,.pc-aula-form select:focus{outline:none;border-color:var(--pc-accent);box-shadow:0 0 0 3px rgba(49,94,251,.12)}
+.pc-form input::placeholder,.pc-form textarea::placeholder,.pc-form-inline input::placeholder,.pc-aula-form input::placeholder,
+.pc-importador input::placeholder,.pc-importador textarea::placeholder{color:#64748b}
+.pc-form input:focus,.pc-form textarea:focus,.pc-form-inline input:focus,.pc-form-inline select:focus,.pc-aula-form input:focus,.pc-aula-form select:focus,
+.pc-importador input:focus,.pc-importador select:focus,.pc-importador textarea:focus{outline:none;border-color:var(--pc-accent);box-shadow:0 0 0 3px rgba(49,94,251,.12)}
 .pc-form textarea{min-height:78px;resize:vertical}
-.pc-form button,.pc-form-inline button,.pc-aula-form button,.pc-topo-curso button,.pc-disciplina button{border:0;border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--pc-accent);color:#fff;font-weight:700}
+.pc-form button,.pc-form-inline button,.pc-aula-form button,.pc-topo-curso button,.pc-disciplina button,.pc-importador button{border:0;border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--pc-accent);color:#fff;font-weight:700}
+.pc-form button:disabled,.pc-form-inline button:disabled,.pc-aula-form button:disabled,.pc-topo-curso button:disabled,.pc-disciplina button:disabled,.pc-importador button:disabled{cursor:not-allowed;opacity:.5}
 
 .pc-conteudo{min-width:0;display:flex;flex-direction:column;gap:16px}
 .pc-topo-curso{padding:20px;display:flex;justify-content:space-between;gap:16px}
@@ -67,6 +71,17 @@
 .pc-topo-curso p{margin:0;color:var(--pc-muted)}
 .pc-topo-curso button.secundario{background:rgba(49,94,251,.13);color:#93c5fd;border:1px solid rgba(96,165,250,.25)}
 .pc-topo-curso button.primario{background:var(--pc-accent)}
+.pc-topo-acoes,.pc-item-acoes{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pc-topo-curso button.perigo,.pc-disciplina button.mini.perigo,.pc-aula button.mini.perigo,.pc-modulos button.mini.perigo,.pc-importador button.perigo{
+  color:#fecaca;
+  background:rgba(127,29,29,.2);
+  border:1px solid rgba(248,113,113,.34);
+}
+.pc-topo-curso button.perigo:hover,.pc-disciplina button.mini.perigo:hover,.pc-aula button.mini.perigo:hover,.pc-modulos button.mini.perigo:hover,.pc-importador button.perigo:hover{
+  color:#fff;
+  background:rgba(185,28,28,.42);
+  border-color:rgba(248,113,113,.55);
+}
 
 .pc-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .pc-resumo article{padding:16px;border-radius:16px;display:flex;flex-direction:column;gap:4px}
@@ -97,10 +112,10 @@
 .pc-aulas{display:flex;flex-direction:column}
 .pc-aula{display:flex;justify-content:space-between;gap:12px;padding:12px;border-top:1px solid var(--pc-border);background:rgba(10,20,35,.28)}
 .pc-aula>div:first-child{display:flex;flex-direction:column;gap:2px}
-.pc-aula>div:last-child{display:flex;align-items:center;gap:8px}
+.pc-aula>div:last-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pc-aula a{font-weight:700;color:#60a5fa;text-decoration:none}
 .pc-aula p{margin:4px 0 0;color:var(--pc-muted)}
-.pc-aula-form{display:grid;grid-template-columns:1.3fr .8fr 1.3fr .5fr 1.2fr auto;gap:7px;padding:12px;border-top:1px solid var(--pc-border);background:rgba(10,20,35,.32)}
+.pc-aula-form{display:grid;grid-template-columns:1.3fr .8fr 1.3fr .7fr 1.2fr auto;gap:7px;padding:12px;border-top:1px solid var(--pc-border);background:rgba(10,20,35,.32)}
 .pc-disciplina button.mini,.pc-aula button.mini,.pc-modulos button.mini{background:#1b2a40;color:#cbd5e1;border:1px solid var(--pc-border);padding:7px 9px;font-size:.78rem}
 .inativo{opacity:.55}
 
@@ -115,6 +130,39 @@
 .pc-vazio.pequeno{padding:18px;background:rgba(10,20,35,.48)}
 .pc-estado,.pc-erro{padding:14px 16px;border-radius:12px}
 .pc-erro{background:rgba(127,29,29,.22);color:#fca5a5;border:1px solid rgba(248,113,113,.32)}
+
+/* Importador: link público ou captura de uma plataforma autenticada, sempre com revisão antes de gravar. */
+.pc-importador{overflow:hidden}
+.pc-importador-cabecalho{margin-bottom:0}
+.pc-importador button.pc-botao-secundario{background:#17263b;color:#bfdbfe;border:1px solid var(--pc-border-strong)}
+.pc-importador-corpo{display:flex;flex-direction:column;gap:16px;margin-top:16px;padding-top:16px;border-top:1px solid var(--pc-border)}
+.pc-importador-fontes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pc-importador-fontes>article{padding:16px;border:1px solid var(--pc-border);border-radius:14px;background:rgba(10,20,35,.35)}
+.pc-importador-fontes strong{display:block;margin-bottom:5px}
+.pc-importador-fontes p{margin:0 0 12px;color:var(--pc-muted);font-size:.9rem;line-height:1.45}
+.pc-importador-linha{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.pc-importador-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.pc-importador-captura{min-height:104px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem}
+.pc-importador-revisao{display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:16px;border:1px solid var(--pc-border-strong);background:rgba(8,17,31,.46)}
+.pc-importador-resumo{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.pc-importador-resumo>div:first-child{display:flex;flex-direction:column;gap:4px}
+.pc-importador-resumo span{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#60a5fa;text-transform:uppercase}
+.pc-importador-destino{display:flex;gap:8px;flex-wrap:wrap}
+.pc-importador-destino label{display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:10px;border:1px solid var(--pc-border);background:var(--pc-surface-2);font-size:.85rem}
+.pc-importador-destino input{width:auto;accent-color:var(--pc-accent)}
+.pc-importador-meta{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.pc-importador-arvore{display:flex;flex-direction:column;gap:12px}
+.pc-importador-disciplina{padding:14px;border:1px solid var(--pc-border);border-radius:14px;background:var(--pc-surface-2)}
+.pc-importador-disciplina>header,.pc-importador-modulo>header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.pc-importador-disciplina>header>span{font-size:.72rem;font-weight:800;color:#93c5fd;letter-spacing:.06em}
+.pc-importador-modulos{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+.pc-importador-modulo{padding:12px;border:1px solid var(--pc-border);border-radius:12px;background:rgba(10,20,35,.5)}
+.pc-importador-aulas{display:flex;flex-direction:column;gap:7px;margin:10px 0}
+.pc-importador-aula{display:grid;grid-template-columns:32px 1fr 120px minmax(180px,1.25fr) 82px auto;gap:7px;align-items:center;padding:8px;border-radius:10px;border:1px solid rgba(100,116,139,.22);background:rgba(255,255,255,.018)}
+.pc-importador-aula>span{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--pc-soft);color:#93c5fd;font-weight:800}
+.pc-importador-mini-acoes{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
+.pc-importador-mini-acoes button{padding:7px 9px;background:#1b2a40;color:#cbd5e1;border:1px solid var(--pc-border);font-size:.78rem}
+.pc-importador-rodape{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
 
 /* O tema claro continua claro; a correção acima é o padrão para o site escuro e skins escuras. */
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-pagina{
@@ -141,6 +189,13 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-aula button.m
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-modulos button.mini{background:#f1f5f9;color:#475569}
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-progresso-barra{background:#e2e8f0}
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-vazio.pequeno{background:#f8fafc}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-importador-fontes>article,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-importador-revisao,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-importador-modulo{background:#f8fafc}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-importador-disciplina{background:#fff}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-importador button.pc-botao-secundario{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .pc-importador-mini-acoes button{background:#f1f5f9;color:#475569}
 
-@media(max-width:1050px){.pc-layout{grid-template-columns:1fr}.pc-lateral{position:static}.pc-resumo{grid-template-columns:repeat(2,1fr)}.pc-aula-form{grid-template-columns:1fr 1fr}.pc-form-inline,.pc-form-inline.compacto{grid-template-columns:1fr}}
-@media(max-width:700px){.pc-hero,.pc-topo-curso,.pc-card-cabecalho{flex-direction:column}.pc-resumo{grid-template-columns:1fr 1fr}.pc-progresso-lista>a{grid-template-columns:1fr 60px}.pc-progresso-barra{grid-column:1/-1}.pc-aula{flex-direction:column}.pc-aula-form{grid-template-columns:1fr}}
+@media(max-width:1200px){.pc-importador-aula{grid-template-columns:32px 1fr 110px 1fr}.pc-importador-aula>input:nth-of-type(3),.pc-importador-mini-acoes{grid-column:auto}.pc-importador-aula .pc-importador-mini-acoes{grid-column:2/-1;justify-content:flex-end}}
+@media(max-width:1050px){.pc-layout{grid-template-columns:1fr}.pc-lateral{position:static}.pc-resumo{grid-template-columns:repeat(2,1fr)}.pc-aula-form{grid-template-columns:1fr 1fr}.pc-form-inline,.pc-form-inline.compacto{grid-template-columns:1fr}.pc-importador-fontes{grid-template-columns:1fr}}
+@media(max-width:700px){.pc-hero,.pc-topo-curso,.pc-card-cabecalho,.pc-importador-resumo{flex-direction:column}.pc-resumo{grid-template-columns:1fr 1fr}.pc-progresso-lista>a{grid-template-columns:1fr 60px}.pc-progresso-barra{grid-column:1/-1}.pc-aula{flex-direction:column}.pc-aula-form{grid-template-columns:1fr}.pc-topo-acoes{width:100%}.pc-topo-acoes button{flex:1}.pc-importador-meta,.pc-importador-linha{grid-template-columns:1fr}.pc-importador-aula{grid-template-columns:32px 1fr}.pc-importador-aula>*:not(span){grid-column:2}.pc-importador-aula .pc-importador-mini-acoes{grid-column:2;justify-content:flex-start}}
