@@ -41,7 +41,7 @@
       "destination": "/index.html"
     }
   ],
-  "buildCommand": "npm run build:preview",
-  "outputDirectory": "dist-preview",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "framework": "vite"
 }
