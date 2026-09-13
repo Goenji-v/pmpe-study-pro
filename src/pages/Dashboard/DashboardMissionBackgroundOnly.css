@@ -21,7 +21,7 @@
       rgba(3, 18, 34, 0.12) 78%,
       rgba(3, 18, 34, 0.04) 100%
     ),
-    url('/assets/pmpe-hero-bg.webp') center right / cover no-repeat;
+    url('/assets/pmpe-hero-user.svg') center right / cover no-repeat;
 }
 
 .dashboard-pro-v3 .dashboard-pro-mission > * {
@@ -44,6 +44,6 @@
         rgba(3, 18, 34, 0.82) 55%,
         rgba(3, 18, 34, 0.42) 100%
       ),
-      url('/assets/pmpe-hero-bg.webp') 68% center / cover no-repeat;
+      url('/assets/pmpe-hero-user.svg') 68% center / cover no-repeat;
   }
 }
