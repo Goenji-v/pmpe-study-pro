@@ -16,14 +16,16 @@ import { useContextoComercial } from "../../hooks/useContextoComercial";
 type GrupoId =
   | "planejamento"
   | "estudos"
-  | "pratica";
+  | "pratica"
+  | "parceiro";
 
 type IconeMenu =
   | "home"
   | "calendar"
   | "book"
   | "target"
-  | "sparkles";
+  | "sparkles"
+  | "briefcase";
 
 type GrupoMenuProps = {
   id: GrupoId;
@@ -65,6 +67,9 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/desempenho",
     "/historico",
   ],
+  parceiro: [
+    "/parceiro",
+  ],
 };
 
 function rotaPertenceAoGrupo(pathname: string, id: GrupoId) {
@@ -88,6 +93,11 @@ export default function Sidebar() {
   const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
     obterGrupoDaRota(location.pathname)
   );
+
+  const temAreaParceiro =
+    contexto?.papel === "proprietario" ||
+    contexto?.papel === "gestor" ||
+    contexto?.papel === "professor";
 
   useEffect(() => {
     if (location.pathname === "/estatisticas") {
@@ -214,14 +224,23 @@ export default function Sidebar() {
             icone="sparkles"
             texto="Inteligência"
           />
-          {(contexto?.papel === "proprietario" || contexto?.papel === "gestor" || contexto?.papel === "professor") && (
-            <>
-              <ItemMenu to="/parceiro" texto="Painel do parceiro" />
-              <ItemMenu to="/parceiro/mentoria" texto="Trilha da mentoria" />
-              <ItemMenu to="/parceiro/cursos" texto="Curso do professor" />
-              <ItemMenu to="/parceiro/simulados" texto="Simulados do professor" />
-            </>
+
+          {temAreaParceiro && (
+            <GrupoMenu
+              id="parceiro"
+              titulo="Área do Parceiro"
+              icone="briefcase"
+              ativo={rotaPertenceAoGrupo(location.pathname, "parceiro")}
+              aberto={grupoAberto === "parceiro"}
+              onToggle={alternarGrupo}
+            >
+              <ItemMenu to="/parceiro" texto="Visão geral e turmas" final />
+              <ItemMenu to="/parceiro/mentoria" texto="Cronograma da turma" />
+              <ItemMenu to="/parceiro/cursos" texto="Conteúdos do curso" />
+              <ItemMenu to="/parceiro/simulados" texto="Simulados" />
+            </GrupoMenu>
           )}
+
           {contexto?.papel === "aluno" && <ItemMenu to="/meu-acesso" texto="Meu acesso" />}
         </nav>
 
@@ -363,6 +382,16 @@ function MenuIcon({ nome }: { nome: IconeMenu }) {
         <circle cx="12" cy="12" r="8.5" />
         <circle cx="12" cy="12" r="4.5" />
         <circle cx="12" cy="12" r="1.2" />
+      </svg>
+    );
+  }
+
+  if (nome === "briefcase") {
+    return (
+      <svg {...props}>
+        <rect x="3" y="7" width="18" height="13" rx="2.5" />
+        <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
+        <path d="M3 12h18M10 12v2h4v-2" />
       </svg>
     );
   }
