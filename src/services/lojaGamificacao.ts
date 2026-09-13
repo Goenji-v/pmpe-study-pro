@@ -1,6 +1,6 @@
 import type { EstadoEconomia } from "./economiaGamificacao";
 
-export type TipoItemLoja = "tema" | "moldura";
+export type TipoItemLoja = "tema" | "moldura" | "fundo";
 export type RaridadeItemLoja = "comum" | "raro" | "epico" | "lendario";
 
 export type ItemLoja = {
@@ -106,7 +106,8 @@ export function itensDoInventario(
 
 export function itemEstaEquipado(estado: EstadoEconomia, item: ItemLoja) {
   if (item.tipo === "moldura") return estado.molduraEquipada === item.id;
-  return estado.temaEquipado === item.id;
+  if (item.tipo === "tema") return estado.temaEquipado === item.id;
+  return false;
 }
 
 export function comprarItemLoja(
@@ -166,6 +167,10 @@ export function equiparItemLoja(
 
   if (!(estado.inventario ?? []).includes(item.id)) {
     return { estado, item, erro: "Compre este item antes de equipar." };
+  }
+
+  if (item.tipo === "fundo") {
+    return { estado, item, erro: "Fundos do Dashboard são equipados pela personalização visual." };
   }
 
   const base = {
