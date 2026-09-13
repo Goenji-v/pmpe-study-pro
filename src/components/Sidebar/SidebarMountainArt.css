@@ -1,0 +1,80 @@
+.sidebar {
+  isolation: isolate;
+  padding-bottom: 198px;
+}
+
+.sidebar > * {
+  position: relative;
+  z-index: 2;
+}
+
+.sidebar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  height: 188px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(8, 23, 39, 0.06) 0%, rgba(5, 15, 25, 0.18) 38%, rgba(3, 10, 17, 0.70) 100%),
+    url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMjggMTkwJz48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9J3NreScgeDE9JzAnIHkxPScwJyB4Mj0nMCcgeTI9JzEnPjxzdG9wIG9mZnNldD0nMCcgc3RvcC1jb2xvcj0nIzBiMjMzYScvPjxzdG9wIG9mZnNldD0nLjUyJyBzdG9wLWNvbG9yPScjMGExYzMxJy8+PHN0b3Agb2Zmc2V0PScxJyBzdG9wLWNvbG9yPScjMDcxNDIxJy8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9J3JpZGdlJyB4MT0nMCcgeTE9JzAnIHgyPScxJyB5Mj0nMSc+PHN0b3Agb2Zmc2V0PScwJyBzdG9wLWNvbG9yPScjMTczMjRhJy8+PHN0b3Agb2Zmc2V0PScxJyBzdG9wLWNvbG9yPScjMDgxMzFmJy8+PC9saW5lYXJHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9J21pc3QnIGN4PSc3MCUnIGN5PScyNiUnIHI9JzYwJSc+PHN0b3Agb2Zmc2V0PScwJyBzdG9wLWNvbG9yPScjMjg0ODY3JyBzdG9wLW9wYWNpdHk9Jy40MicvPjxzdG9wIG9mZnNldD0nLjcnIHN0b3AtY29sb3I9JyMwYTE4MjcnIHN0b3Atb3BhY2l0eT0nMCcvPjwvcmFkaWFsR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPScyMjgnIGhlaWdodD0nMTkwJyBmaWxsPSd1cmwoI3NreSknLz48cmVjdCB3aWR0aD0nMjI4JyBoZWlnaHQ9JzE5MCcgZmlsbD0ndXJsKCNtaXN0KScvPjxwYXRoIGQ9J00wIDk2IDI4IDY5IDQ4IDgyIDc0IDUwIDEwMSA4MiAxMjcgNjEgMTU0IDgwIDE4MSA0MiAyMjggOTRWMTkwSDBaJyBmaWxsPScjMGUyNDM2Jy8+PHBhdGggZD0nTTAgMTE5IDM2IDg5IDYxIDEwMyA4OCA3MiAxMTkgMTEyIDE1MSA3NiAxNzcgOTYgMjA0IDY4IDIyOCA5MlYxOTBIMFonIGZpbGw9J3VybCgjcmlkZ2UpJyBvcGFjaXR5PScuOTUnLz48cGF0aCBkPSdNMCAxNDEgMzAgMTIwIDUyIDEzMCA4MyA5NCAxMDggMTMwIDEzOCAxMDEgMTY5IDEyNyAxOTYgOTUgMjI4IDExN1YxOTBIMFonIGZpbGw9JyMwNzEzMWUnLz48cGF0aCBkPSdNMCAxNjAgNDQgMTM2IDcxIDE1MyAxMDEgMTE5IDEzMSAxNTAgMTY1IDEyNiAyMDIgMTQ1IDIyOCAxMzNWMTkwSDBaJyBmaWxsPScjMDUwZDE2Jy8+PGcgZmlsbD0nbm9uZScgc3Ryb2tlPScjMjU0NTVmJyBzdHJva2Utd2lkdGg9Jy45JyBvcGFjaXR5PScuNSc+PHBhdGggZD0nTTEwIDExMyA1MiA4OSA4NyAxMDcgMTE4IDgzIDE1NiAxMDEgMjA3IDcyJy8+PHBhdGggZD0nTTAgMTQ4IDQ4IDEyNCA4NiAxMzggMTI2IDExMSAxNzIgMTMzIDIyNCAxMDQnLz48L2c+PGcgZmlsbD0nIzA2MTAxYSc+PHBhdGggZD0nTTE3NiA0OWg5djEyaC05eicvPjxwYXRoIGQ9J00xNzQgNDdoMTNsLTMtNWgtN3onLz48cGF0aCBkPSdNMTc5IDM2aDN2OGgtM3onLz48cGF0aCBkPSdNMTcxIDYxaDIwbC01IDVoLTExeicvPjwvZz48Y2lyY2xlIGN4PScyMDYnIGN5PScyOCcgcj0nMS4yJyBmaWxsPScjZThjMzZjJy8+PGNpcmNsZSBjeD0nMTk0JyBjeT0nMzcnIHI9Jy43JyBmaWxsPScjOWJiOGQwJyBvcGFjaXR5PScuOCcvPjxjaXJjbGUgY3g9JzIxNScgY3k9JzQ4JyByPScuNTUnIGZpbGw9JyM5YmI4ZDAnIG9wYWNpdHk9Jy42Jy8+PC9zdmc+");
+  background-size: cover, cover;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  opacity: 0.94;
+  border-top: 1px solid rgba(96, 135, 171, 0.12);
+  box-shadow: inset 0 34px 40px rgba(8, 23, 39, 0.95);
+}
+
+.sidebar::before {
+  content: "\201C DISCIPLINA\A TRANSFORMA\A PLANOS EM\A REALIDADE.\201D";
+  position: absolute;
+  left: 18px;
+  bottom: 29px;
+  z-index: 1;
+  width: 126px;
+  padding-top: 13px;
+  pointer-events: none;
+  white-space: pre;
+  color: rgba(236, 242, 249, 0.88);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.55;
+  letter-spacing: 0.75px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+  background: linear-gradient(#e7bd62, #e7bd62) 0 0 / 18px 2px no-repeat;
+}
+
+.sidebar-rodape-acoes {
+  margin-bottom: 0;
+}
+
+@media (max-height: 760px) and (min-width: 901px) {
+  .sidebar {
+    padding-bottom: 152px;
+  }
+
+  .sidebar::after {
+    height: 145px;
+  }
+
+  .sidebar::before {
+    bottom: 18px;
+    font-size: 8px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    padding-bottom: 18px;
+  }
+
+  .sidebar::before,
+  .sidebar::after {
+    display: none;
+  }
+}
