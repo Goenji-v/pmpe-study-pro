@@ -45,9 +45,9 @@ test("compra desconta moedas uma vez e adiciona item permanentemente ao inventar
 });
 
 test("nao permite comprar item sem saldo suficiente", () => {
-  const resultado = comprarItemLoja(economiaComMoedas(20), "moldura-elite");
+  const resultado = comprarItemLoja(economiaComMoedas(20), "tema-carbono");
 
-  assert.match(resultado.erro ?? "", /Faltam 400 moedas/i);
+  assert.match(resultado.erro ?? "", /Faltam 270 moedas/i);
   assert.equal(resultado.estado.moedas, 20);
   assert.deepEqual(resultado.estado.inventario, []);
 });
@@ -55,13 +55,13 @@ test("nao permite comprar item sem saldo suficiente", () => {
 test("moldura e tema usam slots independentes", () => {
   let estado = economiaComMoedas(1000);
 
-  for (const itemId of ["moldura-aco", "tema-roxo-estrategico"]) {
+  for (const itemId of ["moldura-aco", "tema-grafite"]) {
     estado = comprarItemLoja(estado, itemId).estado;
     estado = equiparItemLoja(estado, itemId).estado;
   }
 
   assert.equal(estado.molduraEquipada, "moldura-aco");
-  assert.equal(estado.temaEquipado, "tema-roxo-estrategico");
+  assert.equal(estado.temaEquipado, "tema-grafite");
 
   const moldura = comprarItemLoja(economiaComMoedas(300), "moldura-aco").item;
   assert.ok(moldura);
@@ -69,20 +69,33 @@ test("moldura e tema usam slots independentes", () => {
 });
 
 test("nao equipa item que nao foi comprado", () => {
-  const resultado = equiparItemLoja(economiaComMoedas(500), "tema-dourado-elite");
+  const resultado = equiparItemLoja(economiaComMoedas(500), "tema-carbono");
   assert.match(resultado.erro ?? "", /Compre este item/i);
   assert.equal(resultado.estado.temaEquipado, undefined);
 });
 
 test("desequipar tema preserva a compra no inventario", () => {
   let estado = economiaComMoedas(500);
-  estado = comprarItemLoja(estado, "tema-roxo-estrategico").estado;
-  estado = equiparItemLoja(estado, "tema-roxo-estrategico").estado;
+  estado = comprarItemLoja(estado, "tema-grafite").estado;
+  estado = equiparItemLoja(estado, "tema-grafite").estado;
   estado = desequiparTipoLoja(estado, "tema");
 
   assert.equal(estado.temaEquipado, undefined);
-  assert.equal(estado.inventario?.includes("tema-roxo-estrategico"), true);
-  assert.equal(itensDoInventario(estado).some((item) => item.id === "tema-roxo-estrategico"), true);
+  assert.equal(estado.inventario?.includes("tema-grafite"), true);
+  assert.equal(itensDoInventario(estado).some((item) => item.id === "tema-grafite"), true);
+});
+
+test("tema legado inativo sai das novas vendas sem sumir do inventario antigo", () => {
+  const compraNova = comprarItemLoja(economiaComMoedas(1000), "tema-dourado-elite");
+  assert.match(compraNova.erro ?? "", /não está disponível/i);
+
+  const estadoAntigo: EstadoEconomia = {
+    ...economiaComMoedas(0),
+    inventario: ["tema-dourado-elite"],
+  };
+  const equipado = equiparItemLoja(estadoAntigo, "tema-dourado-elite");
+  assert.equal(equipado.erro, undefined);
+  assert.equal(equipado.estado.temaEquipado, "tema-dourado-elite");
 });
 
 test("normalizacao da economia preserva inventario compras e dados legados para migracao", () => {
