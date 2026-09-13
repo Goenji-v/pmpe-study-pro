@@ -4,6 +4,23 @@
   padding: 0;
 }
 
+:root {
+  --studio-bg: #061425;
+  --studio-surface: #081728;
+  --studio-card: #0b1a2d;
+  --studio-card-raised: #10243a;
+  --studio-border: rgba(75, 113, 151, 0.30);
+  --studio-border-strong: rgba(99, 127, 154, 0.48);
+  --studio-text: #f6f8fc;
+  --studio-muted: #a7b7ca;
+  --studio-muted-2: #7f93a9;
+  --studio-gold: #edc677;
+  --studio-gold-strong: #f3d27a;
+  --studio-blue: #53a7ff;
+  --studio-green: #34dc83;
+  --studio-red: #ff777a;
+}
+
 html,
 body,
 #root {
@@ -14,8 +31,8 @@ body,
 body {
   min-width: 320px;
   min-height: 100vh;
-  color: #f8fafc;
-  background: #0f172a;
+  color: var(--studio-text);
+  background: var(--studio-bg);
   font-family:
     Inter,
     system-ui,
@@ -23,6 +40,7 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  color-scheme: dark;
 }
 
 button,
@@ -36,6 +54,23 @@ button {
   cursor: pointer;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--studio-gold-strong);
+  outline-offset: 3px;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -45,22 +80,29 @@ a {
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background: #0f172a;
+  background:
+    radial-gradient(circle at 72% 8%, rgba(24, 76, 108, 0.12), transparent 30%),
+    var(--studio-bg);
 }
 
 .content {
-  width: calc(100% - 240px);
+  width: calc(100% - 228px);
   min-width: 0;
-  margin-left: 240px;
-  background: #0f172a;
+  margin-left: 228px;
+  background: transparent;
 }
 
 .page {
   width: 100%;
-  min-height: calc(100vh - 64px);
-  padding: 26px 30px;
-  color: #f8fafc;
-  background: #0f172a;
+  min-height: calc(100vh - 76px);
+  padding: 28px 30px 34px;
+  color: var(--studio-text);
+  background: transparent;
+}
+
+.page-interna {
+  max-width: 1690px;
+  margin: 0 auto;
 }
 
 h1,
@@ -69,11 +111,34 @@ h3,
 h4,
 h5,
 h6 {
-  color: #f8fafc;
+  color: var(--studio-text);
 }
 
 p {
-  line-height: 1.5;
+  line-height: 1.55;
+}
+
+::selection {
+  color: #172333;
+  background: var(--studio-gold);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #29425b;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3c5874;
 }
 
 @media (max-width: 900px) {
@@ -83,7 +148,8 @@ p {
   }
 
   .page {
-    padding: 20px 16px;
+    min-height: calc(100vh - 58px);
+    padding: 22px 16px 28px;
   }
 }
 
