@@ -21,6 +21,7 @@ import "./pages/Dashboard/DashboardCompactStats.css";
 import "./pages/Dashboard/DashboardGeneralPerformanceVisual";
 import "./pages/Dashboard/DashboardHeroPremium.css";
 import "./pages/Dashboard/DashboardWeeklyGoalCompact";
+import "./pages/Dashboard/DashboardMissionBackgroundOnly.css";
 
 // Mantém a preview no estado visual anterior ao experimento da nova tela inicial.
 ReactDOM.createRoot(
