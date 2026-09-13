@@ -18,6 +18,7 @@ import "./components/Sidebar/SidebarPremiumGroups.css";
 import "./components/Sidebar/SidebarIconAdjustments.css";
 import "./components/Sidebar/SidebarMountainArt.css";
 import "./pages/Dashboard/DashboardCompactStats.css";
+import "./pages/Dashboard/DashboardGeneralPerformanceVisual";
 
 // Mantém a preview no estado visual anterior ao experimento da nova tela inicial.
 ReactDOM.createRoot(
