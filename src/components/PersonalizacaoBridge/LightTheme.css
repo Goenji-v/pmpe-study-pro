@@ -1,0 +1,363 @@
+/* Tema claro: corrige resíduos de estilos pensados originalmente para o modo escuro.
+ * Só entra quando nenhum tema premium da Loja está equipado. */
+html[data-study-base-theme="claro"][data-study-theme="padrao"] {
+  color-scheme: light;
+  --study-accent: #2563eb;
+  --study-accent-strong: #1d4ed8;
+  --study-accent-soft: rgba(37, 99, 235, 0.10);
+  --study-accent-border: rgba(37, 99, 235, 0.28);
+  --study-accent-glow: rgba(37, 99, 235, 0.14);
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .header-identidade strong {
+  color: #0f172a;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .header-identidade span {
+  color: #2563eb;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] :is(
+  .dashboard-pro-header p,
+  .dashboard-pro-mission-meta,
+  .dashboard-pro-session-info p,
+  .dashboard-pro-periods span,
+  .dashboard-pro-review-counts span,
+  .dashboard-pro-review-list small,
+  .dashboard-pro-empty
+) {
+  color: #64748b !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] :is(
+  .dashboard-pro-search,
+  .dashboard-pro-icon,
+  .dashboard-pro-date,
+  .dashboard-pro-panel-title button,
+  .dashboard-pro-review-list button
+) {
+  color: #334155 !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.05);
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-actions button {
+  color: #334155 !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-actions .primary {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-actions .outline {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-actions button:disabled {
+  color: #94a3b8 !important;
+  background: #f8fafc !important;
+  border-color: #dbe3ee !important;
+  box-shadow: none !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-timer {
+  background:
+    radial-gradient(circle, #ffffff 62%, transparent 63%),
+    conic-gradient(#2563eb 0 72%, #dbeafe 72%) !important;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.12);
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-timer.active {
+  background:
+    radial-gradient(circle, #ffffff 62%, transparent 63%),
+    conic-gradient(#2d8cff 0 82%, #dbeafe 82%) !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-timer strong {
+  color: #0f172a !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-session-info hr {
+  border-top-color: #dbe3ee !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-stat-art .dashboard-pro-stat-copy > strong,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-stat strong {
+  color: #0f172a !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-stat-art .dashboard-pro-stat-copy > b,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-stat b {
+  color: #475569 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-stat-art .dashboard-pro-stat-copy > small,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-stat small {
+  color: #059669 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] :is(
+  .dashboard-pro-bar,
+  .dashboard-pro-weekly-progress,
+  .dashboard-pro-progress
+) {
+  background: #e2e8f0 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-review-counts {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-pro-review-counts div {
+  border-right-color: #e2e8f0 !important;
+}
+
+/* Faixa de nível, XP, moedas e conquistas. */
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline {
+  color: #0f172a !important;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(37, 99, 235, 0.10), transparent 36%),
+    linear-gradient(135deg, #ffffff, #f8fbff) !important;
+  border-color: #bfdbfe !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-nivel {
+  color: #2563eb !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-nivel small,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-meta small {
+  color: #64748b !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-meta b {
+  color: #1d4ed8 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-barra {
+  background: #dbeafe !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-conquistas {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-conquistas:hover {
+  background: #dbeafe !important;
+  border-color: #93c5fd !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-moedas {
+  color: #92400e !important;
+  background: #fffbeb !important;
+  border-color: #f6d68c !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-moedas strong {
+  color: #92400e !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .dashboard-xp-inline-moedas small {
+  color: #a16207 !important;
+}
+
+/* Perfil e sincronização no cabeçalho. */
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-trigger {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.06);
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-trigger:hover,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-trigger[aria-expanded="true"] {
+  background: #f8fafc !important;
+  border-color: #93c5fd !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-copy small,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-chevron {
+  color: #64748b !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-badge {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-dropdown {
+  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.99) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-dropdown-head {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-dropdown-head span {
+  color: #64748b !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-links a {
+  color: #334155 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-links a:hover {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .user-profile-logout {
+  color: #dc2626 !important;
+  border-top-color: #e2e8f0 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status {
+  color: #334155 !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status strong {
+  color: #334155 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status-painel {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status-painel-cabecalho strong,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status-metricas strong {
+  color: #0f172a !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] :is(
+  .cloud-status-badge,
+  .cloud-status-metricas > div,
+  .cloud-status-painel-acoes button,
+  .cloud-status-painel-acoes a
+) {
+  color: #334155 !important;
+  background: #f8fafc !important;
+  border-color: #dbe3ee !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status-painel-cabecalho span,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status-metricas span,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .cloud-status-mensagem {
+  color: #64748b !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .header .header-notification-button {
+  color: #1d4ed8 !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Menu lateral: mantém o azul como destaque, sem blocos escuros soltos. */
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .sidebar-rodape {
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .sidebar-rodape strong {
+  color: #2563eb !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .sidebar-rodape span,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .sidebar-rodape small {
+  color: #64748b !important;
+}
+
+/* Central de notificações também acompanha o branco. */
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacoes-painel {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border-left-color: #cbd5e1 !important;
+  box-shadow: -24px 0 60px rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacoes-painel > header h2 {
+  color: #0f172a !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacoes-painel > header > button {
+  color: #334155 !important;
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item {
+  color: #0f172a !important;
+  background: #f8fafc !important;
+  border-color: #dbe3ee !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item span {
+  color: #475569 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item small {
+  color: #64748b !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item.destaque {
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item.revisao-hoje {
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item.revisao-hoje strong {
+  color: #047857 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item.revisao-atrasada {
+  background: #fff7ed !important;
+  border-color: #fed7aa !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-item.revisao-atrasada strong {
+  color: #c2410c !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacoes-vazio {
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacoes-painel > footer button {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-toast {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border-color: #bfdbfe !important;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .notificacao-toast small {
+  color: #64748b !important;
+}

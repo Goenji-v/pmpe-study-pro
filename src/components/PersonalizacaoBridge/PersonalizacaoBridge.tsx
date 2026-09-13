@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 
 import "./PersonalizacaoBridge.css";
 import "./ThemeVariants.css";
+import "./LightTheme.css";
 
 import { useApp } from "../../context/AppContext";
 import { obterEstadoEconomia } from "../../services/economiaGamificacao";
