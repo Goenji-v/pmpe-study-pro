@@ -1,22 +1,20 @@
-import { useEffect, useState, type ComponentType } from "react";
-import { NavLink } from "react-router-dom";
 import {
-  BarChart3,
+  useEffect,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import {
   BookOpen,
   CalendarDays,
-  ClipboardCheck,
-  FileText,
-  GraduationCap,
+  ChevronRight,
   Home,
   Menu,
-  RotateCcw,
-  Route,
   Settings,
   ShieldCheck,
   Sparkles,
   Target,
-  Trophy,
-  UsersRound,
   X,
 } from "lucide-react";
 
@@ -24,32 +22,81 @@ import "./Sidebar.css";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
 
 type Icone = ComponentType<{ size?: number; strokeWidth?: number }>;
+type GrupoId = "planejamento" | "estudos" | "pratica";
 
 type Item = {
   to: string;
   texto: string;
-  icone: Icone;
+  icone?: Icone;
   final?: boolean;
 };
 
-const itensPrincipais: Item[] = [
-  { to: "/", texto: "Dashboard", icone: Home, final: true },
-  { to: "/plano", texto: "Meu Plano", icone: Trophy },
-  { to: "/meu-edital", texto: "Meu Edital", icone: FileText },
-  { to: "/central-estudos", texto: "Estudos", icone: BookOpen },
-  { to: "/cursos", texto: "Meus Cursos", icone: GraduationCap },
-  { to: "/questoes", texto: "Questões", icone: ClipboardCheck },
-  { to: "/revisoes", texto: "Revisões", icone: RotateCcw },
-  { to: "/simulados", texto: "Simulados", icone: Target },
-  { to: "/desempenho", texto: "Desempenho", icone: BarChart3 },
-  { to: "/materiais", texto: "Materiais", icone: ShieldCheck },
-  { to: "/cronograma-ia", texto: "Cronograma", icone: CalendarDays },
-  { to: "/inteligencia", texto: "Inteligência", icone: Sparkles },
-];
+type GrupoMenuProps = {
+  id: GrupoId;
+  titulo: string;
+  icone: Icone;
+  ativo: boolean;
+  aberto: boolean;
+  onToggle: (id: GrupoId) => void;
+  children: ReactNode;
+};
+
+const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
+  planejamento: [
+    "/meu-edital",
+    "/plano",
+    "/plano-estudos",
+    "/calendario",
+    "/cronograma-ia",
+  ],
+  estudos: [
+    "/central-estudos",
+    "/cursos",
+    "/curso-mentoria",
+    "/materiais",
+    "/estudos",
+    "/conteudos",
+    "/revisoes",
+    "/historico-sessoes",
+    "/estatisticas-sessoes",
+  ],
+  pratica: [
+    "/questoes",
+    "/registrar-questoes",
+    "/banco-questoes",
+    "/simulados",
+    "/resolver-simulado-ia",
+    "/gerar-simulado-ia",
+    "/estatisticas-simulado-ia",
+    "/desempenho",
+    "/historico",
+    "/estatisticas",
+  ],
+};
+
+function rotaPertenceAoGrupo(pathname: string, id: GrupoId) {
+  return ROTAS_GRUPOS[id].some(
+    (rota) => pathname === rota || pathname.startsWith(`${rota}/`)
+  );
+}
+
+function obterGrupoDaRota(pathname: string): GrupoId | null {
+  const grupos = Object.keys(ROTAS_GRUPOS) as GrupoId[];
+  return grupos.find((id) => rotaPertenceAoGrupo(pathname, id)) ?? null;
+}
 
 export default function Sidebar() {
   const { contexto } = useContextoComercial();
+  const location = useLocation();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+  const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
+    obterGrupoDaRota(location.pathname)
+  );
+
+  useEffect(() => {
+    setMenuMobileAberto(false);
+    setGrupoAberto(obterGrupoDaRota(location.pathname));
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!menuMobileAberto) {
@@ -61,13 +108,14 @@ export default function Sidebar() {
     return () => document.body.classList.remove("menu-mobile-aberto");
   }, [menuMobileAberto]);
 
-  const rotaMentoria = contexto?.papel === "aluno" ? "/curso-mentoria" : "/parceiro/mentoria";
-  const podeVerMentoria = Boolean(
-    contexto?.papel === "aluno" ||
-      contexto?.papel === "proprietario" ||
-      contexto?.papel === "gestor" ||
-      contexto?.papel === "professor"
-  );
+  function alternarGrupo(id: GrupoId) {
+    setGrupoAberto((atual) => (atual === id ? null : id));
+  }
+
+  const podeVerParceiro =
+    contexto?.papel === "proprietario" ||
+    contexto?.papel === "gestor" ||
+    contexto?.papel === "professor";
 
   return (
     <>
@@ -90,7 +138,7 @@ export default function Sidebar() {
         />
       )}
 
-      <aside className={`sidebar studio-premium-sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
+      <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
         <div className="sidebar-logo studio-premium-brand">
           <div className="studio-brand-shield" aria-hidden="true">
             <svg viewBox="0 0 72 82">
@@ -113,31 +161,82 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <nav className="sidebar-menu studio-premium-nav" aria-label="Navegação principal">
-          {itensPrincipais.map((item) => (
-            <ItemMenu key={item.to} {...item} onNavigate={() => setMenuMobileAberto(false)} />
-          ))}
-
-          {podeVerMentoria && (
+        <nav className="sidebar-menu" aria-label="Navegação principal">
+          <div className="sidebar-inicio">
+            <span className="sidebar-secao-label">VISÃO GERAL</span>
             <ItemMenu
-              to={rotaMentoria}
-              texto="Mentoria"
-              icone={UsersRound}
+              to="/"
+              texto="Dashboard"
+              icone={Home}
+              final
               onNavigate={() => setMenuMobileAberto(false)}
             />
-          )}
+          </div>
 
-          {(contexto?.papel === "proprietario" || contexto?.papel === "gestor" || contexto?.papel === "professor") && (
-            <ItemMenu
-              to="/parceiro"
-              texto="Painel do parceiro"
-              icone={Route}
-              onNavigate={() => setMenuMobileAberto(false)}
-            />
+          <GrupoMenu
+            id="planejamento"
+            titulo="Planejamento"
+            icone={CalendarDays}
+            ativo={rotaPertenceAoGrupo(location.pathname, "planejamento")}
+            aberto={grupoAberto === "planejamento"}
+            onToggle={alternarGrupo}
+          >
+            <ItemMenu to="/meu-edital" texto="Meu Edital" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/plano" texto="Plano de Estudos" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/calendario" texto="Calendário" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/cronograma-ia" texto="Cronograma IA" onNavigate={() => setMenuMobileAberto(false)} />
+          </GrupoMenu>
+
+          <GrupoMenu
+            id="estudos"
+            titulo="Estudos"
+            icone={BookOpen}
+            ativo={rotaPertenceAoGrupo(location.pathname, "estudos")}
+            aberto={grupoAberto === "estudos"}
+            onToggle={alternarGrupo}
+          >
+            <ItemMenu to="/central-estudos" texto="Central de Estudos" onNavigate={() => setMenuMobileAberto(false)} />
+            {contexto?.papel === "aluno" && (
+              <ItemMenu to="/curso-mentoria" texto="Curso da Mentoria" onNavigate={() => setMenuMobileAberto(false)} />
+            )}
+            <ItemMenu to="/cursos" texto="Meus Cursos" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/estudos" texto="Conteúdos" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/materiais" texto="Materiais" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/revisoes" texto="Revisões" onNavigate={() => setMenuMobileAberto(false)} />
+          </GrupoMenu>
+
+          <GrupoMenu
+            id="pratica"
+            titulo="Prática"
+            icone={Target}
+            ativo={rotaPertenceAoGrupo(location.pathname, "pratica")}
+            aberto={grupoAberto === "pratica"}
+            onToggle={alternarGrupo}
+          >
+            <ItemMenu to="/questoes" texto="Questões" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/simulados" texto="Simulados" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/desempenho" texto="Desempenho" onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/estatisticas" texto="Estatísticas" onNavigate={() => setMenuMobileAberto(false)} />
+          </GrupoMenu>
+
+          <ItemMenu
+            to="/inteligencia"
+            texto="Inteligência"
+            icone={Sparkles}
+            onNavigate={() => setMenuMobileAberto(false)}
+          />
+
+          {podeVerParceiro && (
+            <div className="sidebar-partner-links">
+              <ItemMenu to="/parceiro" texto="Painel do parceiro" onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/mentoria" texto="Trilha da mentoria" onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/cursos" texto="Curso do professor" onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/simulados" texto="Simulados do professor" onNavigate={() => setMenuMobileAberto(false)} />
+            </div>
           )}
         </nav>
 
-        <div className="studio-sidebar-bottom">
+        <div className="sidebar-rodape-acoes">
           {contexto?.papel === "aluno" && (
             <ItemMenu
               to="/meu-acesso"
@@ -152,13 +251,40 @@ export default function Sidebar() {
             icone={Settings}
             onNavigate={() => setMenuMobileAberto(false)}
           />
-          <div className="studio-sidebar-quote">
-            <span>DISCIPLINA TRANSFORMA<br />PLANOS EM REALIDADE.</span>
-            <i />
-          </div>
         </div>
       </aside>
     </>
+  );
+}
+
+function GrupoMenu({
+  id,
+  titulo,
+  icone: Icone,
+  ativo,
+  aberto,
+  onToggle,
+  children,
+}: GrupoMenuProps) {
+  return (
+    <div className={`sidebar-grupo ${ativo ? "sidebar-grupo-ativo" : ""} ${aberto ? "sidebar-grupo-aberto" : ""}`}>
+      <button
+        type="button"
+        className="sidebar-grupo-botao"
+        aria-expanded={aberto}
+        onClick={() => onToggle(id)}
+      >
+        <span className="sidebar-grupo-identidade">
+          <span className="sidebar-grupo-icone" aria-hidden="true">
+            <Icone size={18} strokeWidth={1.8} />
+          </span>
+          <span>{titulo}</span>
+        </span>
+        <ChevronRight className="sidebar-chevron" size={16} strokeWidth={1.8} aria-hidden="true" />
+      </button>
+
+      {aberto && <div className="sidebar-submenu">{children}</div>}
+    </div>
   );
 }
 
@@ -175,12 +301,14 @@ function ItemMenu({
       end={final}
       onClick={onNavigate}
       className={({ isActive }) =>
-        `sidebar-link studio-premium-link ${isActive ? "sidebar-link-ativo" : ""}`
+        `sidebar-link ${isActive ? "sidebar-link-ativo" : ""} ${Icone ? "sidebar-link-com-icone" : "sidebar-link-subitem"}`
       }
     >
-      <span className="sidebar-link-icone" aria-hidden="true">
-        <Icone size={19} strokeWidth={1.9} />
-      </span>
+      {Icone && (
+        <span className="sidebar-link-icone" aria-hidden="true">
+          <Icone size={18} strokeWidth={1.8} />
+        </span>
+      )}
       <span className="sidebar-link-texto">{texto}</span>
     </NavLink>
   );
