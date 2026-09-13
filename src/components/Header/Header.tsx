@@ -26,6 +26,13 @@ export default function Header() {
 
       <div className="header-acoes">
         <CloudStatus />
+        <button
+          type="button"
+          className="header-notification-button dashboard-pro-icon"
+          aria-label="Notificações"
+        >
+          🔔
+        </button>
         <UserProfileMenu />
       </div>
     </header>
