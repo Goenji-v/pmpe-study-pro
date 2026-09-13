@@ -90,7 +90,7 @@
     z-index: 1301;
   }
 
-  .header .header-notification-button.dashboard-pro-icon[aria-label="Notificações"] {
+  .header .header-notification-button {
     position: fixed;
     top: 7px;
     right: 62px;
