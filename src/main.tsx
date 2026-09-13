@@ -14,6 +14,7 @@ import "./styles/mobile-dashboard-fixes.css";
 import "./styles/visual-qa-final.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./styles/StudioProPremiumShell.css";
+import "./components/Sidebar/SidebarPremiumGroups.css";
 
 // Mantém a preview no estado visual anterior ao experimento da nova tela inicial.
 ReactDOM.createRoot(
