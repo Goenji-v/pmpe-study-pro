@@ -1,4 +1,5 @@
 @import "./styles/StudioProFunctional.css";
+@import "./styles/StudioProLegacySuite.css";
 
 * {
   box-sizing: border-box;
