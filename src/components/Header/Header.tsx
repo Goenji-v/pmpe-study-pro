@@ -12,6 +12,10 @@ export default function Header() {
     configuracoes,
   } = useApp();
 
+  function abrirNotificacoes() {
+    window.dispatchEvent(new Event("pmpe:notificacoes:abrir"));
+  }
+
   return (
     <header className="header">
       <div className="header-identidade">
@@ -26,6 +30,14 @@ export default function Header() {
 
       <div className="header-acoes">
         <CloudStatus />
+        <button
+          type="button"
+          className="header-notification-button"
+          aria-label="Notificações"
+          onClick={abrirNotificacoes}
+        >
+          🔔
+        </button>
         <UserProfileMenu />
       </div>
     </header>
