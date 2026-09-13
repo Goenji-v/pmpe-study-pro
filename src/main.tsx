@@ -15,6 +15,7 @@ import "./styles/visual-qa-final.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./styles/StudioProPremiumShell.css";
 import "./components/Sidebar/SidebarPremiumGroups.css";
+import "./components/Sidebar/SidebarIconAdjustments.css";
 
 // Mantém a preview no estado visual anterior ao experimento da nova tela inicial.
 ReactDOM.createRoot(
