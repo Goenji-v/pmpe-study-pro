@@ -35,7 +35,7 @@
       rgba(2, 14, 28, .06) 77%,
       rgba(2, 14, 28, .14) 100%
     ),
-    url('/assets/pmpe-hero-user.svg') center top / cover no-repeat;
+    var(--study-dashboard-bg-image, url('/assets/pmpe-hero-user.svg')) center top / cover no-repeat;
 }
 
 .dashboard-pro-v3 > * {
