@@ -1,21 +1,41 @@
-/* Preview premium: composição final aprovada — fundo PMPE atravessando o topo,
-   missão à esquerda e cronômetro à direita. Este arquivo é importado por último
-   para neutralizar experimentos visuais anteriores sem alterar a lógica real. */
+/* Preview premium: a arte da PMPE fica ATRÁS de todo o topo do Dashboard,
+   atravessando o cabeçalho, a missão e o cronômetro — como na referência aprovada. */
 
 .dashboard-pro-v3 {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   padding-top: 28px;
+  background: #081423 !important;
+}
+
+/* Fundo único do topo. NÃO fica preso dentro de nenhum card. */
+.dashboard-pro-v3::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 590px;
   background:
     linear-gradient(
       180deg,
-      rgba(2, 14, 28, .28) 0%,
-      rgba(3, 17, 33, .42) 34%,
-      rgba(4, 18, 34, .72) 72%,
+      rgba(2, 13, 26, .10) 0%,
+      rgba(2, 13, 26, .10) 52%,
+      rgba(3, 16, 31, .45) 78%,
       #081423 100%
     ),
-    url('/assets/pmpe-hero-bg.webp') top center / 100% 690px no-repeat;
+    linear-gradient(
+      90deg,
+      rgba(2, 14, 28, .66) 0%,
+      rgba(2, 14, 28, .43) 30%,
+      rgba(2, 14, 28, .14) 57%,
+      rgba(2, 14, 28, .06) 77%,
+      rgba(2, 14, 28, .14) 100%
+    ),
+    url('/assets/pmpe-hero-user.svg') center top / cover no-repeat;
 }
 
 .dashboard-pro-v3 > * {
@@ -29,12 +49,12 @@
 
 .dashboard-pro-v3 .dashboard-pro-header h1 {
   color: #f8fbff;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, .42);
+  text-shadow: 0 3px 16px rgba(0, 0, 0, .55);
 }
 
 .dashboard-pro-v3 .dashboard-pro-header p {
-  color: #d6e1ef;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, .36);
+  color: #e0e9f5;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .55);
 }
 
 .dashboard-pro-v3 .dashboard-pro-hero {
@@ -46,17 +66,18 @@
   margin-bottom: 20px;
 }
 
+/* Os dois cards ficam translúcidos para o policial/cidade continuarem visíveis atrás. */
 .dashboard-pro-v3 .dashboard-pro-mission,
 .dashboard-pro-v3 .dashboard-pro-session {
   min-height: 318px;
-  border: 1px solid rgba(66, 132, 196, .72) !important;
+  border: 1px solid rgba(239, 192, 69, .62) !important;
   border-radius: 18px !important;
   background:
-    linear-gradient(145deg, rgba(4, 24, 43, .84), rgba(5, 21, 39, .76)) !important;
+    linear-gradient(145deg, rgba(4, 21, 38, .62), rgba(4, 18, 34, .48)) !important;
   box-shadow:
-    0 0 0 1px rgba(94, 177, 255, .04) inset,
-    0 18px 44px rgba(0, 0, 0, .22) !important;
-  backdrop-filter: blur(2px);
+    0 0 0 1px rgba(255, 223, 135, .04) inset,
+    0 18px 44px rgba(0, 0, 0, .25) !important;
+  backdrop-filter: none !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-mission {
@@ -66,7 +87,7 @@
   padding: 34px 46px !important;
 }
 
-/* remove totalmente a arte circular que estava aparecendo dentro do card */
+/* Remove qualquer arte/círculo antigo desenhado dentro do card. */
 .dashboard-pro-v3 .dashboard-pro-mission::before,
 .dashboard-pro-v3 .dashboard-pro-mission::after {
   content: none !important;
@@ -81,7 +102,7 @@
 
 .dashboard-pro-v3 .dashboard-pro-mission > .dashboard-pro-kicker {
   margin-bottom: 28px !important;
-  color: #62c4ff !important;
+  color: #63c7ff !important;
   font-size: 11px !important;
   font-weight: 900 !important;
   letter-spacing: .15em !important;
@@ -94,7 +115,7 @@
   height: 1px !important;
   margin-right: 12px !important;
   vertical-align: middle !important;
-  background: linear-gradient(90deg, #f6c659, #9c650d) !important;
+  background: linear-gradient(90deg, #ffd86a, #a76a0d) !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-mission h2,
@@ -102,19 +123,20 @@
 .dashboard-pro-v3 .dashboard-pro-empty h2 {
   max-width: 760px;
   margin: 0 0 14px !important;
-  color: #f7bf4b !important;
+  color: #ffc94e !important;
   font-size: clamp(31px, 2.35vw, 43px) !important;
   line-height: 1.08 !important;
   letter-spacing: -.025em !important;
-  text-shadow: 0 3px 18px rgba(0, 0, 0, .36) !important;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, .48) !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-mission p,
 .dashboard-pro-v3 .dashboard-pro-empty p {
   max-width: 720px;
-  color: #dce6f2 !important;
+  color: #edf3fb !important;
   font-size: 15px !important;
   line-height: 1.55 !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .46);
 }
 
 .dashboard-pro-v3 .dashboard-pro-empty {
@@ -131,11 +153,11 @@
   padding: 0 24px !important;
   border: 1px solid #315c88 !important;
   border-radius: 10px !important;
-  background: rgba(7, 27, 48, .82) !important;
+  background: rgba(6, 25, 46, .76) !important;
   color: #f3f7fc !important;
   font-size: 14px !important;
   font-weight: 800 !important;
-  box-shadow: 0 7px 18px rgba(0, 0, 0, .12) !important;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, .14) !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-session {
@@ -146,31 +168,33 @@
   padding: 28px 30px !important;
 }
 
+/* Cronômetro dourado como na referência. */
 .dashboard-pro-v3 .dashboard-pro-timer,
 .dashboard-pro-v3 .dashboard-pro-timer.active {
   width: 202px !important;
   height: 202px !important;
   margin: auto !important;
-  border: 1px solid rgba(72, 153, 238, .28) !important;
+  border: 1px solid rgba(255, 210, 82, .30) !important;
   background:
-    radial-gradient(circle, #07192d 61%, transparent 62%),
-    conic-gradient(#1688ff 0 78%, #173b65 78%) !important;
+    radial-gradient(circle, rgba(5, 22, 40, .88) 61%, transparent 62%),
+    conic-gradient(#ffc84a 0 78%, rgba(30, 73, 112, .72) 78%) !important;
   box-shadow:
-    0 0 0 10px rgba(13, 58, 104, .22) inset,
-    0 0 28px rgba(27, 137, 255, .13) !important;
+    0 0 0 10px rgba(15, 54, 91, .20) inset,
+    0 0 28px rgba(255, 196, 58, .10) !important;
   filter: none !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-timer.active {
   background:
-    radial-gradient(circle, #07192d 61%, transparent 62%),
-    conic-gradient(#2c99ff 0 86%, #173b65 86%) !important;
+    radial-gradient(circle, rgba(5, 22, 40, .88) 61%, transparent 62%),
+    conic-gradient(#ffd05a 0 86%, rgba(30, 73, 112, .72) 86%) !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-timer strong {
   color: #f8fbff !important;
   font-size: 34px !important;
   letter-spacing: -.03em !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .55);
 }
 
 .dashboard-pro-v3 .dashboard-pro-session-info .dashboard-pro-kicker {
@@ -179,24 +203,28 @@
 }
 
 .dashboard-pro-v3 .dashboard-pro-session-info h2 {
-  color: #f8fbff !important;
+  color: #ffc94e !important;
   font-size: clamp(24px, 2vw, 34px) !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .48);
 }
 
 .dashboard-pro-v3 .dashboard-pro-session-info hr {
   border: 0 !important;
-  border-top: 1px solid #31506f !important;
+  border-top: 1px solid rgba(82, 137, 190, .58) !important;
   margin: 18px 0 !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-session-info p {
-  color: #d7e1ee !important;
+  color: #eef4fb !important;
   font-size: 14px !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .42);
 }
 
 @media (max-width: 1180px) {
-  .dashboard-pro-v3 {
-    background-size: auto 650px;
+  .dashboard-pro-v3::before {
+    height: 620px;
+    background-position: center top;
+    background-size: auto 620px;
   }
 
   .dashboard-pro-v3 .dashboard-pro-hero {
@@ -222,9 +250,10 @@
 }
 
 @media (max-width: 980px) {
-  .dashboard-pro-v3 {
-    background-position: 62% top;
-    background-size: auto 620px;
+  .dashboard-pro-v3::before {
+    height: 760px;
+    background-position: 63% top;
+    background-size: auto 650px;
   }
 
   .dashboard-pro-v3 .dashboard-pro-hero {
@@ -240,7 +269,12 @@
 @media (max-width: 720px) {
   .dashboard-pro-v3 {
     padding-top: 12px;
-    background-position: 66% top;
+  }
+
+  .dashboard-pro-v3::before {
+    height: 800px;
+    background-position: 68% top;
+    background-size: auto 620px;
   }
 
   .dashboard-pro-v3 .dashboard-pro-mission {
