@@ -7,6 +7,7 @@ import {
 import {
   NavLink,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
 import "./Sidebar.css";
@@ -63,7 +64,6 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/estatisticas-simulado-ia",
     "/desempenho",
     "/historico",
-    "/estatisticas",
   ],
 };
 
@@ -83,15 +83,21 @@ function obterGrupoDaRota(pathname: string): GrupoId | null {
 export default function Sidebar() {
   const { contexto } = useContextoComercial();
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
     obterGrupoDaRota(location.pathname)
   );
 
   useEffect(() => {
+    if (location.pathname === "/estatisticas") {
+      navigate("/desempenho", { replace: true });
+      return;
+    }
+
     setMenuMobileAberto(false);
     setGrupoAberto(obterGrupoDaRota(location.pathname));
-  }, [location.pathname]);
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (!menuMobileAberto) {
@@ -201,7 +207,6 @@ export default function Sidebar() {
             <ItemMenu to="/questoes" texto="Questões" />
             <ItemMenu to="/simulados" texto="Simulados" />
             <ItemMenu to="/desempenho" texto="Desempenho" />
-            <ItemMenu to="/estatisticas" texto="Estatísticas" />
           </GrupoMenu>
 
           <ItemMenu
