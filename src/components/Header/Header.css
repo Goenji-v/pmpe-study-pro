@@ -49,6 +49,10 @@
   gap: 14px;
 }
 
+.header-notification-button {
+  display: none;
+}
+
 @media (max-width: 850px) {
   .header {
     padding: 10px 16px;
@@ -84,5 +88,27 @@
     top: 7px;
     right: 8px;
     z-index: 1301;
+  }
+
+  .header .header-notification-button.dashboard-pro-icon[aria-label="Notificações"] {
+    position: fixed;
+    top: 7px;
+    right: 62px;
+    z-index: 1301;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #f8fafc;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .dashboard-pro-header .dashboard-pro-icon[aria-label="Notificações"] {
+    display: none;
   }
 }
