@@ -15,6 +15,7 @@ import "./styles/visual-qa-final.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./styles/StudioProPremiumShell.css";
 
+// Mantém a preview no estado visual anterior ao experimento da nova tela inicial.
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(
