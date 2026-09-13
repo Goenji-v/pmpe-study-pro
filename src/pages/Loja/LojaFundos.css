@@ -1,0 +1,218 @@
+.loja-equipados {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.loja-preview-fundo {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 112px;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid #314966;
+  background-position: center;
+  background-size: cover;
+  box-shadow: inset 0 -46px 42px rgba(2, 10, 22, .72);
+}
+
+.loja-preview-fundo span {
+  position: relative;
+  z-index: 1;
+  color: #eef5ff;
+  font-size: 11px;
+  font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
+}
+
+.loja-fundos-admin {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(245, 190, 66, .34);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(245, 190, 66, .08), transparent 34%),
+    linear-gradient(145deg, #111d31, #0d1728);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .16);
+}
+
+.loja-fundos-admin-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.loja-fundos-admin-topo h2 {
+  margin: 5px 0 6px;
+  font-size: 20px;
+}
+
+.loja-fundos-admin-topo p {
+  color: #91a4bb;
+  font-size: 12px;
+}
+
+.loja-fundos-admin-badge {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  color: #f2cb68;
+  border: 1px solid rgba(245, 190, 66, .35);
+  border-radius: 999px;
+  background: rgba(217, 155, 36, .10);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.loja-fundos-form {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 1.5fr .6fr .7fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.loja-fundos-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.loja-fundos-form label > span {
+  color: #7f93ac;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.loja-fundos-form input,
+.loja-fundos-form select {
+  width: 100%;
+  min-height: 39px;
+  padding: 0 10px;
+  color: #e9f1fb;
+  border: 1px solid #2c435e;
+  border-radius: 8px;
+  background: #0c1728;
+  outline: none;
+}
+
+.loja-fundos-form input[type="file"] {
+  padding: 8px;
+  font-size: 10px;
+}
+
+.loja-fundos-form input:focus,
+.loja-fundos-form select:focus {
+  border-color: #4d8fd4;
+}
+
+.loja-fundos-form .loja-botao-primario {
+  min-height: 39px;
+  white-space: nowrap;
+}
+
+.loja-fundos-admin-erro {
+  padding: 10px 12px;
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, .32);
+  border-radius: 9px;
+  background: rgba(127, 29, 29, .12);
+  font-size: 11px;
+}
+
+.loja-fundos-publicados {
+  display: grid;
+  gap: 10px;
+}
+
+.loja-fundos-publicados > strong {
+  font-size: 12px;
+}
+
+.loja-fundos-publicados > span {
+  color: #7f93ac;
+  font-size: 11px;
+}
+
+.loja-fundos-publicados-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.loja-fundos-publicados-grid article {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #273d58;
+  border-radius: 10px;
+  background: #0c1728;
+}
+
+.loja-fundos-publicados-grid article > div {
+  height: 72px;
+  border-radius: 7px;
+  background-position: center;
+  background-size: cover;
+}
+
+.loja-fundos-publicados-grid article > span {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.loja-fundos-publicados-grid article > small {
+  color: #8ea0b7;
+  font-size: 9px;
+}
+
+.loja-fundos-publicados-grid article > button {
+  min-height: 30px;
+  color: #b9c8da;
+  border: 1px solid #304963;
+  border-radius: 7px;
+  background: #132238;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+  .loja-equipados {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loja-fundos-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .loja-fundos-publicados-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .loja-fundos-admin-topo {
+    flex-direction: column;
+  }
+
+  .loja-fundos-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .loja-fundos-publicados-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .loja-equipados,
+  .loja-fundos-form,
+  .loja-fundos-publicados-grid {
+    grid-template-columns: 1fr;
+  }
+}
