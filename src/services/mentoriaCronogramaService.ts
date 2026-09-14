@@ -173,7 +173,7 @@ export async function listarMinhasTarefasMentoria(inicio: string, fim: string): 
       ordem: numero(item.ordem, 1),
       tipo,
       minutosPlanejados: numero(item.minutos_planejados, 0),
-      questoesPlanejadas: numero(item.questoes_planejados, 0),
+      questoesPlanejadas: numero(item.questoes_planejadas, 0),
       status: statusTarefa(item.status),
       origem: texto(item.origem) || "automatico",
       itemId: texto(item.item_id) || null,
