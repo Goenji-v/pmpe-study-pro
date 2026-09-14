@@ -1,0 +1,16 @@
+/* Ajustes exclusivos da nova prévia.
+   A sidebar atual participa do flex da página; por isso não devemos deslocar
+   o conteúdo uma segunda vez com margin-left da camada visual antiga. */
+@media (min-width: 901px) {
+  .content {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .page-dashboard {
+    padding-left: 12px !important;
+    padding-right: 18px !important;
+  }
+}
