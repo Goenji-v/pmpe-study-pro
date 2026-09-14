@@ -26,6 +26,7 @@ import "./pages/Dashboard/DashboardCompactStats.css";
 import "./pages/Dashboard/DashboardWeeklyGoalCompact.css";
 import "./pages/Dashboard/DashboardGeneralPerformanceVisual.css";
 import "./pages/Dashboard/DashboardMissionBackgroundOnly.css";
+import "./styles/PreviewLayoutFixes.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
