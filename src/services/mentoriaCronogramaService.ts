@@ -30,6 +30,8 @@ export type ItemCronogramaMentoria = {
   materialUrl: string | null;
 };
 
+export type ModoCronogramaMentoria = "turma" | "personalizado";
+
 export type TrilhaCronogramaMentoria = {
   id: string;
   nome: string;
@@ -42,6 +44,8 @@ export type TrilhaCronogramaMentoria = {
   intervalosRevisao: number[];
   simuladoCadaDias: number | null;
   percentualTeoria: number;
+  modoCronograma: ModoCronogramaMentoria;
+  personalizadoEm: string | null;
   itens: ItemCronogramaMentoria[];
   disponibilidade: DisponibilidadeMentoria[];
   preferencias: PreferenciasCronogramaMentoria;
@@ -117,6 +121,8 @@ export async function carregarTrilhaCronogramaMentoria(): Promise<TrilhaCronogra
     intervalosRevisao,
     simuladoCadaDias,
     percentualTeoria,
+    modoCronograma: valor.modo_cronograma === "personalizado" ? "personalizado" : "turma",
+    personalizadoEm: texto(valor.personalizado_em) || null,
     itens: lista(valor.itens).map((item) => ({
       id: texto(item.id),
       materia: texto(item.materia),
@@ -167,7 +173,7 @@ export async function listarMinhasTarefasMentoria(inicio: string, fim: string): 
       ordem: numero(item.ordem, 1),
       tipo,
       minutosPlanejados: numero(item.minutos_planejados, 0),
-      questoesPlanejadas: numero(item.questoes_planejadas, 0),
+      questoesPlanejadas: numero(item.questoes_planejados, 0),
       status: statusTarefa(item.status),
       origem: texto(item.origem) || "automatico",
       itemId: texto(item.item_id) || null,
@@ -219,6 +225,28 @@ export async function recalcularMeuCronogramaMentoria(
     p_motivo: motivo,
   });
   if (error) throw new Error(`Não foi possível recalcular o cronograma: ${error.message}`);
+}
+
+export async function personalizarMeuCronogramaMentoria(
+  inicio = dataLocalIso(),
+  dias = 30,
+): Promise<void> {
+  const { error } = await supabase.rpc("personalizar_meu_cronograma_mentoria", {
+    p_inicio: inicio,
+    p_dias: dias,
+  });
+  if (error) throw new Error(`Não foi possível personalizar seu cronograma: ${error.message}`);
+}
+
+export async function voltarMeuCronogramaParaTurma(
+  inicio = dataLocalIso(),
+  dias = 30,
+): Promise<void> {
+  const { error } = await supabase.rpc("voltar_meu_cronograma_para_turma", {
+    p_inicio: inicio,
+    p_dias: dias,
+  });
+  if (error) throw new Error(`Não foi possível voltar ao cronograma da turma: ${error.message}`);
 }
 
 export async function atualizarStatusTarefaMentoria(
