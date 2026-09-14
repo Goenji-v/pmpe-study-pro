@@ -4,9 +4,8 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  BarChart3,
   BookOpen,
   CalendarDays,
   ChevronRight,
@@ -32,7 +31,7 @@ import "./Sidebar.css";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
 
 type Icone = ComponentType<{ size?: number; strokeWidth?: number }>;
-type GrupoId = "planejamento" | "estudos" | "pratica";
+type GrupoId = "planejamento" | "estudos" | "pratica" | "parceiro";
 
 type Item = {
   to: string;
@@ -80,8 +79,8 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/estatisticas-simulado-ia",
     "/desempenho",
     "/historico",
-    "/estatisticas",
   ],
+  parceiro: ["/parceiro"],
 };
 
 function rotaPertenceAoGrupo(pathname: string, id: GrupoId) {
@@ -98,15 +97,21 @@ function obterGrupoDaRota(pathname: string): GrupoId | null {
 export default function Sidebar() {
   const { contexto } = useContextoComercial();
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
     obterGrupoDaRota(location.pathname)
   );
 
   useEffect(() => {
+    if (location.pathname === "/estatisticas") {
+      navigate("/desempenho", { replace: true });
+      return;
+    }
+
     setMenuMobileAberto(false);
     setGrupoAberto(obterGrupoDaRota(location.pathname));
-  }, [location.pathname]);
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (!menuMobileAberto) {
@@ -226,7 +231,6 @@ export default function Sidebar() {
             <ItemMenu to="/questoes" texto="Questões" icone={ClipboardCheck} onNavigate={() => setMenuMobileAberto(false)} />
             <ItemMenu to="/simulados" texto="Simulados" icone={Target} onNavigate={() => setMenuMobileAberto(false)} />
             <ItemMenu to="/desempenho" texto="Desempenho" icone={TrendingUp} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/estatisticas" texto="Estatísticas" icone={BarChart3} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
           <ItemMenu
@@ -237,12 +241,19 @@ export default function Sidebar() {
           />
 
           {podeVerParceiro && (
-            <div className="sidebar-partner-links">
-              <ItemMenu to="/parceiro" texto="Painel do parceiro" icone={UsersRound} onNavigate={() => setMenuMobileAberto(false)} />
-              <ItemMenu to="/parceiro/mentoria" texto="Trilha da mentoria" icone={Route} onNavigate={() => setMenuMobileAberto(false)} />
-              <ItemMenu to="/parceiro/cursos" texto="Curso do professor" icone={GraduationCap} onNavigate={() => setMenuMobileAberto(false)} />
-              <ItemMenu to="/parceiro/simulados" texto="Simulados do professor" icone={Target} onNavigate={() => setMenuMobileAberto(false)} />
-            </div>
+            <GrupoMenu
+              id="parceiro"
+              titulo="Área do Parceiro"
+              icone={UsersRound}
+              ativo={rotaPertenceAoGrupo(location.pathname, "parceiro")}
+              aberto={grupoAberto === "parceiro"}
+              onToggle={alternarGrupo}
+            >
+              <ItemMenu to="/parceiro" texto="Visão geral e turmas" icone={UsersRound} final onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/mentoria" texto="Cronograma da turma" icone={Route} onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/cursos" texto="Conteúdos do curso" icone={GraduationCap} onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/simulados" texto="Simulados" icone={Target} onNavigate={() => setMenuMobileAberto(false)} />
+            </GrupoMenu>
           )}
         </nav>
 
