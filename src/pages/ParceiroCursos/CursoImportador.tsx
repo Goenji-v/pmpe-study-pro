@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { supabase } from "../../lib/supabase";
 import {
   importarEstruturaCurso,
@@ -30,6 +30,7 @@ export default function CursoImportador({ parceiroId, cursoAtual, onImportado }:
   const [processando, setProcessando] = useState("");
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
+  const arquivoInputRef = useRef<HTMLInputElement>(null);
 
   const totais = useMemo(() => {
     if (!rascunho) return { disciplinas: 0, modulos: 0, aulas: 0 };
@@ -66,6 +67,39 @@ export default function CursoImportador({ parceiroId, cursoAtual, onImportado }:
     }
   }
 
+  async function carregarArquivoJson(evento: ChangeEvent<HTMLInputElement>) {
+    const input = evento.currentTarget;
+    const arquivo = input.files?.[0];
+    if (!arquivo) return;
+
+    try {
+      setProcessando("arquivo");
+      setErro("");
+      setMensagem("");
+
+      if (arquivo.size > 5 * 1024 * 1024) {
+        throw new Error("O arquivo JSON é muito grande. O limite para importação é 5 MB.");
+      }
+
+      const conteudo = await arquivo.text();
+      const convertido = normalizarRascunho(JSON.parse(conteudo));
+      setRascunho(convertido);
+      setCaptura("");
+      setMensagem(`Arquivo “${arquivo.name}” carregado por completo. Revise a estrutura e aprove a importação.`);
+    } catch (e) {
+      setErro(
+        e instanceof SyntaxError
+          ? "Esse arquivo JSON está incompleto ou inválido. Baixe novamente o arquivo original e tente selecionar o arquivo inteiro."
+          : e instanceof Error
+            ? e.message
+            : "Não foi possível ler o arquivo JSON.",
+      );
+    } finally {
+      setProcessando("");
+      input.value = "";
+    }
+  }
+
   function processarCaptura() {
     try {
       setErro("");
@@ -74,7 +108,13 @@ export default function CursoImportador({ parceiroId, cursoAtual, onImportado }:
       setRascunho(convertido);
       setMensagem("Captura carregada. Ajuste a estrutura e aprove quando estiver pronta.");
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "A captura não está em um formato válido.");
+      setErro(
+        e instanceof SyntaxError
+          ? "O JSON colado está incompleto ou inválido. No celular, prefira Selecionar arquivo JSON para evitar cortes no texto."
+          : e instanceof Error
+            ? e.message
+            : "A captura não está em um formato válido.",
+      );
     }
   }
 
@@ -184,7 +224,29 @@ export default function CursoImportador({ parceiroId, cursoAtual, onImportado }:
             </article>
 
             <article>
-              <strong>2. Curso com login</strong>
+              <strong>2. Arquivo JSON</strong>
+              <p>No celular, selecione o arquivo .json completo. O Study Pro lê o arquivo direto, sem depender de copiar e colar textos grandes.</p>
+              <input
+                ref={arquivoInputRef}
+                type="file"
+                accept=".json,application/json"
+                hidden
+                onChange={(e) => void carregarArquivoJson(e)}
+              />
+              <div className="pc-importador-acoes">
+                <button
+                  type="button"
+                  className="pc-botao-secundario"
+                  disabled={processando === "arquivo"}
+                  onClick={() => arquivoInputRef.current?.click()}
+                >
+                  {processando === "arquivo" ? "Lendo arquivo..." : "Selecionar arquivo JSON"}
+                </button>
+              </div>
+            </article>
+
+            <article>
+              <strong>3. Curso com login</strong>
               <p>Entre normalmente na plataforma do parceiro e use o script de captura. Ele copia apenas a estrutura visível e os links, não baixa vídeos.</p>
               <div className="pc-importador-acoes">
                 <button type="button" className="pc-botao-secundario" onClick={() => void copiarScript()}>Copiar script de captura</button>
