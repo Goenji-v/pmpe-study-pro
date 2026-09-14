@@ -10,9 +10,11 @@ import {
   carregarTrilhaCronogramaMentoria,
   dataLocalIso,
   listarMinhasTarefasMentoria,
+  personalizarMeuCronogramaMentoria,
   recalcularMeuCronogramaMentoria,
   salvarDisponibilidadeMentoria,
   salvarPreferenciasMentoria,
+  voltarMeuCronogramaParaTurma,
   type DisponibilidadeMentoria,
   type PreferenciasCronogramaMentoria,
   type TarefaMentoria,
@@ -127,6 +129,37 @@ export default function CronogramaMentoria({ trilhaInicial }: Props) {
     }
   }
 
+  async function alternarModoCronograma() {
+    const estaPersonalizado = trilha.modoCronograma === "personalizado";
+    if (estaPersonalizado) {
+      const confirmado = window.confirm(
+        "Voltar ao cronograma da turma?\n\nSua rotina pessoal e seu progresso serão preservados, mas a rota de conteúdos voltará a acompanhar as próximas alterações da mentoria."
+      );
+      if (!confirmado) return;
+    }
+
+    try {
+      setProcessando("modo-cronograma");
+      setErro("");
+      setMensagem("");
+
+      if (estaPersonalizado) {
+        await voltarMeuCronogramaParaTurma(hoje, 30);
+        setMensagem("Você voltou ao cronograma da turma. Seu progresso foi preservado e a rota agora acompanha novamente a mentoria.");
+      } else {
+        await personalizarMeuCronogramaMentoria(hoje, 30);
+        setMensagem("Cronograma personalizado. Sua rota atual foi salva e futuras alterações coletivas da turma não mudarão seus conteúdos.");
+      }
+
+      window.dispatchEvent(new CustomEvent("pmpe-mentoria-cronograma-atualizado"));
+      await carregar(false);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível alterar o modo do cronograma.");
+    } finally {
+      setProcessando("");
+    }
+  }
+
   async function iniciarTarefa(tarefa: TarefaMentoria) {
     try {
       setProcessando(tarefa.id);
@@ -202,6 +235,33 @@ export default function CronogramaMentoria({ trilhaInicial }: Props) {
 
       {erro && <div className="cm-alerta erro" role="alert">{erro}</div>}
       {mensagem && <div className="cm-alerta sucesso">{mensagem}</div>}
+
+      <section className={`cm-modo ${trilha.modoCronograma === "personalizado" ? "personalizado" : "turma"}`}>
+        <div>
+          <span>{trilha.modoCronograma === "personalizado" ? "CRONOGRAMA PERSONALIZADO" : "CRONOGRAMA DA TURMA"}</span>
+          <h2>{trilha.modoCronograma === "personalizado" ? "Sua rota está independente" : "Sua rota acompanha a mentoria"}</h2>
+          <p>
+            {trilha.modoCronograma === "personalizado"
+              ? "A estrutura atual foi congelada para você. Novas matérias, mudanças de ordem ou ajustes coletivos feitos depois pela turma não alteram sua rota. Sua rotina, revisões e progresso continuam funcionando normalmente."
+              : "Você recebe automaticamente as próximas alterações coletivas feitas pela mentoria. Se quiser manter exatamente a rota atual, personalize seu cronograma."}
+          </p>
+          {trilha.modoCronograma === "personalizado" && trilha.personalizadoEm && (
+            <small>Personalizado em {dataHoraCurta(trilha.personalizadoEm)}</small>
+          )}
+        </div>
+        <button
+          type="button"
+          className={trilha.modoCronograma === "personalizado" ? "secundario" : ""}
+          disabled={processando === "modo-cronograma" || carregando}
+          onClick={() => void alternarModoCronograma()}
+        >
+          {processando === "modo-cronograma"
+            ? "Atualizando..."
+            : trilha.modoCronograma === "personalizado"
+              ? "Voltar ao cronograma da turma"
+              : "Personalizar meu cronograma"}
+        </button>
+      </section>
 
       <div className="cm-resumos">
         <Resumo titulo="Progresso" valor={`${progresso}%`} detalhe={`${trilha.itens.filter((item) => item.concluido).length} de ${trilha.itens.length} conteúdos`} />
@@ -346,4 +406,10 @@ function somarDias(dataIso: string, dias: number) {
 
 function dataCurta(dataIso: string) {
   return new Date(`${dataIso}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function dataHoraCurta(dataIso: string) {
+  const data = new Date(dataIso);
+  if (Number.isNaN(data.getTime())) return "agora";
+  return data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
