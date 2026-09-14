@@ -1,0 +1,173 @@
+.pc-fluxo-publicacao {
+  margin: 0 0 22px;
+  padding: 18px;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, .98), rgba(30, 41, 59, .9));
+}
+
+.pc-fluxo-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pc-fluxo-linha > div:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pc-fluxo-linha small {
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.pc-status-curso {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+
+.pc-status-curso.status-rascunho {
+  color: #cbd5e1;
+  background: rgba(71, 85, 105, .24);
+  border-color: rgba(100, 116, 139, .52);
+}
+
+.pc-status-curso.status-publicado {
+  color: #86efac;
+  background: rgba(22, 163, 74, .15);
+  border-color: rgba(34, 197, 94, .4);
+}
+
+.pc-status-curso.status-arquivado {
+  color: #fcd34d;
+  background: rgba(217, 119, 6, .14);
+  border-color: rgba(245, 158, 11, .38);
+}
+
+.pc-fluxo-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pc-fluxo-acoes button {
+  min-height: 38px;
+  padding: 9px 13px;
+  border: 1px solid #475569;
+  border-radius: 9px;
+  color: #f8fafc;
+  background: #334155;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pc-fluxo-acoes button:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+.pc-fluxo-acoes .publicar {
+  background: #15803d;
+  border-color: rgba(34, 197, 94, .55);
+}
+
+.pc-fluxo-acoes .arquivar {
+  background: #92400e;
+  border-color: rgba(245, 158, 11, .5);
+}
+
+.pc-fluxo-acoes .restaurar {
+  background: #1d4ed8;
+  border-color: rgba(59, 130, 246, .55);
+}
+
+.pc-fluxo-acoes .duplicar {
+  background: #334155;
+}
+
+.pc-protecao-progresso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid rgba(96, 165, 250, .28);
+  border-radius: 11px;
+  background: rgba(37, 99, 235, .09);
+  color: #bfdbfe;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pc-protecao-progresso strong {
+  flex: 0 0 auto;
+  color: #dbeafe;
+}
+
+.pc-protecao-progresso.em-uso {
+  border-color: rgba(34, 197, 94, .3);
+  background: rgba(22, 163, 74, .08);
+  color: #bbf7d0;
+}
+
+.pc-fluxo-erro,
+.pc-fluxo-sucesso {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.pc-fluxo-erro {
+  color: #fecaca;
+  background: rgba(185, 28, 28, .14);
+  border: 1px solid rgba(239, 68, 68, .35);
+}
+
+.pc-fluxo-sucesso {
+  color: #bbf7d0;
+  background: rgba(22, 163, 74, .12);
+  border: 1px solid rgba(34, 197, 94, .3);
+}
+
+/* O fluxo Rascunho → Publicado → Arquivado substitui o botão legado Pausar/Ativar curso. */
+.pc-topo-acoes > button.primario,
+.pc-topo-acoes > button.secundario {
+  display: none;
+}
+
+.pc-topo-curso > div:first-child > span {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .pc-fluxo-linha {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pc-fluxo-acoes {
+    justify-content: stretch;
+  }
+
+  .pc-fluxo-acoes button {
+    flex: 1 1 150px;
+  }
+
+  .pc-protecao-progresso {
+    flex-direction: column;
+  }
+}
