@@ -15,34 +15,60 @@
   }
 }
 
-/* Deixa a arte/cidade do topo atravessar os dois cards principais.
-   Mantemos só uma película leve para preservar a leitura dos textos. */
-.dashboard-pro-v3 .dashboard-pro-mission,
-.dashboard-pro-v3 .dashboard-pro-session {
+/* O fundo do herói precisa aparecer de verdade por trás dos dois cards.
+   A versão anterior ainda mantinha película escura demais no próprio cenário. */
+.dashboard-pro-v3::before {
   background:
     linear-gradient(
-      145deg,
-      rgba(3, 17, 31, .18) 0%,
-      rgba(3, 17, 31, .10) 55%,
-      rgba(3, 17, 31, .05) 100%
-    ) !important;
+      180deg,
+      rgba(2, 13, 26, .02) 0%,
+      rgba(2, 13, 26, .02) 58%,
+      rgba(3, 16, 31, .16) 82%,
+      #081423 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(2, 14, 28, .10) 0%,
+      rgba(2, 14, 28, .06) 35%,
+      rgba(2, 14, 28, .02) 62%,
+      rgba(2, 14, 28, .01) 82%,
+      rgba(2, 14, 28, .04) 100%
+    ),
+    var(--study-dashboard-bg-image, url('/assets/pmpe-hero-user.svg')) center top / cover no-repeat !important;
+}
+
+/* Missão e cronômetro: sem placa escura por cima da cidade/policial.
+   Ficam apenas borda e conteúdo. */
+.dashboard-pro-v3 .dashboard-pro-mission,
+.dashboard-pro-v3 .dashboard-pro-session {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
   box-shadow:
     0 0 0 1px rgba(255, 223, 135, .035) inset,
-    0 10px 26px rgba(0, 0, 0, .11) !important;
+    0 8px 22px rgba(0, 0, 0, .08) !important;
   backdrop-filter: none !important;
 }
 
-/* A área interna do cronômetro também fica menos opaca para não virar um
-   círculo escuro isolado sobre a imagem. */
+.dashboard-pro-v3 .dashboard-pro-mission::before,
+.dashboard-pro-v3 .dashboard-pro-mission::after,
+.dashboard-pro-v3 .dashboard-pro-session::before,
+.dashboard-pro-v3 .dashboard-pro-session::after {
+  background: none !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+}
+
+/* O centro do cronômetro permanece legível, mas deixa a imagem aparecer. */
 .dashboard-pro-v3 .dashboard-pro-timer,
 .dashboard-pro-v3 .dashboard-pro-timer.active {
   background:
-    radial-gradient(circle, rgba(5, 22, 40, .48) 61%, transparent 62%),
-    conic-gradient(#ffc84a 0 78%, rgba(30, 73, 112, .56) 78%) !important;
+    radial-gradient(circle, rgba(5, 22, 40, .18) 61%, transparent 62%),
+    conic-gradient(#ffc84a 0 78%, rgba(30, 73, 112, .48) 78%) !important;
 }
 
 .dashboard-pro-v3 .dashboard-pro-timer.active {
   background:
-    radial-gradient(circle, rgba(5, 22, 40, .48) 61%, transparent 62%),
-    conic-gradient(#ffd05a 0 86%, rgba(30, 73, 112, .56) 86%) !important;
+    radial-gradient(circle, rgba(5, 22, 40, .18) 61%, transparent 62%),
+    conic-gradient(#ffd05a 0 86%, rgba(30, 73, 112, .48) 86%) !important;
 }
