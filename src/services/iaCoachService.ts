@@ -36,6 +36,11 @@ export type DiagnosticoCoachIA = {
   acoes: AcaoCoachIA[];
 };
 
+export type DiagnosticoCoachSalvo = {
+  geradoEm: string;
+  diagnostico: DiagnosticoCoachIA;
+};
+
 export type DadosCoachIA = {
   nomeUsuario: string;
   concurso: string;
@@ -120,14 +125,23 @@ export async function gerarDiagnosticoCoach(
 }
 
 export function carregarUltimoDiagnostico(): DiagnosticoCoachIA | null {
+  return carregarUltimoDiagnosticoComMeta()?.diagnostico ?? null;
+}
+
+export function carregarUltimoDiagnosticoComMeta(): DiagnosticoCoachSalvo | null {
   const salvo = localStorage.getItem(CHAVE_ULTIMO_COACH);
   if (!salvo) return null;
 
   try {
-    const valor = JSON.parse(salvo) as {
-      diagnostico?: DiagnosticoCoachIA;
+    const valor = JSON.parse(salvo) as Partial<DiagnosticoCoachSalvo>;
+    if (!valor.diagnostico) return null;
+    return {
+      geradoEm:
+        typeof valor.geradoEm === "string" && valor.geradoEm
+          ? valor.geradoEm
+          : new Date(0).toISOString(),
+      diagnostico: valor.diagnostico,
     };
-    return valor.diagnostico ?? null;
   } catch {
     return null;
   }
@@ -140,11 +154,12 @@ export function limparUltimoDiagnostico() {
 function salvarUltimoDiagnostico(
   diagnostico: DiagnosticoCoachIA
 ) {
+  const salvo: DiagnosticoCoachSalvo = {
+    geradoEm: new Date().toISOString(),
+    diagnostico,
+  };
   localStorage.setItem(
     CHAVE_ULTIMO_COACH,
-    JSON.stringify({
-      geradoEm: new Date().toISOString(),
-      diagnostico,
-    })
+    JSON.stringify(salvo)
   );
 }
