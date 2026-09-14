@@ -140,6 +140,27 @@
   background: linear-gradient(135deg, rgba(31, 109, 204, .18), rgba(18, 46, 78, .25));
 }
 
+.notificacao-item.revisao-hoje {
+  margin-bottom: 9px;
+  border-color: rgba(66, 190, 148, .42);
+  background: linear-gradient(135deg, rgba(22, 118, 86, .17), rgba(16, 54, 56, .24));
+}
+
+.notificacao-item.revisao-hoje strong {
+  color: #8fe0bf;
+}
+
+.notificacao-item.revisao-atrasada {
+  margin-bottom: 9px;
+  border-color: rgba(246, 156, 70, .52);
+  background: linear-gradient(135deg, rgba(151, 66, 23, .20), rgba(68, 33, 25, .27));
+  box-shadow: inset 3px 0 0 rgba(255, 173, 79, .72);
+}
+
+.notificacao-item.revisao-atrasada strong {
+  color: #ffc27c;
+}
+
 .notificacao-item.admin {
   margin-top: 9px;
   border-color: rgba(242, 177, 66, .34);

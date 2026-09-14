@@ -28,6 +28,29 @@ export type CursoParceiro = {
 export type PainelCursosParceiro = { parceiroId: string; turmas: TurmaCursoParceiro[]; cursos: CursoParceiro[] };
 export type CursoMentoriaAluno = Omit<CursoParceiro, "turmaIds" | "progresso" | "ativo">;
 
+export type AulaImportacaoCurso = {
+  titulo: string;
+  descricao?: string;
+  tipo?: AulaCursoParceiro["tipo"];
+  url: string;
+  duracaoMinutos?: number | null;
+};
+export type ModuloImportacaoCurso = {
+  titulo: string;
+  descricao?: string;
+  aulas: AulaImportacaoCurso[];
+};
+export type DisciplinaImportacaoCurso = {
+  titulo: string;
+  descricao?: string;
+  modulos: ModuloImportacaoCurso[];
+};
+export type RascunhoImportacaoCurso = {
+  nome: string;
+  descricao?: string;
+  disciplinas: DisciplinaImportacaoCurso[];
+};
+
 export async function carregarPainelCursosParceiro(): Promise<PainelCursosParceiro> {
   const { data, error } = await supabase.rpc("painel_cursos_meu_parceiro");
   if (error) throw new Error(`Não foi possível carregar os cursos: ${error.message}`);
@@ -50,36 +73,39 @@ export async function carregarMeusCursosMentoria(): Promise<CursoMentoriaAluno[]
 
 export async function criarCursoParceiro(parceiroId: string, nome: string, descricao: string) {
   const userId = await usuarioAtual();
-  const { error } = await supabase.from("curso_parceiro_cursos").insert({
+  const { data, error } = await supabase.from("curso_parceiro_cursos").insert({
     parceiro_id: parceiroId,
     nome: nome.trim(),
     descricao: descricao.trim() || null,
     criado_por: userId,
-  });
+  }).select("id").single();
   if (error) throw new Error(`Não foi possível criar o curso: ${error.message}`);
+  return String(data.id);
 }
 
 export async function criarDisciplinaCurso(cursoId: string, titulo: string, descricao: string, ordem: number) {
-  const { error } = await supabase.from("curso_parceiro_disciplinas").insert({
+  const { data, error } = await supabase.from("curso_parceiro_disciplinas").insert({
     curso_id: cursoId,
     titulo: titulo.trim(),
     descricao: descricao.trim() || null,
     ordem,
-  });
+  }).select("id").single();
   if (error) throw new Error(`Não foi possível criar a disciplina: ${error.message}`);
+  return String(data.id);
 }
 
 export async function criarModuloCurso(parceiroId: string, disciplinaId: string, titulo: string, descricao: string, ordem: number) {
   const userId = await usuarioAtual();
-  const { error } = await supabase.from("curso_parceiro_modulos").insert({
+  const { data, error } = await supabase.from("curso_parceiro_modulos").insert({
     parceiro_id: parceiroId,
     disciplina_id: disciplinaId,
     titulo: titulo.trim(),
     descricao: descricao.trim() || null,
     ordem,
     criado_por: userId,
-  });
+  }).select("id").single();
   if (error) throw new Error(`Não foi possível criar o módulo: ${error.message}`);
+  return String(data.id);
 }
 
 export async function criarAulaCurso(
@@ -88,19 +114,23 @@ export async function criarAulaCurso(
   descricao: string,
   tipo: AulaCursoParceiro["tipo"],
   url: string,
-  duracaoMinutos: number,
+  duracaoMinutos: number | null,
   ordem: number,
 ) {
-  const { error } = await supabase.from("curso_parceiro_aulas").insert({
+  const duracao = duracaoMinutos && duracaoMinutos >= 1
+    ? Math.min(1440, Math.floor(duracaoMinutos))
+    : null;
+  const { data, error } = await supabase.from("curso_parceiro_aulas").insert({
     modulo_id: moduloId,
     titulo: titulo.trim(),
     descricao: descricao.trim() || null,
     tipo,
     url: url.trim() || null,
-    duracao_minutos: Math.max(0, duracaoMinutos || 0),
+    duracao_minutos: duracao,
     ordem,
-  });
+  }).select("id").single();
   if (error) throw new Error(`Não foi possível criar a aula/material: ${error.message}`);
+  return String(data.id);
 }
 
 export async function definirTurmasCurso(cursoId: string, turmaIds: string[]) {
@@ -131,6 +161,75 @@ export async function alternarAtivoCurso(
   if (error) throw new Error(`Não foi possível atualizar o item: ${error.message}`);
 }
 
+export async function excluirItemCurso(
+  entidade: "curso" | "disciplina" | "modulo" | "aula",
+  id: string,
+) {
+  const tabelas = {
+    curso: "curso_parceiro_cursos",
+    disciplina: "curso_parceiro_disciplinas",
+    modulo: "curso_parceiro_modulos",
+    aula: "curso_parceiro_aulas",
+  } as const;
+  const { error } = await supabase.from(tabelas[entidade]).delete().eq("id", id);
+  if (error) throw new Error(`Não foi possível excluir o item: ${error.message}`);
+}
+
+export async function importarEstruturaCurso({
+  parceiroId,
+  rascunho,
+  cursoId,
+  ordemDisciplinaInicial = 0,
+}: {
+  parceiroId: string;
+  rascunho: RascunhoImportacaoCurso;
+  cursoId?: string;
+  ordemDisciplinaInicial?: number;
+}) {
+  validarRascunhoImportacao(rascunho);
+  const destinoId = cursoId || await criarCursoParceiro(
+    parceiroId,
+    rascunho.nome || "Curso importado",
+    rascunho.descricao || "Importado para revisão no Study Pro"
+  );
+
+  for (let indiceDisciplina = 0; indiceDisciplina < rascunho.disciplinas.length; indiceDisciplina += 1) {
+    const disciplina = rascunho.disciplinas[indiceDisciplina];
+    const disciplinaId = await criarDisciplinaCurso(
+      destinoId,
+      disciplina.titulo,
+      disciplina.descricao || "",
+      ordemDisciplinaInicial + indiceDisciplina + 1,
+    );
+
+    for (let indiceModulo = 0; indiceModulo < disciplina.modulos.length; indiceModulo += 1) {
+      const modulo = disciplina.modulos[indiceModulo];
+      const moduloId = await criarModuloCurso(
+        parceiroId,
+        disciplinaId,
+        modulo.titulo,
+        modulo.descricao || "",
+        indiceModulo + 1,
+      );
+
+      for (let indiceAula = 0; indiceAula < modulo.aulas.length; indiceAula += 1) {
+        const aula = modulo.aulas[indiceAula];
+        await criarAulaCurso(
+          moduloId,
+          aula.titulo,
+          aula.descricao || "",
+          aula.tipo || "video",
+          aula.url,
+          aula.duracaoMinutos ?? null,
+          indiceAula + 1,
+        );
+      }
+    }
+  }
+
+  return destinoId;
+}
+
 export async function marcarAulaMentoria(aulaId: string, concluida: boolean) {
   const userId = await usuarioAtual();
   const agora = new Date().toISOString();
@@ -143,6 +242,22 @@ export async function marcarAulaMentoria(aulaId: string, concluida: boolean) {
     atualizado_em: agora,
   }, { onConflict: "aula_id,user_id" });
   if (error) throw new Error(`Não foi possível atualizar o progresso: ${error.message}`);
+}
+
+function validarRascunhoImportacao(rascunho: RascunhoImportacaoCurso) {
+  if (!rascunho.disciplinas.length) throw new Error("A importação não possui disciplinas para aprovar.");
+  for (const disciplina of rascunho.disciplinas) {
+    if (disciplina.titulo.trim().length < 2) throw new Error("Toda disciplina precisa ter um nome.");
+    for (const modulo of disciplina.modulos) {
+      if (modulo.titulo.trim().length < 2) throw new Error(`A disciplina “${disciplina.titulo}” possui um módulo sem nome.`);
+      for (const aula of modulo.aulas) {
+        if (aula.titulo.trim().length < 2) throw new Error(`O módulo “${modulo.titulo}” possui uma aula sem título.`);
+        if (!/^https:\/\//i.test(aula.url.trim())) {
+          throw new Error(`A aula “${aula.titulo}” precisa de um link HTTPS válido.`);
+        }
+      }
+    }
+  }
 }
 
 function normalizarCursoParceiro(item: Record<string, unknown>): CursoParceiro {

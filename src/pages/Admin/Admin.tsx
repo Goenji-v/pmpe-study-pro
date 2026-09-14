@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
+import AdminParcerias from "../../components/AdminParcerias/AdminParcerias";
 import BetaMonitor from "../../components/BetaMonitor/BetaMonitor";
 import CuradoriaQuestoes from "../../components/CuradoriaQuestoes/CuradoriaQuestoes";
 import ModeracaoDenuncias from "../../components/ModeracaoDenuncias/ModeracaoDenuncias";
@@ -86,7 +87,7 @@ export default function Admin() {
         <div>
           <span className="admin-etiqueta">ACESSO RESTRITO</span>
           <h1>🛡️ Administração</h1>
-          <p>Acompanhe usuários, atividade geral e a curadoria de conteúdo do Study Pro.</p>
+          <p>Acompanhe usuários, parcerias, atividade geral e a curadoria de conteúdo do Study Pro.</p>
         </div>
         <div className="admin-seguranca">
           <strong>RLS + RPC protegida</strong>
@@ -110,6 +111,8 @@ export default function Admin() {
         <Card titulo="Questões" valor={resumo.questoesNoMes} detalhe="Resolvidas no mês" />
         <Card titulo="Acertos" valor={resumo.acertosNoMes} detalhe="Acertos registrados" />
       </div>
+
+      <AdminParcerias />
 
       <ModeracaoDenuncias />
 
