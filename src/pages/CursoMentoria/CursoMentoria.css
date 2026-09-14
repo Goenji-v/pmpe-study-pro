@@ -289,6 +289,79 @@
   color: var(--text-secondary, #6f7684);
 }
 
+/* No tema escuro, toda a árvore do curso precisa acompanhar o restante do
+ * Study Pro. O fallback branco de --card-bg deixava disciplina, módulos e
+ * aulas quase ilegíveis no celular. */
+html:not([data-study-base-theme="claro"]) .cm-disciplina {
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(49, 94, 251, 0.10), transparent 34%),
+    linear-gradient(145deg, rgba(17, 32, 58, 0.97), rgba(10, 22, 43, 0.97));
+  border-color: rgba(122, 150, 196, 0.24);
+  box-shadow: 0 14px 34px rgba(2, 8, 23, 0.18);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-disciplina > header,
+html:not([data-study-base-theme="claro"]) .cm-aulas article {
+  border-color: rgba(122, 150, 196, 0.18);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-disciplina h2,
+html:not([data-study-base-theme="claro"]) .cm-aula-info strong,
+html:not([data-study-base-theme="claro"]) .cm-modulos summary strong {
+  color: #f8fafc;
+}
+
+html:not([data-study-base-theme="claro"]) .cm-disciplina p,
+html:not([data-study-base-theme="claro"]) .cm-disciplina small,
+html:not([data-study-base-theme="claro"]) .cm-aula-info p,
+html:not([data-study-base-theme="claro"]) .cm-modulos summary span,
+html:not([data-study-base-theme="claro"]) .cm-fluxo-aviso span {
+  color: #a9b8cc;
+}
+
+html:not([data-study-base-theme="claro"]) .cm-modulos details {
+  background: rgba(8, 18, 35, 0.66);
+  border-color: rgba(122, 150, 196, 0.22);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-modulos summary {
+  color: #eaf2ff;
+  background: rgba(20, 42, 72, 0.72);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-aulas article {
+  background: rgba(7, 17, 32, 0.72);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-aulas article:nth-child(even) {
+  background: rgba(12, 27, 48, 0.72);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-aulas article.concluida {
+  background: rgba(22, 76, 54, 0.28);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-aulas article.em-andamento {
+  background: rgba(49, 94, 251, 0.14);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-status-aula {
+  border-color: #667a98;
+  background: rgba(7, 17, 32, 0.78);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-fluxo-aviso {
+  background: rgba(49, 94, 251, 0.10);
+  border-color: rgba(90, 130, 255, 0.28);
+}
+
+html:not([data-study-base-theme="claro"]) .cm-cursos button {
+  color: #eaf2ff;
+  background: rgba(12, 27, 48, 0.92);
+  border-color: rgba(122, 150, 196, 0.24);
+}
+
 /* O estado vazio precisa acompanhar o tema real da página. Sem isso, o
  * fallback branco do --card-bg fica ilegível no tema escuro. */
 html:not([data-study-base-theme="claro"]) .cm-vazio,
