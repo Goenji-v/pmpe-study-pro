@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useContextoComercial } from "../../hooks/useContextoComercial";
 import {
   carregarDashboardProfessor,
   type DashboardProfessor,
 } from "../../services/professorDashboardService";
+import { obterPermissoesParceiro } from "../../utils/permissoesParceiro";
 import GerenciarTurmasParceiro from "./GerenciarTurmasParceiro";
 import "./ProfessorDashboard.css";
 
 export default function ProfessorDashboard() {
+  const { contexto } = useContextoComercial();
+  const permissoes = obterPermissoesParceiro(contexto?.papel);
   const [dados, setDados] = useState<DashboardProfessor | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -64,7 +68,7 @@ export default function ProfessorDashboard() {
         <Link to="/parceiro/mentoria">Gerenciar trilhas →</Link>
       </section>
 
-      <GerenciarTurmasParceiro onChanged={carregar} />
+      {permissoes.podeGerenciarTurmas && <GerenciarTurmasParceiro onChanged={carregar} />}
 
       <section className="prof-dashboard-kpis" aria-label="Indicadores principais">
         <Kpi titulo="Alunos ativos" valor={String(i.alunosAtivos)} detalhe={`${i.alunosAtivosHoje} estudaram hoje`} />
