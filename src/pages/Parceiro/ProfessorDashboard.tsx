@@ -4,6 +4,7 @@ import {
   carregarDashboardProfessor,
   type DashboardProfessor,
 } from "../../services/professorDashboardService";
+import GerenciarTurmasParceiro from "./GerenciarTurmasParceiro";
 import "./ProfessorDashboard.css";
 
 export default function ProfessorDashboard() {
@@ -62,6 +63,8 @@ export default function ProfessorDashboard() {
         </div>
         <Link to="/parceiro/mentoria">Gerenciar trilhas →</Link>
       </section>
+
+      <GerenciarTurmasParceiro onChanged={carregar} />
 
       <section className="prof-dashboard-kpis" aria-label="Indicadores principais">
         <Kpi titulo="Alunos ativos" valor={String(i.alunosAtivos)} detalhe={`${i.alunosAtivosHoje} estudaram hoje`} />
