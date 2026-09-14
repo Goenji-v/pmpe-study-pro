@@ -32,19 +32,26 @@ export default function MentoriaCronometroBridge() {
 
   useEffect(() => {
     function aoFinalizarSessao() {
+      const sessao = sessaoAtual.current;
       const tarefa = lerTarefaMentoriaAtiva();
+
       if (tarefa) {
+        const correspondeTarefa =
+          mesmoTexto(sessao.materia, tarefa.materia) &&
+          mesmoTexto(sessao.assunto, tarefa.assunto);
+
         limparTarefaMentoriaAtiva();
-        void atualizarStatusTarefaMentoria(tarefa.id, "concluido")
-          .then(() => window.dispatchEvent(new Event("pmpe-mentoria-cronograma-atualizado")))
-          .catch((erro) => console.error("Falha ao concluir tarefa da mentoria:", erro));
+        if (correspondeTarefa) {
+          void atualizarStatusTarefaMentoria(tarefa.id, "concluido")
+            .then(() => window.dispatchEvent(new Event("pmpe-mentoria-cronograma-atualizado")))
+            .catch((erro) => console.error("Falha ao concluir tarefa da mentoria:", erro));
+        }
       }
 
       const aula = lerAulaMentoriaAtiva();
       if (!aula) return;
 
-      const sessao = sessaoAtual.current;
-      const corresponde =
+      const correspondeAula =
         mesmoTexto(sessao.materia, aula.disciplina) &&
         mesmoTexto(sessao.modulo ?? "", aula.modulo) &&
         mesmoTexto(sessao.assunto, aula.titulo);
@@ -52,7 +59,7 @@ export default function MentoriaCronometroBridge() {
       // A referência é de uso único. Se outra sessão tiver substituído o
       // cronômetro, ela nunca pode concluir silenciosamente a aula anterior.
       limparAulaMentoriaAtiva();
-      if (!corresponde) return;
+      if (!correspondeAula) return;
 
       void marcarAulaMentoria(aula.aulaId, true)
         .then(() => {
