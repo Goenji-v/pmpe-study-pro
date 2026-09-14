@@ -5,6 +5,8 @@ const CHAVE_AULA_MENTORIA_ATIVA = "mentoria:aula-ativa";
 export type AulaMentoriaAtiva = {
   aulaId: string;
   cursoId: string;
+  disciplinaId: string;
+  moduloId: string;
   curso: string;
   disciplina: string;
   modulo: string;
@@ -31,6 +33,8 @@ export function lerAulaMentoriaAtiva(): AulaMentoriaAtiva | null {
     return {
       aulaId: valor.aulaId,
       cursoId: valor.cursoId ?? "",
+      disciplinaId: valor.disciplinaId ?? "",
+      moduloId: valor.moduloId ?? "",
       curso: valor.curso ?? "",
       disciplina: valor.disciplina ?? "",
       modulo: valor.modulo ?? "",
