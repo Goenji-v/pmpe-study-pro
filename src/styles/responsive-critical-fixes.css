@@ -1,0 +1,155 @@
+/* Correções pontuais detectadas pelo E2E autenticado.
+   Mantém o visual atual e impede que padding/min-content empurre a página para fora da viewport. */
+
+.materiais-container,
+.conteudos-container,
+.simulados-container {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.materiais-container *,
+.conteudos-container *,
+.simulados-container * {
+  box-sizing: border-box;
+}
+
+/* Materiais: campos com width: 100% não podem somar o padding à largura da coluna. */
+.materiais-grid,
+.materiais-grid > *,
+.materiais-cadastro,
+.materiais-biblioteca,
+.materiais-filtros,
+.materiais-filtros > *,
+.materiais-campo,
+.material-card,
+.material-info,
+.material-acoes {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.materiais-campo input,
+.materiais-campo select,
+.materiais-campo textarea,
+.materiais-filtros input,
+.materiais-filtros select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Conteúdos: a área útil fica menor por causa do menu lateral.
+   Reduzimos a grade antes que os formulários de 3/5 colunas gerem min-content excessivo. */
+.conteudos-cabecalho,
+.conteudos-cadastros,
+.conteudos-cadastros > *,
+.conteudos-painel-form,
+.conteudos-grid-form,
+.conteudos-grid-form > *,
+.conteudos-linha-form,
+.conteudos-linha-form > *,
+.conteudos-materia-card,
+.conteudos-modulo-card,
+.conteudos-modulo-topo,
+.conteudos-modulo-toggle,
+.conteudos-assuntos,
+.conteudos-assunto-item,
+.conteudos-assunto-info,
+.conteudos-acoes-unificadas,
+.conteudos-etapas-assunto,
+.conteudos-editor-bloco,
+.conteudos-editor-adicionar,
+.conteudos-editor-adicionar > *,
+.conteudos-material-form,
+.conteudos-material-form > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.conteudos-cabecalho input,
+.conteudos-painel-form input,
+.conteudos-painel-form select,
+.conteudos-modal input,
+.conteudos-modal select,
+.conteudos-modal textarea,
+.conteudos-mover,
+.conteudos-mover-compacto {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1400px) {
+  .conteudos-cadastros-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .conteudos-cadastros-3 > article:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .conteudos-grid-form-assunto,
+  .conteudos-grid-form-modulo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1000px) {
+  .conteudos-cadastros,
+  .conteudos-cadastros-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .conteudos-cadastros-3 > article:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 650px) {
+  .conteudos-grid-form,
+  .conteudos-grid-form-assunto,
+  .conteudos-grid-form-modulo,
+  .conteudos-material-form,
+  .conteudos-editor-adicionar,
+  .conteudos-editor-adicionar-tarefa {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Simulados: o formulário móvel estourava a viewport porque inputs de 100%
+   ainda somavam padding/borda à largura declarada. */
+.simulados-resumo,
+.simulados-grid,
+.simulados-grid > *,
+.simulados-card,
+.simulado-form-group,
+.simulado-form-row,
+.simulado-form-row > *,
+.simulados-lista,
+.simulado-item,
+.simulado-item-conteudo,
+.simulado-item-topo,
+.simulado-acoes,
+.simulados-central-acoes,
+.simulados-central-acao {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.simulados-grid {
+  grid-template-columns: minmax(0, 430px) minmax(0, 1fr);
+}
+
+.simulado-form-group input,
+.simulado-form-group select,
+.simulado-form-group textarea,
+.simulado-salvar {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1050px) {
+  .simulados-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
