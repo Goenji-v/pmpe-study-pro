@@ -14,6 +14,7 @@ import {
   type GestaoParceiro,
   type ResumoParceiro,
 } from "../../services/parceriasService";
+import { obterPermissoesParceiro } from "../../utils/permissoesParceiro";
 import ProfessorDashboard from "./ProfessorDashboard";
 import "./Parceiro.css";
 import "./ParceiroArea.css";
@@ -41,10 +42,11 @@ export default function Parceiro() {
   const [mensagem, setMensagem] = useState("");
   const [linkCriado, setLinkCriado] = useState("");
 
-  const podeGerenciar =
-    contexto?.papel === "proprietario" ||
-    contexto?.papel === "gestor" ||
-    contexto?.papel === "professor";
+  const permissoes = useMemo(
+    () => obterPermissoesParceiro(contexto?.papel),
+    [contexto?.papel],
+  );
+  const podeGerenciar = permissoes.podeAcessarArea;
 
   const carregar = useCallback(async () => {
     if (!podeGerenciar) {
@@ -86,6 +88,16 @@ export default function Parceiro() {
 
   const pendentes = gestao.solicitacoes.filter((s) => s.status === "pendente").length;
   const turmasAtivas = gestao.turmas.filter((turma) => turma.ativa);
+  const abas = useMemo(() => {
+    const itens: [Aba, string][] = [
+      ["visao", "Visão geral"],
+      ["alunos", "Alunos e turmas"],
+    ];
+    if (permissoes.podeGerenciarConvites) itens.push(["convites", "Convites"]);
+    if (permissoes.podeVerFinanceiro) itens.push(["financeiro", "Financeiro"]);
+    if (permissoes.podeVerHistorico) itens.push(["auditoria", "Histórico"]);
+    return itens;
+  }, [permissoes]);
 
   async function executar(chave: string, tarefa: () => Promise<void>, sucesso?: string) {
     try {
@@ -103,6 +115,7 @@ export default function Parceiro() {
   }
 
   async function responder(id: string, decisao: "aprovar" | "recusar") {
+    if (!permissoes.podeGerenciarConvites) return;
     await executar(
       `solicitacao-${id}`,
       () => decidirSolicitacao(id, decisao),
@@ -114,6 +127,7 @@ export default function Parceiro() {
     aluno: AlunoParceiro,
     status: "ativa" | "suspensa" | "cancelada"
   ) {
+    if (!permissoes.podeGerenciarAlunos) return;
     const motivo =
       status === "suspensa"
         ? "Acesso suspenso pelo responsável da turma."
@@ -133,6 +147,7 @@ export default function Parceiro() {
   }
 
   async function moverAluno(aluno: AlunoParceiro, turmaDestinoId: string) {
+    if (!permissoes.podeGerenciarAlunos) return;
     if (!turmaDestinoId || turmaDestinoId === aluno.turmaId) return;
     const destino = gestao.turmas.find((turma) => turma.id === turmaDestinoId);
     if (!destino) return;
@@ -147,6 +162,7 @@ export default function Parceiro() {
   }
 
   async function alternarConvite(id: string, ativo: boolean) {
+    if (!permissoes.podeGerenciarConvites) return;
     await executar(
       `convite-${id}`,
       () => alterarStatusConvite(id, ativo),
@@ -156,6 +172,7 @@ export default function Parceiro() {
 
   async function gerar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (!permissoes.podeGerenciarConvites) return;
     const form = new FormData(evento.currentTarget);
     const turma = String(form.get("turma") || "");
     if (!turma) return;
@@ -194,13 +211,13 @@ export default function Parceiro() {
   if (!podeGerenciar) return <Navigate to="/" replace />;
 
   return (
-    <section className="parceiro-pagina">
+    <section className={`parceiro-pagina papel-${contexto?.papel || "desconhecido"}`}>
       <header className="parceiro-cabecalho parceiro-area-cabecalho">
         <div>
           <span>ÁREA DO PARCEIRO</span>
           <h1>{resumo?.parceiroNome || contexto?.parceiroNome || "Minha parceria"}</h1>
           <p>
-            Gerencie suas turmas, acompanhe os alunos e mantenha o cronograma e os conteúdos da parceria atualizados.
+            Acompanhe os alunos e mantenha o cronograma e os conteúdos da parceria atualizados conforme as permissões do seu perfil.
           </p>
           <div className="parceiro-area-atalhos">
             <Link to="/parceiro/mentoria">Cronograma da turma</Link>
@@ -219,13 +236,7 @@ export default function Parceiro() {
       {mensagem && <div className="parceiro-area-sucesso" role="status">{mensagem}</div>}
 
       <nav className="parceiro-abas" aria-label="Seções da área do parceiro">
-        {([
-          ["visao", "Visão geral"],
-          ["alunos", "Alunos e turmas"],
-          ["convites", "Convites"],
-          ["financeiro", "Financeiro"],
-          ["auditoria", "Histórico"],
-        ] as [Aba, string][]).map(([id, nome]) => (
+        {abas.map(([id, nome]) => (
           <button
             type="button"
             key={id}
@@ -248,17 +259,17 @@ export default function Parceiro() {
                 <article>
                   <span>Turmas</span>
                   <strong>{turmasAtivas.length}</strong>
-                  <small>Você administra apenas as turmas vinculadas à sua parceria.</small>
+                  <small>{permissoes.podeGerenciarTurmas ? "Você pode criar, editar, arquivar e duplicar turmas." : "Você acompanha as turmas vinculadas à sua parceria."}</small>
                 </article>
                 <article>
                   <span>Alunos ativos</span>
                   <strong>{resumo?.alunosAtivos ?? 0}</strong>
-                  <small>Dados e desempenho ficam restritos a esses alunos.</small>
+                  <small>Dados e desempenho ficam restritos aos alunos desta parceria.</small>
                 </article>
                 <article>
-                  <span>Solicitações</span>
-                  <strong>{pendentes}</strong>
-                  <small>Entradas aguardando sua aprovação.</small>
+                  <span>{permissoes.podeGerenciarConvites ? "Solicitações" : "Seu perfil"}</span>
+                  <strong>{permissoes.podeGerenciarConvites ? pendentes : "Professor"}</strong>
+                  <small>{permissoes.podeGerenciarConvites ? "Entradas aguardando sua aprovação." : "Foco em conteúdo, cronograma e acompanhamento pedagógico."}</small>
                 </article>
               </section>
               <ProfessorDashboard />
@@ -271,7 +282,9 @@ export default function Parceiro() {
                 <div>
                   <h2>Alunos das suas turmas</h2>
                   <p>
-                    Você pode acompanhar, suspender, remover e mover alunos entre turmas desta mesma parceria.
+                    {permissoes.podeGerenciarAlunos
+                      ? "Você pode acompanhar, suspender, remover e mover alunos entre turmas desta mesma parceria."
+                      : "Você pode acompanhar o desempenho dos alunos. Alterações de acesso e movimentações ficam com proprietário ou gestor."}
                   </p>
                 </div>
                 <input
@@ -300,7 +313,7 @@ export default function Parceiro() {
                     <span>Turma</span>
                     <span>Desempenho</span>
                     <span>Acesso</span>
-                    <span>Ações</span>
+                    <span>{permissoes.podeGerenciarAlunos ? "Ações" : "Permissão"}</span>
                   </div>
 
                   {filtrados.map((aluno) => (
@@ -325,68 +338,74 @@ export default function Parceiro() {
                         <b className={`status ${aluno.status}`}>{aluno.status}</b>
                         <small>{aluno.expiraEm ? `até ${data(aluno.expiraEm)}` : ""}</small>
                       </div>
-                      <div className="parceiro-acoes parceiro-area-acoes">
-                        {aluno.status !== "cancelada" && turmasAtivas.length > 1 && (
-                          <select
-                            aria-label={`Mover ${aluno.nome} para outra turma`}
-                            value=""
-                            disabled={processando === `mover-${aluno.licencaId}`}
-                            onChange={(e) => void moverAluno(aluno, e.target.value)}
-                          >
-                            <option value="">Mover para...</option>
-                            {turmasAtivas
-                              .filter((turma) => turma.id !== aluno.turmaId)
-                              .map((turma) => (
-                                <option key={turma.id} value={turma.id}>{turma.nome}</option>
-                              ))}
-                          </select>
-                        )}
+                      {permissoes.podeGerenciarAlunos ? (
+                        <div className="parceiro-acoes parceiro-area-acoes">
+                          {aluno.status !== "cancelada" && turmasAtivas.length > 1 && (
+                            <select
+                              aria-label={`Mover ${aluno.nome} para outra turma`}
+                              value=""
+                              disabled={processando === `mover-${aluno.licencaId}`}
+                              onChange={(e) => void moverAluno(aluno, e.target.value)}
+                            >
+                              <option value="">Mover para...</option>
+                              {turmasAtivas
+                                .filter((turma) => turma.id !== aluno.turmaId)
+                                .map((turma) => (
+                                  <option key={turma.id} value={turma.id}>{turma.nome}</option>
+                                ))}
+                            </select>
+                          )}
 
-                        {aluno.status === "ativa" ? (
-                          <button
-                            type="button"
-                            disabled={processando === `licenca-${aluno.licencaId}`}
-                            onClick={() => void mudarLicenca(aluno, "suspensa")}
-                          >
-                            Suspender
-                          </button>
-                        ) : aluno.status === "suspensa" ? (
-                          <button
-                            type="button"
-                            disabled={processando === `licenca-${aluno.licencaId}`}
-                            onClick={() => void mudarLicenca(aluno, "ativa")}
-                          >
-                            Reativar
-                          </button>
-                        ) : null}
+                          {aluno.status === "ativa" ? (
+                            <button
+                              type="button"
+                              disabled={processando === `licenca-${aluno.licencaId}`}
+                              onClick={() => void mudarLicenca(aluno, "suspensa")}
+                            >
+                              Suspender
+                            </button>
+                          ) : aluno.status === "suspensa" ? (
+                            <button
+                              type="button"
+                              disabled={processando === `licenca-${aluno.licencaId}`}
+                              onClick={() => void mudarLicenca(aluno, "ativa")}
+                            >
+                              Reativar
+                            </button>
+                          ) : null}
 
-                        {aluno.status !== "cancelada" && (
-                          <button
-                            type="button"
-                            className="perigo"
-                            disabled={processando === `licenca-${aluno.licencaId}`}
-                            onClick={() => {
-                              if (window.confirm(`Remover ${aluno.nome} desta parceria?`)) {
-                                void mudarLicenca(aluno, "cancelada");
-                              }
-                            }}
-                          >
-                            Remover
-                          </button>
-                        )}
-                      </div>
+                          {aluno.status !== "cancelada" && (
+                            <button
+                              type="button"
+                              className="perigo"
+                              disabled={processando === `licenca-${aluno.licencaId}`}
+                              onClick={() => {
+                                if (window.confirm(`Remover ${aluno.nome} desta parceria?`)) {
+                                  void mudarLicenca(aluno, "cancelada");
+                                }
+                              }}
+                            >
+                              Remover
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <small className="parceiro-area-permissao">Somente acompanhamento pedagógico.</small>
+                      )}
                     </article>
                   ))}
                 </div>
               )}
 
-              <p className="parceiro-area-regra">
-                Transferências para uma turma de outro parceiro não ficam disponíveis aqui. Esse tipo de mudança precisa ser solicitado ao suporte do Study Pro.
-              </p>
+              {permissoes.podeGerenciarAlunos && (
+                <p className="parceiro-area-regra">
+                  Transferências para uma turma de outro parceiro não ficam disponíveis aqui. Esse tipo de mudança precisa ser solicitado ao suporte do Study Pro.
+                </p>
+              )}
             </section>
           )}
 
-          {aba === "convites" && (
+          {permissoes.podeGerenciarConvites && aba === "convites" && (
             <div className="parceiro-grade">
               <section className="parceiro-lista">
                 <h2>Solicitações pendentes</h2>
@@ -499,7 +518,7 @@ export default function Parceiro() {
             </div>
           )}
 
-          {aba === "financeiro" && (
+          {permissoes.podeVerFinanceiro && aba === "financeiro" && (
             <section className="parceiro-lista">
               <h2>Financeiro da parceria</h2>
               <p>A estimativa considera somente licenças ativas desta parceria.</p>
@@ -523,7 +542,7 @@ export default function Parceiro() {
             </section>
           )}
 
-          {aba === "auditoria" && (
+          {permissoes.podeVerHistorico && aba === "auditoria" && (
             <section className="parceiro-lista">
               <h2>Histórico da parceria</h2>
               <p>Alterações de acesso, convites e movimentações de turma ficam registradas aqui.</p>
@@ -586,6 +605,8 @@ function rotuloEvento(evento: string) {
     licenca_ativada: "Acesso ativado",
     licenca_suspensa: "Acesso suspenso",
     licenca_cancelada: "Aluno removido",
+    turma_criada: "Turma criada",
+    turma_atualizada: "Turma atualizada",
   };
   return rotulos[evento] || evento.replaceAll("_", " ");
 }
