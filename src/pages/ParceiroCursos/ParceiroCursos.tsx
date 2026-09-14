@@ -13,10 +13,13 @@ import {
   excluirItemCurso,
   type AulaCursoParceiro,
   type CursoParceiro,
+  type CursoStatusParceiro,
   type PainelCursosParceiro,
 } from "../../services/cursoParceiroService";
+import CursoFluxoPublicacao from "./CursoFluxoPublicacao";
 import CursoImportador from "./CursoImportador";
 import "./ParceiroCursos.css";
+import "./CursoFluxoPublicacao.css";
 
 const VAZIO: PainelCursosParceiro = { parceiroId: "", turmas: [], cursos: [] };
 
@@ -92,7 +95,7 @@ export default function ParceiroCursos() {
       const novoId = await criarCursoParceiro(painel.parceiroId, nome, String(form.get("descricao") || ""));
       setCursoId(novoId);
       evento.currentTarget.reset();
-    }, "Curso criado.");
+    }, "Curso criado como rascunho.");
   }
 
   async function novaDisciplina(evento: FormEvent<HTMLFormElement>, atual: CursoParceiro) {
@@ -246,7 +249,7 @@ export default function ParceiroCursos() {
                   onClick={() => setCursoId(item.id)}
                 >
                   <strong>{item.nome}</strong>
-                  <small>{item.disciplinas.length} disciplinas · {contarAulas(item)} links</small>
+                  <small>{rotuloStatusCurto(item.status)} · {item.disciplinas.length} disciplinas · {contarAulas(item)} links</small>
                 </button>
               ))}
             </div>
@@ -256,7 +259,7 @@ export default function ParceiroCursos() {
               <input name="nome" required minLength={2} placeholder="Ex.: PMPE 2027" />
               <textarea name="descricao" placeholder="Descrição do curso" />
               <button disabled={processando === "curso-novo"}>
-                {processando === "curso-novo" ? "Criando..." : "Criar curso"}
+                {processando === "curso-novo" ? "Criando..." : "Criar rascunho"}
               </button>
             </form>
           </aside>
@@ -293,18 +296,28 @@ export default function ParceiroCursos() {
                     <button
                       type="button"
                       className="perigo"
-                      disabled={processando === `excluir-curso-${curso.id}`}
+                      disabled={curso.status === "publicado" || curso.possuiProgresso || processando === `excluir-curso-${curso.id}`}
+                      title={curso.status === "publicado" ? "Arquive o curso antes de excluir." : curso.possuiProgresso ? "Há progresso de alunos protegido neste curso." : undefined}
                       onClick={() => void excluir(
                         "curso",
                         curso.id,
                         curso.nome,
-                        `Serão excluídas ${curso.disciplinas.length} disciplinas, ${contarModulos(curso)} módulos e ${contarAulas(curso)} aulas, além do progresso ligado a essas aulas.`
+                        `Serão excluídas ${curso.disciplinas.length} disciplinas, ${contarModulos(curso)} módulos e ${contarAulas(curso)} aulas.`
                       )}
                     >
-                      Excluir curso
+                      {curso.status === "publicado" || curso.possuiProgresso ? "Exclusão protegida" : "Excluir curso"}
                     </button>
                   </div>
                 </section>
+
+                <CursoFluxoPublicacao
+                  curso={curso}
+                  onAtualizado={carregar}
+                  onDuplicado={async (id) => {
+                    setCursoId(id);
+                    await carregar();
+                  }}
+                />
 
                 <section className="pc-resumo">
                   <Resumo titulo="Disciplinas" valor={curso.disciplinas.length} />
@@ -316,13 +329,19 @@ export default function ParceiroCursos() {
                   <Resumo titulo="Alunos liberados" valor={curso.progresso.length} />
                 </section>
 
-                <CursoImportador parceiroId={painel.parceiroId} cursoAtual={curso} onImportado={async (id) => { setCursoId(id); await carregar(); }} />
+                {curso.status === "rascunho" ? (
+                  <CursoImportador parceiroId={painel.parceiroId} cursoAtual={curso} onImportado={async (id) => { setCursoId(id); await carregar(); }} />
+                ) : (
+                  <div className="pc-estado">
+                    Para importar uma estrutura grande neste curso, restaure-o como rascunho ou duplique o curso. Assim o conteúdo ao vivo dos alunos não é reestruturado por engano.
+                  </div>
+                )}
 
                 <section className="pc-card">
                   <div className="pc-card-cabecalho">
                     <div>
                       <h3>Liberação por turma</h3>
-                      <p>Somente alunos ativos nas turmas marcadas enxergam este curso.</p>
+                      <p>As turmas podem ser preparadas no rascunho; os alunos só enxergam o curso quando ele estiver publicado.</p>
                     </div>
                   </div>
                   <div className="pc-turmas">
@@ -345,7 +364,7 @@ export default function ParceiroCursos() {
                     <div>
                       <h3>Conteúdo e links externos</h3>
                       <p>
-                        Cadastre um link por aula. Se a plataforma do parceiro mudar o endereço, use “Editar link”; o novo endereço passa a valer imediatamente.
+                        Cadastre um link por aula. Alterações de link preservam o ID da aula e o progresso já feito. Exclusões em curso publicado ou em item com progresso são bloqueadas.
                       </p>
                     </div>
                   </div>
@@ -386,7 +405,7 @@ export default function ParceiroCursos() {
                                 "disciplina",
                                 disciplina.id,
                                 disciplina.titulo,
-                                `Os ${disciplina.modulos.length} módulos e ${disciplina.modulos.reduce((n, modulo) => n + modulo.aulas.length, 0)} aulas desta disciplina também serão excluídos.`
+                                `Os ${disciplina.modulos.length} módulos e ${disciplina.modulos.reduce((n, modulo) => n + modulo.aulas.length, 0)} aulas desta disciplina também serão excluídos. Se houver progresso, a exclusão será bloqueada.`
                               )}
                             >
                               Excluir
@@ -430,7 +449,7 @@ export default function ParceiroCursos() {
                                     className="mini perigo"
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      void excluir("modulo", modulo.id, modulo.titulo, `As ${modulo.aulas.length} aulas deste módulo também serão excluídas.`);
+                                      void excluir("modulo", modulo.id, modulo.titulo, `As ${modulo.aulas.length} aulas deste módulo também serão excluídas. Se houver progresso, a exclusão será bloqueada.`);
                                     }}
                                   >
                                     Excluir
@@ -475,7 +494,7 @@ export default function ParceiroCursos() {
                                       <button
                                         type="button"
                                         className="mini perigo"
-                                        onClick={() => void excluir("aula", aula.id, aula.titulo, "O progresso associado a esta aula também será removido.")}
+                                        onClick={() => void excluir("aula", aula.id, aula.titulo, "Se já existir progresso nesta aula, a exclusão será bloqueada e os dados serão preservados.")}
                                       >
                                         Excluir
                                       </button>
@@ -563,6 +582,12 @@ function mediaProgresso(curso: CursoParceiro) {
   return curso.progresso.length
     ? Math.round(curso.progresso.reduce((n, aluno) => n + aluno.percentual, 0) / curso.progresso.length)
     : 0;
+}
+
+function rotuloStatusCurto(status: CursoStatusParceiro) {
+  if (status === "publicado") return "Publicado";
+  if (status === "arquivado") return "Arquivado";
+  return "Rascunho";
 }
 
 function rotuloTipo(tipo: string) {

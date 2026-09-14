@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 
 export type TurmaCursoParceiro = { id: string; nome: string; ativa: boolean };
+export type CursoStatusParceiro = "rascunho" | "publicado" | "arquivado";
 export type AulaCursoParceiro = {
   id: string;
   titulo: string;
@@ -21,12 +22,16 @@ export type CursoParceiro = {
   nome: string;
   descricao: string;
   ativo: boolean;
+  status: CursoStatusParceiro;
+  publicadoEm: string | null;
+  arquivadoEm: string | null;
+  possuiProgresso: boolean;
   turmaIds: string[];
   disciplinas: DisciplinaCursoParceiro[];
   progresso: ProgressoAlunoCurso[];
 };
 export type PainelCursosParceiro = { parceiroId: string; turmas: TurmaCursoParceiro[]; cursos: CursoParceiro[] };
-export type CursoMentoriaAluno = Omit<CursoParceiro, "turmaIds" | "progresso" | "ativo">;
+export type CursoMentoriaAluno = Pick<CursoParceiro, "id" | "nome" | "descricao" | "disciplinas">;
 
 export type AulaImportacaoCurso = {
   titulo: string;
@@ -77,10 +82,29 @@ export async function criarCursoParceiro(parceiroId: string, nome: string, descr
     parceiro_id: parceiroId,
     nome: nome.trim(),
     descricao: descricao.trim() || null,
+    status: "rascunho",
+    ativo: true,
     criado_por: userId,
   }).select("id").single();
   if (error) throw new Error(`Não foi possível criar o curso: ${error.message}`);
   return String(data.id);
+}
+
+export async function alterarStatusCursoParceiro(cursoId: string, status: CursoStatusParceiro) {
+  const { error } = await supabase.rpc("alterar_status_curso_parceiro", {
+    p_curso_id: cursoId,
+    p_status: status,
+  });
+  if (error) throw new Error(`Não foi possível alterar o status do curso: ${error.message}`);
+}
+
+export async function duplicarCursoParceiro(cursoId: string) {
+  const { data, error } = await supabase.rpc("duplicar_curso_parceiro", {
+    p_curso_id: cursoId,
+  });
+  if (error) throw new Error(`Não foi possível duplicar o curso: ${error.message}`);
+  if (!data) throw new Error("A cópia do curso não retornou um identificador.");
+  return String(data);
 }
 
 export async function criarDisciplinaCurso(cursoId: string, titulo: string, descricao: string, ordem: number) {
@@ -172,7 +196,11 @@ export async function excluirItemCurso(
     aula: "curso_parceiro_aulas",
   } as const;
   const { error } = await supabase.from(tabelas[entidade]).delete().eq("id", id);
-  if (error) throw new Error(`Não foi possível excluir o item: ${error.message}`);
+  if (error) {
+    const protegida = /progresso dos alunos foi preservado|possui progresso de alunos/i.test(error.message);
+    if (protegida) throw new Error(error.message);
+    throw new Error(`Não foi possível excluir o item: ${error.message}`);
+  }
 }
 
 export async function importarEstruturaCurso({
@@ -261,11 +289,19 @@ function validarRascunhoImportacao(rascunho: RascunhoImportacaoCurso) {
 }
 
 function normalizarCursoParceiro(item: Record<string, unknown>): CursoParceiro {
+  const statusBruto = texto(item.status);
+  const status: CursoStatusParceiro = statusBruto === "rascunho" || statusBruto === "arquivado"
+    ? statusBruto
+    : "publicado";
   return {
     id: texto(item.id),
     nome: texto(item.nome),
     descricao: texto(item.descricao),
     ativo: item.ativo !== false,
+    status,
+    publicadoEm: texto(item.publicado_em) || null,
+    arquivadoEm: texto(item.arquivado_em) || null,
+    possuiProgresso: item.possui_progresso === true,
     turmaIds: Array.isArray(item.turma_ids) ? item.turma_ids.map(texto).filter(Boolean) : [],
     disciplinas: lista(item.disciplinas).map((d) => ({
       id: texto(d.id),
