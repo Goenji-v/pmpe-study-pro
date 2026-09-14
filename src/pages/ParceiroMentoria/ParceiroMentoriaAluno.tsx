@@ -19,6 +19,7 @@ import {
   salvarRotaMentoriaAluno,
   type ItemRotaMentoriaAluno,
 } from "../../services/rotaMentoriaAlunoService";
+import ProgressoCursosAluno from "./ProgressoCursosAluno";
 import "./ParceiroMentoriaAluno.css";
 
 export default function ParceiroMentoriaAluno() {
@@ -236,6 +237,8 @@ export default function ParceiroMentoriaAluno() {
             <Metrica titulo="Revisões atrasadas" valor={String(painel.revisoes.atrasadas)} detalhe={`${painel.revisoes.pendentes} pendentes`} alerta={painel.revisoes.atrasadas > 0} />
             <Metrica titulo="Reforços" valor={String(reforcosPendentes.length)} detalhe="pendentes na mentoria" alerta={reforcosPendentes.length > 0} />
           </div>
+
+          <ProgressoCursosAluno userId={userId} turmaId={aluno.turmaId} />
 
           <div className="mentoria-aluno-principal">
             <section className="mentoria-aluno-card rota">
