@@ -1,0 +1,646 @@
+/* Studio Pro visual layer for remaining legacy/functional pages.
+   Presentation only: no business logic, routes, services or state are changed. */
+
+.page-interna .conteudos-container,
+.page-interna .meu-edital-page,
+.page-interna .plano-edital-wrapper,
+.page-interna .plano-edital-page,
+.page-interna .cursos-page,
+.page-interna .simulados-container,
+.page-interna .central-desempenho-container,
+.page-interna .historico-sessoes-container,
+.page-interna .estatisticas-container,
+.page-interna .estatisticas-sessoes-container {
+  --sp2-surface: #081728;
+  --sp2-card: #0b1a2d;
+  --sp2-raised: #10243a;
+  --sp2-border: rgba(75, 113, 151, .30);
+  --sp2-border-strong: rgba(99, 127, 154, .48);
+  --sp2-text: #f6f8fc;
+  --sp2-muted: #a7b7ca;
+  --sp2-muted-2: #7f93a9;
+  --sp2-gold: #edc677;
+  --sp2-gold-strong: #f3d27a;
+  --sp2-blue: #53a7ff;
+  --sp2-green: #34dc83;
+  --sp2-red: #ff777a;
+  color: var(--sp2-text);
+}
+
+/* ===== Estudos / Conteúdos ===== */
+.page-interna .conteudos-container {
+  max-width: 1560px;
+  margin: 0 auto;
+}
+
+.page-interna .conteudos-cabecalho h1,
+.page-interna .meu-edital-hero h1,
+.page-interna .plano-edital-hero h1,
+.page-interna .cursos-hero h1,
+.page-interna .simulados-title,
+.page-interna .central-desempenho-cabecalho h1,
+.page-interna .historico-sessoes-cabecalho h1,
+.page-interna .estatisticas-title,
+.page-interna .estatisticas-sessoes-cabecalho h1 {
+  color: var(--sp2-text) !important;
+  font-size: clamp(28px, 3vw, 40px) !important;
+  letter-spacing: -.8px;
+}
+
+.page-interna .conteudos-cabecalho p,
+.page-interna .meu-edital-hero p,
+.page-interna .plano-edital-hero p,
+.page-interna .cursos-hero p,
+.page-interna .simulados-subtitle,
+.page-interna .central-desempenho-cabecalho p,
+.page-interna .historico-sessoes-cabecalho p,
+.page-interna .estatisticas-subtitle,
+.page-interna .estatisticas-sessoes-cabecalho p {
+  color: var(--sp2-muted) !important;
+  font-size: 13px;
+}
+
+.page-interna .conteudos-painel-form,
+.page-interna .conteudos-materia-card,
+.page-interna .conteudos-modulo-card {
+  background: linear-gradient(130deg, rgba(16, 36, 58, .96), rgba(11, 26, 45, .98)) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .10);
+}
+
+.page-interna .conteudos-painel-form h2,
+.page-interna .conteudos-materia-topo h2,
+.page-interna .conteudos-modulo-topo h3 {
+  color: #f3f7fb !important;
+}
+
+.page-interna .conteudos-cabecalho input,
+.page-interna .conteudos-painel-form input,
+.page-interna .conteudos-painel-form select,
+.page-interna .conteudos-mover,
+.page-interna .conteudos-modal input,
+.page-interna .conteudos-modal select,
+.page-interna .conteudos-modal textarea {
+  color: #edf3f8 !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .conteudos-painel-form button,
+.page-interna .conteudos-assunto-item button,
+.page-interna .conteudos-modal button {
+  border-radius: 7px !important;
+}
+
+.page-interna .conteudos-painel-form > button:not(.conteudos-excluir),
+.page-interna .conteudos-estudei-agora,
+.page-interna .conteudos-acoes-aula button:first-child {
+  color: #172333 !important;
+  background: linear-gradient(120deg, #efcf88, #ddb45e) !important;
+  border: 1px solid rgba(237, 207, 146, .42) !important;
+}
+
+.page-interna .conteudos-progresso,
+.page-interna .conteudos-progresso-modulo {
+  background: #17314b !important;
+}
+
+.page-interna .conteudos-progresso div,
+.page-interna .conteudos-progresso-modulo div {
+  background: linear-gradient(90deg, #d9ae55, #f3d27a) !important;
+}
+
+.page-interna .conteudos-materia-acoes strong,
+.page-interna .conteudos-modulo-seta,
+.page-interna .conteudos-trilha-fixa {
+  color: var(--sp2-gold) !important;
+}
+
+.page-interna .conteudos-trilha-fixa {
+  background: rgba(237, 198, 119, .09) !important;
+  border-color: rgba(237, 198, 119, .30) !important;
+}
+
+.page-interna .conteudos-assunto-item {
+  background: rgba(8, 23, 40, .84) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 8px !important;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.page-interna .conteudos-assunto-item:hover {
+  transform: translateY(-1px);
+  background: #0d1e31 !important;
+  border-color: var(--sp2-border-strong) !important;
+}
+
+.page-interna .conteudos-assunto-info strong {
+  color: #edf3f8 !important;
+}
+
+.page-interna .conteudos-assunto-info small,
+.page-interna .conteudos-modulo-topo small,
+.page-interna .conteudos-metrica-aula span,
+.page-interna .conteudos-metricas-aula span {
+  color: #8fa3bb !important;
+}
+
+.page-interna .conteudos-metricas-aula span {
+  background: #10243a !important;
+  border-color: var(--sp2-border) !important;
+}
+
+.page-interna .conteudos-modal {
+  background: #0b1a2d !important;
+  border-color: var(--sp2-border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .34);
+}
+
+.page-interna .conteudos-materiais-lista article {
+  background: #081728 !important;
+  border: 1px solid var(--sp2-border);
+  border-radius: 7px !important;
+}
+
+/* ===== Meu Edital ===== */
+.page-interna .meu-edital-page {
+  max-width: 1280px;
+}
+
+.page-interna .meu-edital-hero,
+.page-interna .edital-card {
+  background: linear-gradient(130deg, rgba(16, 36, 58, .96), rgba(11, 26, 45, .98)) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .11);
+}
+
+.page-interna .meu-edital-hero {
+  background:
+    radial-gradient(circle at 92% 10%, rgba(83, 167, 255, .13), transparent 34%),
+    linear-gradient(130deg, #10243a, #0b1a2d 72%) !important;
+}
+
+.page-interna .meu-edital-hero span,
+.page-interna .edital-card-cabecalho > div > span {
+  color: var(--sp2-gold) !important;
+}
+
+.page-interna .edital-fluxo span {
+  color: #8194aa !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .edital-fluxo span.ativo {
+  color: #f0d394 !important;
+  background: rgba(237, 198, 119, .11) !important;
+  border-color: rgba(237, 198, 119, .38) !important;
+}
+
+.page-interna .edital-upload {
+  background: rgba(83, 167, 255, .06) !important;
+  border-color: rgba(83, 167, 255, .32) !important;
+  border-radius: 8px !important;
+}
+
+.page-interna .edital-botao-principal {
+  color: #172333 !important;
+  background: linear-gradient(120deg, #efcf88, #ddb45e) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .edital-botao-secundario,
+.page-interna .edital-link-config {
+  color: #d7e2ed !important;
+  background: #10243a !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .edital-materia,
+.page-interna .edital-perfil-resumo {
+  background: rgba(8, 23, 40, .78) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 8px !important;
+}
+
+.page-interna .edital-materia-topo input,
+.page-interna .edital-assunto input,
+.page-interna .edital-assunto select {
+  color: #edf3f8 !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .edital-incidencia,
+.page-interna .edital-adicionar-assunto {
+  color: var(--sp2-gold) !important;
+}
+
+/* ===== Plano / Rota de estudos ===== */
+.page-interna .plano-edital-wrapper,
+.page-interna .plano-edital-page {
+  max-width: 1500px;
+  margin-inline: auto;
+}
+
+.page-interna .plano-edital-switch,
+.page-interna .plano-edital-hero,
+.page-interna .plano-edital-resumo > div,
+.page-interna .plano-edital-semana,
+.page-interna .plano-edital-semanas-nav button {
+  background: linear-gradient(130deg, rgba(16, 36, 58, .96), rgba(11, 26, 45, .98)) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 9px !important;
+}
+
+.page-interna .plano-edital-hero {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(83, 167, 255, .13), transparent 36%),
+    linear-gradient(130deg, #10243a, #0b1a2d 72%) !important;
+}
+
+.page-interna .plano-edital-hero span,
+.page-interna .plano-edital-semana > header span {
+  color: var(--sp2-gold) !important;
+}
+
+.page-interna .plano-edital-switch button {
+  color: #9fb0c4 !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .plano-edital-switch button.ativo {
+  color: #172333 !important;
+  background: linear-gradient(120deg, #efcf88, #ddb45e) !important;
+}
+
+.page-interna .plano-edital-hero button {
+  color: #d8e4ef !important;
+  background: #10243a !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .plano-edital-resumo span,
+.page-interna .plano-edital-dia-topo small,
+.page-interna .plano-edital-missoes button small {
+  color: #8498af !important;
+}
+
+.page-interna .plano-edital-resumo strong,
+.page-interna .plano-edital-semanas-nav button strong {
+  color: #eef3f8 !important;
+}
+
+.page-interna .plano-edital-progresso {
+  background: #17314b !important;
+}
+
+.page-interna .plano-edital-progresso span {
+  background: linear-gradient(90deg, #d9ae55, #34dc83) !important;
+}
+
+.page-interna .plano-edital-dia {
+  background: rgba(8, 23, 40, .72) !important;
+  border-color: rgba(75, 113, 151, .22) !important;
+  border-radius: 8px !important;
+}
+
+.page-interna .plano-edital-dia-topo > span {
+  color: #d5bb82 !important;
+}
+
+.page-interna .plano-edital-missoes button {
+  color: #ecf2f8 !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.page-interna .plano-edital-missoes button:hover {
+  transform: translateY(-1px);
+  background: #10243a !important;
+  border-color: var(--sp2-border-strong) !important;
+}
+
+.page-interna .plano-edital-semanas-nav button.ativo {
+  border-color: rgba(237, 198, 119, .42) !important;
+  background: rgba(237, 198, 119, .10) !important;
+}
+
+/* ===== Cursos ===== */
+.page-interna .cursos-page {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.page-interna .cursos-hero,
+.page-interna .cursos-importador,
+.page-interna .cursos-preview,
+.page-interna .cursos-salvos,
+.page-interna .curso-materia-card,
+.page-interna .cursos-cards > article {
+  background: linear-gradient(130deg, rgba(16, 36, 58, .96), rgba(11, 26, 45, .98)) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .09);
+}
+
+.page-interna .cursos-hero {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(83, 167, 255, .13), transparent 36%),
+    linear-gradient(130deg, #10243a, #0b1a2d 72%) !important;
+}
+
+.page-interna .cursos-hero span,
+.page-interna .cursos-preview header span,
+.page-interna .cursos-salvos header span {
+  color: var(--sp2-gold) !important;
+}
+
+.page-interna .cursos-hero-resumo div,
+.page-interna .cursos-upload-card,
+.page-interna .curso-modulo-preview {
+  background: rgba(8, 23, 40, .76) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 8px !important;
+}
+
+.page-interna .cursos-tabs button,
+.page-interna .cursos-importador button,
+.page-interna .cursos-preview button,
+.page-interna .cursos-salvos button {
+  color: #d1deea !important;
+  background: #10243a !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .cursos-tabs button.ativo,
+.page-interna .cursos-preview-acoes button:not(.secundario) {
+  color: #172333 !important;
+  background: linear-gradient(120deg, #efcf88, #ddb45e) !important;
+  border-color: rgba(237, 207, 146, .42) !important;
+}
+
+.page-interna .cursos-upload-card input,
+.page-interna .cursos-upload-card textarea,
+.page-interna .cursos-capturador textarea,
+.page-interna .cursos-preview input {
+  color: #edf3f8 !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .cursos-arquivo {
+  background: rgba(83, 167, 255, .05) !important;
+  border-color: rgba(83, 167, 255, .28) !important;
+  border-radius: 8px !important;
+}
+
+.page-interna .curso-materias-chips span {
+  color: #e4c883 !important;
+  background: rgba(237, 198, 119, .09) !important;
+}
+
+.page-interna .cursos-cards > article.ativo {
+  border-color: rgba(52, 220, 131, .34) !important;
+  box-shadow: inset 3px 0 0 rgba(52, 220, 131, .62) !important;
+}
+
+/* ===== Simulados ===== */
+.page-interna .simulados-container {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.page-interna .simulado-resumo-card,
+.page-interna .simulados-card {
+  background: linear-gradient(130deg, rgba(16, 36, 58, .96), rgba(11, 26, 45, .98)) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .10);
+}
+
+.page-interna .simulado-resumo-card span,
+.page-interna .simulado-diagnostico-item span,
+.page-interna .simulado-item-topo span {
+  color: #93a7bd !important;
+}
+
+.page-interna .simulado-resumo-card strong {
+  color: #f2f6fb;
+}
+
+.page-interna .simulado-form-group label {
+  color: #cbd7e3 !important;
+  font-size: 11px;
+}
+
+.page-interna .simulado-form-group input,
+.page-interna .simulado-form-group select,
+.page-interna .simulado-form-group textarea {
+  color: #edf3f8 !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .simulado-salvar,
+.page-interna .simulado-duplicar {
+  color: #172333 !important;
+  background: linear-gradient(120deg, #efcf88, #ddb45e) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .simulado-recomendacao,
+.page-interna .simulado-item,
+.page-interna .simulado-observacao {
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 8px !important;
+}
+
+.page-interna .simulado-recomendacao {
+  border-left-color: var(--sp2-gold) !important;
+}
+
+.page-interna .simulado-item {
+  transition: transform .16s ease, border-color .16s ease;
+}
+
+.page-interna .simulado-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--sp2-border-strong) !important;
+}
+
+/* ===== Central de Desempenho / Histórico ===== */
+.page-interna .central-desempenho-container {
+  max-width: 1560px;
+  margin: 0 auto;
+}
+
+.page-interna .central-desempenho-abas {
+  background: rgba(8, 23, 40, .82) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 10px !important;
+  padding: 7px !important;
+}
+
+.page-interna .central-desempenho-aba {
+  color: #9fb0c4 !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .central-desempenho-aba:hover {
+  color: #f5f8fb !important;
+  background: #10243a !important;
+}
+
+.page-interna .central-desempenho-aba-ativa {
+  color: #f0d394 !important;
+  background: linear-gradient(120deg, rgba(237, 198, 119, .16), rgba(83, 167, 255, .07)) !important;
+  border-color: rgba(237, 198, 119, .42) !important;
+  box-shadow: inset 0 -2px 0 #edc677 !important;
+}
+
+.page-interna .historico-sessoes-resumo-card,
+.page-interna .historico-sessao-card,
+.page-interna .historico-sessoes-vazio,
+.page-interna .estatisticas-filtros-card,
+.page-interna .estatisticas-painel,
+.page-interna .grafico-card,
+.page-interna .estatistica-card,
+.page-interna .estatisticas-sessoes-total,
+.page-interna .estatisticas-sessoes-card,
+.page-interna .estatisticas-sessoes-painel {
+  background: linear-gradient(130deg, rgba(16, 36, 58, .96), rgba(11, 26, 45, .98)) !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .09);
+}
+
+.page-interna .historico-sessoes-resumo-card span,
+.page-interna .historico-sessao-detalhes,
+.page-interna .estatistica-card span,
+.page-interna .estatistica-card small,
+.page-interna .estatisticas-sessoes-card span,
+.page-interna .estatisticas-sessoes-card small,
+.page-interna .estatisticas-sessoes-coluna > span {
+  color: #8fa3bb !important;
+}
+
+.page-interna .historico-sessao-tipo {
+  color: #e6ca89 !important;
+  background: rgba(237, 198, 119, .10) !important;
+  border: 1px solid rgba(237, 198, 119, .24);
+}
+
+.page-interna .historico-sessao-tempo,
+.page-interna .estatisticas-sessoes-total strong,
+.page-interna .estatisticas-sessoes-painel-topo > strong {
+  color: var(--sp2-gold) !important;
+}
+
+.page-interna .historico-sessao-texto,
+.page-interna .estatisticas-sessoes-materia,
+.page-interna .estatisticas-sessoes-ranking article,
+.page-interna .estatisticas-sessoes-recentes article {
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 8px !important;
+}
+
+.page-interna .historico-sessoes-filtros input,
+.page-interna .historico-sessoes-filtros select,
+.page-interna .historico-sessao-form-group input,
+.page-interna .historico-sessao-form-group select,
+.page-interna .historico-sessao-form-group textarea,
+.page-interna .estatisticas-datas input,
+.page-interna .estatisticas-selects select {
+  color: #edf3f8 !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .estatisticas-periodo,
+.page-interna .estatisticas-limpar {
+  color: #afbed0 !important;
+  background: #081728 !important;
+  border-color: var(--sp2-border) !important;
+  border-radius: 7px !important;
+}
+
+.page-interna .estatisticas-periodo.ativo {
+  color: #172333 !important;
+  background: linear-gradient(120deg, #efcf88, #ddb45e) !important;
+  border-color: rgba(237, 207, 146, .42) !important;
+}
+
+.page-interna .estatisticas-sessoes-barra-area div {
+  background: linear-gradient(180deg, #f1ce83, #c99942) !important;
+}
+
+.page-interna .historico-sessao-editar { background: #b27a27 !important; }
+.page-interna .historico-sessao-duplicar { background: #265f9f !important; }
+.page-interna .historico-sessao-salvar { background: #188353 !important; }
+.page-interna .historico-sessao-cancelar { background: #22384e !important; }
+.page-interna .historico-sessao-excluir { background: #a94149 !important; }
+
+/* ===== Shared interaction polish ===== */
+.page-interna .conteudos-container button,
+.page-interna .meu-edital-page button,
+.page-interna .plano-edital-wrapper button,
+.page-interna .plano-edital-page button,
+.page-interna .cursos-page button,
+.page-interna .simulados-container button,
+.page-interna .central-desempenho-container button,
+.page-interna .historico-sessoes-container button,
+.page-interna .estatisticas-container button,
+.page-interna .estatisticas-sessoes-container button {
+  transition: transform .16s ease, filter .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.page-interna .conteudos-container button:hover:not(:disabled),
+.page-interna .meu-edital-page button:hover:not(:disabled),
+.page-interna .plano-edital-wrapper button:hover:not(:disabled),
+.page-interna .plano-edital-page button:hover:not(:disabled),
+.page-interna .cursos-page button:hover:not(:disabled),
+.page-interna .simulados-container button:hover:not(:disabled),
+.page-interna .central-desempenho-container button:hover:not(:disabled),
+.page-interna .historico-sessoes-container button:hover:not(:disabled),
+.page-interna .estatisticas-container button:hover:not(:disabled),
+.page-interna .estatisticas-sessoes-container button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+@media (max-width: 700px) {
+  .page-interna .conteudos-cabecalho h1,
+  .page-interna .meu-edital-hero h1,
+  .page-interna .plano-edital-hero h1,
+  .page-interna .cursos-hero h1,
+  .page-interna .simulados-title,
+  .page-interna .central-desempenho-cabecalho h1,
+  .page-interna .historico-sessoes-cabecalho h1,
+  .page-interna .estatisticas-title,
+  .page-interna .estatisticas-sessoes-cabecalho h1 {
+    font-size: 27px !important;
+  }
+
+  .page-interna .meu-edital-hero,
+  .page-interna .plano-edital-hero,
+  .page-interna .cursos-hero {
+    padding: 18px !important;
+  }
+}
