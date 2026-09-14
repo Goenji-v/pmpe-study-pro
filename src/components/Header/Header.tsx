@@ -13,6 +13,10 @@ export default function Header() {
     month: "long",
   }).format(new Date());
 
+  function abrirNotificacoes() {
+    window.dispatchEvent(new Event("pmpe:notificacoes:abrir"));
+  }
+
   return (
     <header className="header studio-premium-header">
       <button
@@ -32,6 +36,7 @@ export default function Header() {
           type="button"
           className="studio-header-icon"
           aria-label="Notificações"
+          onClick={abrirNotificacoes}
         >
           <Bell size={18} />
           <i />
