@@ -14,6 +14,19 @@ import "./styles/mobile-dashboard-fixes.css";
 import "./styles/visual-qa-final.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 
+// Camada visual da nova prévia: mantém as funções atuais e troca apenas a apresentação.
+import "./styles/StudioProPremiumShell.css";
+import "./styles/StudioProLegacySuite.css";
+import "./styles/StudioProFunctional.css";
+import "./components/Sidebar/SidebarPremiumGroups.css";
+import "./components/Sidebar/SidebarIconAdjustments.css";
+import "./components/Sidebar/SidebarMountainArt.css";
+import "./pages/Dashboard/DashboardHeroPremium.css";
+import "./pages/Dashboard/DashboardCompactStats.css";
+import "./pages/Dashboard/DashboardWeeklyGoalCompact.css";
+import "./pages/Dashboard/DashboardGeneralPerformanceVisual.css";
+import "./pages/Dashboard/DashboardMissionBackgroundOnly.css";
+
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(
