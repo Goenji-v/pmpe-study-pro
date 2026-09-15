@@ -238,6 +238,7 @@ export default function Sidebar() {
               <ItemMenu to="/parceiro/mentoria" texto="Cronograma da turma" />
               <ItemMenu to="/parceiro/cursos" texto="Conteúdos do curso" />
               <ItemMenu to="/parceiro/simulados" texto="Simulados" />
+              <ItemMenu to="/parceiro/relatorios" texto="Relatórios e alertas" />
             </GrupoMenu>
           )}
 
