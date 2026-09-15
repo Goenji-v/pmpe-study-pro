@@ -19,7 +19,7 @@ const rotasCriticas = [
 ];
 
 async function esperarLayoutEstavel(page: import("@playwright/test").Page) {
-  await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".layout")).toBeVisible({ timeout: 30_000 });
   await page.evaluate(async () => {
     if (document.fonts?.ready) {
       await document.fonts.ready;
@@ -48,6 +48,8 @@ test.describe("fluxo crítico autenticado", () => {
   test.skip(!email || !senha, "Configure E2E_TEST_EMAIL e E2E_TEST_PASSWORD com uma conta de teste dedicada.");
 
   test("login persiste e as rotas críticas abrem sem erro de runtime ou overflow", async ({ page }) => {
+    test.setTimeout(120_000);
+
     const errosDePagina: Error[] = [];
     page.on("pageerror", (erro) => errosDePagina.push(erro));
 

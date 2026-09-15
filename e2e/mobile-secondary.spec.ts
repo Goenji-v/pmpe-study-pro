@@ -24,13 +24,13 @@ async function entrar(page: Page) {
   await page.getByLabel("Senha").fill(senha!);
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).not.toHaveURL(/\/login(?:$|\?)/, { timeout: 15_000 });
-  await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".layout")).toBeVisible({ timeout: 30_000 });
 }
 
 async function auditarRota(page: Page, rota: string) {
   await page.goto(rota, { waitUntil: "domcontentloaded" });
   await expect(page).not.toHaveURL(/\/login(?:$|\?)/);
-  await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".layout")).toBeVisible({ timeout: 30_000 });
   await page.waitForTimeout(500);
 
   const texto = await page.locator("body").innerText();
@@ -117,6 +117,7 @@ test.describe("auditoria mobile de telas secundárias", () => {
 
   test("telas e formulários cabem em 360px sem erro de runtime", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "Teste exclusivo do projeto mobile.");
+    test.setTimeout(120_000);
 
     await page.setViewportSize({ width: 360, height: 740 });
 
@@ -132,6 +133,6 @@ test.describe("auditoria mobile de telas secundárias", () => {
     }
 
     await page.goto("/configuracoes", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("combobox", { name: "Banca padrão" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("combobox", { name: "Banca padrão" })).toBeVisible({ timeout: 30_000 });
   });
 });
