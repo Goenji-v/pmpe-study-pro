@@ -70,9 +70,9 @@ jobs:
           fi
 
   permissoes-parceiro:
-    name: Permissões da Área do Parceiro
+    name: Auditoria da Área do Parceiro
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       E2E_BASE_URL: https://pmpe-study-pro-two.vercel.app
       E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
@@ -89,14 +89,14 @@ jobs:
         run: npm ci
       - name: Instalar Chromium do Playwright
         run: npx playwright install --with-deps chromium
-      - name: Validar matriz de permissões
+      - name: Validar permissões, rotas e responsividade
         if: env.E2E_TEST_EMAIL != '' && env.E2E_TEST_PASSWORD != ''
-        run: npx playwright test e2e/partner-permissions.spec.ts --project=desktop-chrome
+        run: npx playwright test e2e/partner-permissions.spec.ts e2e/partner-area-audit.spec.ts
       - name: Preservar diagnóstico em falha
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: e2e-parceiro-permissoes-${{ github.run_number }}
+          name: e2e-parceiro-auditoria-${{ github.run_number }}
           path: |
             playwright-report
             test-results
