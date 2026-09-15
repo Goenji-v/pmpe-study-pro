@@ -15,6 +15,7 @@ import {
   type ResumoParceiro,
 } from "../../services/parceriasService";
 import { obterPermissoesParceiro } from "../../utils/permissoesParceiro";
+import ParceiroFinanceiro from "../../components/ParceiroFinanceiro/ParceiroFinanceiro";
 import ProfessorDashboard from "./ProfessorDashboard";
 import "./Parceiro.css";
 import "./ParceiroArea.css";
@@ -519,27 +520,10 @@ export default function Parceiro() {
           )}
 
           {permissoes.podeVerFinanceiro && aba === "financeiro" && (
-            <section className="parceiro-lista">
-              <h2>Financeiro da parceria</h2>
-              <p>A estimativa considera somente licenças ativas desta parceria.</p>
-              <div className="financeiro-destaque">
-                <strong>{resumo?.alunosAtivos ?? 0} alunos ativos</strong>
-                <span>{moeda(resumo?.valorMensal ?? 0)}</span>
-              </div>
-              {gestao.faturamento.length === 0 ? (
-                <Vazio texto="Ainda não há fechamento mensal." />
-              ) : (
-                gestao.faturamento.map((faturamento) => (
-                  <article className="convite-linha" key={faturamento.competencia}>
-                    <div>
-                      <strong>{mes(faturamento.competencia)}</strong>
-                      <small>{faturamento.alunosAtivos} alunos ativos</small>
-                    </div>
-                    <strong>{moeda(faturamento.valorTotal)}</strong>
-                  </article>
-                ))
-              )}
-            </section>
+            <ParceiroFinanceiro
+              alunosAtivos={resumo?.alunosAtivos ?? 0}
+              valorMensal={resumo?.valorMensal ?? 0}
+            />
           )}
 
           {permissoes.podeVerHistorico && aba === "auditoria" && (
@@ -571,10 +555,6 @@ function Vazio({ texto }: { texto: string }) {
   return <div className="parceiro-estado">{texto}</div>;
 }
 
-function moeda(valor: number) {
-  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 function data(valor: string | null) {
   if (!valor) return "sem prazo";
   return new Date(valor).toLocaleDateString("pt-BR");
@@ -584,15 +564,6 @@ function dataHora(valor: string) {
   return new Date(valor).toLocaleString("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
-  });
-}
-
-function mes(valor: string) {
-  const [ano, numeroMes] = valor.slice(0, 7).split("-").map(Number);
-  if (!ano || !numeroMes) return valor;
-  return new Date(ano, numeroMes - 1, 1).toLocaleDateString("pt-BR", {
-    month: "long",
-    year: "numeric",
   });
 }
 
