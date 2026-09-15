@@ -43,6 +43,7 @@ test.describe("auditoria final da Area do Parceiro", () => {
     await abrirRota(page, "/parceiro", ".parceiro-pagina");
     await expect(page.getByText("ÁREA DO PARCEIRO", { exact: true })).toBeVisible();
     await expect(page.locator(".parceiro-erro")).toHaveCount(0);
+    await expect(page.locator('.sidebar a[href="/parceiro/relatorios"]')).toHaveCount(1);
 
     await abrirRota(page, "/parceiro/mentoria", ".mentoria-pagina");
     await expect(page.getByRole("heading", { name: "Trilha de estudos da turma" })).toBeVisible();
