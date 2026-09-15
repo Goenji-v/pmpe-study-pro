@@ -65,7 +65,10 @@ export default function ProfessorDashboard() {
             Os indicadores abaixo usam atividade real registrada pelos alunos no Study Pro durante o mês atual.
           </p>
         </div>
-        <Link to="/parceiro/mentoria">Gerenciar trilhas →</Link>
+        <div className="prof-dashboard-intro-acoes">
+          <Link to="/parceiro/mentoria">Gerenciar trilhas →</Link>
+          <Link to="/parceiro/relatorios">Relatórios e alertas →</Link>
+        </div>
       </section>
 
       {permissoes.podeGerenciarTurmas && <GerenciarTurmasParceiro onChanged={carregar} />}
