@@ -132,6 +132,6 @@ test.describe("auditoria mobile de telas secundárias", () => {
     }
 
     await page.goto("/configuracoes", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".page select").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("combobox", { name: "Banca padrão" })).toBeVisible({ timeout: 15_000 });
   });
 });
