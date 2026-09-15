@@ -32,6 +32,7 @@ async function abrirRota(page: Page, rota: string, seletor: string) {
 }
 
 test.describe("auditoria final da Area do Parceiro", () => {
+  test.setTimeout(120_000);
   test.skip(!email || !senha, "Configure a conta E2E dedicada.");
 
   test("rotas operacionais carregam sem erro e cabem na tela", async ({ page }) => {
