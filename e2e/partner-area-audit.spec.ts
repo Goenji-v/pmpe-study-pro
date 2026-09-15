@@ -75,18 +75,18 @@ test.describe("auditoria final da Area do Parceiro", () => {
 
     expect(papel).not.toBe("desconhecido");
 
-    await expect(page.getByRole("link", { name: "Cronograma da turma" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Conteúdos do curso" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Simulados" })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: "Cronograma da turma" })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: "Conteúdos do curso" })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: "Simulados" })).toBeVisible();
 
     if (papel === "proprietario") {
-      await page.getByRole("button", { name: "Financeiro" }).click();
-      await expect(page.getByText("FINANCEIRO DA PARCERIA", { exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Competências e repasses" })).toBeVisible();
-      await expect(page.locator(".parceiro-financeiro-aviso.erro")).toHaveCount(0);
+      await pagina.getByRole("button", { name: "Financeiro" }).click();
+      await expect(pagina.getByText("FINANCEIRO DA PARCERIA", { exact: true })).toBeVisible();
+      await expect(pagina.getByRole("heading", { name: "Competências e repasses" })).toBeVisible();
+      await expect(pagina.locator(".parceiro-financeiro-aviso.erro")).toHaveCount(0);
       await semOverflowHorizontal(page, "/parceiro#financeiro");
     } else {
-      await expect(page.getByRole("button", { name: "Financeiro" })).toHaveCount(0);
+      await expect(pagina.getByRole("button", { name: "Financeiro" })).toHaveCount(0);
     }
 
     await abrirRota(page, "/parceiro/mentoria", ".mentoria-pagina");
