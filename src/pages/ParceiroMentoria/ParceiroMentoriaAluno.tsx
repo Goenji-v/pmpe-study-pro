@@ -20,6 +20,7 @@ import {
   type ItemRotaMentoriaAluno,
 } from "../../services/rotaMentoriaAlunoService";
 import AcompanhamentoAlunoParceiro from "./AcompanhamentoAlunoParceiro";
+import ProgressoCursosAluno from "./ProgressoCursosAluno";
 import "./ParceiroMentoriaAluno.css";
 
 export default function ParceiroMentoriaAluno() {
@@ -219,7 +220,7 @@ export default function ParceiroMentoriaAluno() {
       </header>
 
       {erro && <div className="mentoria-aluno-alerta erro">{erro}</div>}
-      {mensagem && <div className="mentoria-aluno-alerta sucesso">{mensagem}</div>}
+      {mensagem && <div className="mentoria-aluno-alerta sucesso" role="status">{mensagem}</div>}
 
       {carregando ? (
         <div className="mentoria-aluno-estado">Carregando dados do aluno...</div>
@@ -242,6 +243,8 @@ export default function ParceiroMentoriaAluno() {
             userId={userId}
             alunoNome={painel.aluno.nome || aluno.nome}
           />
+
+          <ProgressoCursosAluno userId={userId} turmaId={aluno.turmaId} />
 
           <div className="mentoria-aluno-principal">
             <section className="mentoria-aluno-card rota">
