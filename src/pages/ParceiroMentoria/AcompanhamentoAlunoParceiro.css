@@ -1,0 +1,296 @@
+.acompanhamento-parceiro {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 18px;
+}
+
+.acompanhamento-parceiro-topo,
+.acompanhamento-parceiro-historico-topo,
+.acompanhamento-parceiro-item-topo,
+.acompanhamento-parceiro-item footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.acompanhamento-parceiro-topo > div:first-child {
+  min-width: 0;
+}
+
+.acompanhamento-parceiro-topo > div:first-child > span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  opacity: 0.72;
+}
+
+.acompanhamento-parceiro-topo h2,
+.acompanhamento-parceiro-historico h3 {
+  margin: 5px 0 6px;
+}
+
+.acompanhamento-parceiro-topo p,
+.acompanhamento-parceiro-historico-topo small,
+.acompanhamento-parceiro-item footer small {
+  margin: 0;
+  opacity: 0.72;
+}
+
+.acompanhamento-parceiro-resumo {
+  min-width: 130px;
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.18);
+  text-align: right;
+}
+
+.acompanhamento-parceiro-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.16);
+}
+
+.acompanhamento-parceiro-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.acompanhamento-parceiro-form select,
+.acompanhamento-parceiro-form textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.22);
+  color: inherit;
+  font: inherit;
+}
+
+.acompanhamento-parceiro-form select {
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.acompanhamento-parceiro-form textarea {
+  min-height: 112px;
+  resize: vertical;
+  padding: 12px;
+  line-height: 1.45;
+}
+
+.acompanhamento-parceiro-texto small {
+  justify-self: end;
+  font-weight: 500;
+  opacity: 0.62;
+}
+
+.acompanhamento-parceiro-envio {
+  grid-column: 1 / -1;
+  grid-template-columns: auto 1fr !important;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.09);
+}
+
+.acompanhamento-parceiro-envio input {
+  margin-top: 3px;
+}
+
+.acompanhamento-parceiro-envio span {
+  display: grid;
+  gap: 3px;
+}
+
+.acompanhamento-parceiro-envio small {
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.acompanhamento-parceiro-form > button {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.acompanhamento-parceiro-form > button:disabled,
+.acompanhamento-parceiro-item button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.acompanhamento-parceiro-aviso {
+  padding: 11px 13px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.acompanhamento-parceiro-aviso.erro {
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.24);
+}
+
+.acompanhamento-parceiro-aviso.sucesso {
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.24);
+}
+
+.acompanhamento-parceiro-historico {
+  display: grid;
+  gap: 12px;
+}
+
+.acompanhamento-parceiro-historico-topo {
+  align-items: end;
+}
+
+.acompanhamento-parceiro-historico-topo h3 {
+  margin: 0;
+}
+
+.acompanhamento-parceiro-lista {
+  display: grid;
+  gap: 10px;
+}
+
+.acompanhamento-parceiro-item {
+  display: grid;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.acompanhamento-parceiro-item.concluido {
+  opacity: 0.76;
+}
+
+.acompanhamento-parceiro-item-topo {
+  align-items: center;
+}
+
+.acompanhamento-parceiro-item-topo > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.acompanhamento-parceiro-item-topo span,
+.acompanhamento-parceiro-item-topo b {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.acompanhamento-parceiro-item-topo .tipo.observacao {
+  background: rgba(100, 116, 139, 0.16);
+}
+
+.acompanhamento-parceiro-item-topo .tipo.plano_acao {
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.acompanhamento-parceiro-item-topo .tipo.orientacao,
+.acompanhamento-parceiro-item-topo .enviado {
+  background: rgba(37, 99, 235, 0.13);
+}
+
+.acompanhamento-parceiro-item-topo .status.aberto {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.acompanhamento-parceiro-item-topo .status.concluido {
+  background: rgba(22, 163, 74, 0.12);
+}
+
+.acompanhamento-parceiro-item time {
+  white-space: nowrap;
+  font-size: 0.76rem;
+  opacity: 0.66;
+}
+
+.acompanhamento-parceiro-item > p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.acompanhamento-parceiro-item footer {
+  align-items: center;
+}
+
+.acompanhamento-parceiro-item footer button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.16);
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acompanhamento-parceiro-vazio {
+  padding: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.26);
+  border-radius: 14px;
+  text-align: center;
+  opacity: 0.68;
+}
+
+@media (max-width: 760px) {
+  .acompanhamento-parceiro-topo,
+  .acompanhamento-parceiro-item-topo,
+  .acompanhamento-parceiro-item footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .acompanhamento-parceiro-resumo {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .acompanhamento-parceiro-form {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 13px;
+  }
+
+  .acompanhamento-parceiro-envio,
+  .acompanhamento-parceiro-form > button {
+    grid-column: 1;
+  }
+
+  .acompanhamento-parceiro-form > button,
+  .acompanhamento-parceiro-item footer button {
+    width: 100%;
+  }
+
+  .acompanhamento-parceiro-item time {
+    white-space: normal;
+  }
+}
