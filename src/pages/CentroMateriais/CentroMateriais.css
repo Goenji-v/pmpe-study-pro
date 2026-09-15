@@ -130,6 +130,7 @@
 .materiais-campo textarea,
 .materiais-filtros input,
 .materiais-filtros select {
+  box-sizing: border-box;
   width: 100%;
   padding: 11px;
   color: #ffffff;
