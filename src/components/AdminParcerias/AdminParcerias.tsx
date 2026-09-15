@@ -10,6 +10,7 @@ import {
   type TurmaParceiroAdmin,
   type UsuarioParceiroAdmin,
 } from "../../services/adminParceriasService";
+import AdminFinanceiroParceiro from "./AdminFinanceiroParceiro";
 import "./AdminParcerias.css";
 
 export default function AdminParcerias() {
@@ -357,6 +358,11 @@ export default function AdminParcerias() {
                   </form>
                 </section>
               </div>
+
+              <AdminFinanceiroParceiro
+                parceiroId={parceria.id}
+                valorAlunoCentavos={parceria.valorAlunoCentavos}
+              />
             </article>
           ))}
         </div>
