@@ -56,6 +56,11 @@ test.describe("auditoria final da Area do Parceiro", () => {
     await expect(page.getByRole("heading", { name: "Simulados do Professor" })).toBeVisible();
     await expect(page.locator(".psim-aviso.erro")).toHaveCount(0);
 
+    await abrirRota(page, "/parceiro/relatorios", ".parceiro-relatorios");
+    await expect(page.getByRole("heading", { name: "Relatórios e Alertas" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeVisible();
+    await expect(page.locator(".prel-erro")).toHaveCount(0);
+
     expect(errosRuntime, `Erros de runtime encontrados: ${errosRuntime.join(" | ")}`).toEqual([]);
   });
 
@@ -78,6 +83,7 @@ test.describe("auditoria final da Area do Parceiro", () => {
     await expect(pagina.getByRole("link", { name: "Cronograma da turma" })).toBeVisible();
     await expect(pagina.getByRole("link", { name: "Conteúdos do curso" })).toBeVisible();
     await expect(pagina.getByRole("link", { name: "Simulados" })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: "Relatórios e alertas" })).toBeVisible();
 
     if (papel === "proprietario") {
       await pagina.getByRole("button", { name: "Financeiro" }).click();
