@@ -626,6 +626,7 @@ export default function BancoQuestoes() {
           {questoesFiltradas.map((questao) => {
             const estatistica = estatisticaDaQuestao(questao);
             const respondidaOnline = idsRespondidosOnline.has(questao.id);
+            const comentarioGabarito = separarComentarioGabarito(questao.explicacao);
 
             return (
               <article key={questao.id} className="banco-biblioteca-item">
@@ -673,7 +674,13 @@ export default function BancoQuestoes() {
                 </div>
 
                 <details className="banco-biblioteca-gabarito">
-                  <summary>{questao.explicacao ? "Ver gabarito e explicação" : "Ver gabarito"}</summary>
+                  <summary>
+                    {questao.explicacao
+                      ? comentarioGabarito !== null
+                        ? "Ver gabarito e comentário"
+                        : "Ver gabarito e explicação"
+                      : "Ver gabarito"}
+                  </summary>
                   <div className="banco-alternativas">
                     {questao.alternativas.map((alternativa) => (
                       <p
@@ -690,7 +697,10 @@ export default function BancoQuestoes() {
                   </div>
                   {questao.explicacao && (
                     <p className="banco-explicacao">
-                      <strong>Explicação:</strong> {questao.explicacao}
+                      <strong>
+                        {comentarioGabarito !== null ? "Comentário do gabarito:" : "Explicação:"}
+                      </strong>{" "}
+                      {comentarioGabarito ?? questao.explicacao}
                     </p>
                   )}
                 </details>
@@ -987,6 +997,15 @@ function normalizar(texto: string) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function separarComentarioGabarito(explicacao?: string) {
+  if (!explicacao) return null;
+
+  const prefixo = "Comentário do gabarito:";
+  if (!explicacao.startsWith(prefixo)) return null;
+
+  return explicacao.slice(prefixo.length).trim();
 }
 
 function slugLocal(texto: string) {
