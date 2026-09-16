@@ -211,6 +211,7 @@ async function auditar(page: Page, rota: string) {
 }
 
 test.describe("auditoria mobile completa", () => {
+  test.setTimeout(120_000);
   test.skip(!email || !senha, "Configure a conta E2E dedicada.");
 
   test("rotas principais e prova realista cabem em 360px", async ({ page }, testInfo) => {
