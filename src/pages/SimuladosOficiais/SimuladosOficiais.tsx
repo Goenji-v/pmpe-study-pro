@@ -57,7 +57,10 @@ export default function SimuladosOficiais() {
                 <h2>{simulado.nome}</h2>
                 <p>{simulado.total_questoes} questões · {simulado.duracao_minutos} min{simulado.data_prova ? ` · ${formatarData(simulado.data_prova)}` : ""}</p>
               </div>
-              <button type="button" onClick={() => navigate(`/simulado-oficial/${simulado.id}`)}>Iniciar prova</button>
+              <div className="acoes-oficiais">
+                <button type="button" className="ranking-oficial" onClick={() => navigate(`/ranking?simulado=${simulado.id}`)}>Ver ranking</button>
+                <button type="button" onClick={() => navigate(`/simulado-oficial/${simulado.id}`)}>Iniciar prova</button>
+              </div>
             </article>
           ))}
         </div>
