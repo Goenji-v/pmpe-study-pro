@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
+import AdminFinanceiroGeral from "../../components/AdminFinanceiroGeral/AdminFinanceiroGeral";
 import AdminParcerias from "../../components/AdminParcerias/AdminParcerias";
 import BetaMonitor from "../../components/BetaMonitor/BetaMonitor";
 import CuradoriaQuestoes from "../../components/CuradoriaQuestoes/CuradoriaQuestoes";
@@ -33,53 +34,28 @@ export default function Admin() {
 
   useEffect(() => {
     if (!administrador) return;
-
     let ativo = true;
-
     async function carregar() {
       try {
-        setCarregando(true);
-        setErro("");
-        const [novoResumo, novosUsuarios] = await Promise.all([
-          carregarResumoAdmin(),
-          carregarUsuariosAdmin(),
-        ]);
-
-        if (ativo) {
-          setResumo(novoResumo);
-          setUsuarios(novosUsuarios);
-        }
+        setCarregando(true); setErro("");
+        const [novoResumo, novosUsuarios] = await Promise.all([carregarResumoAdmin(), carregarUsuariosAdmin()]);
+        if (ativo) { setResumo(novoResumo); setUsuarios(novosUsuarios); }
       } catch (error) {
-        if (ativo) {
-          setErro(error instanceof Error ? error.message : "Erro desconhecido.");
-        }
-      } finally {
-        if (ativo) setCarregando(false);
-      }
+        if (ativo) setErro(error instanceof Error ? error.message : "Erro desconhecido.");
+      } finally { if (ativo) setCarregando(false); }
     }
-
     void carregar();
-    return () => {
-      ativo = false;
-    };
+    return () => { ativo = false; };
   }, [administrador]);
 
   const usuariosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     if (!termo) return usuarios;
-
-    return usuarios.filter((usuario) =>
-      `${usuario.nome} ${usuario.email}`.toLowerCase().includes(termo)
-    );
+    return usuarios.filter((usuario) => `${usuario.nome} ${usuario.email}`.toLowerCase().includes(termo));
   }, [usuarios, busca]);
 
-  if (carregandoAdmin) {
-    return <div className="admin-estado">Verificando permissão administrativa...</div>;
-  }
-
-  if (!administrador) {
-    return <Navigate to="/" replace />;
-  }
+  if (carregandoAdmin) return <div className="admin-estado">Verificando permissão administrativa...</div>;
+  if (!administrador) return <Navigate to="/" replace />;
 
   return (
     <section className="admin-container">
@@ -87,21 +63,12 @@ export default function Admin() {
         <div>
           <span className="admin-etiqueta">ACESSO RESTRITO</span>
           <h1>🛡️ Administração</h1>
-          <p>Acompanhe usuários, parcerias, atividade geral e a curadoria de conteúdo do Study Pro.</p>
+          <p>Acompanhe usuários, parcerias, atividade geral, financeiro e a curadoria de conteúdo do Study Pro.</p>
         </div>
-        <div className="admin-seguranca">
-          <strong>RLS + RPC protegida</strong>
-          <span>Somente administradores cadastrados no Supabase.</span>
-        </div>
+        <div className="admin-seguranca"><strong>RLS + RPC protegida</strong><span>Somente administradores cadastrados no Supabase.</span></div>
       </header>
 
-      {erro && (
-        <div className="admin-erro">
-          <strong>Não foi possível carregar o painel.</strong>
-          <span>{erro}</span>
-          <small>Verifique a configuração administrativa do Supabase.</small>
-        </div>
-      )}
+      {erro && <div className="admin-erro"><strong>Não foi possível carregar o painel.</strong><span>{erro}</span><small>Verifique a configuração administrativa do Supabase.</small></div>}
 
       <div className="admin-cards">
         <Card titulo="Usuários" valor={resumo.totalUsuarios} detalhe="Contas cadastradas" />
@@ -112,54 +79,25 @@ export default function Admin() {
         <Card titulo="Acertos" valor={resumo.acertosNoMes} detalhe="Acertos registrados" />
       </div>
 
+      <AdminFinanceiroGeral />
       <AdminParcerias />
-
       <ModeracaoDenuncias />
 
       <section className="admin-painel">
         <div className="admin-painel-topo">
-          <div>
-            <h2>Usuários cadastrados</h2>
-            <p>Dados privados disponíveis apenas para a administração.</p>
-          </div>
-          <input
-            value={busca}
-            onChange={(evento) => setBusca(evento.target.value)}
-            placeholder="Pesquisar por nome ou e-mail"
-            aria-label="Pesquisar usuários"
-          />
+          <div><h2>Usuários cadastrados</h2><p>Dados privados disponíveis apenas para a administração.</p></div>
+          <input value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Pesquisar por nome ou e-mail" aria-label="Pesquisar usuários" />
         </div>
 
-        {carregando ? (
-          <div className="admin-estado">Carregando usuários...</div>
-        ) : usuariosFiltrados.length === 0 ? (
-          <div className="admin-estado">Nenhum usuário encontrado.</div>
-        ) : (
+        {carregando ? <div className="admin-estado">Carregando usuários...</div> : usuariosFiltrados.length === 0 ? <div className="admin-estado">Nenhum usuário encontrado.</div> : (
           <div className="admin-tabela-area">
-            <div className="admin-tabela admin-tabela-cabecalho">
-              <span>Usuário</span>
-              <span>Cadastro</span>
-              <span>Último login</span>
-              <span>Horas</span>
-              <span>Questões</span>
-              <span>Acertos</span>
-              <span>XP</span>
-              <span>Status</span>
-            </div>
-
+            <div className="admin-tabela admin-tabela-cabecalho"><span>Usuário</span><span>Cadastro</span><span>Último login</span><span>Horas</span><span>Questões</span><span>Acertos</span><span>XP</span><span>Status</span></div>
             {usuariosFiltrados.map((usuario) => (
               <article className="admin-tabela admin-linha" key={usuario.userId}>
-                <div className="admin-identidade">
-                  <strong>{usuario.nome}</strong>
-                  <span>{usuario.email}</span>
-                </div>
+                <div className="admin-identidade"><strong>{usuario.nome}</strong><span>{usuario.email}</span></div>
                 <span>{formatarData(usuario.criadoEm)}</span>
                 <span>{usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : "Nunca"}</span>
-                <strong>{formatarHoras(usuario.minutosMes)}</strong>
-                <span>{usuario.questoesMes}</span>
-                <span>{usuario.acertosMes}</span>
-                <b>{usuario.xpMes}</b>
-                <Status usuario={usuario} />
+                <strong>{formatarHoras(usuario.minutosMes)}</strong><span>{usuario.questoesMes}</span><span>{usuario.acertosMes}</span><b>{usuario.xpMes}</b><Status usuario={usuario} />
               </article>
             ))}
           </div>
@@ -173,41 +111,11 @@ export default function Admin() {
   );
 }
 
-function Card({ titulo, valor, detalhe }: { titulo: string; valor: string | number; detalhe: string }) {
-  return (
-    <article className="admin-card">
-      <span>{titulo}</span>
-      <strong>{valor}</strong>
-      <small>{detalhe}</small>
-    </article>
-  );
-}
-
+function Card({ titulo, valor, detalhe }: { titulo: string; valor: string | number; detalhe: string }) { return <article className="admin-card"><span>{titulo}</span><strong>{valor}</strong><small>{detalhe}</small></article>; }
 function Status({ usuario }: { usuario: UsuarioAdmin }) {
-  if (usuario.banidoAte && new Date(usuario.banidoAte) > new Date()) {
-    return <span className="admin-status admin-status-bloqueado">Bloqueado</span>;
-  }
-
-  if (!usuario.emailConfirmadoEm) {
-    return <span className="admin-status admin-status-pendente">E-mail pendente</span>;
-  }
-
+  if (usuario.banidoAte && new Date(usuario.banidoAte) > new Date()) return <span className="admin-status admin-status-bloqueado">Bloqueado</span>;
+  if (!usuario.emailConfirmadoEm) return <span className="admin-status admin-status-pendente">E-mail pendente</span>;
   return <span className="admin-status admin-status-ativo">Ativo</span>;
 }
-
-function formatarHoras(minutos: number) {
-  const horas = Math.floor(minutos / 60);
-  const restantes = minutos % 60;
-  return restantes === 0 ? `${horas}h` : `${horas}h ${restantes}min`;
-}
-
-function formatarData(valor: string) {
-  const data = new Date(valor);
-  return Number.isNaN(data.getTime()) ? "—" : data.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+function formatarHoras(minutos: number) { const horas = Math.floor(minutos / 60); const restantes = minutos % 60; return restantes === 0 ? `${horas}h` : `${horas}h ${restantes}min`; }
+function formatarData(valor: string) { const data = new Date(valor); return Number.isNaN(data.getTime()) ? "—" : data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
