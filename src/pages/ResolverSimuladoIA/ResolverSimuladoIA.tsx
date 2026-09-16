@@ -234,6 +234,8 @@ export default function ResolverSimuladoIA() {
   const questao =
     questoes[questaoAtual];
 
+  const comentarioGabarito = separarComentarioGabarito(questao?.explicacao);
+
   const totalRespondidas =
     Object.keys(respostas).length;
 
@@ -708,13 +710,7 @@ export default function ResolverSimuladoIA() {
     definirTipoSessaoQuestoesIAAtiva("questoes");
     setTipoSessao("questoes");
 
-    const novasQuestoes =
-      questoesParaTreino.map(
-        (item) => ({
-          ...item,
-          id: crypto.randomUUID(),
-        })
-      );
+    const novasQuestoes = [...questoesParaTreino];
 
     localStorage.setItem(
       CHAVE_QUESTOES_IA,
@@ -762,7 +758,7 @@ export default function ResolverSimuladoIA() {
   function excluirQuestoes() {
     const confirmar =
       window.confirm(
-        "Deseja excluir as questões geradas por IA?"
+        "Deseja excluir as questões deste treino?"
       );
 
     if (!confirmar) {
@@ -819,7 +815,7 @@ export default function ResolverSimuladoIA() {
           </h1>
 
           <p>
-            {mensagem || "Gere questões antes de iniciar o treino."}
+            {mensagem || "Abra um treino no Banco de Questões ou gere novas questões para começar."}
           </p>
 
           <button
@@ -844,7 +840,7 @@ export default function ResolverSimuladoIA() {
           <h1>
             {tipoSessao === "simulado"
               ? "🎯 Simulado Inteligente"
-              : "📝 Questões por assunto"}
+              : tituloTreinoQuestoes(questoes)}
           </h1>
 
           <p>
@@ -1186,6 +1182,11 @@ export default function ResolverSimuladoIA() {
             {questao.modulo
               ? `${questao.modulo} → ${questao.assunto}`
               : questao.assunto}
+            {questao.subassunto ? ` → ${questao.subassunto}` : ""}
+          </p>
+
+          <p className="resolver-ia-assunto">
+            {rotuloFonteQuestao(questao)}
           </p>
 
           <h2 className="resolver-ia-enunciado">
@@ -1344,20 +1345,16 @@ export default function ResolverSimuladoIA() {
           {finalizado && (
             <div className="resolver-ia-explicacao">
               <h3>
-                Explicação
+                {comentarioGabarito !== null ? "Comentário do gabarito" : "Explicação"}
               </h3>
 
               <p>
-                {
-                  questao.explicacao
-                }
+                {comentarioGabarito ?? questao.explicacao}
               </p>
 
               <strong>
                 Gabarito:{" "}
-                {
-                  questao.respostaCorreta
-                }
+                {questao.respostaCorreta}
               </strong>
             </div>
           )}
@@ -1457,10 +1454,7 @@ function montarResultadoSalvo(
 
   return {
     id: crypto.randomUUID(),
-    nome:
-      tipo === "simulado"
-        ? "Simulado gerado por IA"
-        : "Questões por assunto geradas por IA",
+    nome: nomeResultadoQuestoes(questoes, tipo),
     data:
       new Date().toISOString(),
     total: questoes.length,
@@ -1477,6 +1471,66 @@ function montarResultadoSalvo(
     cadernoId,
     tipo,
   };
+}
+
+function nomeResultadoQuestoes(
+  questoes: QuestaoIA[],
+  tipo: TipoSessaoQuestoesIA
+) {
+  if (tipo === "simulado") return "Simulado inteligente";
+
+  const origens = new Set(questoes.map((item) => item.origem).filter(Boolean));
+  if (origens.size !== 1) return "Treino do Banco de Questões";
+
+  const origem = questoes[0]?.origem;
+  if (origem === "simulado_terceiro") {
+    const fontes = Array.from(new Set(questoes.map((item) => item.fonteNome).filter(Boolean)));
+    return fontes.length === 1
+      ? `Questões — ${fontes[0]}`
+      : "Questões de simulados publicados";
+  }
+  if (origem === "prova_oficial") return "Questões de provas oficiais";
+  if (origem === "ia") return "Questões por assunto geradas por IA";
+  if (origem === "pessoal") return "Minhas questões";
+  return "Questões por assunto";
+}
+
+function tituloTreinoQuestoes(questoes: QuestaoIA[]) {
+  const origens = new Set(questoes.map((item) => item.origem).filter(Boolean));
+  if (origens.size !== 1) return "📝 Treino do Banco de Questões";
+
+  const origem = questoes[0]?.origem;
+  if (origem === "simulado_terceiro") return "📘 Questões de simulados publicados";
+  if (origem === "prova_oficial") return "📄 Questões de provas oficiais";
+  if (origem === "ia") return "📝 Questões por assunto";
+  if (origem === "pessoal") return "📝 Minhas questões";
+  return "📝 Questões por assunto";
+}
+
+function rotuloFonteQuestao(questao: QuestaoIA) {
+  const numero = questao.numeroOriginal ? ` · questão ${questao.numeroOriginal}` : "";
+
+  if (questao.origem === "simulado_terceiro") {
+    return `Origem: Simulado publicado · ${questao.fonteNome ?? questao.concursoOrigem ?? questao.banca}${numero}`;
+  }
+  if (questao.origem === "prova_oficial") {
+    return `Origem: Prova oficial · ${questao.concursoOrigem ?? questao.fonteNome ?? questao.banca}${numero}`;
+  }
+  if (questao.origem === "ia") {
+    return `Origem: Questão gerada por IA${questao.fonteNome ? ` · ${questao.fonteNome}` : ""}`;
+  }
+  if (questao.origem === "pessoal") return "Origem: Questão pessoal";
+  if (questao.fonteNome) return `Fonte: ${questao.fonteNome}${numero}`;
+  return `Origem: ${questao.banca}`;
+}
+
+function separarComentarioGabarito(explicacao?: string) {
+  if (!explicacao) return null;
+
+  const prefixo = "Comentário do gabarito:";
+  if (!explicacao.startsWith(prefixo)) return null;
+
+  return explicacao.slice(prefixo.length).trim();
 }
 
 function montarMensagemRevisaoAutomatica(

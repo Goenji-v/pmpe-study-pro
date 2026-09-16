@@ -324,7 +324,7 @@ function converterLinhaQuestao(linha: LinhaQuestaoCatalogo): QuestaoBanco {
     statusEditorial: linha.status,
     compatibilidadeEdital: linha.compatibilidade_edital,
     confiancaClassificacao: linha.confianca_classificacao,
-    origem: linha.origem === "simulado_terceiro" ? "prova_oficial" : linha.origem,
+    origem: linha.origem,
     global: true,
     revisadaEm: linha.revisada_em ?? undefined,
   };
