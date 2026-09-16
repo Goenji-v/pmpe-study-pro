@@ -240,6 +240,7 @@ export type ConfiancaClassificacao =
 export type OrigemQuestao =
   | "pessoal"
   | "prova_oficial"
+  | "simulado_terceiro"
   | "ia";
 
 export type QuestaoBanco = {
@@ -343,6 +344,7 @@ export interface QuestaoIA {
   moduloId?: string;
   assunto: string;
   assuntoId?: string;
+  subassunto?: string;
   banca: string;
   dificuldade:
     | "Fácil"
@@ -368,6 +370,10 @@ export interface QuestaoIA {
 
   explicacao: string;
   fonteNome?: string;
+  origem?: OrigemQuestao;
+  concursoOrigem?: string;
+  anoOrigem?: number;
+  numeroOriginal?: number;
   norma?: string;
   dispositivo?: string;
   verificadaEm?: string;
