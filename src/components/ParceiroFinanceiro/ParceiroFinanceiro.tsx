@@ -10,7 +10,7 @@ import "./ParceiroFinanceiro.css";
 
 type Props = { alunosAtivos?: number; valorMensal?: number };
 
-export default function ParceiroFinanceiro(_: Props) {
+export default function ParceiroFinanceiro({ alunosAtivos = 0, valorMensal = 0 }: Props) {
   const [itens, setItens] = useState<FaturamentoOperacionalParceiro[]>([]);
   const [resumo, setResumo] = useState<ResumoFinanceiroMeuParceiro | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -43,6 +43,11 @@ export default function ParceiroFinanceiro(_: Props) {
     };
   }, [itens]);
 
+  const estimativaFallbackCentavos = Math.max(0, Math.round(valorMensal * 100));
+  const taxaFallbackCentavos = alunosAtivos > 0
+    ? Math.round(estimativaFallbackCentavos / alunosAtivos)
+    : 0;
+
   return (
     <section className="parceiro-financeiro">
       <div className="parceiro-financeiro-topo">
@@ -54,8 +59,8 @@ export default function ParceiroFinanceiro(_: Props) {
       </div>
 
       <div className="parceiro-financeiro-resumo">
-        <article><span>Estimativa atual</span><strong>{moedaCentavos(resumo?.estimativaAtualCentavos ?? 0)}</strong><small>{resumo?.alunosAtivos ?? 0} aluno(s) ativo(s)</small></article>
-        <article><span>Taxa atual</span><strong>{moedaCentavos(resumo?.valorUnitarioCentavos ?? 0)}</strong><small>por aluno ativo / mês</small></article>
+        <article><span>Estimativa atual</span><strong>{moedaCentavos(resumo?.estimativaAtualCentavos ?? estimativaFallbackCentavos)}</strong><small>{resumo?.alunosAtivos ?? alunosAtivos} aluno(s) ativo(s)</small></article>
+        <article><span>Taxa atual</span><strong>{moedaCentavos(resumo?.valorUnitarioCentavos ?? taxaFallbackCentavos)}</strong><small>por aluno ativo / mês</small></article>
         <article><span>Em aberto</span><strong>{moedaCentavos(indicadores.pendente)}</strong><small>{indicadores.vencidos ? `${indicadores.vencidos} competência(s) vencida(s)` : "nenhuma competência vencida"}</small></article>
         <article><span>Pago no histórico</span><strong>{moedaCentavos(indicadores.pago)}</strong><small>{itens.filter((item) => item.status === "pago").length} competência(s)</small></article>
       </div>
