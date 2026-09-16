@@ -37,6 +37,7 @@ type FiltroStatus =
 type FiltroOrigem =
   | "todas"
   | "oficiais"
+  | "simulados"
   | "ia"
   | "pessoais";
 
@@ -157,7 +158,7 @@ export default function BancoQuestoes() {
         if (ativo) {
           setQuestoesGlobais([]);
           showToast(
-            erro instanceof Error ? erro.message : "Não foi possível carregar o banco oficial.",
+            erro instanceof Error ? erro.message : "Não foi possível carregar o catálogo de questões.",
             "warning"
           );
         }
@@ -230,7 +231,9 @@ export default function BancoQuestoes() {
     let favoritas = 0;
     let revisar = 0;
     let oficiais = 0;
+    let simulados = 0;
     let ia = 0;
+    let pessoais = 0;
 
     questoesBiblioteca.forEach((questao) => {
       const estatistica = estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;
@@ -241,7 +244,9 @@ export default function BancoQuestoes() {
       if (questao.favoritada) favoritas += 1;
       if (questao.revisarDepois) revisar += 1;
       if (questao.origem === "prova_oficial") oficiais += 1;
+      if (questao.origem === "simulado_terceiro") simulados += 1;
       if (questao.origem === "ia" && questao.global) ia += 1;
+      if (!questao.global || questao.origem === "pessoal") pessoais += 1;
     });
 
     return {
@@ -252,7 +257,9 @@ export default function BancoQuestoes() {
       favoritas,
       revisar,
       oficiais,
+      simulados,
       ia,
+      pessoais,
     };
   }, [estatisticasPorQuestao, idsRespondidosOnline, questoesBiblioteca]);
 
@@ -296,6 +303,7 @@ export default function BancoQuestoes() {
       if (filtroSubassunto && questao.subassunto !== filtroSubassunto) return false;
       if (filtroDificuldade && questao.dificuldade !== filtroDificuldade) return false;
       if (filtroOrigem === "oficiais" && questao.origem !== "prova_oficial") return false;
+      if (filtroOrigem === "simulados" && questao.origem !== "simulado_terceiro") return false;
       if (filtroOrigem === "ia" && questao.origem !== "ia") return false;
       if (filtroOrigem === "pessoais" && questao.global) return false;
 
@@ -308,7 +316,7 @@ export default function BancoQuestoes() {
       if (!termo) return true;
 
       return normalizar(
-        `${questao.materia} ${questao.modulo ?? ""} ${questao.assunto} ${questao.subassunto ?? ""} ${questao.banca} ${questao.enunciado}`
+        `${questao.materia} ${questao.modulo ?? ""} ${questao.assunto} ${questao.subassunto ?? ""} ${questao.banca} ${questao.fonteNome ?? ""} ${questao.concursoOrigem ?? ""} ${questao.enunciado}`
       ).includes(termo);
     });
   }, [
@@ -404,7 +412,7 @@ export default function BancoQuestoes() {
   function excluirQuestao(id: string) {
     const questao = questoesBiblioteca.find((item) => item.id === id);
     if (questao?.global) {
-      showToast("Questões oficiais só podem ser arquivadas pela curadoria.", "warning");
+      showToast("Questões publicadas só podem ser arquivadas pela curadoria.", "warning");
       return;
     }
 
@@ -514,8 +522,10 @@ export default function BancoQuestoes() {
 
       <div className="banco-biblioteca-resumo">
         <Resumo titulo="Total" valor={contagens.todas} />
-        <Resumo titulo="Oficiais e simulados" valor={contagens.oficiais} classe="oficial" />
+        <Resumo titulo="Provas oficiais" valor={contagens.oficiais} classe="oficial" />
+        <Resumo titulo="Simulados publicados" valor={contagens.simulados} classe="oficial" />
         <Resumo titulo="Geradas por IA" valor={contagens.ia} classe="neutro" />
+        <Resumo titulo="Questões pessoais" valor={contagens.pessoais} classe="neutro" />
         <Resumo titulo="Erradas" valor={contagens.erradas} classe="erro" />
         <Resumo titulo="Nunca respondidas" valor={contagens.naoResolvidas} classe="neutro" />
         <Resumo titulo="Favoritas" valor={contagens.favoritas} classe="favorita" />
@@ -587,8 +597,9 @@ export default function BancoQuestoes() {
 
           <select value={filtroOrigem} onChange={(evento) => setFiltroOrigem(evento.target.value as FiltroOrigem)}>
             <option value="todas">Todas as origens</option>
-            <option value="oficiais">Provas e simulados publicados</option>
-            <option value="ia">Catálogo compartilhado IA</option>
+            <option value="oficiais">Provas oficiais</option>
+            <option value="simulados">Simulados publicados</option>
+            <option value="ia">Questões geradas por IA</option>
             <option value="pessoais">Minhas questões</option>
           </select>
 
@@ -637,18 +648,18 @@ export default function BancoQuestoes() {
                     <small>
                       {questao.subassunto ? `${questao.subassunto} · ` : ""}
                       {questao.banca} · {rotuloDificuldade(questao.dificuldade)}
-                      {questao.origem === "ia"
-                        ? " · Catálogo compartilhado IA"
-                        : questao.global
-                          ? ` · ${questao.concursoOrigem ?? "Prova oficial"} ${questao.anoOrigem ?? ""}`
-                          : " · Questão pessoal"}
+                      {` · ${rotuloFonteQuestao(questao)}`}
                     </small>
                   </div>
                   <div className="banco-biblioteca-tags">
-                    {questao.origem === "ia" ? (
+                    {questao.origem === "ia" && (
                       <span className="nunca">🤖 Gerada por IA</span>
-                    ) : (
-                      questao.global && <span className="oficial">✓ Publicada e validada</span>
+                    )}
+                    {questao.origem === "simulado_terceiro" && (
+                      <span className="oficial">📘 Simulado publicado</span>
+                    )}
+                    {questao.origem === "prova_oficial" && (
+                      <span className="oficial">✓ Prova oficial</span>
                     )}
                     {estatistica.tentativas === 0 && !respondidaOnline ? (
                       <span className="nunca">Nunca respondida</span>
@@ -959,6 +970,7 @@ function converterParaQuestaoIA(questao: QuestaoBanco): QuestaoIA {
     moduloId: questao.moduloId,
     assunto: questao.assunto,
     assuntoId: questao.assuntoId,
+    subassunto: questao.subassunto,
     banca: questao.banca,
     dificuldade:
       questao.dificuldade === "facil"
@@ -977,6 +989,10 @@ function converterParaQuestaoIA(questao: QuestaoBanco): QuestaoIA {
     respostaCorreta: questao.respostaCorretaId as QuestaoIA["respostaCorreta"],
     explicacao: questao.explicacao ?? "",
     fonteNome: questao.fonteNome,
+    origem: questao.origem,
+    concursoOrigem: questao.concursoOrigem,
+    anoOrigem: questao.anoOrigem,
+    numeroOriginal: questao.numeroOriginal,
     norma: questao.norma,
     dispositivo: questao.dispositivo,
   };
@@ -1006,6 +1022,18 @@ function separarComentarioGabarito(explicacao?: string) {
   if (!explicacao.startsWith(prefixo)) return null;
 
   return explicacao.slice(prefixo.length).trim();
+}
+
+function rotuloFonteQuestao(questao: QuestaoBanco) {
+  if (questao.origem === "simulado_terceiro") {
+    return `Simulado publicado · ${questao.fonteNome ?? questao.concursoOrigem ?? questao.banca}`;
+  }
+  if (questao.origem === "prova_oficial") {
+    const prova = questao.concursoOrigem ?? questao.fonteNome ?? "Prova oficial";
+    return `${prova}${questao.anoOrigem ? ` · ${questao.anoOrigem}` : ""}`;
+  }
+  if (questao.origem === "ia") return "Questão gerada por IA";
+  return "Questão pessoal";
 }
 
 function slugLocal(texto: string) {
