@@ -13,7 +13,9 @@ import {
 } from "../../services/simuladosProfessorService";
 import "./ParceiroSimulados.css";
 
-const ALTERNATIVAS = ["A", "B", "C", "D"];
+const LETRAS_ALTERNATIVAS = Array.from({ length: 26 }, (_, indice) => String.fromCharCode(65 + indice));
+type ModeloQuestao = "certo_errado" | "quatro" | "cinco" | "personalizado";
+type QuestaoEditor = QuestaoProfessor & { textoBase: string };
 
 export default function ParceiroSimulados() {
   const navigate = useNavigate();
@@ -60,6 +62,13 @@ export default function ParceiroSimulados() {
     }));
   }
 
+  function atualizarTextoBase(indice: number, valor: string) {
+    setForm((atual) => ({
+      ...atual,
+      questoes: atual.questoes.map((questao, i) => i === indice ? { ...questao, textoBase: valor } : questao),
+    }));
+  }
+
   function atualizarAlternativa(indiceQuestao: number, id: string, texto: string) {
     setForm((atual) => ({
       ...atual,
@@ -67,6 +76,40 @@ export default function ParceiroSimulados() {
         ...questao,
         alternativas: questao.alternativas.map((alternativa) => alternativa.id === id ? { ...alternativa, texto } : alternativa),
       } : questao),
+    }));
+  }
+
+  function definirModeloQuestao(indiceQuestao: number, modelo: Exclude<ModeloQuestao, "personalizado">) {
+    setForm((atual) => ({
+      ...atual,
+      questoes: atual.questoes.map((questao, i) => {
+        if (i !== indiceQuestao) return questao;
+
+        const modeloAtual = identificarModelo(questao);
+        const alternativas = modelo === "certo_errado"
+          ? [{ id: "C", texto: "Certo" }, { id: "E", texto: "Errado" }]
+          : criarAlternativas(modelo === "cinco" ? 5 : 4, modeloAtual === "certo_errado" ? [] : questao.alternativas);
+        const respostaCorretaId = alternativas.some((item) => item.id === questao.respostaCorretaId)
+          ? questao.respostaCorretaId
+          : alternativas[0].id;
+
+        return { ...questao, alternativas, respostaCorretaId };
+      }),
+    }));
+  }
+
+  function adicionarAlternativa(indiceQuestao: number) {
+    setForm((atual) => ({
+      ...atual,
+      questoes: atual.questoes.map((questao, i) => {
+        if (i !== indiceQuestao || identificarModelo(questao) === "certo_errado" || questao.alternativas.length >= LETRAS_ALTERNATIVAS.length) {
+          return questao;
+        }
+        const usadas = new Set(questao.alternativas.map((item) => item.id));
+        const proxima = LETRAS_ALTERNATIVAS.find((letra) => !usadas.has(letra));
+        if (!proxima) return questao;
+        return { ...questao, alternativas: [...questao.alternativas, { id: proxima, texto: "" }] };
+      }),
     }));
   }
 
@@ -80,14 +123,24 @@ export default function ParceiroSimulados() {
   async function salvar() {
     setMensagem("");
     setErro("");
-    const questoesInvalidas = form.questoes.some((q) => !q.enunciado.trim() || q.alternativas.some((a) => !a.texto.trim()));
+    const questoesInvalidas = form.questoes.some((q) =>
+      !q.enunciado.trim()
+      || q.alternativas.length < 2
+      || q.alternativas.some((a) => !a.texto.trim())
+      || !q.alternativas.some((a) => a.id === q.respostaCorretaId)
+    );
     if (!form.nome.trim()) return setErro("Informe o nome do simulado.");
     if (!form.turmas.length) return setErro("Selecione ao menos uma turma.");
-    if (questoesInvalidas) return setErro("Preencha o enunciado e todas as alternativas das questões.");
+    if (questoesInvalidas) return setErro("Preencha o enunciado, todas as alternativas e marque o gabarito de cada questão.");
     if (form.abreEm && form.encerraEm && new Date(form.encerraEm) <= new Date(form.abreEm)) return setErro("O encerramento precisa ser posterior à abertura.");
 
     setSalvando(true);
     try {
+      const questoesParaSalvar: QuestaoProfessor[] = form.questoes.map(({ textoBase, ...questao }) => ({
+        ...questao,
+        enunciado: montarEnunciado(textoBase, questao.enunciado),
+      }));
+
       await criarSimuladoProfessor({
         nome: form.nome,
         descricao: form.descricao,
@@ -98,7 +151,7 @@ export default function ParceiroSimulados() {
         encerraEm: iso(form.encerraEm),
         resultadoLiberadoEm: iso(form.resultadoEm),
         turmas: form.turmas,
-        questoes: form.questoes,
+        questoes: questoesParaSalvar,
         bonificacoes: form.premios.split("\n").map((premio, index) => ({ posicao: index + 1, premio: premio.trim() })).filter((item) => item.premio).slice(0, 5),
         exigirTelaCheia: form.telaCheia,
         registrarIntegridade: form.integridade,
@@ -168,15 +221,65 @@ export default function ParceiroSimulados() {
 
           <div className="psim-questoes-cab"><div><span>QUESTÕES</span><strong>{form.questoes.length} cadastrada(s)</strong></div><button type="button" className="secundario" onClick={() => setForm({ ...form, questoes: [...form.questoes, novaQuestao()] })}>+ Adicionar questão</button></div>
           <div className="psim-questoes">
-            {form.questoes.map((questao, indice) => (
-              <article key={indice}>
-                <header><strong>Questão {indice + 1}</strong>{form.questoes.length > 1 && <button type="button" onClick={() => setForm({ ...form, questoes: form.questoes.filter((_, i) => i !== indice) })}>Remover</button>}</header>
-                <div className="psim-qmeta"><input value={questao.materia} onChange={(e) => atualizarQuestao(indice, "materia", e.target.value)} placeholder="Matéria" /><input value={questao.assunto} onChange={(e) => atualizarQuestao(indice, "assunto", e.target.value)} placeholder="Assunto" /><select value={questao.dificuldade} onChange={(e) => atualizarQuestao(indice, "dificuldade", e.target.value)}><option value="facil">Fácil</option><option value="media">Média</option><option value="dificil">Difícil</option></select></div>
-                <textarea className="psim-enunciado" value={questao.enunciado} onChange={(e) => atualizarQuestao(indice, "enunciado", e.target.value)} placeholder="Enunciado da questão" />
-                <div className="psim-alternativas">{questao.alternativas.map((alt) => <label key={alt.id} className={questao.respostaCorretaId === alt.id ? "correta" : ""}><input type="radio" name={`gabarito-${indice}`} checked={questao.respostaCorretaId === alt.id} onChange={() => atualizarQuestao(indice, "respostaCorretaId", alt.id)} /><b>{alt.id}</b><input value={alt.texto} onChange={(e) => atualizarAlternativa(indice, alt.id, e.target.value)} placeholder={`Alternativa ${alt.id}`} /></label>)}</div>
-                <input value={questao.explicacao ?? ""} onChange={(e) => atualizarQuestao(indice, "explicacao", e.target.value)} placeholder="Explicação do gabarito (opcional)" />
-              </article>
-            ))}
+            {form.questoes.map((questao, indice) => {
+              const modelo = identificarModelo(questao);
+              const certoErrado = modelo === "certo_errado";
+              return (
+                <article key={indice}>
+                  <header><strong>Questão {indice + 1}</strong>{form.questoes.length > 1 && <button type="button" onClick={() => setForm({ ...form, questoes: form.questoes.filter((_, i) => i !== indice) })}>Remover</button>}</header>
+
+                  <section className="psim-tipo-questao">
+                    <div>
+                      <span>TIPO DA QUESTÃO</span>
+                      <small>Escolha um padrão e o bloco de respostas é montado automaticamente.</small>
+                    </div>
+                    <div className="psim-tipo-opcoes">
+                      <button type="button" className={modelo === "certo_errado" ? "ativo" : ""} onClick={() => definirModeloQuestao(indice, "certo_errado")}>Certo / Errado</button>
+                      <button type="button" className={modelo === "quatro" ? "ativo" : ""} onClick={() => definirModeloQuestao(indice, "quatro")}>4 alternativas</button>
+                      <button type="button" className={modelo === "cinco" ? "ativo" : ""} onClick={() => definirModeloQuestao(indice, "cinco")}>5 alternativas</button>
+                      {modelo === "personalizado" && <span className="psim-tipo-personalizado">Personalizada · {questao.alternativas.length} alternativas</span>}
+                    </div>
+                  </section>
+
+                  <div className="psim-qmeta">
+                    <label>Matéria<input value={questao.materia} onChange={(e) => atualizarQuestao(indice, "materia", e.target.value)} placeholder="Ex.: História" /></label>
+                    <label>Assunto<input value={questao.assunto} onChange={(e) => atualizarQuestao(indice, "assunto", e.target.value)} placeholder="Ex.: Confederação do Equador" /></label>
+                    <label>Dificuldade<select value={questao.dificuldade} onChange={(e) => atualizarQuestao(indice, "dificuldade", e.target.value)}><option value="facil">Fácil</option><option value="media">Média</option><option value="dificil">Difícil</option></select></label>
+                  </div>
+
+                  <label className="psim-campo-texto">
+                    <span>Texto-base / enunciado do texto <small>(opcional)</small></span>
+                    <textarea className="psim-texto-base" value={questao.textoBase} onChange={(e) => atualizarTextoBase(indice, e.target.value)} placeholder="Cole aqui o texto, trecho, situação-problema ou texto de apoio usado pela questão." />
+                  </label>
+
+                  <label className="psim-campo-texto">
+                    <span>Enunciado da questão</span>
+                    <textarea className="psim-enunciado" value={questao.enunciado} onChange={(e) => atualizarQuestao(indice, "enunciado", e.target.value)} placeholder="Digite aqui a pergunta ou afirmação que o aluno deverá responder." />
+                  </label>
+
+                  <div className="psim-alternativas">
+                    {questao.alternativas.map((alt) => (
+                      <label key={alt.id} className={questao.respostaCorretaId === alt.id ? "correta" : ""}>
+                        <input type="radio" name={`gabarito-${indice}`} checked={questao.respostaCorretaId === alt.id} onChange={() => atualizarQuestao(indice, "respostaCorretaId", alt.id)} />
+                        <b>{alt.id}</b>
+                        <input readOnly={certoErrado} value={alt.texto} onChange={(e) => atualizarAlternativa(indice, alt.id, e.target.value)} placeholder={`Alternativa ${alt.id}`} />
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="psim-alternativas-acoes">
+                    {!certoErrado && (
+                      <button type="button" className="secundario" disabled={questao.alternativas.length >= LETRAS_ALTERNATIVAS.length} onClick={() => adicionarAlternativa(indice)}>
+                        + Adicionar alternativa
+                      </button>
+                    )}
+                    <small>{certoErrado ? "Certo/Errado usa somente duas respostas fixas." : "O botão continua a sequência automaticamente: E, F, G..."}</small>
+                  </div>
+
+                  <input value={questao.explicacao ?? ""} onChange={(e) => atualizarQuestao(indice, "explicacao", e.target.value)} placeholder="Explicação do gabarito (opcional)" />
+                </article>
+              );
+            })}
           </div>
           <div className="psim-salvar"><button type="button" disabled={salvando} onClick={() => void salvar()}>{salvando ? "Salvando..." : "Salvar como rascunho"}</button></div>
         </section>
@@ -202,7 +305,28 @@ function PainelResultados({ painel, onAluno }: { painel: PainelSimuladoProfessor
   return <div className="psim-resultado"><div className="psim-kpis"><div><strong>{painel.oficiaisConcluidas}</strong><span>oficiais concluídas</span></div><div><strong>{painel.treinosConcluidos}</strong><span>treinos</span></div><div><strong>{painel.mediaPercentual.toFixed(1)}%</strong><span>média</span></div><div><strong>{painel.alertasIntegridade}</strong><span>alertas de integridade</span></div></div><div className="psim-ranking"><div className="linha cab"><span>#</span><span>Aluno</span><span>Turma</span><span>Acertos</span><span>%</span><span>Tempo</span><span>Alertas</span></div>{painel.ranking.length === 0 ? <p>Nenhuma tentativa oficial concluída.</p> : painel.ranking.map((item, indice) => <button type="button" className="linha" key={`${item.usuarioId}-${indice}`} onClick={() => onAluno(item.usuarioId)}><span>{indice + 1}º</span><span>{item.nome}</span><span>{item.turma}</span><span>{item.certas}</span><span>{item.percentual.toFixed(1)}%</span><span>{item.minutos} min</span><span>{item.alertas}</span></button>)}</div></div>;
 }
 
+function identificarModelo(questao: QuestaoEditor): ModeloQuestao {
+  const ids = questao.alternativas.map((item) => item.id).join("");
+  if (ids === "CE" && questao.alternativas.length === 2) return "certo_errado";
+  if (ids === "ABCD" && questao.alternativas.length === 4) return "quatro";
+  if (ids === "ABCDE" && questao.alternativas.length === 5) return "cinco";
+  return "personalizado";
+}
+
+function criarAlternativas(quantidade: number, existentes: Array<{ id: string; texto: string }> = []) {
+  return LETRAS_ALTERNATIVAS.slice(0, quantidade).map((id) => ({
+    id,
+    texto: existentes.find((item) => item.id === id)?.texto ?? "",
+  }));
+}
+
+function montarEnunciado(textoBase: string, enunciado: string) {
+  const texto = textoBase.trim();
+  const pergunta = enunciado.trim();
+  return texto ? `Texto-base:\n${texto}\n\nQuestão:\n${pergunta}` : pergunta;
+}
+
 function formInicial() { return { nome: "", descricao: "", concurso: "PMPE", banca: "", duracao: "60", abreEm: "", encerraEm: "", resultadoEm: "", turmas: [] as string[], premios: "", telaCheia: true, integridade: true, questoes: [novaQuestao()] }; }
-function novaQuestao(): QuestaoProfessor { return { materia: "", assunto: "", dificuldade: "media", enunciado: "", alternativas: ALTERNATIVAS.map((id) => ({ id, texto: "" })), respostaCorretaId: "A", explicacao: "" }; }
+function novaQuestao(): QuestaoEditor { return { materia: "", assunto: "", dificuldade: "media", textoBase: "", enunciado: "", alternativas: criarAlternativas(5), respostaCorretaId: "A", explicacao: "" }; }
 function iso(valor: string) { return valor ? new Date(valor).toISOString() : null; }
 function dataHora(valor: string | null) { if (!valor) return ""; const d = new Date(valor); return Number.isNaN(d.getTime()) ? valor : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }); }
