@@ -90,7 +90,7 @@ test.describe("auditoria final da Area do Parceiro", () => {
     if (papel === "proprietario") {
       await pagina.getByRole("button", { name: "Financeiro" }).click();
       await expect(pagina.getByText("FINANCEIRO DA PARCERIA", { exact: true })).toBeVisible();
-      await expect(pagina.getByRole("heading", { name: "Competências e repasses" })).toBeVisible();
+      await expect(pagina.getByRole("heading", { name: "Cobranças da plataforma" })).toBeVisible();
       await expect(pagina.locator(".parceiro-financeiro-aviso.erro")).toHaveCount(0);
       await semOverflowHorizontal(page, "/parceiro#financeiro");
     } else {
