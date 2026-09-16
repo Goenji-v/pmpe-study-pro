@@ -133,7 +133,13 @@ function DesempenhoGeral({
           <div>
             <h3>{mensagem.titulo}</h3>
             <p>{mensagem.texto}</p>
-            <strong>↗ {mensagem.acao}</strong>
+            <button
+              type="button"
+              className="dashboard-geral-feedback-cta"
+              onClick={onDetalhes}
+            >
+              ↗ {mensagem.acao}
+            </button>
           </div>
         </div>
       </div>
