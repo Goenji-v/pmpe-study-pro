@@ -202,11 +202,24 @@
   line-height: 1.65;
 }
 
-.dashboard-geral-donut-feedback strong {
+.dashboard-geral-feedback-cta {
   display: block;
   margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #42df9d;
+  font: inherit;
   font-size: 10px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-geral-feedback-cta:hover,
+.dashboard-geral-feedback-cta:focus-visible {
+  color: #75efbb;
+  text-decoration: underline;
 }
 
 @media (max-width: 1250px) {
