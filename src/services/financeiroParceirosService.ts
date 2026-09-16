@@ -5,6 +5,7 @@ export type StatusFinanceiroParceiro = "pendente" | "pago" | "cancelado";
 export type FaturamentoOperacionalParceiro = {
   id: string;
   parceiroId: string | null;
+  parceiroNome: string;
   competencia: string;
   alunosAtivos: number;
   valorUnitarioCentavos: number;
@@ -17,6 +18,13 @@ export type FaturamentoOperacionalParceiro = {
   observacao: string | null;
   fechadoEm: string;
   atualizadoEm: string;
+};
+
+export type ResumoFinanceiroMeuParceiro = {
+  parceiroId: string;
+  alunosAtivos: number;
+  valorUnitarioCentavos: number;
+  estimativaAtualCentavos: number;
 };
 
 export type FecharCompetenciaParceiro = {
@@ -45,10 +53,38 @@ export async function listarFaturamentoParceiroAdmin(parceiroId: string) {
   return normalizarLista(data);
 }
 
+export async function listarFinanceiroGeralAdmin(ano: number) {
+  const { data, error } = await supabase.rpc("listar_financeiro_geral_admin", {
+    p_ano: Math.round(ano),
+  });
+  if (error) throw new Error(`Não foi possível carregar o consolidado financeiro: ${error.message}`);
+  return normalizarLista(data);
+}
+
 export async function listarMeuFaturamentoParceiro() {
   const { data, error } = await supabase.rpc("listar_meu_faturamento_parceiro");
   if (error) throw new Error(`Não foi possível carregar o financeiro da parceria: ${error.message}`);
   return normalizarLista(data);
+}
+
+export async function carregarResumoFinanceiroMeuParceiro(): Promise<ResumoFinanceiroMeuParceiro> {
+  const { data, error } = await supabase.rpc("resumo_financeiro_meu_parceiro");
+  if (error) throw new Error(`Não foi possível carregar a estimativa financeira: ${error.message}`);
+  const item = objeto(data);
+  return {
+    parceiroId: texto(item.parceiro_id),
+    alunosAtivos: numero(item.alunos_ativos),
+    valorUnitarioCentavos: numero(item.valor_unitario_centavos),
+    estimativaAtualCentavos: numero(item.estimativa_atual_centavos),
+  };
+}
+
+export async function atualizarValorParceriaAdmin(parceiroId: string, valorAlunoCentavos: number) {
+  const { error } = await supabase.rpc("admin_atualizar_valor_parceria", {
+    p_parceiro_id: parceiroId,
+    p_valor_aluno_centavos: Math.max(0, Math.round(valorAlunoCentavos)),
+  });
+  if (error) throw new Error(`Não foi possível atualizar a taxa da parceria: ${error.message}`);
 }
 
 export async function fecharCompetenciaParceiroAdmin(entrada: FecharCompetenciaParceiro) {
@@ -80,6 +116,7 @@ function normalizarLista(valor: unknown): FaturamentoOperacionalParceiro[] {
     .map((item) => ({
       id: texto(item.id),
       parceiroId: texto(item.parceiro_id) || null,
+      parceiroNome: texto(item.parceiro_nome),
       competencia: texto(item.competencia),
       alunosAtivos: numero(item.alunos_ativos),
       valorUnitarioCentavos: numero(item.valor_unitario_centavos),
@@ -93,6 +130,10 @@ function normalizarLista(valor: unknown): FaturamentoOperacionalParceiro[] {
       fechadoEm: texto(item.fechado_em),
       atualizadoEm: texto(item.atualizado_em),
     }));
+}
+
+function objeto(valor: unknown): Registro {
+  return valor && typeof valor === "object" && !Array.isArray(valor) ? valor as Registro : {};
 }
 
 function status(valor: unknown): StatusFinanceiroParceiro {
