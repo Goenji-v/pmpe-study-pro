@@ -113,6 +113,28 @@ export default function ParceiroSimulados() {
     }));
   }
 
+  function removerAlternativa(indiceQuestao: number, id: string) {
+    setForm((atual) => ({
+      ...atual,
+      questoes: atual.questoes.map((questao, i) => {
+        if (i !== indiceQuestao || identificarModelo(questao) === "certo_errado" || questao.alternativas.length <= 2) {
+          return questao;
+        }
+
+        const restantes = questao.alternativas.filter((item) => item.id !== id);
+        if (restantes.length === questao.alternativas.length || restantes.length < 2) return questao;
+
+        const indiceDoGabarito = restantes.findIndex((item) => item.id === questao.respostaCorretaId);
+        const alternativas = restantes.map((item, index) => ({ ...item, id: LETRAS_ALTERNATIVAS[index] }));
+        const respostaCorretaId = indiceDoGabarito >= 0
+          ? alternativas[indiceDoGabarito].id
+          : alternativas[0].id;
+
+        return { ...questao, alternativas, respostaCorretaId };
+      }),
+    }));
+  }
+
   function alternarTurma(id: string) {
     setForm((atual) => ({
       ...atual,
@@ -262,7 +284,24 @@ export default function ParceiroSimulados() {
                       <label key={alt.id} className={questao.respostaCorretaId === alt.id ? "correta" : ""}>
                         <input type="radio" name={`gabarito-${indice}`} checked={questao.respostaCorretaId === alt.id} onChange={() => atualizarQuestao(indice, "respostaCorretaId", alt.id)} />
                         <b>{alt.id}</b>
-                        <input readOnly={certoErrado} value={alt.texto} onChange={(e) => atualizarAlternativa(indice, alt.id, e.target.value)} placeholder={`Alternativa ${alt.id}`} />
+                        <span style={{ display: "grid", gridTemplateColumns: !certoErrado && questao.alternativas.length > 2 ? "minmax(0, 1fr) auto" : "1fr", gap: 8 }}>
+                          <input readOnly={certoErrado} value={alt.texto} onChange={(e) => atualizarAlternativa(indice, alt.id, e.target.value)} placeholder={`Alternativa ${alt.id}`} />
+                          {!certoErrado && questao.alternativas.length > 2 && (
+                            <button
+                              type="button"
+                              className="perigo"
+                              aria-label={`Excluir alternativa ${alt.id}`}
+                              title={`Excluir alternativa ${alt.id}`}
+                              onClick={(evento) => {
+                                evento.preventDefault();
+                                evento.stopPropagation();
+                                removerAlternativa(indice, alt.id);
+                              }}
+                            >
+                              Excluir
+                            </button>
+                          )}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -273,7 +312,7 @@ export default function ParceiroSimulados() {
                         + Adicionar alternativa
                       </button>
                     )}
-                    <small>{certoErrado ? "Certo/Errado usa somente duas respostas fixas." : "O botão continua a sequência automaticamente: E, F, G..."}</small>
+                    <small>{certoErrado ? "Certo/Errado usa somente duas respostas fixas." : "Você pode adicionar ou excluir alternativas sem perder o restante da questão."}</small>
                   </div>
 
                   <input value={questao.explicacao ?? ""} onChange={(e) => atualizarQuestao(indice, "explicacao", e.target.value)} placeholder="Explicação do gabarito (opcional)" />
