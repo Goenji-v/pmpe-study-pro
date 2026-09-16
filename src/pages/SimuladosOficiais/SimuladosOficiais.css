@@ -68,6 +68,18 @@
   opacity: 0.65;
 }
 
+.acoes-oficiais {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.acoes-oficiais .ranking-oficial {
+  border-color: rgba(250, 204, 21, 0.45);
+  color: #facc15;
+}
+
 .estado-oficial {
   padding: 35px;
   border: 1px dashed rgba(127, 127, 127, 0.3);
@@ -84,5 +96,13 @@
   .cards-oficiais article {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .acoes-oficiais {
+    width: 100%;
+  }
+
+  .acoes-oficiais button {
+    flex: 1;
   }
 }
