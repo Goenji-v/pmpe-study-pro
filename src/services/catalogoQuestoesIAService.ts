@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { Dificuldade, QuestaoIA } from "../types/index";
+import type { Dificuldade, OrigemQuestao, QuestaoIA } from "../types/index";
 import {
   fingerprintQuestaoIA,
   reconciliarQuestoesComCatalogo,
@@ -16,6 +16,7 @@ type LinhaCatalogoIA = {
   modulo: string | null;
   assunto_id: string | null;
   assunto: string;
+  subassunto?: string | null;
   banca: string;
   dificuldade: Dificuldade;
   enunciado: string;
@@ -23,6 +24,10 @@ type LinhaCatalogoIA = {
   resposta_correta_id: string | null;
   explicacao: string | null;
   fonte_nome?: string | null;
+  origem?: OrigemQuestao | null;
+  concurso_origem?: string | null;
+  ano_origem?: number | null;
+  numero_original?: number | null;
   norma?: string | null;
   dispositivo?: string | null;
   fingerprint: string | null;
@@ -48,6 +53,9 @@ export type ContextoPublicacaoIA = {
   materiaId?: string;
   assuntoId?: string;
 };
+
+const CAMPOS_CATALOGO_TREINO =
+  "id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,subassunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,origem,concurso_origem,ano_origem,numero_original,norma,dispositivo,fingerprint";
 
 export async function selecionarDoCatalogoIA(
   filtros: FiltrosCatalogoIA
@@ -77,7 +85,7 @@ export async function atualizarQuestoesAntesDoTreino(questoes: QuestaoIA[]) {
 
   for (let inicio = 0; inicio < ids.length; inicio += 100) {
     let consulta = supabase.from("questoes_catalogo")
-      .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,norma,dispositivo,fingerprint")
+      .select(CAMPOS_CATALOGO_TREINO)
       .in("id", ids.slice(inicio, inicio + 100))
       .in("origem", ["ia", "prova_oficial", "simulado_terceiro"]);
 
@@ -193,9 +201,7 @@ export async function registrarRespostasQuestoesIA(
 async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
   let consulta = supabase
     .from("questoes_catalogo")
-    .select(
-      "id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,norma,dispositivo,fingerprint"
-    )
+    .select(CAMPOS_CATALOGO_TREINO)
     .eq("origem", "ia")
     .eq("status", "ativa")
     .eq("compatibilidade_edital", "direta")
@@ -258,6 +264,7 @@ function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
     moduloId: linha.modulo_id ?? undefined,
     assunto: linha.assunto,
     assuntoId: linha.assunto_id ?? undefined,
+    subassunto: linha.subassunto ?? undefined,
     banca: linha.banca,
     dificuldade:
       linha.dificuldade === "facil"
@@ -276,6 +283,10 @@ function converterLinha(linha: LinhaCatalogoIA): QuestaoIA {
     respostaCorreta: linha.resposta_correta_id as QuestaoIA["respostaCorreta"],
     explicacao: linha.explicacao ?? "",
     fonteNome: linha.fonte_nome ?? undefined,
+    origem: linha.origem ?? undefined,
+    concursoOrigem: linha.concurso_origem ?? undefined,
+    anoOrigem: linha.ano_origem ?? undefined,
+    numeroOriginal: linha.numero_original ?? undefined,
     norma: linha.norma ?? undefined,
     dispositivo: linha.dispositivo ?? undefined,
   };
