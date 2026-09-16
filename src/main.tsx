@@ -13,7 +13,6 @@ import "./styles/mobile-density.css";
 import "./styles/mobile-dashboard-fixes.css";
 import "./styles/visual-qa-final.css";
 import "./styles/responsive-critical-fixes.css";
-import "./styles/dashboard-hero-agent.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 
 const CHAVE_RECUPERACAO_ASSET = "study-pro:asset-reload";
