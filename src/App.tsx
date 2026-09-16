@@ -38,7 +38,7 @@ const RevisaoCadernoIA = lazy(() => import("./pages/RevisaoCadernoIA/RevisaoCade
 const CronogramaGateway = lazy(() => import("./pages/CronogramaIA/CronogramaGateway"));
 const GerarSimuladoIA = lazy(() => import("./pages/GerarSimuladoIA/GerarSimuladoIA"));
 const CentroMateriais = lazy(() => import("./pages/CentroMateriais/CentroMateriais"));
-const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
+const Dashboard = lazy(() => import("./pages/Dashboard/DashboardOficial"));
 const Estudos = lazy(() => import("./pages/Estudos/Estudos"));
 const Questoes = lazy(() => import("./pages/Questoes/Questoes"));
 const Historico = lazy(() => import("./pages/Historico/Historico"));
