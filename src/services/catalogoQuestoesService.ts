@@ -46,7 +46,7 @@ type LinhaQuestaoCatalogo = {
   dispositivo: string | null;
   motivo_status: string | null;
   fonte_nome: string | null;
-  origem: "prova_oficial" | "ia";
+  origem: "prova_oficial" | "ia" | "simulado_terceiro";
   created_at: string;
   revisada_em: string | null;
 };
@@ -78,12 +78,21 @@ export type ResultadoPublicacaoLote = {
 export async function listarQuestoesPublicadas(
   concursoAlvo: string
 ): Promise<QuestaoBanco[]> {
-  const [oficiais, geradasIA] = await Promise.all([
+  const [oficiais, simuladosTerceiros, geradasIA] = await Promise.all([
     supabase
       .from("questoes_catalogo")
       .select("*")
       .eq("status", "ativa")
       .eq("origem", "prova_oficial")
+      .eq("concurso_alvo", concursoAlvo)
+      .in("compatibilidade_edital", ["direta", "implicita"])
+      .order("created_at", { ascending: false })
+      .limit(1000),
+    supabase
+      .from("questoes_catalogo")
+      .select("*")
+      .eq("status", "ativa")
+      .eq("origem", "simulado_terceiro")
       .eq("concurso_alvo", concursoAlvo)
       .in("compatibilidade_edital", ["direta", "implicita"])
       .order("created_at", { ascending: false })
@@ -98,13 +107,14 @@ export async function listarQuestoesPublicadas(
       .limit(1000),
   ]);
 
-  const erro = oficiais.error ?? geradasIA.error;
+  const erro = oficiais.error ?? simuladosTerceiros.error ?? geradasIA.error;
   if (erro) {
     throw new Error(`Erro ao carregar o catálogo de questões: ${erro.message}`);
   }
 
   return [
     ...((oficiais.data ?? []) as LinhaQuestaoCatalogo[]),
+    ...((simuladosTerceiros.data ?? []) as LinhaQuestaoCatalogo[]),
     ...((geradasIA.data ?? []) as LinhaQuestaoCatalogo[]),
   ].map(converterLinhaQuestao);
 }
@@ -314,7 +324,7 @@ function converterLinhaQuestao(linha: LinhaQuestaoCatalogo): QuestaoBanco {
     statusEditorial: linha.status,
     compatibilidadeEdital: linha.compatibilidade_edital,
     confiancaClassificacao: linha.confianca_classificacao,
-    origem: linha.origem,
+    origem: linha.origem === "simulado_terceiro" ? "prova_oficial" : linha.origem,
     global: true,
     revisadaEm: linha.revisada_em ?? undefined,
   };
