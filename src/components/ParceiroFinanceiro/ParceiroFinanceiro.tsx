@@ -8,7 +8,9 @@ import {
 } from "../../services/financeiroParceirosService";
 import "./ParceiroFinanceiro.css";
 
-export default function ParceiroFinanceiro() {
+type Props = { alunosAtivos?: number; valorMensal?: number };
+
+export default function ParceiroFinanceiro(_: Props) {
   const [itens, setItens] = useState<FaturamentoOperacionalParceiro[]>([]);
   const [resumo, setResumo] = useState<ResumoFinanceiroMeuParceiro | null>(null);
   const [carregando, setCarregando] = useState(true);
