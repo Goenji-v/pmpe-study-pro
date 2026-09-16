@@ -10,6 +10,7 @@ import { useApp } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { listarQuestoesPublicadas } from "../../services/catalogoQuestoesService";
+import { listarIdsRespondidos } from "../../services/catalogoQuestoesIAService";
 import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
 
 import type {
@@ -86,6 +87,7 @@ export default function BancoQuestoes() {
   const [questoesGlobais, setQuestoesGlobais] = useState<QuestaoBanco[]>([]);
   const [carregandoGlobais, setCarregandoGlobais] = useState(true);
   const [preferenciasGlobais, setPreferenciasGlobais] = useState<Record<string, PreferenciaQuestaoGlobal>>({});
+  const [idsRespondidosOnline, setIdsRespondidosOnline] = useState<Set<string>>(new Set());
 
   const chavePreferencias = `pmpe_questoes_globais_preferencias_${usuario?.id ?? "anonimo"}`;
 
@@ -107,6 +109,8 @@ export default function BancoQuestoes() {
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todas");
   const [filtroOrigem, setFiltroOrigem] = useState<FiltroOrigem>("todas");
   const [filtroMateria, setFiltroMateria] = useState("");
+  const [filtroAssunto, setFiltroAssunto] = useState("");
+  const [filtroSubassunto, setFiltroSubassunto] = useState("");
   const [filtroDificuldade, setFiltroDificuldade] = useState("");
   const [busca, setBusca] = useState("");
   const [quantidadeTreino, setQuantidadeTreino] = useState(10);
@@ -168,6 +172,29 @@ export default function BancoQuestoes() {
     };
   }, [configuracoes.concurso, showToast]);
 
+  useEffect(() => {
+    let ativo = true;
+
+    if (!usuario?.id) {
+      setIdsRespondidosOnline(new Set());
+      return () => {
+        ativo = false;
+      };
+    }
+
+    void listarIdsRespondidos()
+      .then((ids) => {
+        if (ativo) setIdsRespondidosOnline(ids);
+      })
+      .catch(() => {
+        if (ativo) setIdsRespondidosOnline(new Set());
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [usuario?.id]);
+
   const materiaSelecionada = materias.find(
     (materia: Materia) => materia.id === materiaId
   );
@@ -193,6 +220,9 @@ export default function BancoQuestoes() {
   const estatisticaDaQuestao = (questao: QuestaoBanco) =>
     estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;
 
+  const questaoJaRespondida = (questao: QuestaoBanco) =>
+    idsRespondidosOnline.has(questao.id) || estatisticaDaQuestao(questao).tentativas > 0;
+
   const contagens = useMemo(() => {
     let erradas = 0;
     let acertadas = 0;
@@ -204,7 +234,8 @@ export default function BancoQuestoes() {
 
     questoesBiblioteca.forEach((questao) => {
       const estatistica = estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;
-      if (estatistica.tentativas === 0) naoResolvidas += 1;
+      const respondida = idsRespondidosOnline.has(questao.id) || estatistica.tentativas > 0;
+      if (!respondida) naoResolvidas += 1;
       if (estatistica.ultima === "erro") erradas += 1;
       if (estatistica.ultima === "acerto") acertadas += 1;
       if (questao.favoritada) favoritas += 1;
@@ -223,11 +254,34 @@ export default function BancoQuestoes() {
       oficiais,
       ia,
     };
-  }, [estatisticasPorQuestao, questoesBiblioteca]);
+  }, [estatisticasPorQuestao, idsRespondidosOnline, questoesBiblioteca]);
 
   const materiasDisponiveis = useMemo(
     () => Array.from(new Set(questoesBiblioteca.map((questao) => questao.materia))).sort(),
     [questoesBiblioteca]
+  );
+
+  const assuntosDisponiveis = useMemo(
+    () => Array.from(new Set(
+      questoesBiblioteca
+        .filter((questao) => !filtroMateria || questao.materia === filtroMateria)
+        .map((questao) => questao.assunto)
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [filtroMateria, questoesBiblioteca]
+  );
+
+  const subassuntosDisponiveis = useMemo(
+    () => Array.from(new Set(
+      questoesBiblioteca
+        .filter((questao) =>
+          (!filtroMateria || questao.materia === filtroMateria) &&
+          (!filtroAssunto || questao.assunto === filtroAssunto)
+        )
+        .map((questao) => questao.subassunto?.trim())
+        .filter((subassunto): subassunto is string => Boolean(subassunto))
+    )).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [filtroAssunto, filtroMateria, questoesBiblioteca]
   );
 
   const questoesFiltradas = useMemo(() => {
@@ -235,8 +289,11 @@ export default function BancoQuestoes() {
 
     return questoesBiblioteca.filter((questao) => {
       const estatistica = estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;
+      const respondida = idsRespondidosOnline.has(questao.id) || estatistica.tentativas > 0;
 
       if (filtroMateria && questao.materia !== filtroMateria) return false;
+      if (filtroAssunto && questao.assunto !== filtroAssunto) return false;
+      if (filtroSubassunto && questao.subassunto !== filtroSubassunto) return false;
       if (filtroDificuldade && questao.dificuldade !== filtroDificuldade) return false;
       if (filtroOrigem === "oficiais" && questao.origem !== "prova_oficial") return false;
       if (filtroOrigem === "ia" && questao.origem !== "ia") return false;
@@ -244,23 +301,26 @@ export default function BancoQuestoes() {
 
       if (filtroStatus === "erradas" && estatistica.ultima !== "erro") return false;
       if (filtroStatus === "acertadas" && estatistica.ultima !== "acerto") return false;
-      if (filtroStatus === "nao_resolvidas" && estatistica.tentativas > 0) return false;
+      if (filtroStatus === "nao_resolvidas" && respondida) return false;
       if (filtroStatus === "favoritas" && !questao.favoritada) return false;
       if (filtroStatus === "revisar" && !questao.revisarDepois) return false;
 
       if (!termo) return true;
 
       return normalizar(
-        `${questao.materia} ${questao.modulo ?? ""} ${questao.assunto} ${questao.banca} ${questao.enunciado}`
+        `${questao.materia} ${questao.modulo ?? ""} ${questao.assunto} ${questao.subassunto ?? ""} ${questao.banca} ${questao.enunciado}`
       ).includes(termo);
     });
   }, [
     busca,
     estatisticasPorQuestao,
+    filtroAssunto,
     filtroDificuldade,
     filtroMateria,
     filtroOrigem,
     filtroStatus,
+    filtroSubassunto,
+    idsRespondidosOnline,
     questoesBiblioteca,
   ]);
 
@@ -399,7 +459,13 @@ export default function BancoQuestoes() {
     }
 
     const quantidade = Math.min(Math.max(1, quantidadeTreino), treinaveis.length);
-    const sorteadas = embaralhar(treinaveis).slice(0, quantidade);
+    const ineditas = treinaveis.filter((questao) => !questaoJaRespondida(questao));
+    const idsIneditas = new Set(ineditas.map((questao) => questao.id));
+    const repetidas = treinaveis.filter((questao) => !idsIneditas.has(questao.id));
+    const sorteadas = [
+      ...embaralhar(ineditas),
+      ...embaralhar(repetidas),
+    ].slice(0, quantidade);
     const questoesIA = sorteadas.map(converterParaQuestaoIA);
 
     localStorage.setItem(CHAVE_QUESTOES_IA, JSON.stringify(questoesIA));
@@ -448,7 +514,7 @@ export default function BancoQuestoes() {
 
       <div className="banco-biblioteca-resumo">
         <Resumo titulo="Total" valor={contagens.todas} />
-        <Resumo titulo="Oficiais" valor={contagens.oficiais} classe="oficial" />
+        <Resumo titulo="Oficiais e simulados" valor={contagens.oficiais} classe="oficial" />
         <Resumo titulo="Geradas por IA" valor={contagens.ia} classe="neutro" />
         <Resumo titulo="Erradas" valor={contagens.erradas} classe="erro" />
         <Resumo titulo="Nunca respondidas" valor={contagens.naoResolvidas} classe="neutro" />
@@ -474,10 +540,41 @@ export default function BancoQuestoes() {
             aria-label="Buscar no banco de questões"
           />
 
-          <select value={filtroMateria} onChange={(evento) => setFiltroMateria(evento.target.value)}>
+          <select
+            value={filtroMateria}
+            onChange={(evento) => {
+              setFiltroMateria(evento.target.value);
+              setFiltroAssunto("");
+              setFiltroSubassunto("");
+            }}
+          >
             <option value="">Todas as matérias</option>
             {materiasDisponiveis.map((materia) => (
               <option key={materia} value={materia}>{materia}</option>
+            ))}
+          </select>
+
+          <select
+            value={filtroAssunto}
+            onChange={(evento) => {
+              setFiltroAssunto(evento.target.value);
+              setFiltroSubassunto("");
+            }}
+          >
+            <option value="">Todos os assuntos</option>
+            {assuntosDisponiveis.map((assunto) => (
+              <option key={assunto} value={assunto}>{assunto}</option>
+            ))}
+          </select>
+
+          <select
+            value={filtroSubassunto}
+            onChange={(evento) => setFiltroSubassunto(evento.target.value)}
+            disabled={subassuntosDisponiveis.length === 0}
+          >
+            <option value="">Todos os subassuntos</option>
+            {subassuntosDisponiveis.map((subassunto) => (
+              <option key={subassunto} value={subassunto}>{subassunto}</option>
             ))}
           </select>
 
@@ -490,7 +587,7 @@ export default function BancoQuestoes() {
 
           <select value={filtroOrigem} onChange={(evento) => setFiltroOrigem(evento.target.value as FiltroOrigem)}>
             <option value="todas">Todas as origens</option>
-            <option value="oficiais">Somente oficiais</option>
+            <option value="oficiais">Provas e simulados publicados</option>
             <option value="ia">Catálogo compartilhado IA</option>
             <option value="pessoais">Minhas questões</option>
           </select>
@@ -507,11 +604,14 @@ export default function BancoQuestoes() {
             </select>
           </label>
         </div>
+        <p className="banco-subtitle">
+          Ao iniciar um treino, o Study Pro prioriza questões que você ainda não respondeu e só repete quando necessário.
+        </p>
       </section>
 
       <div className="banco-biblioteca-contagem">
         {carregandoGlobais ? (
-          <span>Carregando catálogo oficial...</span>
+          <span>Carregando catálogo compartilhado...</span>
         ) : (
           <><strong>{questoesFiltradas.length}</strong> questão{questoesFiltradas.length === 1 ? "" : "ões"} neste filtro</>
         )}
@@ -525,6 +625,7 @@ export default function BancoQuestoes() {
         <div className="banco-biblioteca-lista">
           {questoesFiltradas.map((questao) => {
             const estatistica = estatisticaDaQuestao(questao);
+            const respondidaOnline = idsRespondidosOnline.has(questao.id);
 
             return (
               <article key={questao.id} className="banco-biblioteca-item">
@@ -533,6 +634,7 @@ export default function BancoQuestoes() {
                     <span>{questao.materia}</span>
                     <strong>{questao.assunto}</strong>
                     <small>
+                      {questao.subassunto ? `${questao.subassunto} · ` : ""}
                       {questao.banca} · {rotuloDificuldade(questao.dificuldade)}
                       {questao.origem === "ia"
                         ? " · Catálogo compartilhado IA"
@@ -545,10 +647,12 @@ export default function BancoQuestoes() {
                     {questao.origem === "ia" ? (
                       <span className="nunca">🤖 Gerada por IA</span>
                     ) : (
-                      questao.global && <span className="oficial">✓ Oficial validada</span>
+                      questao.global && <span className="oficial">✓ Publicada e validada</span>
                     )}
-                    {estatistica.tentativas === 0 ? (
+                    {estatistica.tentativas === 0 && !respondidaOnline ? (
                       <span className="nunca">Nunca respondida</span>
+                    ) : estatistica.tentativas === 0 ? (
+                      <span className="nunca">Já respondida</span>
                     ) : (
                       <span className={estatistica.ultima === "acerto" ? "acerto" : "erro"}>
                         Última: {estatistica.ultima === "acerto" ? "Acerto" : "Erro"}
@@ -562,14 +666,14 @@ export default function BancoQuestoes() {
                 <p className="banco-biblioteca-enunciado">{questao.enunciado}</p>
 
                 <div className="banco-biblioteca-desempenho">
-                  <span><strong>{estatistica.tentativas}</strong> tentativa{estatistica.tentativas === 1 ? "" : "s"}</span>
+                  <span><strong>{estatistica.tentativas}</strong> tentativa{estatistica.tentativas === 1 ? "" : "s"} neste aparelho</span>
                   <span className="positivo"><strong>{estatistica.acertos}</strong> acerto{estatistica.acertos === 1 ? "" : "s"}</span>
                   <span className="negativo"><strong>{estatistica.erros}</strong> erro{estatistica.erros === 1 ? "" : "s"}</span>
                   <span><strong>{estatistica.percentual}%</strong> aproveitamento</span>
                 </div>
 
                 <details className="banco-biblioteca-gabarito">
-                  <summary>Ver gabarito e explicação</summary>
+                  <summary>{questao.explicacao ? "Ver gabarito e explicação" : "Ver gabarito"}</summary>
                   <div className="banco-alternativas">
                     {questao.alternativas.map((alternativa) => (
                       <p
@@ -840,9 +944,11 @@ function converterParaQuestaoIA(questao: QuestaoBanco): QuestaoIA {
   return {
     id: questao.id,
     materia: questao.materia,
+    materiaId: questao.materiaId,
     modulo: questao.modulo,
     moduloId: questao.moduloId,
     assunto: questao.assunto,
+    assuntoId: questao.assuntoId,
     banca: questao.banca,
     dificuldade:
       questao.dificuldade === "facil"
@@ -860,6 +966,9 @@ function converterParaQuestaoIA(questao: QuestaoBanco): QuestaoIA {
     },
     respostaCorreta: questao.respostaCorretaId as QuestaoIA["respostaCorreta"],
     explicacao: questao.explicacao ?? "",
+    fonteNome: questao.fonteNome,
+    norma: questao.norma,
+    dispositivo: questao.dispositivo,
   };
 }
 

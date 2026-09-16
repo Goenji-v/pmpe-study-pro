@@ -79,7 +79,7 @@ export async function atualizarQuestoesAntesDoTreino(questoes: QuestaoIA[]) {
     let consulta = supabase.from("questoes_catalogo")
       .select("id,materia_id,materia,modulo_id,modulo,assunto_id,assunto,banca,dificuldade,enunciado,alternativas,resposta_correta_id,explicacao,fonte_nome,norma,dispositivo,fingerprint")
       .in("id", ids.slice(inicio, inicio + 100))
-      .eq("origem", "ia");
+      .in("origem", ["ia", "prova_oficial", "simulado_terceiro"]);
 
     consulta = usuarioId
       ? consulta.or(
@@ -228,7 +228,7 @@ async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
     .map(converterLinha);
 }
 
-async function listarIdsRespondidos() {
+export async function listarIdsRespondidos() {
   const { data, error } = await supabase
     .from("respostas_questoes_ia")
     .select("questao_id")
@@ -295,8 +295,7 @@ function ehQuestaoValida(linha: LinhaCatalogoIA) {
     ["A", "B", "C", "D", "E"].every((letra) => ids.includes(letra)) &&
     textos.every(Boolean) &&
     new Set(textos.map(normalizarChaveIA)).size === 5 &&
-    Boolean(linha.enunciado.trim()) &&
-    Boolean(linha.explicacao?.trim())
+    Boolean(linha.enunciado.trim())
   );
 }
 
