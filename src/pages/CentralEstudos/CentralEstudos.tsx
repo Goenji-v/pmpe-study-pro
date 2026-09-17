@@ -40,6 +40,24 @@ import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacao
 import { salvarArquivoMaterial } from "../../services/materiaisService";
 import { obterReferenciasDaMissao, planoPMPE } from "../../data/planoPMPE";
 
+const BANCAS_CONCURSO = [
+  "Cebraspe (Cespe)",
+  "FGV",
+  "FCC",
+  "Vunesp",
+  "Instituto AOCP",
+  "IBFC",
+  "IDECAN",
+  "Instituto Consulplan",
+  "Instituto Quadrix",
+  "IADES",
+  "Cesgranrio",
+  "Fundatec",
+  "Instituto Selecon",
+  "Instituto ACCESS",
+  "FEPESE",
+] as const;
+
 type EstadoNavegacaoCentral = {
   origem?: "dashboard" | "plano";
   prefillSessao?: DadosIniciarSessao;
@@ -1508,14 +1526,20 @@ const [
                     Banca
 
                     <input
+                      list="bancas-concurso"
                       value={banca}
                       onChange={(evento) =>
                         setBanca(
                           evento.target.value
                         )
                       }
-                      placeholder="AOCP, Cebraspe..."
+                      placeholder="Selecione ou digite uma banca"
                     />
+                    <datalist id="bancas-concurso">
+                      {BANCAS_CONCURSO.map((nomeBanca) => (
+                        <option key={nomeBanca} value={nomeBanca} />
+                      ))}
+                    </datalist>
                   </label>
 
                   {!revisaoPorQuestoes && <label>
