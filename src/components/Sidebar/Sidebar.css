@@ -27,12 +27,21 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
 
-  padding: 4px 8px 22px;
+  padding: 2px 6px 20px;
   margin-bottom: 10px;
 
   border-bottom: 1px solid #273449;
+}
+
+.sidebar-logo-imagem {
+  display: block;
+  width: min(100%, 218px);
+  height: 78px;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 10px;
 }
 
 .sidebar-logo-icone {

@@ -157,12 +157,11 @@ export default function Sidebar() {
 
       <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icone">PM</div>
-
-          <div>
-            <strong>PMPE</strong>
-            <span>Study Pro</span>
-          </div>
+          <img
+            className="sidebar-logo-imagem"
+            src="/assets/studio-pro-logo.webp"
+            alt="Studio Pro"
+          />
         </div>
 
         <nav className="sidebar-menu" aria-label="Navegação principal">

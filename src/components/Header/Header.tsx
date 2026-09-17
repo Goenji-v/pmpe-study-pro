@@ -19,9 +19,11 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-identidade">
-        <strong>
-          PMPE STUDY PRO
-        </strong>
+        <img
+          className="header-logo-marca"
+          src="/assets/studio-pro-logo.webp"
+          alt="Studio Pro"
+        />
 
         <span>
           {configuracoes.concurso}
