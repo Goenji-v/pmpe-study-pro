@@ -23,7 +23,7 @@ jobs:
       - name: Atualizar apenas qs no lockfile
         run: npm update qs --package-lock-only --ignore-scripts
       - name: Verificar versão corrigida
-        run: test "$(node -p \"require('./package-lock.json').packages['node_modules/qs'].version\")" = "6.16.0"
+        run: node -e "const v=require('./package-lock.json').packages['node_modules/qs'].version; console.log('qs='+v); if(v!=='6.16.0') process.exit(1)"
       - name: Validar instalação congelada
         run: npm ci --ignore-scripts
       - name: Auditar dependências de produção
