@@ -199,7 +199,7 @@ export default function Sidebar() {
             onToggle={alternarGrupo}
           >
             <ItemMenu to="/central-estudos" texto="Central de Estudos" />
-            {contexto?.papel === "aluno" && <ItemMenu to="/curso-mentoria" texto="Curso da Mentoria" />}
+            {contexto?.papel === "aluno" && <ItemMenu to="/curso-mentoria" texto="Curso do Parceiro" />}
             <ItemMenu to="/cursos" texto="Meus Cursos" />
             <ItemMenu to="/estudos" texto="Conteúdos" />
             <ItemMenu to="/materiais" texto="Materiais" />

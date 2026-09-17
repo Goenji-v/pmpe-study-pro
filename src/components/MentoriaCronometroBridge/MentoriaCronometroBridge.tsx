@@ -1,4 +1,3 @@
-/* O bridge expõe helpers de sessão usados pela página do cronograma. */
 /* oxlint-disable react/only-export-components */
 import { useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext";
@@ -8,13 +7,10 @@ import {
   limparAulaMentoriaAtiva,
 } from "../../services/aulaMentoriaAtiva";
 import { marcarAulaMentoria } from "../../services/cursoParceiroService";
-import { atualizarStatusTarefaMentoria } from "../../services/mentoriaCronogramaService";
-import {
-  lerTarefaMentoriaAtiva,
-  limparTarefaMentoriaAtiva,
-} from "../../services/tarefaMentoriaAtiva";
 import { criarPrimeiraRevisao } from "../../utils/revisoes";
 
+// Compatibilidade de compilação da tela antiga de cronograma. O gateway atual
+// não monta essa tela e estes helpers não carregam serviços de mentoria.
 export {
   limparTarefaMentoriaAtiva,
   registrarTarefaMentoriaAtiva,
@@ -33,21 +29,6 @@ export default function MentoriaCronometroBridge() {
   useEffect(() => {
     function aoFinalizarSessao() {
       const sessao = sessaoAtual.current;
-      const tarefa = lerTarefaMentoriaAtiva();
-
-      if (tarefa) {
-        const correspondeTarefa =
-          mesmoTexto(sessao.materia, tarefa.materia) &&
-          mesmoTexto(sessao.assunto, tarefa.assunto);
-
-        limparTarefaMentoriaAtiva();
-        if (correspondeTarefa) {
-          void atualizarStatusTarefaMentoria(tarefa.id, "concluido")
-            .then(() => window.dispatchEvent(new Event("pmpe-mentoria-cronograma-atualizado")))
-            .catch((erro) => console.error("Falha ao concluir tarefa da mentoria:", erro));
-        }
-      }
-
       const aula = lerAulaMentoriaAtiva();
       if (!aula) return;
 
@@ -91,7 +72,7 @@ export default function MentoriaCronometroBridge() {
           window.dispatchEvent(new Event("pmpe-curso-mentoria-atualizado"));
           window.dispatchEvent(new Event("pmpe-revisoes-atualizadas"));
         })
-        .catch((erro) => console.error("Falha ao concluir aula da mentoria:", erro));
+        .catch((erro) => console.error("Falha ao concluir aula do curso do parceiro:", erro));
     }
 
     window.addEventListener("pmpe-sessoes-atualizadas", aoFinalizarSessao);
@@ -100,9 +81,6 @@ export default function MentoriaCronometroBridge() {
 
   useEffect(() => {
     if (estavaAtivo.current && !cronometroAtivo) {
-      const tarefa = lerTarefaMentoriaAtiva();
-      if (tarefa) limparTarefaMentoriaAtiva();
-
       const aula = lerAulaMentoriaAtiva();
       if (aula) limparAulaMentoriaAtiva();
     }
