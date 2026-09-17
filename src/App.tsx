@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -21,6 +21,7 @@ import MentoriaProgressoBridge from "./components/MentoriaProgressoBridge/Mentor
 import MentoriaCronometroBridge from "./components/MentoriaCronometroBridge/MentoriaCronometroBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
+import { armazenamentoSessaoDaConta as sessionStorage } from "./services/armazenamentoConta";
 
 import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -87,12 +88,23 @@ function LayoutProtegido() {
   const paginaDashboard = location.pathname === "/";
   const paginaGeradorIA = location.pathname === "/gerar-simulado-ia";
   const [geradorIAMontado, setGeradorIAMontado] = useState(paginaGeradorIA);
+  const [geradorIAInstancia, setGeradorIAInstancia] = useState(0);
+  const geradorIAMontadoRef = useRef(paginaGeradorIA);
 
   useEffect(() => {
-    if (paginaGeradorIA) {
-      setGeradorIAMontado(true);
+    if (!paginaGeradorIA) return;
+
+    const temNovaSolicitacao =
+      sessionStorage.getItem("pmpe:gerar-ia:modo") !== null ||
+      sessionStorage.getItem("pmpe:gerar-ia:prefill") !== null;
+
+    if (geradorIAMontadoRef.current && temNovaSolicitacao) {
+      setGeradorIAInstancia((atual) => atual + 1);
     }
-  }, [paginaGeradorIA]);
+
+    geradorIAMontadoRef.current = true;
+    setGeradorIAMontado(true);
+  }, [location.key, paginaGeradorIA]);
 
   return (
     <ProtectedRoute>
@@ -123,7 +135,7 @@ function LayoutProtegido() {
                   {(geradorIAMontado || paginaGeradorIA) && (
                     <div hidden={!paginaGeradorIA}>
                       <Suspense fallback={<CarregandoRota />}>
-                        <GerarSimuladoIA />
+                        <GerarSimuladoIA key={geradorIAInstancia} />
                       </Suspense>
                     </div>
                   )}
