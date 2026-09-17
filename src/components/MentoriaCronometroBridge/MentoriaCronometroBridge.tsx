@@ -1,3 +1,4 @@
+/* oxlint-disable react/only-export-components */
 import { useEffect, useRef } from "react";
 import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
