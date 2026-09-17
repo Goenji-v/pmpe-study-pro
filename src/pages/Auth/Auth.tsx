@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import "./Auth.css";
+import AuthHero from "./AuthHero";
 
 import {
   useAuth,
@@ -197,29 +198,7 @@ export default function Auth() {
 
   return (
     <main className="auth-pagina">
-      <section
-        className="auth-apresentacao"
-        aria-label="Studio Pro: preparação que aprova"
-        style={{ position: "relative", overflow: "hidden" }}
-      >
-        <img
-          src="/assets/auth-login-reference.webp"
-          alt=""
-          aria-hidden="true"
-          draggable="false"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            display: "block",
-            objectFit: "cover",
-            objectPosition: "center center",
-            userSelect: "none",
-            pointerEvents: "none",
-          }}
-        />
-      </section>
+      <AuthHero />
 
       <section className="auth-formulario-area">
         <div className="auth-formulario-card">
