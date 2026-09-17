@@ -2,6 +2,10 @@ import { useEffect, useRef } from "react";
 
 import { useToast } from "../../context/ToastContext";
 import { registrarErroRuntime } from "../../services/seguranca/diagnosticoErroService";
+import {
+  ehErroChunkDinamico,
+  tentarRecarregarChunkObsoletoUmaVez,
+} from "../../utils/erroChunkDinamico";
 import PerformanceMonitor from "../PerformanceMonitor/PerformanceMonitor";
 
 export default function RuntimeErrorGuard() {
@@ -20,15 +24,21 @@ export default function RuntimeErrorGuard() {
       );
     }
 
+    function tentarRecuperarChunk(erro: unknown) {
+      return ehErroChunkDinamico(erro) && tentarRecarregarChunkObsoletoUmaVez();
+    }
+
     function aoErro(evento: ErrorEvent) {
-      registrarErroRuntime(
-        evento.error ?? evento.message ?? "Erro de execução",
-        "window-error"
-      );
+      const erro = evento.error ?? evento.message ?? "Erro de execução";
+      if (tentarRecuperarChunk(erro)) return;
+
+      registrarErroRuntime(erro, "window-error");
       avisar();
     }
 
     function aoRejeitar(evento: PromiseRejectionEvent) {
+      if (tentarRecuperarChunk(evento.reason)) return;
+
       registrarErroRuntime(evento.reason, "promise-rejection");
       avisar();
     }
