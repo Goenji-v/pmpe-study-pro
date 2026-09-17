@@ -8,6 +8,13 @@ import {
 import { marcarAulaMentoria } from "../../services/cursoParceiroService";
 import { criarPrimeiraRevisao } from "../../utils/revisoes";
 
+// Compatibilidade de compilação da tela antiga de cronograma. O gateway atual
+// não monta essa tela e estes helpers não carregam serviços de mentoria.
+export {
+  limparTarefaMentoriaAtiva,
+  registrarTarefaMentoriaAtiva,
+} from "../../services/tarefaMentoriaAtiva";
+
 export default function MentoriaCronometroBridge() {
   const { cronometroAtivo, sessaoAtiva } = useCronometro();
   const { configuracoes, setRevisoes } = useApp();
