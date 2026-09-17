@@ -4,12 +4,20 @@ import {
 } from "react";
 
 import {
-  Link,
   Navigate,
   useLocation,
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+
+import {
+  Cloud,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  ShieldCheck,
+  TrendingUp,
+} from "lucide-react";
 
 import "./Auth.css";
 
@@ -66,6 +74,16 @@ export default function Auth() {
     confirmarSenha,
     setConfirmarSenha,
   ] = useState("");
+
+  const [
+    mostrarSenha,
+    setMostrarSenha,
+  ] = useState(false);
+
+  const [
+    mostrarConfirmarSenha,
+    setMostrarConfirmarSenha,
+  ] = useState(false);
 
   const [
     enviando,
@@ -257,14 +275,16 @@ export default function Auth() {
     setMensagem("");
     setSenha("");
     setConfirmarSenha("");
+    setMostrarSenha(false);
+    setMostrarConfirmarSenha(false);
   }
 
   return (
     <main className="auth-pagina">
       <section className="auth-apresentacao">
         <div className="auth-marca">
-          <div>
-            PM
+          <div className="auth-marca-simbolo" aria-hidden="true">
+            SP
           </div>
 
           <span>
@@ -284,61 +304,74 @@ export default function Auth() {
           </span>
 
           <h1>
-            Seus dados disponíveis no
+            Seus dados <em>disponíveis</em> no
             computador e no celular.
           </h1>
 
           <p>
-            Entre na sua conta para
-            acessar estudos, sessões,
-            questões, revisões, simulados
-            e materiais.
+            Entre na sua conta para acessar
+            estudos, sessões, questões, revisões,
+            simulados e materiais em qualquer lugar.
           </p>
         </div>
 
         <div className="auth-beneficios">
-          <div>
-            <strong>
-              ☁️ Sincronização
-            </strong>
+          <article>
+            <div className="auth-beneficio-icone">
+              <Cloud size={22} strokeWidth={2.2} />
+            </div>
 
-            <span>
-              Mesmos dados em todos os
-              dispositivos.
-            </span>
-          </div>
+            <div>
+              <strong>
+                Sincronização
+              </strong>
 
-          <div>
-            <strong>
-              🔒 Segurança
-            </strong>
+              <span>
+                Seus dados atualizados em todos os dispositivos.
+              </span>
+            </div>
+          </article>
 
-            <span>
-              Cada conta acessa somente os
-              próprios registros.
-            </span>
-          </div>
+          <article>
+            <div className="auth-beneficio-icone">
+              <LockKeyhole size={22} strokeWidth={2.2} />
+            </div>
 
-          <div>
-            <strong>
-              💾 Proteção
-            </strong>
+            <div>
+              <strong>
+                Segurança
+              </strong>
 
-            <span>
-              Base preparada para backup
-              automático.
-            </span>
-          </div>
+              <span>
+                Cada conta acessa somente os próprios registros.
+              </span>
+            </div>
+          </article>
+
+          <article>
+            <div className="auth-beneficio-icone">
+              <TrendingUp size={22} strokeWidth={2.2} />
+            </div>
+
+            <div>
+              <strong>
+                Seu progresso
+              </strong>
+
+              <span>
+                Acompanhe sua evolução e mantenha o foco no que importa.
+              </span>
+            </div>
+          </article>
         </div>
+
+        <p className="auth-frase">
+          Disciplina hoje. Evolução todos os dias.
+        </p>
       </section>
 
       <section className="auth-formulario-area">
         <div className="auth-formulario-card">
-          <div className="auth-beta-linha">
-            <span>BETA ABERTA</span>
-            <small>Teste gratuito durante a fase beta</small>
-          </div>
-
           <div className="auth-formulario-topo">
             <span>
               {modo === "login"
@@ -360,11 +393,11 @@ export default function Auth() {
 
             <p>
               {modo === "login"
-                ? "Use seu e-mail e senha."
+                ? "Use seu e-mail e senha para continuar."
                 : modo ===
                     "cadastro"
-                  ? "Crie sua conta para sincronizar os dados."
-                  : "Informe o e-mail da conta."}
+                  ? "Crie sua conta para manter seus dados sincronizados."
+                  : "Informe o e-mail cadastrado para recuperar o acesso."}
             </p>
           </div>
 
@@ -424,25 +457,42 @@ export default function Auth() {
                   Senha
                 </span>
 
-                <input
-                  type="password"
-                  value={senha}
-                  onChange={(
-                    evento
-                  ) =>
-                    setSenha(
-                      evento.target
-                        .value
-                    )
-                  }
-                  autoComplete={
-                    modo ===
-                    "cadastro"
-                      ? "new-password"
-                      : "current-password"
-                  }
-                  placeholder="Sua senha"
-                />
+                <div className="auth-input-senha">
+                  <input
+                    type={mostrarSenha ? "text" : "password"}
+                    value={senha}
+                    onChange={(
+                      evento
+                    ) =>
+                      setSenha(
+                        evento.target
+                          .value
+                      )
+                    }
+                    autoComplete={
+                      modo ===
+                      "cadastro"
+                        ? "new-password"
+                        : "current-password"
+                    }
+                    placeholder="Sua senha"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMostrarSenha(
+                        (valor) => !valor
+                      )
+                    }
+                    aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                    title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {mostrarSenha
+                      ? <EyeOff size={20} />
+                      : <Eye size={20} />}
+                  </button>
+                </div>
               </label>
             )}
 
@@ -453,22 +503,39 @@ export default function Auth() {
                   Confirmar senha
                 </span>
 
-                <input
-                  type="password"
-                  value={
-                    confirmarSenha
-                  }
-                  onChange={(
-                    evento
-                  ) =>
-                    setConfirmarSenha(
-                      evento.target
-                        .value
-                    )
-                  }
-                  autoComplete="new-password"
-                  placeholder="Repita a senha"
-                />
+                <div className="auth-input-senha">
+                  <input
+                    type={mostrarConfirmarSenha ? "text" : "password"}
+                    value={
+                      confirmarSenha
+                    }
+                    onChange={(
+                      evento
+                    ) =>
+                      setConfirmarSenha(
+                        evento.target
+                          .value
+                      )
+                    }
+                    autoComplete="new-password"
+                    placeholder="Repita a senha"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMostrarConfirmarSenha(
+                        (valor) => !valor
+                      )
+                    }
+                    aria-label={mostrarConfirmarSenha ? "Ocultar confirmação da senha" : "Mostrar confirmação da senha"}
+                    title={mostrarConfirmarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {mostrarConfirmarSenha
+                      ? <EyeOff size={20} />
+                      : <Eye size={20} />}
+                  </button>
+                </div>
               </label>
             )}
 
@@ -503,19 +570,35 @@ export default function Auth() {
             </button>
           </form>
 
-          {modo === "login" && (
-            <div className="auth-demo-area">
-              <div className="auth-demo-divisor">
-                <span>ou</span>
+          {modo !== "recuperar" && (
+            <div className="auth-seguranca">
+              <div className="auth-seguranca-destaque">
+                <div className="auth-seguranca-icone">
+                  <ShieldCheck size={25} strokeWidth={2.2} />
+                </div>
+
+                <div>
+                  <strong>
+                    Seus dados estão protegidos
+                  </strong>
+
+                  <span>
+                    Acesso autenticado e boas práticas de proteção da sua conta.
+                  </span>
+                </div>
               </div>
 
-              <Link
-                to="/demo"
-                className="auth-demo-link"
-              >
-                <strong>Explorar demonstração</strong>
-                <small>Sem cadastro · dados fictícios · não altera sua conta</small>
-              </Link>
+              <div className="auth-seguranca-itens" aria-label="Recursos de segurança">
+                <span>
+                  <LockKeyhole size={15} />
+                  Conexão segura
+                </span>
+
+                <span>
+                  <ShieldCheck size={15} />
+                  Acesso individual
+                </span>
+              </div>
             </div>
           )}
 
