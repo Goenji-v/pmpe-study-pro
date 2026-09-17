@@ -779,6 +779,11 @@ export default function ResolverSimuladoIA() {
   }
 
   function retirarQuestaoDenunciada(questaoId: string) {
+    if (finalizado) {
+      setMensagem("Denúncia enviada para análise. O resultado deste treino foi preservado.");
+      return;
+    }
+
     const proximas = questoes.filter((item) => item.id !== questaoId);
     localStorage.setItem(CHAVE_QUESTOES_IA, JSON.stringify(proximas));
     setQuestoes(proximas);
@@ -1352,7 +1357,10 @@ export default function ResolverSimuladoIA() {
                 </strong>
               </div>
 
-              <QuestaoComunidade questaoId={questao.id} />
+              <QuestaoComunidade
+                questaoId={questao.id}
+                onDenunciada={() => retirarQuestaoDenunciada(questao.id)}
+              />
             </>
           )}
 
