@@ -1,5 +1,7 @@
 import { Cloud, LockKeyhole, TrendingUp } from "lucide-react";
 
+import "./AuthHero.css";
+
 export default function AuthHero() {
   return (
     <section className="auth-apresentacao" aria-label="Studio Pro: preparação que aprova">
