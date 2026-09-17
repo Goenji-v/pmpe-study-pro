@@ -9,7 +9,6 @@ import {
   type DisciplinaCursoParceiro,
   type ModuloCursoParceiro,
 } from "../../services/cursoParceiroService";
-import { limparTarefaMentoriaAtiva } from "../../services/tarefaMentoriaAtiva";
 import "./CursoMentoria.css";
 
 export default function CursoMentoria() {
@@ -89,7 +88,7 @@ export default function CursoMentoria() {
   ) {
     if (aulaEmAndamento(disciplina, modulo, aula)) {
       if (aula.url) abrirConteudo(aula.url);
-      navigate("/central-estudos", { state: { origem: "curso-mentoria" } });
+      navigate("/central-estudos", { state: { origem: "curso-parceiro" } });
       return;
     }
 
@@ -104,9 +103,6 @@ export default function CursoMentoria() {
 
     if (!iniciou) return;
 
-    // Se outra tarefa da mentoria estava vinculada ao cronômetro substituído,
-    // ela não pode ser concluída junto com esta aula.
-    limparTarefaMentoriaAtiva();
     registrarAulaMentoriaAtiva({
       aulaId: aula.id,
       cursoId: cursoAtual.id,
@@ -120,7 +116,7 @@ export default function CursoMentoria() {
     });
 
     if (aula.url) abrirConteudo(aula.url);
-    navigate("/central-estudos", { state: { origem: "curso-mentoria" } });
+    navigate("/central-estudos", { state: { origem: "curso-parceiro" } });
   }
 
   if (carregando) return <div className="cm-estado">Carregando seu curso...</div>;
@@ -129,7 +125,7 @@ export default function CursoMentoria() {
     <section className="cm-pagina">
       <header className="cm-hero">
         <div>
-          <span>CURSO DA MENTORIA</span>
+          <span>CURSO DO PARCEIRO</span>
           <h1>{curso?.nome || "Seu conteúdo"}</h1>
           <p>
             {curso?.descricao || "Acompanhe as aulas e materiais liberados pelo seu professor."}
@@ -172,7 +168,7 @@ export default function CursoMentoria() {
       {!curso ? (
         <div className="cm-vazio">
           <h2>Nenhum curso liberado</h2>
-          <p>Quando sua turma receber um curso da mentoria, ele aparecerá aqui automaticamente.</p>
+          <p>Quando sua turma receber um curso do parceiro, ele aparecerá aqui automaticamente.</p>
         </div>
       ) : (
         <div className="cm-disciplinas">
