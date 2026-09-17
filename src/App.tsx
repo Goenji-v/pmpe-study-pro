@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -88,6 +88,14 @@ function CarregandoRota() {
 function LayoutProtegido() {
   const location = useLocation();
   const paginaDashboard = location.pathname === "/";
+  const paginaGeradorIA = location.pathname === "/gerar-simulado-ia";
+  const [geradorIAMontado, setGeradorIAMontado] = useState(paginaGeradorIA);
+
+  useEffect(() => {
+    if (paginaGeradorIA) {
+      setGeradorIAMontado(true);
+    }
+  }, [paginaGeradorIA]);
 
   return (
     <ProtectedRoute>
@@ -115,76 +123,86 @@ function LayoutProtegido() {
                 <AvisoArmazenamento />
 
                 <main className={`page ${paginaDashboard ? "page-dashboard" : "page-interna"}`}>
-                  <Suspense fallback={<CarregandoRota />}>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
+                  {(geradorIAMontado || paginaGeradorIA) && (
+                    <div hidden={!paginaGeradorIA}>
+                      <Suspense fallback={<CarregandoRota />}>
+                        <GerarSimuladoIA />
+                      </Suspense>
+                    </div>
+                  )}
 
-                      <Route path="/meu-edital" element={<MeuEdital />} />
-                      <Route path="/cursos" element={<Cursos />} />
-                      <Route path="/curso-mentoria" element={<CursoMentoria />} />
-                      <Route path="/plano" element={<PlanoEditalGateway />} />
-                      <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
+                  {!paginaGeradorIA && (
+                    <Suspense fallback={<CarregandoRota />}>
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
 
-                      <Route path="/calendario" element={<Calendario />} />
-                      <Route path="/cronograma-ia" element={<CronogramaGateway />} />
-                      <Route path="/central-estudos" element={<CentralEstudosGateway />} />
-                      <Route path="/materiais" element={<CentroMateriais />} />
-                      <Route path="/inteligencia" element={<InteligenciaHub />} />
+                        <Route path="/meu-edital" element={<MeuEdital />} />
+                        <Route path="/cursos" element={<Cursos />} />
+                        <Route path="/curso-mentoria" element={<CursoMentoria />} />
+                        <Route path="/plano" element={<PlanoEditalGateway />} />
+                        <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
 
-                      <Route path="/estudos" element={<Estudos />} />
-                      <Route path="/conteudos" element={<Estudos />} />
-                      <Route path="/buscar" element={<Estudos />} />
-                      <Route path="/pesquisa" element={<Estudos />} />
-                      <Route path="/search" element={<Estudos />} />
+                        <Route path="/calendario" element={<Calendario />} />
+                        <Route path="/cronograma-ia" element={<CronogramaGateway />} />
+                        <Route path="/central-estudos" element={<CentralEstudosGateway />} />
+                        <Route path="/materiais" element={<CentroMateriais />} />
+                        <Route path="/inteligencia" element={<InteligenciaHub />} />
 
-                      <Route path="/revisoes" element={<Revisoes />} />
+                        <Route path="/estudos" element={<Estudos />} />
+                        <Route path="/conteudos" element={<Estudos />} />
+                        <Route path="/buscar" element={<Estudos />} />
+                        <Route path="/pesquisa" element={<Estudos />} />
+                        <Route path="/search" element={<Estudos />} />
 
-                      <Route path="/questoes" element={<CentralQuestoes />} />
-                      <Route path="/registrar-questoes" element={<Questoes />} />
-                      <Route path="/historico" element={<Historico />} />
-                      <Route path="/banco-questoes" element={<BancoQuestoes />} />
-                      <Route path="/estatisticas" element={<Estatisticas />} />
+                        <Route path="/revisoes" element={<Revisoes />} />
 
-                      <Route path="/simulados" element={<SimuladosGateway />} />
-                      <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
-                      <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
-                      <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
-                      <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
-                      <Route path="/resolver-simulado-ia/revisao/:cadernoId" element={<RevisaoCadernoIA />} />
-                      <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
-                      <Route path="/estatisticas-simulado-ia" element={<EstatisticasSimuladoIA />} />
+                        <Route path="/questoes" element={<CentralQuestoes />} />
+                        <Route path="/registrar-questoes" element={<Questoes />} />
+                        <Route path="/historico" element={<Historico />} />
+                        <Route path="/banco-questoes" element={<BancoQuestoes />} />
+                        <Route path="/estatisticas" element={<Estatisticas />} />
 
-                      <Route path="/desempenho" element={<CentralDesempenho />} />
-                      <Route path="/historico-sessoes" element={<HistoricoSessoes />} />
-                      <Route path="/estatisticas-sessoes" element={<EstatisticasSessoes />} />
-                      <Route path="/perfil" element={<Perfil />} />
-                      <Route path="/ranking" element={<Ranking />} />
-                      <Route path="/conquistas" element={<Conquistas />} />
-                      <Route path="/loja" element={<Loja />} />
+                        <Route path="/simulados" element={<SimuladosGateway />} />
+                        <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
+                        <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
+                        <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
+                        <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
+                        <Route path="/resolver-simulado-ia/revisao/:cadernoId" element={<RevisaoCadernoIA />} />
+                        <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
+                        <Route path="/estatisticas-simulado-ia" element={<EstatisticasSimuladoIA />} />
 
-                      <Route
-                        path="/relatorio-inteligente"
-                        element={<Navigate to="/inteligencia?aba=relatorio" replace />}
-                      />
-                      <Route
-                        path="/ia-coach"
-                        element={<Navigate to="/inteligencia?aba=coach" replace />}
-                      />
+                        <Route path="/desempenho" element={<CentralDesempenho />} />
+                        <Route path="/historico-sessoes" element={<HistoricoSessoes />} />
+                        <Route path="/estatisticas-sessoes" element={<EstatisticasSessoes />} />
+                        <Route path="/perfil" element={<Perfil />} />
+                        <Route path="/ranking" element={<Ranking />} />
+                        <Route path="/conquistas" element={<Conquistas />} />
+                        <Route path="/loja" element={<Loja />} />
 
-                      <Route path="/backup" element={<Backup />} />
-                      <Route path="/configuracoes" element={<Configuracoes />} />
-                      <Route path="/admin" element={<Admin />} />
-                      <Route path="/parceiro" element={<Parceiro />} />
-                      <Route path="/parceiro/mentoria" element={<ParceiroMentoria />} />
-                      <Route path="/parceiro/mentoria/aluno/:userId" element={<ParceiroMentoriaAluno />} />
-                      <Route path="/parceiro/cursos" element={<ParceiroCursos />} />
-                      <Route path="/parceiro/simulados" element={<ParceiroSimulados />} />
-                      <Route path="/parceiro/relatorios" element={<ParceiroRelatorios />} />
-                      <Route path="/meu-acesso" element={<MeuAcesso />} />
+                        <Route
+                          path="/relatorio-inteligente"
+                          element={<Navigate to="/inteligencia?aba=relatorio" replace />}
+                        />
+                        <Route
+                          path="/ia-coach"
+                          element={<Navigate to="/inteligencia?aba=coach" replace />}
+                        />
 
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
+                        <Route path="/backup" element={<Backup />} />
+                        <Route path="/configuracoes" element={<Configuracoes />} />
+                        <Route path="/admin" element={<Admin />} />
+                        <Route path="/parceiro" element={<Parceiro />} />
+                        <Route path="/parceiro/mentoria" element={<ParceiroMentoria />} />
+                        <Route path="/parceiro/mentoria/aluno/:userId" element={<ParceiroMentoriaAluno />} />
+                        <Route path="/parceiro/cursos" element={<ParceiroCursos />} />
+                        <Route path="/parceiro/simulados" element={<ParceiroSimulados />} />
+                        <Route path="/parceiro/relatorios" element={<ParceiroRelatorios />} />
+                        <Route path="/meu-acesso" element={<MeuAcesso />} />
+
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
+                  )}
                 </main>
               </div>
             </div>
