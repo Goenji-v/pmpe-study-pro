@@ -1335,28 +1335,25 @@ export default function ResolverSimuladoIA() {
             )}
           </div>
 
-          {!finalizado && (
-            <QuestaoComunidade
-              questaoId={questao.id}
-              onDenunciada={() => retirarQuestaoDenunciada(questao.id)}
-            />
-          )}
-
           {finalizado && (
-            <div className="resolver-ia-explicacao">
-              <h3>
-                {comentarioGabarito !== null ? "Comentário do gabarito" : "Explicação"}
-              </h3>
+            <>
+              <div className="resolver-ia-explicacao">
+                <h3>
+                  {comentarioGabarito !== null ? "Comentário do gabarito" : "Explicação"}
+                </h3>
 
-              <p>
-                {comentarioGabarito ?? questao.explicacao}
-              </p>
+                <p>
+                  {comentarioGabarito ?? questao.explicacao}
+                </p>
 
-              <strong>
-                Gabarito:{" "}
-                {questao.respostaCorreta}
-              </strong>
-            </div>
+                <strong>
+                  Gabarito:{" "}
+                  {questao.respostaCorreta}
+                </strong>
+              </div>
+
+              <QuestaoComunidade questaoId={questao.id} />
+            </>
           )}
 
           <div className="resolver-ia-acoes">
