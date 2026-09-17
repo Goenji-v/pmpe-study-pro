@@ -200,13 +200,17 @@ export default function Auth() {
       <section
         className="auth-apresentacao"
         aria-label="Studio Pro: preparação que aprova"
-        style={{ position: "relative", overflow: "hidden" }}
+        style={{ position: "relative", overflow: "hidden", background: "#04101e" }}
       >
         <img
-          src="/assets/auth-login-reference.webp"
+          src="https://images.pexels.com/photos/4646766/pexels-photo-4646766.jpeg?auto=compress&cs=tinysrgb&w=1600"
           alt=""
           aria-hidden="true"
           draggable="false"
+          onError={(evento) => {
+            evento.currentTarget.onerror = null;
+            evento.currentTarget.src = "/assets/auth-login-reference.webp";
+          }}
           style={{
             position: "absolute",
             inset: 0,
@@ -215,10 +219,104 @@ export default function Auth() {
             display: "block",
             objectFit: "cover",
             objectPosition: "center center",
+            filter: "saturate(.7) contrast(1.12) brightness(.62)",
             userSelect: "none",
             pointerEvents: "none",
           }}
         />
+
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(circle at 25% 38%, rgba(28,132,255,.24), transparent 33%), linear-gradient(90deg, rgba(2,10,21,.46) 0%, rgba(2,10,21,.18) 52%, rgba(3,13,25,.72) 100%)",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            left: "clamp(36px, 5vw, 82px)",
+            top: "50%",
+            zIndex: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+            transform: "translateY(-50%)",
+            textShadow: "0 8px 28px rgba(0,0,0,.6)",
+          }}
+        >
+          <div
+            aria-hidden="true"
+            style={{
+              width: "86px",
+              height: "96px",
+              display: "grid",
+              placeItems: "center",
+              color: "#f7fbff",
+              background:
+                "linear-gradient(145deg, rgba(255,255,255,.18), rgba(18,123,255,.35))",
+              border: "2px solid rgba(119,190,255,.92)",
+              borderRadius: "28px 28px 36px 36px",
+              boxShadow:
+                "0 0 0 6px rgba(20,119,255,.09), 0 14px 38px rgba(0,91,211,.36), inset 0 1px 0 rgba(255,255,255,.34)",
+              fontSize: "54px",
+              fontWeight: 950,
+              letterSpacing: "-4px",
+            }}
+          >
+            S
+          </div>
+
+          <div>
+            <div
+              style={{
+                color: "#ffffff",
+                fontSize: "clamp(34px, 4.3vw, 66px)",
+                fontWeight: 950,
+                lineHeight: .92,
+                letterSpacing: "-2.2px",
+              }}
+            >
+              STUDIO <span style={{ color: "#2594ff" }}>PRO</span>
+            </div>
+            <div
+              style={{
+                marginTop: "12px",
+                color: "#bcd7f4",
+                fontSize: "12px",
+                fontWeight: 800,
+                letterSpacing: "2.7px",
+              }}
+            >
+              FOCO • DISCIPLINA • APROVAÇÃO
+            </div>
+          </div>
+        </div>
+
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            right: "32px",
+            bottom: "34px",
+            zIndex: 2,
+            padding: "10px 15px",
+            color: "#eaf4ff",
+            background: "rgba(3,13,25,.62)",
+            border: "1px solid rgba(89,166,255,.42)",
+            borderRadius: "8px",
+            backdropFilter: "blur(5px)",
+            fontSize: "15px",
+            fontWeight: 950,
+            letterSpacing: "2px",
+          }}
+        >
+          PMPR
+        </div>
       </section>
 
       <section className="auth-formulario-area">
