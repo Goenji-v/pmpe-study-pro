@@ -20,6 +20,12 @@ export type ComentarioQuestao = {
   meu: boolean;
 };
 
+export type AcessoComunidadeQuestao = {
+  disponivel: boolean;
+  podeDenunciar: boolean;
+  aguardandoAprovacao: boolean;
+};
+
 export type DenunciaQuestaoAdmin = {
   id: string;
   questaoId: string | null;
@@ -73,18 +79,37 @@ type LinhaDenuncia = {
   created_at: string;
 };
 
-export async function questaoDisponivelParaComunidade(questaoId: string) {
-  if (!ehUuid(questaoId)) return false;
+export async function obterAcessoComunidadeQuestao(
+  questaoId: string
+): Promise<AcessoComunidadeQuestao> {
+  const indisponivel: AcessoComunidadeQuestao = {
+    disponivel: false,
+    podeDenunciar: false,
+    aguardandoAprovacao: false,
+  };
 
-  const { data, error } = await supabase
-    .from("questoes_catalogo")
-    .select("id")
-    .eq("id", questaoId)
-    .eq("status", "ativa")
-    .maybeSingle();
+  if (!ehUuid(questaoId)) return indisponivel;
 
-  if (error) return false;
-  return Boolean(data?.id);
+  const [{ data, error }, { data: authData }] = await Promise.all([
+    supabase
+      .from("questoes_catalogo")
+      .select("id,status,criado_por")
+      .eq("id", questaoId)
+      .maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
+
+  if (error || !data?.id) return indisponivel;
+
+  const ativa = data.status === "ativa";
+  const pendentePropria =
+    data.status === "pendente" && data.criado_por === authData.user?.id;
+
+  return {
+    disponivel: ativa || pendentePropria,
+    podeDenunciar: ativa,
+    aguardandoAprovacao: pendentePropria,
+  };
 }
 
 export async function denunciarQuestao(
