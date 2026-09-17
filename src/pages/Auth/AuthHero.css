@@ -14,7 +14,7 @@
 .auth-hero-fundo {
   position: absolute;
   inset: 0;
-  z-index: -5;
+  z-index: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -28,7 +28,7 @@
 .auth-hero-overlay {
   position: absolute;
   inset: 0;
-  z-index: -4;
+  z-index: 1;
   background:
     linear-gradient(90deg,
       rgba(2, 12, 24, .90) 0%,
@@ -46,7 +46,7 @@
 .auth-hero-grid {
   position: absolute;
   inset: 0;
-  z-index: -3;
+  z-index: 2;
   opacity: .08;
   background-image:
     linear-gradient(rgba(70, 133, 201, .12) 1px, transparent 1px),
@@ -57,7 +57,7 @@
 
 .auth-hero-conteudo {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   width: min(100%, 920px);
   min-height: calc(100vh - clamp(76px, 8.4vw, 144px));
   display: flex;
