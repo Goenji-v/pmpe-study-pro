@@ -66,11 +66,8 @@ const Admin = lazy(() => import("./pages/Admin/Admin"));
 const Conquistas = lazy(() => import("./pages/Conquistas/Conquistas"));
 const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
 const Parceiro = lazy(() => import("./pages/Parceiro/Parceiro"));
-const ParceiroMentoria = lazy(() => import("./pages/ParceiroMentoria/ParceiroMentoria"));
-const ParceiroMentoriaAluno = lazy(() => import("./pages/ParceiroMentoria/ParceiroMentoriaAluno"));
 const ParceiroCursos = lazy(() => import("./pages/ParceiroCursos/ParceiroCursos"));
 const ParceiroSimulados = lazy(() => import("./pages/ParceiroSimulados/ParceiroSimulados"));
-const ParceiroRelatorios = lazy(() => import("./pages/ParceiroRelatorios/ParceiroRelatorios"));
 const Convite = lazy(() => import("./pages/Convite/Convite"));
 const MeuAcesso = lazy(() => import("./pages/MeuAcesso/MeuAcesso"));
 const DashboardGamificacaoSpotlight = lazy(
@@ -175,11 +172,11 @@ function LayoutProtegido() {
                       <Route path="/configuracoes" element={<Configuracoes />} />
                       <Route path="/admin" element={<Admin />} />
                       <Route path="/parceiro" element={<Parceiro />} />
-                      <Route path="/parceiro/mentoria" element={<ParceiroMentoria />} />
-                      <Route path="/parceiro/mentoria/aluno/:userId" element={<ParceiroMentoriaAluno />} />
+                      <Route path="/parceiro/mentoria" element={<Navigate to="/parceiro/cursos" replace />} />
+                      <Route path="/parceiro/mentoria/aluno/:userId" element={<Navigate to="/parceiro" replace />} />
                       <Route path="/parceiro/cursos" element={<ParceiroCursos />} />
                       <Route path="/parceiro/simulados" element={<ParceiroSimulados />} />
-                      <Route path="/parceiro/relatorios" element={<ParceiroRelatorios />} />
+                      <Route path="/parceiro/relatorios" element={<Navigate to="/parceiro" replace />} />
                       <Route path="/meu-acesso" element={<MeuAcesso />} />
 
                       <Route path="*" element={<NotFound />} />

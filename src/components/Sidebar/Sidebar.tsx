@@ -234,11 +234,9 @@ export default function Sidebar() {
               aberto={grupoAberto === "parceiro"}
               onToggle={alternarGrupo}
             >
-              <ItemMenu to="/parceiro" texto="Visão geral e turmas" final />
-              <ItemMenu to="/parceiro/mentoria" texto="Cronograma da turma" />
-              <ItemMenu to="/parceiro/cursos" texto="Conteúdos do curso" />
+              <ItemMenu to="/parceiro" texto="Resumo das turmas" final />
+              <ItemMenu to="/parceiro/cursos" texto="Meu curso" />
               <ItemMenu to="/parceiro/simulados" texto="Simulados" />
-              <ItemMenu to="/parceiro/relatorios" texto="Relatórios e alertas" />
             </GrupoMenu>
           )}
 

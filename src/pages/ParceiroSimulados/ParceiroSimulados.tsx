@@ -37,7 +37,7 @@ export default function ParceiroSimulados() {
     try {
       const contexto = await carregarContextoComercial();
       if (!contexto.parceiroId || !["proprietario", "gestor", "professor"].includes(contexto.papel)) {
-        throw new Error("Esta área é exclusiva do professor ou gestor da mentoria.");
+        throw new Error("Esta área é exclusiva do parceiro responsável pelo curso.");
       }
       const gestao = await carregarGestaoParceiro();
       const lista = await listarSimuladosProfessor(contexto.parceiroId);
@@ -330,7 +330,7 @@ export default function ParceiroSimulados() {
           <article key={simulado.id} className="psim-card">
             <div className="psim-card-principal"><div className="psim-status"><span className={simulado.status}>{simulado.status}</span><small>{simulado.total_questoes} questões · {simulado.duracao_minutos} min</small></div><h3>{simulado.nome}</h3><p>{simulado.descricao || `${simulado.concurso_alvo} · ${simulado.banca}`}</p><div className="psim-tags">{simulado.turmas.map((id) => <span key={id}>{nomesTurmas.get(id) || "Turma"}</span>)}</div><div className="psim-datas"><small>Abertura: {dataHora(simulado.abre_em) || "imediata"}</small><small>Encerramento: {dataHora(simulado.encerra_em) || "sem prazo"}</small><small>Resultado: {dataHora(simulado.resultado_liberado_em) || "imediato"}</small></div></div>
             <div className="psim-card-acoes">{simulado.status === "rascunho" && <><button type="button" onClick={() => void mudarStatus(simulado.id, "publicado")}>Publicar</button><button type="button" className="perigo" onClick={() => void excluir(simulado.id)}>Excluir</button></>}{simulado.status === "publicado" && <button type="button" className="secundario" onClick={() => void mudarStatus(simulado.id, "encerrado")}>Encerrar</button>}<button type="button" className="secundario" onClick={() => void abrirPainel(simulado.id)}>Resultados</button></div>
-            {painelId === simulado.id && <PainelResultados painel={painel} onAluno={(id) => navigate(`/parceiro/mentoria/aluno/${id}`)} />}
+            {painelId === simulado.id && <PainelResultados painel={painel} />}
           </article>
         ))}
       </section>
@@ -339,9 +339,9 @@ export default function ParceiroSimulados() {
   );
 }
 
-function PainelResultados({ painel, onAluno }: { painel: PainelSimuladoProfessor | null; onAluno: (id: string) => void }) {
+function PainelResultados({ painel }: { painel: PainelSimuladoProfessor | null }) {
   if (!painel) return <div className="psim-resultado"><div className="psim-estado">Carregando resultados...</div></div>;
-  return <div className="psim-resultado"><div className="psim-kpis"><div><strong>{painel.oficiaisConcluidas}</strong><span>oficiais concluídas</span></div><div><strong>{painel.treinosConcluidos}</strong><span>treinos</span></div><div><strong>{painel.mediaPercentual.toFixed(1)}%</strong><span>média</span></div><div><strong>{painel.alertasIntegridade}</strong><span>alertas de integridade</span></div></div><div className="psim-ranking"><div className="linha cab"><span>#</span><span>Aluno</span><span>Turma</span><span>Acertos</span><span>%</span><span>Tempo</span><span>Alertas</span></div>{painel.ranking.length === 0 ? <p>Nenhuma tentativa oficial concluída.</p> : painel.ranking.map((item, indice) => <button type="button" className="linha" key={`${item.usuarioId}-${indice}`} onClick={() => onAluno(item.usuarioId)}><span>{indice + 1}º</span><span>{item.nome}</span><span>{item.turma}</span><span>{item.certas}</span><span>{item.percentual.toFixed(1)}%</span><span>{item.minutos} min</span><span>{item.alertas}</span></button>)}</div></div>;
+  return <div className="psim-resultado"><div className="psim-kpis"><div><strong>{painel.oficiaisConcluidas}</strong><span>oficiais concluídas</span></div><div><strong>{painel.treinosConcluidos}</strong><span>treinos</span></div><div><strong>{painel.mediaPercentual.toFixed(1)}%</strong><span>média geral</span></div><div><strong>{painel.alertasIntegridade}</strong><span>alertas no total</span></div></div><p>O parceiro visualiza apenas o resultado consolidado da turma. Desempenhos individuais permanecem privados.</p></div>;
 }
 
 function identificarModelo(questao: QuestaoEditor): ModeloQuestao {
