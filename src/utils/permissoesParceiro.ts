@@ -22,10 +22,10 @@ export function obterPermissoesParceiro(
 
   return {
     podeAcessarArea: parceiro,
-    podeAcompanharAlunos: parceiro,
-    podeGerenciarPedagogico: parceiro,
+    podeAcompanharAlunos: false,
+    podeGerenciarPedagogico: false,
     podeGerenciarTurmas: operacional,
-    podeGerenciarAlunos: operacional,
+    podeGerenciarAlunos: false,
     podeGerenciarConvites: operacional,
     podeVerHistorico: operacional,
     podeVerFinanceiro: proprietario,
