@@ -3,14 +3,10 @@ import { Link, Navigate } from "react-router-dom";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
 import {
   alterarStatusConvite,
-  alterarStatusLicenca,
   carregarGestaoParceiro,
   carregarResumoParceiro,
   criarConvite,
   decidirSolicitacao,
-  listarAlunosDoParceiro,
-  moverAlunoEntreTurmas,
-  type AlunoParceiro,
   type GestaoParceiro,
   type ResumoParceiro,
 } from "../../services/parceriasService";
@@ -20,7 +16,7 @@ import ProfessorDashboard from "./ProfessorDashboard";
 import "./Parceiro.css";
 import "./ParceiroArea.css";
 
-type Aba = "visao" | "alunos" | "convites" | "financeiro" | "auditoria";
+type Aba = "visao" | "convites" | "financeiro" | "auditoria";
 
 const GESTAO_VAZIA: GestaoParceiro = {
   turmas: [],
@@ -33,10 +29,8 @@ const GESTAO_VAZIA: GestaoParceiro = {
 export default function Parceiro() {
   const { contexto, carregando: verificando } = useContextoComercial();
   const [resumo, setResumo] = useState<ResumoParceiro | null>(null);
-  const [alunos, setAlunos] = useState<AlunoParceiro[]>([]);
   const [gestao, setGestao] = useState<GestaoParceiro>(GESTAO_VAZIA);
   const [aba, setAba] = useState<Aba>("visao");
-  const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [processando, setProcessando] = useState("");
   const [erro, setErro] = useState("");
@@ -57,13 +51,11 @@ export default function Parceiro() {
 
     try {
       setErro("");
-      const [novoResumo, novosAlunos, novaGestao] = await Promise.all([
+      const [novoResumo, novaGestao] = await Promise.all([
         carregarResumoParceiro(),
-        listarAlunosDoParceiro(),
         carregarGestaoParceiro(),
       ]);
       setResumo(novoResumo);
-      setAlunos(novosAlunos);
       setGestao(novaGestao);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao carregar a área do parceiro.");
@@ -76,24 +68,10 @@ export default function Parceiro() {
     void carregar();
   }, [carregar]);
 
-  const filtrados = useMemo(() => {
-    const termo = busca.trim().toLocaleLowerCase("pt-BR");
-    return termo
-      ? alunos.filter((aluno) =>
-          `${aluno.nome} ${aluno.email} ${aluno.turma} ${aluno.status}`
-            .toLocaleLowerCase("pt-BR")
-            .includes(termo)
-        )
-      : alunos;
-  }, [alunos, busca]);
-
   const pendentes = gestao.solicitacoes.filter((s) => s.status === "pendente").length;
   const turmasAtivas = gestao.turmas.filter((turma) => turma.ativa);
   const abas = useMemo(() => {
-    const itens: [Aba, string][] = [
-      ["visao", "Visão geral"],
-      ["alunos", "Alunos e turmas"],
-    ];
+    const itens: [Aba, string][] = [["visao", "Visão geral"]];
     if (permissoes.podeGerenciarConvites) itens.push(["convites", "Convites"]);
     if (permissoes.podeVerFinanceiro) itens.push(["financeiro", "Financeiro"]);
     if (permissoes.podeVerHistorico) itens.push(["auditoria", "Histórico"]);
@@ -121,44 +99,6 @@ export default function Parceiro() {
       `solicitacao-${id}`,
       () => decidirSolicitacao(id, decisao),
       decisao === "aprovar" ? "Aluno aprovado na turma." : "Solicitação recusada."
-    );
-  }
-
-  async function mudarLicenca(
-    aluno: AlunoParceiro,
-    status: "ativa" | "suspensa" | "cancelada"
-  ) {
-    if (!permissoes.podeGerenciarAlunos) return;
-    const motivo =
-      status === "suspensa"
-        ? "Acesso suspenso pelo responsável da turma."
-        : status === "cancelada"
-          ? "Aluno removido da turma pelo parceiro."
-          : undefined;
-
-    await executar(
-      `licenca-${aluno.licencaId}`,
-      () => alterarStatusLicenca(aluno.licencaId, status, motivo),
-      status === "ativa"
-        ? "Acesso reativado."
-        : status === "suspensa"
-          ? "Acesso suspenso."
-          : "Aluno removido da turma."
-    );
-  }
-
-  async function moverAluno(aluno: AlunoParceiro, turmaDestinoId: string) {
-    if (!permissoes.podeGerenciarAlunos) return;
-    if (!turmaDestinoId || turmaDestinoId === aluno.turmaId) return;
-    const destino = gestao.turmas.find((turma) => turma.id === turmaDestinoId);
-    if (!destino) return;
-
-    if (!window.confirm(`Mover ${aluno.nome} para ${destino.nome}?`)) return;
-
-    await executar(
-      `mover-${aluno.licencaId}`,
-      () => moverAlunoEntreTurmas(aluno.licencaId, turmaDestinoId),
-      `${aluno.nome} agora está em ${destino.nome}.`
     );
   }
 
@@ -218,11 +158,10 @@ export default function Parceiro() {
           <span>ÁREA DO PARCEIRO</span>
           <h1>{resumo?.parceiroNome || contexto?.parceiroNome || "Minha parceria"}</h1>
           <p>
-            Acompanhe os alunos e mantenha o cronograma e os conteúdos da parceria atualizados conforme as permissões do seu perfil.
+            Organize seu curso uma vez e acompanhe somente os resultados consolidados das turmas.
           </p>
           <div className="parceiro-area-atalhos">
-            <Link to="/parceiro/mentoria">Cronograma da turma</Link>
-            <Link to="/parceiro/cursos">Conteúdos do curso</Link>
+            <Link to="/parceiro/cursos">Gerenciar meu curso</Link>
             <Link to="/parceiro/simulados">Simulados</Link>
           </div>
         </div>
@@ -265,145 +204,16 @@ export default function Parceiro() {
                 <article>
                   <span>Alunos ativos</span>
                   <strong>{resumo?.alunosAtivos ?? 0}</strong>
-                  <small>Dados e desempenho ficam restritos aos alunos desta parceria.</small>
+                  <small>Somente números consolidados são exibidos ao parceiro.</small>
                 </article>
                 <article>
                   <span>{permissoes.podeGerenciarConvites ? "Solicitações" : "Seu perfil"}</span>
                   <strong>{permissoes.podeGerenciarConvites ? pendentes : "Professor"}</strong>
-                  <small>{permissoes.podeGerenciarConvites ? "Entradas aguardando sua aprovação." : "Foco em conteúdo, cronograma e acompanhamento pedagógico."}</small>
+                  <small>{permissoes.podeGerenciarConvites ? "Entradas aguardando sua aprovação." : "Foco na organização do curso e no resumo das turmas."}</small>
                 </article>
               </section>
               <ProfessorDashboard />
             </>
-          )}
-
-          {aba === "alunos" && (
-            <section className="parceiro-lista">
-              <div className="parceiro-lista-topo">
-                <div>
-                  <h2>Alunos das suas turmas</h2>
-                  <p>
-                    {permissoes.podeGerenciarAlunos
-                      ? "Você pode acompanhar, suspender, remover e mover alunos entre turmas desta mesma parceria."
-                      : "Você pode acompanhar o desempenho dos alunos. Alterações de acesso e movimentações ficam com proprietário ou gestor."}
-                  </p>
-                </div>
-                <input
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Buscar aluno ou turma"
-                  aria-label="Buscar aluno ou turma"
-                />
-              </div>
-
-              <div className="parceiro-area-turmas">
-                {turmasAtivas.map((turma) => (
-                  <article key={turma.id}>
-                    <strong>{turma.nome}</strong>
-                    <span>{alunos.filter((aluno) => aluno.turmaId === turma.id && aluno.status === "ativa").length} ativos</span>
-                  </article>
-                ))}
-              </div>
-
-              {filtrados.length === 0 ? (
-                <Vazio texto="Nenhum aluno encontrado." />
-              ) : (
-                <div className="parceiro-tabela-area">
-                  <div className="parceiro-tabela parceiro-tabela-alunos parceiro-area-tabela cabecalho">
-                    <span>Aluno</span>
-                    <span>Turma</span>
-                    <span>Desempenho</span>
-                    <span>Acesso</span>
-                    <span>{permissoes.podeGerenciarAlunos ? "Ações" : "Permissão"}</span>
-                  </div>
-
-                  {filtrados.map((aluno) => (
-                    <article className="parceiro-tabela parceiro-tabela-alunos parceiro-area-tabela" key={aluno.licencaId}>
-                      <div>
-                        <strong>{aluno.nome}</strong>
-                        <small>{aluno.email || "E-mail não informado"}</small>
-                        {aluno.status === "ativa" && (
-                          <Link to={`/parceiro/mentoria/aluno/${aluno.userId}`}>Abrir acompanhamento</Link>
-                        )}
-                      </div>
-                      <span>{aluno.turma}</span>
-                      <div>
-                        <strong>{aluno.questoes} questões · {aluno.minutos} min</strong>
-                        <small>
-                          {aluno.questoes
-                            ? `${Math.round((aluno.acertos / aluno.questoes) * 100)}% de acertos`
-                            : "Sem atividade"}
-                        </small>
-                      </div>
-                      <div>
-                        <b className={`status ${aluno.status}`}>{aluno.status}</b>
-                        <small>{aluno.expiraEm ? `até ${data(aluno.expiraEm)}` : ""}</small>
-                      </div>
-                      {permissoes.podeGerenciarAlunos ? (
-                        <div className="parceiro-acoes parceiro-area-acoes">
-                          {aluno.status !== "cancelada" && turmasAtivas.length > 1 && (
-                            <select
-                              aria-label={`Mover ${aluno.nome} para outra turma`}
-                              value=""
-                              disabled={processando === `mover-${aluno.licencaId}`}
-                              onChange={(e) => void moverAluno(aluno, e.target.value)}
-                            >
-                              <option value="">Mover para...</option>
-                              {turmasAtivas
-                                .filter((turma) => turma.id !== aluno.turmaId)
-                                .map((turma) => (
-                                  <option key={turma.id} value={turma.id}>{turma.nome}</option>
-                                ))}
-                            </select>
-                          )}
-
-                          {aluno.status === "ativa" ? (
-                            <button
-                              type="button"
-                              disabled={processando === `licenca-${aluno.licencaId}`}
-                              onClick={() => void mudarLicenca(aluno, "suspensa")}
-                            >
-                              Suspender
-                            </button>
-                          ) : aluno.status === "suspensa" ? (
-                            <button
-                              type="button"
-                              disabled={processando === `licenca-${aluno.licencaId}`}
-                              onClick={() => void mudarLicenca(aluno, "ativa")}
-                            >
-                              Reativar
-                            </button>
-                          ) : null}
-
-                          {aluno.status !== "cancelada" && (
-                            <button
-                              type="button"
-                              className="perigo"
-                              disabled={processando === `licenca-${aluno.licencaId}`}
-                              onClick={() => {
-                                if (window.confirm(`Remover ${aluno.nome} desta parceria?`)) {
-                                  void mudarLicenca(aluno, "cancelada");
-                                }
-                              }}
-                            >
-                              Remover
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <small className="parceiro-area-permissao">Somente acompanhamento pedagógico.</small>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              )}
-
-              {permissoes.podeGerenciarAlunos && (
-                <p className="parceiro-area-regra">
-                  Transferências para uma turma de outro parceiro não ficam disponíveis aqui. Esse tipo de mudança precisa ser solicitado ao suporte do Study Pro.
-                </p>
-              )}
-            </section>
           )}
 
           {permissoes.podeGerenciarConvites && aba === "convites" && (
