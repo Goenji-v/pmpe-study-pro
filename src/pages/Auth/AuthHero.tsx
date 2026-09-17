@@ -17,11 +17,11 @@ export default function AuthHero() {
 
       <div className="auth-hero-conteudo">
         <header className="auth-brand">
-          <div className="auth-brand-selo" aria-hidden="true">SP</div>
-          <div>
-            <strong>STUDIO PRO</strong>
-            <span>PMPE • Preparação tática</span>
-          </div>
+          <img
+            className="auth-brand-logo"
+            src="/assets/studio-pro-logo.webp"
+            alt="Studio Pro"
+          />
         </header>
 
         <div className="auth-hero-kicker">

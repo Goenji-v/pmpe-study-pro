@@ -67,8 +67,15 @@
 .auth-brand {
   display: inline-flex;
   align-items: center;
-  gap: 15px;
   width: fit-content;
+}
+
+.auth-brand-logo {
+  display: block;
+  width: clamp(210px, 22vw, 300px);
+  height: auto;
+  border-radius: 12px;
+  filter: drop-shadow(0 12px 30px rgba(0, 80, 200, .20));
 }
 
 .auth-brand-selo {
