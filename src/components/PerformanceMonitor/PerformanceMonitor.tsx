@@ -33,6 +33,7 @@ export default function PerformanceMonitor() {
   useEffect(() => {
     if (!import.meta.env.PROD || typeof window === "undefined" || navigator.webdriver) return;
     if (!("PerformanceObserver" in window)) return;
+    if (document.visibilityState === "hidden") return;
 
     // LCP/CLS/TTFB são métricas do documento. Mantemos a rota presente no
     // primeiro mount para não atribuir o mesmo carregamento a navegações SPA.
@@ -40,15 +41,20 @@ export default function PerformanceMonitor() {
     const observadores: PerformanceObserver[] = [];
     const timers = new Map<NomeMetricaPerformance, ReturnType<typeof setTimeout>>();
     const valores = new Map<NomeMetricaPerformance, number>();
+    let medicaoEncerrada = false;
 
     function enviar(metrica: NomeMetricaPerformance, valor: number) {
+      if (medicaoEncerrada) return;
+
       valores.set(metrica, valor);
       const anterior = timers.get(metrica);
       if (anterior) clearTimeout(anterior);
       timers.set(
         metrica,
         setTimeout(() => {
-          void registrarMetricaPerformance(metrica, valor, rota);
+          if (!medicaoEncerrada) {
+            void registrarMetricaPerformance(metrica, valor, rota);
+          }
         }, 2500)
       );
     }
@@ -62,6 +68,14 @@ export default function PerformanceMonitor() {
       timers.clear();
     }
 
+    function encerrarMedicao() {
+      if (medicaoEncerrada) return;
+
+      enviarPendentes();
+      medicaoEncerrada = true;
+      observadores.forEach((observer) => observer.disconnect());
+    }
+
     const navegacao = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
     if (navegacao?.responseStart && navegacao.responseStart >= 0) {
       enviar("TTFB", navegacao.responseStart);
@@ -71,6 +85,7 @@ export default function PerformanceMonitor() {
 
     if (tiposSuportados.includes("largest-contentful-paint")) {
       const observer = new PerformanceObserver((lista) => {
+        if (medicaoEncerrada) return;
         const entradas = lista.getEntries();
         const ultima = entradas.at(-1);
         if (ultima) enviar("LCP", ultima.startTime);
@@ -86,6 +101,8 @@ export default function PerformanceMonitor() {
       let ultimaMudanca = 0;
 
       const observer = new PerformanceObserver((lista) => {
+        if (medicaoEncerrada) return;
+
         for (const entradaBase of lista.getEntries()) {
           const entrada = entradaBase as EntradaLayoutShift;
           if (entrada.hadRecentInput) continue;
@@ -117,6 +134,8 @@ export default function PerformanceMonitor() {
       let piorEventoSemInteracao = 0;
 
       const observer = new PerformanceObserver((lista) => {
+        if (medicaoEncerrada) return;
+
         for (const entradaBase of lista.getEntries()) {
           const entrada = entradaBase as EntradaInteracao;
           const interactionId = entrada.interactionId ?? 0;
@@ -146,16 +165,16 @@ export default function PerformanceMonitor() {
     }
 
     const aoOcultar = () => {
-      if (document.visibilityState === "hidden") enviarPendentes();
+      if (document.visibilityState === "hidden") encerrarMedicao();
     };
     document.addEventListener("visibilitychange", aoOcultar);
-    window.addEventListener("pagehide", enviarPendentes);
+    window.addEventListener("pagehide", encerrarMedicao);
 
     return () => {
       observadores.forEach((observer) => observer.disconnect());
       timers.forEach((timer) => clearTimeout(timer));
       document.removeEventListener("visibilitychange", aoOcultar);
-      window.removeEventListener("pagehide", enviarPendentes);
+      window.removeEventListener("pagehide", encerrarMedicao);
     };
   }, []);
 

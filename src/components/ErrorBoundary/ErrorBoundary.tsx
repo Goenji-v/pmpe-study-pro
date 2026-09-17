@@ -1,7 +1,10 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from "react";
 
 import { registrarErroRuntime } from "../../services/seguranca/diagnosticoErroService";
-import { ehErroChunkDinamico } from "../../utils/erroChunkDinamico";
+import {
+  ehErroChunkDinamico,
+  tentarRecarregarChunkObsoletoUmaVez,
+} from "../../utils/erroChunkDinamico";
 
 import "./ErrorBoundary.css";
 
@@ -15,9 +18,6 @@ type State = {
   incidentId: string;
   tentativa: number;
 };
-
-const CHAVE_RELOAD_CHUNK = "study-pro:reload-chunk-dinamico";
-const JANELA_RELOAD_CHUNK_MS = 30_000;
 
 export default class ErrorBoundary extends Component<Props, State> {
   state: State = {
@@ -37,7 +37,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Erro não tratado na interface:", error, info);
 
-    if (ehErroChunkDinamico(error) && this.recarregarChunkObsoletoUmaVez()) {
+    if (ehErroChunkDinamico(error) && tentarRecarregarChunkObsoletoUmaVez()) {
       return;
     }
 
@@ -49,27 +49,6 @@ export default class ErrorBoundary extends Component<Props, State> {
     );
 
     this.setState({ incidentId: registro.id });
-  }
-
-  private recarregarChunkObsoletoUmaVez() {
-    try {
-      const agora = Date.now();
-      const ultimaTentativa = Number(sessionStorage.getItem(CHAVE_RELOAD_CHUNK) || "0");
-
-      if (
-        Number.isFinite(ultimaTentativa) &&
-        ultimaTentativa > 0 &&
-        agora - ultimaTentativa < JANELA_RELOAD_CHUNK_MS
-      ) {
-        return false;
-      }
-
-      sessionStorage.setItem(CHAVE_RELOAD_CHUNK, String(agora));
-      window.location.reload();
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   private tentarNovamente = () => {
