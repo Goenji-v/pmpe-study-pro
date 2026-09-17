@@ -11,12 +11,14 @@ import {
 } from "react-router-dom";
 
 import {
-  Cloud,
+  ArrowRight,
+  Database,
   Eye,
   EyeOff,
   LockKeyhole,
+  Mail,
   ShieldCheck,
-  TrendingUp,
+  UserRound,
 } from "lucide-react";
 
 import "./Auth.css";
@@ -30,6 +32,8 @@ type Modo =
   | "cadastro"
   | "recuperar";
 
+const EMAIL_LEMBRADO_CHAVE = "pmpe-study-pro-email";
+
 export default function Auth() {
   const {
     usuario,
@@ -39,71 +43,38 @@ export default function Auth() {
     recuperarSenha,
   } = useAuth();
 
-  const navigate =
-    useNavigate();
-
-  const location =
-    useLocation();
-
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const convite = searchParams.get("convite");
 
-  const [
-    modo,
-    setModo,
-  ] = useState<Modo>(
+  const [modo, setModo] = useState<Modo>(
     searchParams.get("modo") === "cadastro" ? "cadastro" : "login"
   );
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState(() => {
+    try {
+      return window.localStorage.getItem(EMAIL_LEMBRADO_CHAVE) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+  const [lembrar, setLembrar] = useState(() => {
+    try {
+      return Boolean(window.localStorage.getItem(EMAIL_LEMBRADO_CHAVE));
+    } catch {
+      return false;
+    }
+  });
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [mensagem, setMensagem] = useState("");
 
-  const [
-    nome,
-    setNome,
-  ] = useState("");
-
-  const [
-    email,
-    setEmail,
-  ] = useState("");
-
-  const [
-    senha,
-    setSenha,
-  ] = useState("");
-
-  const [
-    confirmarSenha,
-    setConfirmarSenha,
-  ] = useState("");
-
-  const [
-    mostrarSenha,
-    setMostrarSenha,
-  ] = useState(false);
-
-  const [
-    mostrarConfirmarSenha,
-    setMostrarConfirmarSenha,
-  ] = useState(false);
-
-  const [
-    enviando,
-    setEnviando,
-  ] = useState(false);
-
-  const [
-    erro,
-    setErro,
-  ] = useState("");
-
-  const [
-    mensagem,
-    setMensagem,
-  ] = useState("");
-
-  if (
-    !carregando &&
-    usuario
-  ) {
+  if (!carregando && usuario) {
     return (
       <Navigate
         to={convite ? `/convite/${encodeURIComponent(convite)}` : "/"}
@@ -115,16 +86,11 @@ export default function Auth() {
   const origem =
     (
       location.state as
-        | {
-            origem?: string;
-          }
+        | { origem?: string }
         | null
     )?.origem ?? (convite ? `/convite/${encodeURIComponent(convite)}` : "/");
 
-  async function enviar(
-    evento:
-      FormEvent<HTMLFormElement>
-  ) {
+  async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
     if (enviando) {
@@ -137,71 +103,47 @@ export default function Auth() {
     try {
       setEnviando(true);
 
-      if (
-        modo === "login"
-      ) {
+      if (modo === "login") {
         validarEmailSenha();
+        await entrar(email, senha);
 
-        await entrar(
-          email,
-          senha
-        );
-
-        navigate(
-          origem,
-          {
-            replace: true,
+        try {
+          if (lembrar) {
+            window.localStorage.setItem(EMAIL_LEMBRADO_CHAVE, email.trim());
+          } else {
+            window.localStorage.removeItem(EMAIL_LEMBRADO_CHAVE);
           }
-        );
+        } catch {
+          // O login continua normalmente mesmo se o navegador bloquear o armazenamento local.
+        }
 
+        navigate(origem, { replace: true });
         return;
       }
 
-      if (
-        modo === "cadastro"
-      ) {
+      if (modo === "cadastro") {
         validarCadastro();
 
-        const resultado =
-          await cadastrar(
-            nome,
-            email,
-            senha,
-            convite ? `${window.location.origin}/convite/${encodeURIComponent(convite)}` : undefined
-          );
+        const resultado = await cadastrar(
+          nome,
+          email,
+          senha,
+          convite ? `${window.location.origin}/convite/${encodeURIComponent(convite)}` : undefined
+        );
 
-        if (
-          resultado
-            .precisaConfirmarEmail
-        ) {
-          setMensagem(
-            "Conta criada. Confira seu e-mail para confirmar o cadastro."
-          );
-
-          setModo(
-            "login"
-          );
+        if (resultado.precisaConfirmarEmail) {
+          setMensagem("Conta criada. Confira seu e-mail para confirmar o cadastro.");
+          setModo("login");
         } else {
-          navigate(
-            origem,
-            {
-              replace: true,
-            }
-          );
+          navigate(origem, { replace: true });
         }
 
         return;
       }
 
       validarEmail();
-
-      await recuperarSenha(
-        email
-      );
-
-      setMensagem(
-        "Enviamos as instruções de recuperação para seu e-mail."
-      );
+      await recuperarSenha(email);
+      setMensagem("Enviamos as instruções de recuperação para seu e-mail.");
     } catch (erroEnvio) {
       setErro(
         erroEnvio instanceof Error
@@ -214,13 +156,8 @@ export default function Auth() {
   }
 
   function validarEmail() {
-    if (
-      !email.trim() ||
-      !email.includes("@")
-    ) {
-      throw new Error(
-        "Digite um e-mail válido."
-      );
+    if (!email.trim() || !email.includes("@")) {
+      throw new Error("Digite um e-mail válido.");
     }
   }
 
@@ -228,49 +165,28 @@ export default function Auth() {
     validarEmail();
 
     if (!senha) {
-      throw new Error(
-        "Digite sua senha."
-      );
+      throw new Error("Digite sua senha.");
     }
   }
 
   function validarCadastro() {
     validarEmail();
 
-    if (
-      nome.trim().length <
-      2
-    ) {
-      throw new Error(
-        "Digite seu nome."
-      );
+    if (nome.trim().length < 2) {
+      throw new Error("Digite seu nome.");
     }
 
-    if (
-      senha.length < 6
-    ) {
-      throw new Error(
-        "A senha precisa ter pelo menos 6 caracteres."
-      );
+    if (senha.length < 6) {
+      throw new Error("A senha precisa ter pelo menos 6 caracteres.");
     }
 
-    if (
-      senha !==
-      confirmarSenha
-    ) {
-      throw new Error(
-        "As senhas não coincidem."
-      );
+    if (senha !== confirmarSenha) {
+      throw new Error("As senhas não coincidem.");
     }
   }
 
-  function trocarModo(
-    novoModo: Modo
-  ) {
-    setModo(
-      novoModo
-    );
-
+  function trocarModo(novoModo: Modo) {
+    setModo(novoModo);
     setErro("");
     setMensagem("");
     setSenha("");
@@ -281,94 +197,10 @@ export default function Auth() {
 
   return (
     <main className="auth-pagina">
-      <section className="auth-apresentacao">
-        <div className="auth-marca">
-          <div className="auth-marca-simbolo" aria-hidden="true">
-            SP
-          </div>
-
-          <span>
-            <strong>
-              PMPE Study Pro
-            </strong>
-
-            <small>
-              Preparação tática
-            </small>
-          </span>
-        </div>
-
-        <div className="auth-chamada">
-          <span>
-            ESTUDO SINCRONIZADO
-          </span>
-
-          <h1>
-            Seus dados <em>disponíveis</em> no
-            computador e no celular.
-          </h1>
-
-          <p>
-            Entre na sua conta para acessar
-            estudos, sessões, questões, revisões,
-            simulados e materiais em qualquer lugar.
-          </p>
-        </div>
-
-        <div className="auth-beneficios">
-          <article>
-            <div className="auth-beneficio-icone">
-              <Cloud size={22} strokeWidth={2.2} />
-            </div>
-
-            <div>
-              <strong>
-                Sincronização
-              </strong>
-
-              <span>
-                Seus dados atualizados em todos os dispositivos.
-              </span>
-            </div>
-          </article>
-
-          <article>
-            <div className="auth-beneficio-icone">
-              <LockKeyhole size={22} strokeWidth={2.2} />
-            </div>
-
-            <div>
-              <strong>
-                Segurança
-              </strong>
-
-              <span>
-                Cada conta acessa somente os próprios registros.
-              </span>
-            </div>
-          </article>
-
-          <article>
-            <div className="auth-beneficio-icone">
-              <TrendingUp size={22} strokeWidth={2.2} />
-            </div>
-
-            <div>
-              <strong>
-                Seu progresso
-              </strong>
-
-              <span>
-                Acompanhe sua evolução e mantenha o foco no que importa.
-              </span>
-            </div>
-          </article>
-        </div>
-
-        <p className="auth-frase">
-          Disciplina hoje. Evolução todos os dias.
-        </p>
-      </section>
+      <section
+        className="auth-apresentacao"
+        aria-label="Studio Pro: preparação que aprova"
+      />
 
       <section className="auth-formulario-area">
         <div className="auth-formulario-card">
@@ -376,8 +208,7 @@ export default function Auth() {
             <span>
               {modo === "login"
                 ? "ACESSAR CONTA"
-                : modo ===
-                    "cadastro"
+                : modo === "cadastro"
                   ? "CRIAR CONTA"
                   : "RECUPERAR ACESSO"}
             </span>
@@ -385,8 +216,7 @@ export default function Auth() {
             <h2>
               {modo === "login"
                 ? "Entrar"
-                : modo ===
-                    "cadastro"
+                : modo === "cadastro"
                   ? "Cadastro"
                   : "Recuperar senha"}
             </h2>
@@ -394,194 +224,142 @@ export default function Auth() {
             <p>
               {modo === "login"
                 ? "Use seu e-mail e senha para continuar."
-                : modo ===
-                    "cadastro"
+                : modo === "cadastro"
                   ? "Crie sua conta para manter seus dados sincronizados."
                   : "Informe o e-mail cadastrado para recuperar o acesso."}
             </p>
           </div>
 
-          <form
-            onSubmit={enviar}
-            className="auth-formulario"
-          >
-            {modo ===
-              "cadastro" && (
+          <form onSubmit={enviar} className="auth-formulario">
+            {modo === "cadastro" && (
               <label>
-                <span>
-                  Nome
-                </span>
-
-                <input
-                  type="text"
-                  value={nome}
-                  onChange={(
-                    evento
-                  ) =>
-                    setNome(
-                      evento.target
-                        .value
-                    )
-                  }
-                  autoComplete="name"
-                  placeholder="Seu nome"
-                />
+                <span>Nome</span>
+                <div className="auth-input-com-icone">
+                  <UserRound size={19} aria-hidden="true" />
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(evento) => setNome(evento.target.value)}
+                    autoComplete="name"
+                    placeholder="Seu nome"
+                  />
+                </div>
               </label>
             )}
 
             <label>
-              <span>
-                E-mail
-              </span>
-
-              <input
-                type="email"
-                value={email}
-                onChange={(
-                  evento
-                ) =>
-                  setEmail(
-                    evento.target
-                      .value
-                  )
-                }
-                autoComplete="email"
-                placeholder="seuemail@exemplo.com"
-              />
+              <span>E-mail</span>
+              <div className="auth-input-com-icone">
+                <Mail size={19} aria-hidden="true" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(evento) => setEmail(evento.target.value)}
+                  autoComplete="email"
+                  placeholder="seuemail@exemplo.com"
+                />
+              </div>
             </label>
 
-            {modo !==
-              "recuperar" && (
+            {modo !== "recuperar" && (
               <label>
-                <span>
-                  Senha
-                </span>
-
-                <div className="auth-input-senha">
+                <span>Senha</span>
+                <div className="auth-input-com-icone auth-input-senha">
+                  <LockKeyhole size={19} aria-hidden="true" />
                   <input
                     type={mostrarSenha ? "text" : "password"}
                     value={senha}
-                    onChange={(
-                      evento
-                    ) =>
-                      setSenha(
-                        evento.target
-                          .value
-                      )
-                    }
-                    autoComplete={
-                      modo ===
-                      "cadastro"
-                        ? "new-password"
-                        : "current-password"
-                    }
+                    onChange={(evento) => setSenha(evento.target.value)}
+                    autoComplete={modo === "cadastro" ? "new-password" : "current-password"}
                     placeholder="Sua senha"
                   />
-
                   <button
                     type="button"
-                    onClick={() =>
-                      setMostrarSenha(
-                        (valor) => !valor
-                      )
-                    }
+                    onClick={() => setMostrarSenha((valor) => !valor)}
                     aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                     title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   >
-                    {mostrarSenha
-                      ? <EyeOff size={20} />
-                      : <Eye size={20} />}
+                    {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </label>
             )}
 
-            {modo ===
-              "cadastro" && (
+            {modo === "cadastro" && (
               <label>
-                <span>
-                  Confirmar senha
-                </span>
-
-                <div className="auth-input-senha">
+                <span>Confirmar senha</span>
+                <div className="auth-input-com-icone auth-input-senha">
+                  <LockKeyhole size={19} aria-hidden="true" />
                   <input
                     type={mostrarConfirmarSenha ? "text" : "password"}
-                    value={
-                      confirmarSenha
-                    }
-                    onChange={(
-                      evento
-                    ) =>
-                      setConfirmarSenha(
-                        evento.target
-                          .value
-                      )
-                    }
+                    value={confirmarSenha}
+                    onChange={(evento) => setConfirmarSenha(evento.target.value)}
                     autoComplete="new-password"
                     placeholder="Repita a senha"
                   />
-
                   <button
                     type="button"
-                    onClick={() =>
-                      setMostrarConfirmarSenha(
-                        (valor) => !valor
-                      )
-                    }
+                    onClick={() => setMostrarConfirmarSenha((valor) => !valor)}
                     aria-label={mostrarConfirmarSenha ? "Ocultar confirmação da senha" : "Mostrar confirmação da senha"}
                     title={mostrarConfirmarSenha ? "Ocultar senha" : "Mostrar senha"}
                   >
-                    {mostrarConfirmarSenha
-                      ? <EyeOff size={20} />
-                      : <Eye size={20} />}
+                    {mostrarConfirmarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </label>
             )}
 
-            {erro && (
-              <div className="auth-erro">
-                {erro}
+            {modo === "login" && (
+              <div className="auth-acoes-login">
+                <label className="auth-lembrar">
+                  <input
+                    type="checkbox"
+                    checked={lembrar}
+                    onChange={(evento) => setLembrar(evento.target.checked)}
+                  />
+                  <span aria-hidden="true" />
+                  Lembrar de mim
+                </label>
+
+                <button
+                  type="button"
+                  className="auth-esqueceu"
+                  onClick={() => trocarModo("recuperar")}
+                >
+                  Esqueci minha senha?
+                </button>
               </div>
             )}
 
-            {mensagem && (
-              <div className="auth-sucesso">
-                {mensagem}
-              </div>
-            )}
+            {erro && <div className="auth-erro">{erro}</div>}
+            {mensagem && <div className="auth-sucesso">{mensagem}</div>}
 
             <button
               type="submit"
-              disabled={
-                enviando
-              }
+              disabled={enviando}
               className="auth-submit"
             >
-              {enviando
-                ? "Aguarde..."
-                : modo ===
-                    "login"
-                  ? "Entrar"
-                  : modo ===
-                      "cadastro"
-                    ? "Criar conta"
-                    : "Enviar instruções"}
+              <span>
+                {enviando
+                  ? "Aguarde..."
+                  : modo === "login"
+                    ? "Entrar"
+                    : modo === "cadastro"
+                      ? "Criar conta"
+                      : "Enviar instruções"}
+              </span>
+              {modo === "login" && !enviando && <ArrowRight size={20} aria-hidden="true" />}
             </button>
           </form>
 
-          {modo !== "recuperar" && (
+          {modo === "login" && (
             <div className="auth-seguranca">
               <div className="auth-seguranca-destaque">
                 <div className="auth-seguranca-icone">
-                  <ShieldCheck size={25} strokeWidth={2.2} />
+                  <ShieldCheck size={27} strokeWidth={2.1} />
                 </div>
-
                 <div>
-                  <strong>
-                    Seus dados estão protegidos
-                  </strong>
-
+                  <strong>Seus dados estão protegidos</strong>
                   <span>
                     Acesso autenticado e boas práticas de proteção da sua conta.
                   </span>
@@ -590,60 +368,31 @@ export default function Auth() {
 
               <div className="auth-seguranca-itens" aria-label="Recursos de segurança">
                 <span>
-                  <LockKeyhole size={15} />
-                  Conexão segura
+                  <LockKeyhole size={18} />
+                  <small>Conexão segura<br />(SSL)</small>
                 </span>
-
                 <span>
-                  <ShieldCheck size={15} />
-                  Acesso individual
+                  <Database size={18} />
+                  <small>Dados<br />protegidos</small>
+                </span>
+                <span>
+                  <ShieldCheck size={18} />
+                  <small>Privacidade<br />e LGPD</small>
                 </span>
               </div>
             </div>
           )}
 
           <div className="auth-links">
-            {modo ===
-              "login" && (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    trocarModo(
-                      "recuperar"
-                    )
-                  }
-                >
-                  Esqueci minha senha
+            {modo === "login" ? (
+              <p>
+                Ainda não possui uma conta?{" "}
+                <button type="button" onClick={() => trocarModo("cadastro")}>
+                  Criar conta
                 </button>
-
-                <p>
-                  Ainda não possui conta?
-                  {" "}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      trocarModo(
-                        "cadastro"
-                      )
-                    }
-                  >
-                    Criar conta
-                  </button>
-                </p>
-              </>
-            )}
-
-            {modo !==
-              "login" && (
-              <button
-                type="button"
-                onClick={() =>
-                  trocarModo(
-                    "login"
-                  )
-                }
-              >
+              </p>
+            ) : (
+              <button type="button" onClick={() => trocarModo("login")}>
                 ← Voltar para o login
               </button>
             )}
