@@ -4,8 +4,9 @@ import {
   denunciarQuestao,
   excluirMeuComentarioQuestao,
   listarComentariosQuestao,
-  questaoDisponivelParaComunidade,
+  obterAcessoComunidadeQuestao,
   salvarMeuComentarioQuestao,
+  type AcessoComunidadeQuestao,
   type ComentarioQuestao,
   type MotivoDenunciaQuestao,
 } from "../../services/questaoComunidadeService";
@@ -26,9 +27,15 @@ const motivos: Array<{ valor: MotivoDenunciaQuestao; rotulo: string }> = [
   { valor: "outro", rotulo: "Outro problema" },
 ];
 
+const ACESSO_INDISPONIVEL: AcessoComunidadeQuestao = {
+  disponivel: false,
+  podeDenunciar: false,
+  aguardandoAprovacao: false,
+};
+
 export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = false }: Props) {
   const { showToast } = useToast();
-  const [disponivel, setDisponivel] = useState(false);
+  const [acesso, setAcesso] = useState<AcessoComunidadeQuestao>(ACESSO_INDISPONIVEL);
   const [verificando, setVerificando] = useState(true);
   const [aba, setAba] = useState<"comentarios" | "denuncia" | null>(null);
   const [comentarios, setComentarios] = useState<ComentarioQuestao[]>([]);
@@ -42,14 +49,15 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
   useEffect(() => {
     let ativo = true;
     setVerificando(true);
+    setAcesso(ACESSO_INDISPONIVEL);
     setAba(null);
     setComentarios([]);
     setComentario("");
     setDetalhes("");
 
-    void questaoDisponivelParaComunidade(questaoId).then((valor) => {
+    void obterAcessoComunidadeQuestao(questaoId).then((valor) => {
       if (ativo) {
-        setDisponivel(valor);
+        setAcesso(valor);
         setVerificando(false);
       }
     });
@@ -87,7 +95,14 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
       setSalvando(true);
       await salvarMeuComentarioQuestao(questaoId, comentario);
       await carregarComentarios();
-      showToast(meuComentario ? "Comentário atualizado." : "Comentário publicado para a comunidade.", "success");
+      showToast(
+        meuComentario
+          ? "Comentário atualizado."
+          : acesso.aguardandoAprovacao
+            ? "Comentário salvo. Ele ficará visível para a comunidade quando a questão for aprovada."
+            : "Comentário publicado para a comunidade.",
+        "success"
+      );
     } catch (erro) {
       showToast(erro instanceof Error ? erro.message : "Não foi possível salvar o comentário.", "warning");
     } finally {
@@ -111,6 +126,8 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
   }
 
   async function enviarDenuncia() {
+    if (!acesso.podeDenunciar) return;
+
     const confirmar = window.confirm(
       "Ao denunciar, esta questão será retirada imediatamente dos próximos treinos até a análise do administrador. Deseja continuar?"
     );
@@ -119,7 +136,7 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
     try {
       setEnviandoDenuncia(true);
       await denunciarQuestao(questaoId, motivo, detalhes);
-      setDisponivel(false);
+      setAcesso(ACESSO_INDISPONIVEL);
       setAba(null);
       showToast("Denúncia enviada. A questão entrou em quarentena e o administrador foi avisado.", "success");
       onDenunciada?.();
@@ -130,7 +147,7 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
     }
   }
 
-  if (verificando || !disponivel) return null;
+  if (verificando || !acesso.disponivel) return null;
 
   return (
     <section className={`questao-comunidade ${compacto ? "compacto" : ""}`} aria-label="Comunidade da questão">
@@ -138,14 +155,16 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
         <button type="button" onClick={() => void alternarComentarios()} aria-expanded={aba === "comentarios"}>
           💬 Comentários
         </button>
-        <button
-          type="button"
-          className="questao-comunidade-denunciar"
-          onClick={() => setAba((atual) => atual === "denuncia" ? null : "denuncia")}
-          aria-expanded={aba === "denuncia"}
-        >
-          ⚑ Denunciar questão
-        </button>
+        {acesso.podeDenunciar && (
+          <button
+            type="button"
+            className="questao-comunidade-denunciar"
+            onClick={() => setAba((atual) => atual === "denuncia" ? null : "denuncia")}
+            aria-expanded={aba === "denuncia"}
+          >
+            ⚑ Denunciar questão
+          </button>
+        )}
       </div>
 
       {aba === "comentarios" && (
@@ -153,7 +172,11 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
           <div className="questao-comunidade-titulo">
             <div>
               <strong>Comentários da comunidade</strong>
-              <span>Visíveis para outros alunos que estudarem esta questão.</span>
+              <span>
+                {acesso.aguardandoAprovacao
+                  ? "Esta questão aguarda aprovação. Seu comentário ficará visível aos outros alunos quando ela for aprovada."
+                  : "Visíveis para outros alunos que estudarem esta questão."}
+              </span>
             </div>
             <b>{comentarios.length}</b>
           </div>
@@ -199,7 +222,7 @@ export default function QuestaoComunidade({ questaoId, onDenunciada, compacto = 
         </div>
       )}
 
-      {aba === "denuncia" && (
+      {acesso.podeDenunciar && aba === "denuncia" && (
         <div className="questao-comunidade-painel denuncia">
           <div className="questao-comunidade-titulo">
             <div>
