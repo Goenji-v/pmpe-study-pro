@@ -20,22 +20,16 @@
   ],
   "icons": [
     {
-      "src": "/assets/studio-pro-mark.svg",
+      "src": "/assets/studio-pro-mark.svg?v=2",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/assets/studio-pro-mark.svg",
+      "src": "/assets/studio-pro-mark.svg?v=2",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
-    },
-    {
-      "src": "/assets/studio-pro-favicon.png",
-      "sizes": "64x64",
-      "type": "image/png",
-      "purpose": "any"
     }
   ]
 }
