@@ -68,8 +68,24 @@ type PrefillPendente = {
   assunto: string;
 };
 
+type GeracaoPendente = {
+  id: string;
+  criadaEm: string;
+  origem: OrigemGeracao;
+  materiaSelecionada: string;
+  assuntosSelecionados: string[];
+  assuntoPersonalizado: string;
+  semanaSelecionada: number;
+  banca: string;
+  dificuldade: DificuldadeIA;
+  quantidade: number;
+  salvarNoBanco: boolean;
+  preferenciaReuso: PreferenciaReusoIA;
+};
+
 const CHAVE_QUESTOES_IA = "pmpe_questoes_ia";
 const CHAVE_BANCO_IA = "pmpe_banco_questoes_ia";
+const CHAVE_GERACAO_PENDENTE = "pmpe:geracao-questoes-ia:pendente";
 const QUANTIDADES_DISPONIVEIS = [5, 10, 15, 20, 30, 40, 50, 60];
 
 export default function GerarSimuladoIA() {
@@ -92,8 +108,28 @@ export default function GerarSimuladoIA() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [questoesGeradas, setQuestoesGeradas] = useState<QuestaoIA[]>([]);
+  const [geracaoPendente, setGeracaoPendente] =
+    useState<GeracaoPendente | null>(null);
 
   useEffect(() => {
+    const pendente = carregarGeracaoPendente();
+    if (pendente) {
+      setOrigem(pendente.origem);
+      setMateriaSelecionada(pendente.materiaSelecionada);
+      setAssuntosSelecionados(pendente.assuntosSelecionados);
+      setAssuntoPersonalizado(pendente.assuntoPersonalizado);
+      setSemanaSelecionada(pendente.semanaSelecionada);
+      setBanca(pendente.banca);
+      setDificuldade(pendente.dificuldade);
+      setQuantidade(pendente.quantidade);
+      setSalvarNoBanco(pendente.salvarNoBanco);
+      setPreferenciaReuso(pendente.preferenciaReuso);
+      setGeracaoPendente(pendente);
+      setErro(
+        "Há uma geração anterior para recuperar. Use “Retomar geração” para consultar o mesmo processamento sem criar uma nova tentativa."
+      );
+      return;
+    }
     const modoSolicitado = sessionStorage.getItem("pmpe:gerar-ia:modo");
     if (modoSolicitado === "simulado") setOrigem("semana");
     if (modoSolicitado === "questoes") setOrigem("assunto");
@@ -245,6 +281,8 @@ export default function GerarSimuladoIA() {
     setErro("");
     setSucesso("");
     setQuestoesGeradas([]);
+    localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
+    setGeracaoPendente(null);
   }
 
   function alterarMateria(novaMateria: string) {
@@ -284,7 +322,8 @@ export default function GerarSimuladoIA() {
   }
 
   async function gerarBlocoAssunto(
-    item: AssuntoSelecionavel
+    item: AssuntoSelecionavel,
+    requestId?: string
   ): Promise<{
     questoes: QuestaoIA[];
     reutilizadas: number;
@@ -321,6 +360,7 @@ export default function GerarSimuladoIA() {
         enunciadosEvitar: selecaoCatalogo.reutilizadas.map(
           (questao) => questao.enunciado
         ),
+        requestId,
       });
 
       novasQuestoes = resposta.questoes;
@@ -366,7 +406,7 @@ export default function GerarSimuladoIA() {
     };
   }
 
-  async function gerarSimulado() {
+  async function gerarSimulado(operacaoExistente?: GeracaoPendente) {
     setErro("");
     setSucesso("");
 
@@ -395,6 +435,25 @@ export default function GerarSimuladoIA() {
       return;
     }
 
+    const operacao: GeracaoPendente =
+      operacaoExistente ?? {
+        id: crypto.randomUUID(),
+        criadaEm: new Date().toISOString(),
+        origem,
+        materiaSelecionada,
+        assuntosSelecionados: [...assuntosSelecionados],
+        assuntoPersonalizado,
+        semanaSelecionada,
+        banca,
+        dificuldade,
+        quantidade,
+        salvarNoBanco,
+        preferenciaReuso,
+      };
+
+    localStorage.setItem(CHAVE_GERACAO_PENDENTE, JSON.stringify(operacao));
+    setGeracaoPendente(operacao);
+
     try {
       setGerando(true);
       setQuestoesGeradas([]);
@@ -406,8 +465,11 @@ export default function GerarSimuladoIA() {
       if (origem === "assunto") {
         const blocos: QuestaoIA[][] = [];
 
-        for (const item of assuntosParaGerar) {
-          const bloco = await gerarBlocoAssunto(item);
+        for (const [indice, item] of assuntosParaGerar.entries()) {
+          const bloco = await gerarBlocoAssunto(
+            item,
+            `${operacao.id}:assunto:${indice}`
+          );
           blocos.push(bloco.questoes);
           totalReutilizadas += bloco.reutilizadas;
           totalNovas += bloco.novas;
@@ -424,6 +486,7 @@ export default function GerarSimuladoIA() {
           banca: banca.trim(),
           dificuldade,
           quantidade,
+          requestId: `${operacao.id}:semana`,
         });
 
         let novasQuestoes = resposta.questoes;
@@ -464,6 +527,9 @@ export default function GerarSimuladoIA() {
           : `${questoesFinais.length} questões prontas para o simulado da semana.${salvarNoBanco && totalNovas > 0 ? " As novas aguardam curadoria antes de entrarem no banco compartilhado." : ""}`
       );
 
+      localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
+      setGeracaoPendente(null);
+
       window.dispatchEvent(
         new Event("pmpe-questoes-ia-atualizadas")
       );
@@ -474,7 +540,9 @@ export default function GerarSimuladoIA() {
           : "Erro desconhecido ao gerar questões.";
 
       console.error("Erro ao gerar questões:", erroGeracao);
-      setErro(mensagem);
+      setErro(
+        `${mensagem} A operação foi preservada para uma retomada segura.`
+      );
     } finally {
       setGerando(false);
     }
@@ -538,6 +606,29 @@ export default function GerarSimuladoIA() {
       {sucesso && (
         <div className="gerar-ia-mensagem gerar-ia-sucesso" role="status">
           {sucesso}
+        </div>
+      )}
+
+      {geracaoPendente && !gerando && (
+        <div className="gerar-ia-mensagem" role="status">
+          <strong>Geração recuperável disponível.</strong>{" "}
+          O identificador original foi preservado para evitar uma nova chamada quando o servidor ainda possui o processamento.
+          <div className="gerar-ia-acoes">
+            <button
+              type="button"
+              className="gerar-ia-gerar"
+              onClick={() => void gerarSimulado(geracaoPendente)}
+            >
+              Retomar geração
+            </button>
+            <button
+              type="button"
+              className="gerar-ia-limpar"
+              onClick={limparFormulario}
+            >
+              Descartar tentativa
+            </button>
+          </div>
         </div>
       )}
 
@@ -856,7 +947,7 @@ export default function GerarSimuladoIA() {
               <span>
                 {origem === "assunto"
                   ? "Os subassuntos são montados separadamente e misturados no final."
-                  : "Não feche a página."}
+                  : "Você pode navegar para outra área. Se a página for atualizada, use “Retomar geração” ao voltar."}
               </span>
             </div>
           </div>
@@ -875,7 +966,7 @@ export default function GerarSimuladoIA() {
           <button
             type="button"
             className="gerar-ia-gerar"
-            onClick={gerarSimulado}
+            onClick={() => void gerarSimulado()}
             disabled={
               gerando ||
               (origem === "assunto" && !validacaoMultiAssunto.valida)
@@ -903,6 +994,64 @@ export default function GerarSimuladoIA() {
       )}
     </section>
   );
+}
+
+function carregarGeracaoPendente(): GeracaoPendente | null {
+  const salvo = localStorage.getItem(CHAVE_GERACAO_PENDENTE);
+  if (!salvo) return null;
+
+  try {
+    const valor = JSON.parse(salvo) as Partial<GeracaoPendente>;
+    if (
+      typeof valor.id !== "string" ||
+      (valor.origem !== "assunto" && valor.origem !== "semana") ||
+      typeof valor.banca !== "string" ||
+      !Number.isFinite(Number(valor.quantidade))
+    ) {
+      localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
+      return null;
+    }
+
+    return {
+      id: valor.id,
+      criadaEm:
+        typeof valor.criadaEm === "string"
+          ? valor.criadaEm
+          : new Date().toISOString(),
+      origem: valor.origem,
+      materiaSelecionada:
+        typeof valor.materiaSelecionada === "string"
+          ? valor.materiaSelecionada
+          : "",
+      assuntosSelecionados: Array.isArray(valor.assuntosSelecionados)
+        ? valor.assuntosSelecionados.filter(
+            (item): item is string => typeof item === "string"
+          )
+        : [],
+      assuntoPersonalizado:
+        typeof valor.assuntoPersonalizado === "string"
+          ? valor.assuntoPersonalizado
+          : "",
+      semanaSelecionada: Math.max(1, Number(valor.semanaSelecionada) || 1),
+      banca: valor.banca,
+      dificuldade:
+        valor.dificuldade === "Fácil" ||
+        valor.dificuldade === "Média" ||
+        valor.dificuldade === "Difícil" ||
+        valor.dificuldade === "Mista"
+          ? valor.dificuldade
+          : "Mista",
+      quantidade: Math.max(1, Number(valor.quantidade) || 5),
+      salvarNoBanco: valor.salvarNoBanco !== false,
+      preferenciaReuso:
+        valor.preferenciaReuso === "misturar"
+          ? "misturar"
+          : "nao_respondidas",
+    };
+  } catch {
+    localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
+    return null;
+  }
 }
 
 function carregarBancoIA(): QuestaoIA[] {
