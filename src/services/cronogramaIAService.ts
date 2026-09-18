@@ -36,6 +36,7 @@ export type CronogramaGeradoIA = {
   tempoTotalMinutos: number;
   tarefas: TarefaCronogramaIA[];
   geradoEm: string;
+  aprovadoEm?: string;
 };
 
 export type DadosCronogramaIA = {
@@ -155,6 +156,39 @@ export async function listarCronogramasIA(): Promise<CronogramaGeradoIA[]> {
     periodo: linha.periodo,
     geradoEm: linha.created_at,
   }));
+}
+
+export async function aprovarCronogramaIA(
+  cronograma: CronogramaGeradoIA
+): Promise<CronogramaGeradoIA> {
+  if (!cronograma.id) {
+    throw new Error("O cronograma precisa estar salvo antes da aprovação.");
+  }
+
+  const usuario = await exigirUsuario();
+  const aprovadoEm = new Date().toISOString();
+  const dados = { ...cronograma, aprovadoEm };
+
+  const { data, error } = await supabase
+    .from("cronogramas_ia")
+    .update({ dados })
+    .eq("id", cronograma.id)
+    .eq("user_id", usuario.id)
+    .select("id, titulo, periodo, tempo_disponivel_minutos, dados, created_at")
+    .single();
+
+  if (error) {
+    throw new Error(`Não foi possível aprovar o cronograma: ${error.message}`);
+  }
+
+  const linha = data as LinhaCronograma;
+  return {
+    ...linha.dados,
+    id: linha.id,
+    titulo: linha.titulo,
+    periodo: linha.periodo,
+    geradoEm: linha.created_at,
+  };
 }
 
 export async function excluirCronogramaIA(id: string): Promise<void> {
