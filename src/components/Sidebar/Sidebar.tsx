@@ -181,15 +181,10 @@ export default function Sidebar() {
       <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
         <div className="sidebar-logo">
           <img
-            className="sidebar-logo-imagem"
-            src="/assets/studio-pro-mark.svg"
-            alt=""
-            aria-hidden="true"
+            className="sidebar-logo-imagem sidebar-logo-completa"
+            src="/assets/studio-pro-logo.svg"
+            alt="Studio Pro"
           />
-          <div className="sidebar-logo-texto">
-            <strong>STUDIO PRO</strong>
-            <span>PMPE • Preparação tática</span>
-          </div>
         </div>
 
         <nav className="sidebar-menu" aria-label="Navegação principal">

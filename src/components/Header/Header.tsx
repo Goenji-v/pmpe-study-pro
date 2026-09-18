@@ -20,15 +20,11 @@ export default function Header() {
     <header className="header">
       <div className="header-identidade">
         <img
-          className="header-logo-marca"
-          src="/assets/studio-pro-mark.svg"
-          alt=""
-          aria-hidden="true"
+          className="header-logo-marca header-logo-completa"
+          src="/assets/studio-pro-logo.svg"
+          alt="Studio Pro"
         />
-        <div className="header-marca-texto">
-          <strong>STUDIO PRO</strong>
-          <span>{configuracoes.concurso}</span>
-        </div>
+        <span className="header-concurso">{configuracoes.concurso}</span>
       </div>
 
       <div className="header-acoes">
