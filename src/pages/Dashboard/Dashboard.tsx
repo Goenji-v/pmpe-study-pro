@@ -277,28 +277,18 @@ export default function Dashboard() {
     };
   }, [materias]);
 
-  const inicioHojeMetricas = useMemo(() => {
-    const data = new Date();
-    data.setHours(0, 0, 0, 0);
-    return data;
-  }, [hoje]);
-  const fimHojeMetricas = useMemo(() => {
-    const data = new Date();
-    data.setHours(23, 59, 59, 999);
-    return data;
-  }, [hoje]);
-  const metricasHoje = useMemo(
-    () =>
-      calcularMetricasConsolidadas({
-        questoes,
-        sessoes,
-        revisoes,
-        simulados,
-        inicio: inicioHojeMetricas,
-        fim: fimHojeMetricas,
-      }),
-    [questoes, sessoes, revisoes, simulados, inicioHojeMetricas, fimHojeMetricas]
-  );
+  const inicioHojeMetricas = new Date();
+  inicioHojeMetricas.setHours(0, 0, 0, 0);
+  const fimHojeMetricas = new Date();
+  fimHojeMetricas.setHours(23, 59, 59, 999);
+  const metricasHoje = calcularMetricasConsolidadas({
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    inicio: inicioHojeMetricas,
+    fim: fimHojeMetricas,
+  });
   const questoesHoje = metricasHoje.questoes;
   const minutosHoje = metricasHoje.minutos;
 
