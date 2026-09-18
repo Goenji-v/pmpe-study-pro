@@ -67,64 +67,39 @@
 .auth-brand {
   display: inline-flex;
   align-items: center;
+  gap: 14px;
   width: fit-content;
 }
 
 .auth-brand-logo {
   display: block;
-  width: clamp(210px, 22vw, 300px);
-  height: auto;
-  border-radius: 12px;
-  filter: drop-shadow(0 12px 30px rgba(0, 80, 200, .20));
-}
-
-.auth-brand-selo {
-  position: relative;
-  width: 62px;
-  height: 62px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  color: #fff;
-  background: linear-gradient(145deg, #3f98ff 0%, #1f72ed 54%, #145dc8 100%);
-  border: 1px solid rgba(132, 193, 255, .70);
+  width: clamp(54px, 4.8vw, 66px);
+  height: clamp(54px, 4.8vw, 66px);
+  flex: 0 0 auto;
+  object-fit: contain;
   border-radius: 16px;
-  box-shadow:
-    0 14px 34px rgba(20, 103, 220, .25),
-    inset 0 1px 0 rgba(255, 255, 255, .3);
-  font-size: 22px;
-  font-weight: 950;
-  letter-spacing: -1px;
+  filter: drop-shadow(0 12px 26px rgba(0, 80, 200, .24));
 }
 
-.auth-brand-selo::after {
-  content: "";
-  position: absolute;
-  top: -18px;
-  left: -8px;
-  width: 72px;
-  height: 28px;
-  transform: rotate(-12deg);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent);
-}
-
-.auth-brand > div:last-child {
+.auth-brand-texto {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .auth-brand strong {
   color: #f7fbff;
-  font-size: clamp(20px, 1.55vw, 26px);
+  font-size: clamp(20px, 1.55vw, 27px);
+  line-height: 1;
   font-weight: 950;
-  letter-spacing: .8px;
+  letter-spacing: 1px;
   text-shadow: 0 2px 12px rgba(0,0,0,.34);
 }
 
 .auth-brand span {
   color: #58a9ff;
   font-size: 13px;
+  line-height: 1.1;
   font-weight: 750;
   letter-spacing: .2px;
   text-shadow: 0 2px 10px rgba(0,0,0,.5);
