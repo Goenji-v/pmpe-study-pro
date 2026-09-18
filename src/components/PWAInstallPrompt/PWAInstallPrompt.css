@@ -1,0 +1,117 @@
+.pwa-install {
+  position: fixed;
+  z-index: 2200;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: min(calc(100vw - 28px), 620px);
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  color: #eef7ff;
+  background:
+    linear-gradient(145deg, rgba(7, 27, 48, .98), rgba(4, 16, 29, .99));
+  border: 1px solid rgba(72, 167, 255, .42);
+  border-radius: 16px;
+  box-shadow:
+    0 22px 55px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+  backdrop-filter: blur(16px);
+  transform: translateX(-50%);
+}
+
+.pwa-install-logo {
+  width: 48px;
+  height: 48px;
+  display: block;
+  border-radius: 13px;
+  filter: drop-shadow(0 8px 16px rgba(22, 139, 255, .22));
+}
+
+.pwa-install-conteudo {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.pwa-install-conteudo strong {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.pwa-install-conteudo span,
+.pwa-install-conteudo small {
+  color: #9eb1c7;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.pwa-install-conteudo small {
+  margin-top: 3px;
+  color: #c7d8e9;
+}
+
+.pwa-install-acao {
+  min-height: 38px;
+  padding: 0 15px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #168bff, #0a63e8);
+  border: 1px solid #52b2ff;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(10, 99, 232, .25);
+}
+
+.pwa-install-acao:hover {
+  filter: brightness(1.08);
+}
+
+.pwa-install-fechar {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  width: 24px;
+  height: 24px;
+  display: none;
+  place-items: center;
+  padding: 0;
+  color: #7f96ae;
+  background: transparent;
+  border: 0;
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .pwa-install {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
+    padding: 13px 36px 13px 13px;
+  }
+
+  .pwa-install-logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .pwa-install-acao {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 41px;
+    margin-top: 2px;
+  }
+
+  .pwa-install-fechar {
+    display: grid;
+  }
+
+  .pwa-install-conteudo strong {
+    font-size: 13px;
+  }
+}

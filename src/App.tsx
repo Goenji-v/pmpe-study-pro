@@ -21,6 +21,7 @@ import MentoriaProgressoBridge from "./components/MentoriaProgressoBridge/Mentor
 import MentoriaCronometroBridge from "./components/MentoriaCronometroBridge/MentoriaCronometroBridge";
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
+import PWAInstallPrompt from "./components/PWAInstallPrompt/PWAInstallPrompt";
 import { armazenamentoSessaoDaConta as sessionStorage } from "./services/armazenamentoConta";
 import { PARCERIAS_VISIVEIS } from "./config/recursos";
 
@@ -229,6 +230,7 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <BrowserRouter>
+          <PWAInstallPrompt />
           <Suspense fallback={<CarregandoRota />}>
             <Routes>
               <Route path="/login" element={<Auth />} />
