@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+  <title id="title">Studio Pro</title>
+  <desc id="desc">Logo Studio Pro em azul com escudo SP e frase Estudo hoje. Conquista sempre.</desc>
+  <defs>
+    <linearGradient id="outer" x1="70" y1="40" x2="365" y2="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7EE8FF"/>
+      <stop offset=".28" stop-color="#12B8FF"/>
+      <stop offset=".62" stop-color="#086BFF"/>
+      <stop offset="1" stop-color="#052D9A"/>
+    </linearGradient>
+    <linearGradient id="inner" x1="115" y1="95" x2="325" y2="352" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#081B36"/>
+      <stop offset=".58" stop-color="#061126"/>
+      <stop offset="1" stop-color="#020817"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="470" y1="125" x2="935" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".45" stop-color="#F5F8FC"/>
+      <stop offset="1" stop-color="#B6C2D2"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="980" y1="125" x2="1220" y2="255" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#69EAFF"/>
+      <stop offset=".32" stop-color="#16BFFF"/>
+      <stop offset=".7" stop-color="#0879FF"/>
+      <stop offset="1" stop-color="#0344D5"/>
+    </linearGradient>
+    <linearGradient id="pBlue" x1="230" y1="145" x2="292" y2="306" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#71EAFF"/>
+      <stop offset=".4" stop-color="#14B8FF"/>
+      <stop offset=".72" stop-color="#0874FF"/>
+      <stop offset="1" stop-color="#0039C8"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="11" flood-color="#001431" flood-opacity=".7"/>
+    </filter>
+    <filter id="textShadow" x="-20%" y="-30%" width="140%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000A18" flood-opacity=".8"/>
+    </filter>
+  </defs>
+  <g transform="translate(16,10)" filter="url(#shadow)">
+    <path d="M180 20 330 78v115c0 102-59 176-150 220C89 369 30 295 30 193V78L180 20Z" fill="#020817" stroke="url(#outer)" stroke-width="15" stroke-linejoin="round"/>
+    <path d="M180 46 307 95v98c0 86-49 151-127 191-78-40-127-105-127-191V95L180 46Z" fill="url(#inner)" stroke="#2FCBFF" stroke-opacity=".9" stroke-width="4"/>
+    <line x1="180" y1="115" x2="180" y2="326" stroke="url(#outer)" stroke-opacity=".65" stroke-width="3"/>
+    <text x="124" y="302" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="177" font-weight="600" fill="#F4F7FB">S</text>
+    <text x="236" y="302" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="177" font-weight="600" fill="url(#pBlue)">P</text>
+  </g>
+  <g filter="url(#textShadow)">
+    <text x="390" y="225" font-family="Arial Black, Inter, Arial, sans-serif" font-size="132" font-weight="900" letter-spacing="-5" fill="url(#silver)">STUDIO</text>
+    <text x="940" y="225" font-family="Arial Black, Inter, Arial, sans-serif" font-size="132" font-weight="900" letter-spacing="-5" fill="url(#blue)">PRO</text>
+  </g>
+  <text x="405" y="302" font-family="Inter, Arial, sans-serif" font-size="33" font-weight="700" letter-spacing="7" fill="#9CB2CC">ESTUDO HOJE. CONQUISTA SEMPRE.</text>
+</svg>
