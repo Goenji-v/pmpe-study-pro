@@ -14,6 +14,7 @@ import {
 import { executarComFallbackGemini } from "./retryGemini.ts";
 import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
 import { montarPromptGeracaoQuestoesIA } from "./promptQuestoesIA.ts";
+import { executarGeracaoIdempotente, obterEstadoGeracao } from "./geracaoJobs.ts";
 
 const app = express();
 
@@ -111,6 +112,46 @@ app.get(
   }
 );
 
+app.get(
+  "/api/gerar/status/:id",
+  (req, res) => {
+    const userId = String(req.header("x-study-user-id") || "").trim();
+    const requestId = String(req.params.id || "").trim();
+
+    if (!userId || !idGeracaoValido(requestId)) {
+      res.status(400).json({
+        sucesso: false,
+        erro: "Identificador de geração inválido.",
+      });
+      return;
+    }
+
+    const estado = obterEstadoGeracao<unknown[]>(`${userId}:${requestId}`);
+    if (!estado) {
+      res.status(404).json({
+        sucesso: false,
+        status: "nao-encontrada",
+        erro: "A geração não está mais disponível neste servidor.",
+      });
+      return;
+    }
+
+    if (estado.status === "processando") {
+      res.status(202).json({
+        sucesso: true,
+        status: "processando",
+      });
+      return;
+    }
+
+    res.json({
+      sucesso: true,
+      status: "concluida",
+      questoes: estado.resultado ?? [],
+    });
+  }
+);
+
 app.post(
   "/api/gerar",
   async (req, res) => {
@@ -140,69 +181,49 @@ app.post(
             enunciadosEvitar: listaEvitar,
           });
 
-      const resposta =
-        await ai.models.generateContent({
+      const executar = async () => {
+        const resposta = await ai.models.generateContent({
           model: modelo,
-
           contents: prompt,
         });
 
-      if (!resposta.text) {
-        throw new Error(
-          "O Gemini não retornou texto."
-        );
-      }
-
-      const texto =
-        limparJson(
-          resposta.text
-        );
-
-      try {
-        const questoes =
-          JSON.parse(texto);
-
-        if (
-          !Array.isArray(
-            questoes
-          )
-        ) {
-          throw new Error(
-            "A resposta não é uma lista de questões."
-          );
+        if (!resposta.text) {
+          throw new Error("O Gemini não retornou texto.");
         }
 
-        res.json({
-          sucesso: true,
-          questoes,
-        });
-      } catch (erroJson) {
-        console.error(
-          "JSON inválido retornado pela IA:",
-          texto
-        );
+        const texto = limparJson(resposta.text);
+        try {
+          const questoes = JSON.parse(texto);
+          if (!Array.isArray(questoes)) {
+            throw new Error("A resposta não é uma lista de questões.");
+          }
+          return questoes as unknown[];
+        } catch (erroJson) {
+          console.error("JSON inválido retornado pela IA:", texto);
+          throw erroJson instanceof Error
+            ? erroJson
+            : new Error("A IA retornou um JSON inválido.");
+        }
+      };
 
-        res.status(500).json({
-          sucesso: false,
+      const userId = String(req.header("x-study-user-id") || "").trim();
+      const requestId = String(req.header("x-generation-id") || "").trim();
+      const questoes =
+        userId && idGeracaoValido(requestId)
+          ? await executarGeracaoIdempotente(
+              `${userId}:${requestId}`,
+              executar
+            )
+          : await executar();
 
-          erro:
-            erroJson instanceof Error
-              ? erroJson.message
-              : "A IA retornou um JSON inválido.",
-
-          resposta:
-            texto,
-        });
-      }
+      res.json({
+        sucesso: true,
+        questoes,
+      });
     } catch (erro) {
-      console.error(
-        "Erro Gemini:",
-        erro
-      );
-
+      console.error("Erro Gemini:", erro);
       res.status(500).json({
         sucesso: false,
-
         erro:
           erro instanceof Error
             ? erro.message
@@ -211,6 +232,10 @@ app.post(
     }
   }
 );
+
+function idGeracaoValido(valor: string) {
+  return /^[a-zA-Z0-9:_-]{8,220}$/.test(valor);
+}
 
 app.post(
   "/api/coach",
