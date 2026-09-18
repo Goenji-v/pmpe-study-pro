@@ -121,9 +121,9 @@ export default function CentralInteligencia() {
         <section className="inteligencia-painel inteligencia-missao">
           <div className="inteligencia-painel-topo">
             <div>
-              <span className="inteligencia-etiqueta">PLANO AUTOMÁTICO</span>
-              <h2>🎯 Missão de hoje</h2>
-              <p>Tarefas selecionadas com base nas suas maiores necessidades.</p>
+              <span className="inteligencia-etiqueta">RECOMENDAÇÕES COMPLEMENTARES</span>
+              <h2>🎯 Sugestões para hoje</h2>
+              <p>Sugestões baseadas nos seus registros. Elas não substituem nem reabrem tarefas obrigatórias do Plano de Estudos.</p>
             </div>
             <div className="inteligencia-tempo-missao">
               <span>Tempo estimado</span>
@@ -133,7 +133,7 @@ export default function CentralInteligencia() {
 
           {dados.missoes.length === 0 ? (
             <div className="inteligencia-vazio">
-              Registre sessões, questões ou revisões para gerar uma missão inteligente.
+              Registre sessões, questões ou revisões para receber sugestões complementares.
             </div>
           ) : (
             <div className="inteligencia-lista-missoes">
@@ -166,7 +166,7 @@ export default function CentralInteligencia() {
             onClick={iniciarMissaoCompleta}
             disabled={dados.missoes.length === 0}
           >
-            ▶ Iniciar missão completa
+            ▶ Executar sugestões
           </button>
         </section>
 
