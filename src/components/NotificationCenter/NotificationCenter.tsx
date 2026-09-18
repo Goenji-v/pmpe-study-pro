@@ -154,7 +154,7 @@ export default function NotificationCenter() {
 
       if (missaoHoje) {
         mostrarAviso({
-          titulo: "Missão de hoje",
+          titulo: "Tarefa do plano de hoje",
           mensagem: `${missaoHoje.missao.materia} — ${missaoHoje.missao.assunto}`,
           rota: "/plano",
         });
@@ -300,7 +300,7 @@ export default function NotificationCenter() {
 
             {missaoHoje && (
               <button className="notificacao-item destaque" type="button" onClick={() => { setAberto(false); navigate("/plano"); }}>
-                <strong>Missão de hoje</strong>
+                <strong>Tarefa do plano de hoje</strong>
                 <span>{missaoHoje.missao.materia} — {missaoHoje.missao.assunto}</span>
                 <small>Semana {missaoHoje.semana}</small>
               </button>
