@@ -99,7 +99,7 @@ export default function PWAInstallPrompt() {
       </button>
 
       <img
-        src="/assets/studio-pro-mark.svg?v=2"
+        src="/assets/studio-pro-mark.svg?v=3"
         alt=""
         aria-hidden="true"
         className="pwa-install-logo"
