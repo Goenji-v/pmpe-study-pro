@@ -10,10 +10,10 @@ export type ExplicacaoQuestaoEstruturada = {
 };
 
 const INICIO_ALTERNATIVA =
-  /(?:^|[.!?;]\s+)(?=(?:alternativa\s+)?[A-E][\).:\-]?\s+(?:está|esta|é|e)\s+(?:(?:a\s+)?(?:alternativa\s+)?)?(?:errada|incorreta|correta|certa)\b)/giu;
+  /(?:^|[.!?;]\s+)(?=(?:alternativa\s+)?[A-E][).:-]?\s+(?:está|esta|é|e)\s+(?:(?:a\s+)?(?:alternativa\s+)?)?(?:errada|incorreta|correta|certa)\b)/giu;
 
 const PADRAO_ALTERNATIVA =
-  /^(?:alternativa\s+)?([A-E])[\).:\-]?\s+(?:está|esta|é|e)\s+(?:(?:a\s+)?(?:alternativa\s+)?)?(errada|incorreta|correta|certa)\b\s*(.*)$/iu;
+  /^(?:alternativa\s+)?([A-E])[).:-]?\s+(?:está|esta|é|e)\s+(?:(?:a\s+)?(?:alternativa\s+)?)?(errada|incorreta|correta|certa)\b\s*(.*)$/iu;
 
 export function estruturarExplicacaoQuestao(
   valor: string | null | undefined
