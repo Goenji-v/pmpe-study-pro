@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import QuestaoComunidade from "../../components/QuestaoComunidade/QuestaoComunidade";
+import ExplicacaoQuestao from "../../components/ExplicacaoQuestao/ExplicacaoQuestao";
 import { listarCadernosSimuladosIA, type CadernoSimuladoIA } from "../../services/cadernosSimuladosIAService";
 import { carregarRevisoesCadernoIA } from "../../services/revisaoCadernoIAService";
 import { numerarQuestoesRevisao, possuiCorrecaoCompleta, type TentativaRevisaoIA } from "../../utils/revisaoCadernoIA";
@@ -141,10 +142,11 @@ export default function RevisaoCadernoIA() {
                       {(letra === resposta || letra === q.respostaCorreta) && <small>{letra === resposta ? "Sua resposta" : ""}{letra === resposta && letra === q.respostaCorreta ? " · " : ""}{letra === q.respostaCorreta ? "Correta" : ""}</small>}
                     </li>)}
                   </ul>
-                  <div className="revisao-caderno-explicacao">
-                    <h4>Comentário do gabarito</h4>
-                    <p>{q.explicacao || "Este caderno não tem comentário salvo para esta questão."}</p>
-                  </div>
+                  <ExplicacaoQuestao
+                    texto={q.explicacao}
+                    gabarito={q.respostaCorreta}
+                    titulo="Comentário do gabarito"
+                  />
                   <QuestaoComunidade questaoId={q.id} compacto />
                 </div>
               </details>
