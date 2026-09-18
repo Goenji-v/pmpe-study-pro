@@ -1,39 +1,50 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Studio Pro</title>
-  <desc id="desc">Escudo azul com as letras S e P</desc>
+  <desc id="desc">Ícone azul escuro do Studio Pro com escudo SP</desc>
   <defs>
-    <linearGradient id="outer" x1="72" y1="62" x2="430" y2="454" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#7EE8FF"/>
-      <stop offset=".28" stop-color="#12B8FF"/>
-      <stop offset=".62" stop-color="#086BFF"/>
-      <stop offset="1" stop-color="#052D9A"/>
+    <radialGradient id="bg" cx="42%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#0b2a52"/>
+      <stop offset=".52" stop-color="#06172d"/>
+      <stop offset="1" stop-color="#020811"/>
+    </radialGradient>
+    <linearGradient id="outer" x1="105" y1="82" x2="406" y2="432" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8AF0FF"/>
+      <stop offset=".26" stop-color="#25CBFF"/>
+      <stop offset=".62" stop-color="#0B7BFF"/>
+      <stop offset="1" stop-color="#0545D8"/>
     </linearGradient>
-    <linearGradient id="inner" x1="126" y1="112" x2="388" y2="403" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#081B36"/>
+    <linearGradient id="inner" x1="156" y1="127" x2="365" y2="374" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A1D38"/>
       <stop offset=".58" stop-color="#061126"/>
       <stop offset="1" stop-color="#020817"/>
     </linearGradient>
-    <linearGradient id="pBlue" x1="286" y1="169" x2="354" y2="351" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#71EAFF"/>
-      <stop offset=".38" stop-color="#14B8FF"/>
-      <stop offset=".7" stop-color="#0874FF"/>
-      <stop offset="1" stop-color="#0039C8"/>
+    <linearGradient id="pBlue" x1="286" y1="177" x2="348" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#76F0FF"/>
+      <stop offset=".38" stop-color="#19C6FF"/>
+      <stop offset=".72" stop-color="#087EFF"/>
+      <stop offset="1" stop-color="#0643D5"/>
     </linearGradient>
-    <linearGradient id="sSilver" x1="145" y1="164" x2="236" y2="350" gradientUnits="userSpaceOnUse">
+    <linearGradient id="sSilver" x1="164" y1="176" x2="228" y2="340" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset=".5" stop-color="#E8EEF7"/>
-      <stop offset="1" stop-color="#A7B5C9"/>
+      <stop offset=".55" stop-color="#EEF3F9"/>
+      <stop offset="1" stop-color="#AEBBCD"/>
     </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#001431" flood-opacity=".72"/>
+    <filter id="shieldGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#00142d" flood-opacity=".88"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#078BFF" flood-opacity=".30"/>
     </filter>
   </defs>
-  <g filter="url(#shadow)">
-    <path d="M256 42 420 105v125c0 111-65 192-164 240C157 422 92 341 92 230V105L256 42Z" fill="#020817" stroke="url(#outer)" stroke-width="18" stroke-linejoin="round"/>
-    <path d="M256 68 395 121v108c0 94-54 165-139 209-85-44-139-115-139-209V121L256 68Z" fill="url(#inner)" stroke="#2FCBFF" stroke-opacity=".9" stroke-width="5" stroke-linejoin="round"/>
-    <path d="M256 84 379 131" stroke="#D5F5FF" stroke-opacity=".55" stroke-width="3" stroke-linecap="round"/>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect x="14" y="14" width="484" height="484" rx="96" fill="none" stroke="#0D2E55" stroke-width="4" opacity=".72"/>
+
+  <g filter="url(#shieldGlow)">
+    <path d="M256 74 401 130v111c0 98-58 171-145 215-87-44-145-117-145-215V130L256 74Z" fill="#020817" stroke="url(#outer)" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M256 98 380 145v95c0 82-48 143-124 182-76-39-124-100-124-182v-95L256 98Z" fill="url(#inner)" stroke="#2DCBFF" stroke-opacity=".92" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M256 111 365 153" stroke="#D5F5FF" stroke-opacity=".48" stroke-width="3" stroke-linecap="round"/>
   </g>
-  <line x1="256" y1="150" x2="256" y2="359" stroke="url(#outer)" stroke-opacity=".7" stroke-width="3"/>
-  <text x="196" y="338" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="196" font-weight="600" fill="url(#sSilver)">S</text>
-  <text x="321" y="338" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="196" font-weight="600" fill="url(#pBlue)">P</text>
+
+  <line x1="256" y1="165" x2="256" y2="348" stroke="url(#outer)" stroke-opacity=".72" stroke-width="3"/>
+  <text x="203" y="331" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="172" font-weight="600" fill="url(#sSilver)">S</text>
+  <text x="313" y="331" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="172" font-weight="600" fill="url(#pBlue)">P</text>
 </svg>
