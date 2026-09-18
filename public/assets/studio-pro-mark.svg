@@ -1,24 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Studio Pro</title>
-  <desc id="desc">Marca SP em azul para o Studio Pro</desc>
+  <desc id="desc">Escudo azul com as letras S e P</desc>
   <defs>
-    <linearGradient id="bg" x1="32" y1="22" x2="224" y2="234" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#168BFF"/>
-      <stop offset="0.52" stop-color="#0A63E8"/>
-      <stop offset="1" stop-color="#0B2F78"/>
+    <linearGradient id="outer" x1="72" y1="62" x2="430" y2="454" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7EE8FF"/>
+      <stop offset=".28" stop-color="#12B8FF"/>
+      <stop offset=".62" stop-color="#086BFF"/>
+      <stop offset="1" stop-color="#052D9A"/>
     </linearGradient>
-    <linearGradient id="shine" x1="44" y1="34" x2="192" y2="164" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.34"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    <linearGradient id="inner" x1="126" y1="112" x2="388" y2="403" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#081B36"/>
+      <stop offset=".58" stop-color="#061126"/>
+      <stop offset="1" stop-color="#020817"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#001733" flood-opacity="0.42"/>
+    <linearGradient id="pBlue" x1="286" y1="169" x2="354" y2="351" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#71EAFF"/>
+      <stop offset=".38" stop-color="#14B8FF"/>
+      <stop offset=".7" stop-color="#0874FF"/>
+      <stop offset="1" stop-color="#0039C8"/>
+    </linearGradient>
+    <linearGradient id="sSilver" x1="145" y1="164" x2="236" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".5" stop-color="#E8EEF7"/>
+      <stop offset="1" stop-color="#A7B5C9"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#001431" flood-opacity=".72"/>
     </filter>
   </defs>
-  <rect x="18" y="18" width="220" height="220" rx="52" fill="url(#bg)" filter="url(#shadow)"/>
-  <rect x="25" y="25" width="206" height="206" rx="45" fill="none" stroke="#7EC3FF" stroke-opacity="0.58" stroke-width="2"/>
-  <path d="M40 92C67 47 126 31 182 49C143 50 101 69 68 104C57 116 48 128 41 140C35 123 35 106 40 92Z" fill="url(#shine)"/>
-  <path d="M66 130C66 94 91 75 126 75C148 75 167 83 181 97L163 116C153 106 141 101 127 101C107 101 94 110 94 126C94 144 108 153 129 153C145 153 158 148 168 138L186 157C171 173 151 181 127 181C91 181 66 162 66 130Z" fill="#F7FBFF"/>
-  <path d="M132 76H190C218 76 235 92 235 115C235 139 217 155 190 155H160V180H132V76ZM160 101V131H187C199 131 206 126 206 116C206 106 199 101 187 101H160Z" fill="#B9DCFF"/>
-  <circle cx="128" cy="128" r="111" fill="none" stroke="#0A1730" stroke-opacity="0.18" stroke-width="3"/>
+  <g filter="url(#shadow)">
+    <path d="M256 42 420 105v125c0 111-65 192-164 240C157 422 92 341 92 230V105L256 42Z" fill="#020817" stroke="url(#outer)" stroke-width="18" stroke-linejoin="round"/>
+    <path d="M256 68 395 121v108c0 94-54 165-139 209-85-44-139-115-139-209V121L256 68Z" fill="url(#inner)" stroke="#2FCBFF" stroke-opacity=".9" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M256 84 379 131" stroke="#D5F5FF" stroke-opacity=".55" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <line x1="256" y1="150" x2="256" y2="359" stroke="url(#outer)" stroke-opacity=".7" stroke-width="3"/>
+  <text x="196" y="338" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="196" font-weight="600" fill="url(#sSilver)">S</text>
+  <text x="321" y="338" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="196" font-weight="600" fill="url(#pBlue)">P</text>
 </svg>
