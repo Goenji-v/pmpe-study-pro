@@ -67,6 +67,16 @@ window.setTimeout(() => {
   sessionStorage.removeItem(CHAVE_RECUPERACAO_ASSET);
 }, 10_000);
 
+
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
+      .catch((erro) => {
+        console.warn("Não foi possível registrar o modo aplicativo do Studio Pro.", erro);
+      });
+  });
+}
+
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(
