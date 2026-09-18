@@ -64,7 +64,7 @@ export default function Admin() {
         <div>
           <span className="admin-etiqueta">ACESSO RESTRITO</span>
           <h1>🛡️ Administração</h1>
-          <p>Acompanhe usuários, atividade geral, segurança, desempenho e a curadoria de conteúdo do Studio Pro.</p>
+          <p>Acompanhe usuários, atividade geral, segurança, desempenho e a curadoria de conteúdo do Study Pro.</p>
         </div>
         <div className="admin-seguranca"><strong>RLS + RPC protegida</strong><span>Somente administradores cadastrados no Supabase.</span></div>
       </header>
