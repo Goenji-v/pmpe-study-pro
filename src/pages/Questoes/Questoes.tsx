@@ -10,6 +10,7 @@ import {
   diagnosticarRevisaoAdaptativa,
   rotuloPrioridadeRevisaoAdaptativa,
 } from "../../utils/revisaoAdaptativa";
+import { BANCAS_CONCURSO } from "../../utils/bancasConcurso";
 
 import type {
   Assunto,
@@ -29,7 +30,7 @@ export default function Questoes() {
   const [materia, setMateria] = useState("");
   const [modulo, setModulo] = useState("");
   const [assunto, setAssunto] = useState("");
-  const [banca, setBanca] = useState("AOCP");
+  const [banca, setBanca] = useState("Instituto AOCP");
   const [certas, setCertas] = useState(0);
   const [erradas, setErradas] = useState(0);
   const [minutos, setMinutos] = useState(0);
@@ -169,7 +170,7 @@ export default function Questoes() {
     setMateria("");
     setModulo("");
     setAssunto("");
-    setBanca("AOCP");
+    setBanca("Instituto AOCP");
     setCertas(0);
     setErradas(0);
     setMinutos(0);
@@ -308,20 +309,17 @@ export default function Questoes() {
                 setBanca(evento.target.value)
               }
             >
-              <option value="AOCP">AOCP</option>
-              <option value="CEBRASPE">
-                CEBRASPE
-              </option>
-              <option value="FGV">FGV</option>
-              <option value="FCC">FCC</option>
-              <option value="VUNESP">
-                VUNESP
-              </option>
-              <option value="IBFC">IBFC</option>
-              <option value="IDECAN">
-                IDECAN
-              </option>
-              <option value="Outra">Outra</option>
+              {BANCAS_CONCURSO.map(
+                (nomeBanca) => (
+                  <option
+                    key={nomeBanca}
+                    value={nomeBanca}
+                  >
+                    {nomeBanca}
+                  </option>
+                )
+              )}
+              <option value="Outra">Outra / não informada</option>
             </select>
           </div>
 
