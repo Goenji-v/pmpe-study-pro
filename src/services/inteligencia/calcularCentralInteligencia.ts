@@ -5,6 +5,7 @@ import type {
   Simulado,
 } from "../../types";
 import { calcularMetricasConsolidadas, resumirSimulado } from "../../utils/metricasConsolidadas";
+import { normalizarBancaConcurso } from "../../utils/bancasConcurso";
 import type {
   DadosCentral,
   DesempenhoAssunto,
@@ -250,7 +251,13 @@ function calcularDesempenhoAssuntos(questoes: RegistroQuestao[]): DesempenhoAssu
 function calcularDesempenhoBancas(questoes: RegistroQuestao[]): DesempenhoBanca[] {
   const mapa = new Map<string, DesempenhoBanca>();
   questoes.forEach((registro) => {
-    const banca = registro.banca.trim() || "Não informada";
+    const original = registro.banca.trim() || "Não informada";
+    const canonica = normalizarBancaConcurso(original);
+    // Só consolidamos aliases conhecidos. Bancas desconhecidas preservam o
+    // próprio nome para evitar fundir instituições diferentes por engano.
+    const banca = canonica === "Não informada" && original !== "Não informada"
+      ? original
+      : canonica;
     const chave = normalizar(banca);
     const atual = mapa.get(chave) ?? {
       banca,
