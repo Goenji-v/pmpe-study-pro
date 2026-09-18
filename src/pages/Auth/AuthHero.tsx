@@ -19,9 +19,14 @@ export default function AuthHero() {
         <header className="auth-brand">
           <img
             className="auth-brand-logo"
-            src="/assets/studio-pro-logo.webp"
-            alt="Studio Pro"
+            src="/assets/studio-pro-mark.svg"
+            alt=""
+            aria-hidden="true"
           />
+          <div className="auth-brand-texto">
+            <strong>STUDIO PRO</strong>
+            <span>PMPE • Preparação tática</span>
+          </div>
         </header>
 
         <div className="auth-hero-kicker">
