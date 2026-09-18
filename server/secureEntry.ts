@@ -94,6 +94,9 @@ app.use((req, res) => {
       headers: {
         ...req.headers,
         host: `127.0.0.1:${portaInterna}`,
+        // Sobrescrito após validar o JWT: a API interna não confia em um
+        // identificador de usuário enviado diretamente pelo cliente.
+        "x-study-user-id": String(res.locals.userId || ""),
       },
     },
     (respostaInterna) => {
