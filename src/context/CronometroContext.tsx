@@ -668,7 +668,7 @@ export function CronometroProvider({
             dados.observacao?.trim() ||
             sessaoAtiva.observacao ||
             undefined,
-          origem: "manual",
+          origem: "manual" as const,
         },
         ...anteriores,
       ].filter(
