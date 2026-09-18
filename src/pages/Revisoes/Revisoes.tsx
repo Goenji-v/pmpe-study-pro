@@ -308,7 +308,7 @@ export default function Revisoes() {
 
     setRevisoes(reorganizadas);
     showToast(
-      `${alteradas} revisão${alteradas === 1 ? " foi reorganizada" : "ões foram reorganizadas"}.`,
+      `${alteradas} revisão${alteradas === 1 ? " foi reorganizada" : "ões foram reorganizadas"}. Conclusões foram preservadas e nenhuma revisão futura foi antecipada.`,
       "success"
     );
   }
@@ -332,7 +332,7 @@ export default function Revisoes() {
         <span>
           Limite atual: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia
         </span>
-        <button type="button" onClick={reorganizarAgenda}>Reorganizar agenda</button>
+        <button type="button" onClick={reorganizarAgenda} title="Redistribui atrasos e excesso diário sem antecipar revisões futuras nem alterar conclusões.">Reorganizar agenda</button>
       </div>
 
       <div className="revisoes-resumo">
