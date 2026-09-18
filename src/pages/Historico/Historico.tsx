@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
+import { BANCAS_CONCURSO, normalizarBancaConcurso } from "../../utils/bancasConcurso";
 import type { RegistroQuestao } from "../../types";
 
 export default function Historico() {
@@ -54,8 +55,20 @@ export default function Historico() {
   }
 
   function iniciarEdicao(registro: RegistroQuestao) {
+    const bancaNormalizada =
+      normalizarBancaConcurso(
+        registro.banca
+      );
+
     setEditandoId(registro.id);
-    setRegistroEditado({ ...registro });
+    setRegistroEditado({
+      ...registro,
+      banca:
+        bancaNormalizada ===
+        "Não informada"
+          ? "Outra"
+          : bancaNormalizada,
+    });
   }
 
   function cancelarEdicao() {
@@ -270,13 +283,19 @@ export default function Historico() {
                         }
                         style={inputStyle}
                       >
-                        <option value="AOCP">AOCP</option>
-                        <option value="CEBRASPE">CEBRASPE</option>
-                        <option value="FGV">FGV</option>
-                        <option value="FCC">FCC</option>
-                        <option value="VUNESP">VUNESP</option>
-                        <option value="IBFC">IBFC</option>
-                        <option value="Outra">Outra</option>
+                        {BANCAS_CONCURSO.map(
+                          (nomeBanca) => (
+                            <option
+                              key={nomeBanca}
+                              value={nomeBanca}
+                            >
+                              {nomeBanca}
+                            </option>
+                          )
+                        )}
+                        <option value="Outra">
+                          Outra / não informada
+                        </option>
                       </select>
                     </div>
 

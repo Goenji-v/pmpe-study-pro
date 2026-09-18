@@ -12,6 +12,7 @@ import {
 } from "react-router-dom";
 
 import { avaliarRevisaoPorQuestoes } from "../../utils/revisoes";
+import { BANCAS_CONCURSO } from "../../utils/bancasConcurso";
 import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
 
@@ -39,24 +40,6 @@ import { localizarProximaAula } from "../../services/conteudos/localizarConteudo
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { salvarArquivoMaterial } from "../../services/materiaisService";
 import { obterReferenciasDaMissao, planoPMPE } from "../../data/planoPMPE";
-
-const BANCAS_CONCURSO = [
-  "Cebraspe (Cespe)",
-  "FGV",
-  "FCC",
-  "Vunesp",
-  "Instituto AOCP",
-  "IBFC",
-  "IDECAN",
-  "Instituto Consulplan",
-  "Instituto Quadrix",
-  "IADES",
-  "Cesgranrio",
-  "Fundatec",
-  "Instituto Selecon",
-  "Instituto ACCESS",
-  "FEPESE",
-] as const;
 
 type EstadoNavegacaoCentral = {
   origem?: "dashboard" | "plano";
