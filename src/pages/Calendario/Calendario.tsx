@@ -8,6 +8,7 @@ import "./Calendario.css";
 import {
   useApp,
 } from "../../context/AppContext";
+import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
 
 type EventoCalendario = {
   id: string;
@@ -126,13 +127,47 @@ export default function Calendario() {
 
   const resumoMes =
     useMemo(
-      () =>
-        calcularResumoMes(
-          diasDoMes,
-          mesExibido
-        ),
+      () => {
+        const inicio = new Date(
+          mesExibido.getFullYear(),
+          mesExibido.getMonth(),
+          1,
+          0,
+          0,
+          0,
+          0
+        );
+        const fim = new Date(
+          mesExibido.getFullYear(),
+          mesExibido.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+        const metricas = calcularMetricasConsolidadas({
+          questoes,
+          sessoes,
+          revisoes,
+          simulados,
+          inicio,
+          fim,
+        });
+
+        return {
+          diasAtivos: metricas.diasAtivos,
+          minutos: metricas.minutos,
+          questoes: metricas.questoes,
+          revisoes: metricas.revisoesConcluidas,
+          simulados: metricas.simulados,
+        };
+      },
       [
-        diasDoMes,
+        questoes,
+        sessoes,
+        revisoes,
+        simulados,
         mesExibido,
       ]
     );
@@ -660,6 +695,9 @@ function montarEventos({
         ) || 0) +
         (Number(
           registro.erradas
+        ) || 0) +
+        (Number(
+          registro.emBranco
         ) || 0);
 
       eventos.push({
@@ -730,7 +768,7 @@ function montarEventos({
 
   simulados.forEach(
     (simulado) => {
-      const total =
+      const somaInformada =
         (Number(
           simulado.certas
         ) || 0) +
@@ -738,8 +776,15 @@ function montarEventos({
           simulado.erradas
         ) || 0) +
         (Number(
+          simulado.emBranco
+        ) || 0) +
+        (Number(
           simulado.anuladas
         ) || 0);
+      const total = Math.max(
+        somaInformada,
+        Number(simulado.totalQuestoes) || 0
+      );
 
       const espelhadoEmQuestoes =
         typeof simulado.tentativaId === "string" &&
@@ -914,77 +959,6 @@ function montarDiasCalendario(
       };
     }
   );
-}
-
-function calcularResumoMes(
-  dias:
-    ResumoDia[],
-  mes: Date
-) {
-  const diasDoMes =
-    dias.filter(
-      (dia) =>
-        dia.data.getMonth() ===
-          mes.getMonth() &&
-        dia.data.getFullYear() ===
-          mes.getFullYear()
-    );
-
-  return {
-    diasAtivos:
-      diasDoMes.filter(
-        (dia) =>
-          dia.sessoes > 0 ||
-          dia.questoes > 0 ||
-          dia.revisoesConcluidas >
-            0 ||
-          dia.simulados > 0
-      ).length,
-
-    minutos:
-      diasDoMes.reduce(
-        (
-          total,
-          dia
-        ) =>
-          total +
-          dia.minutos,
-        0
-      ),
-
-    questoes:
-      diasDoMes.reduce(
-        (
-          total,
-          dia
-        ) =>
-          total +
-          dia.questoes,
-        0
-      ),
-
-    revisoes:
-      diasDoMes.reduce(
-        (
-          total,
-          dia
-        ) =>
-          total +
-          dia.revisoesConcluidas,
-        0
-      ),
-
-    simulados:
-      diasDoMes.reduce(
-        (
-          total,
-          dia
-        ) =>
-          total +
-          dia.simulados,
-        0
-      ),
-  };
 }
 
 function formatarChaveData(
