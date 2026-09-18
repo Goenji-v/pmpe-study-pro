@@ -22,6 +22,7 @@ import MentoriaCronometroBridge from "./components/MentoriaCronometroBridge/Ment
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
 import { armazenamentoSessaoDaConta as sessionStorage } from "./services/armazenamentoConta";
+import { PARCERIAS_VISIVEIS } from "./config/recursos";
 
 import { AppProvider } from "./context/AppContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -113,7 +114,7 @@ function LayoutProtegido() {
         <RuntimeErrorGuard />
         <AppProvider>
           <PersonalizacaoBridge />
-          <MentoriaProgressoBridge />
+          {PARCERIAS_VISIVEIS && <MentoriaProgressoBridge />}
           {paginaDashboard && (
             <Suspense fallback={null}>
               <DashboardGamificacaoSpotlight />
@@ -123,7 +124,7 @@ function LayoutProtegido() {
           <CronometroProvider>
             <QuestaoIACronometroBridge />
             <CentralRedacaoBridge />
-            <MentoriaCronometroBridge />
+            {PARCERIAS_VISIVEIS && <MentoriaCronometroBridge />}
             <div className="layout">
               <Sidebar />
 
@@ -147,7 +148,7 @@ function LayoutProtegido() {
 
                         <Route path="/meu-edital" element={<MeuEdital />} />
                         <Route path="/cursos" element={<Cursos />} />
-                        <Route path="/curso-mentoria" element={<CursoMentoria />} />
+                        <Route path="/curso-mentoria" element={PARCERIAS_VISIVEIS ? <CursoMentoria /> : <Navigate to="/" replace />} />
                         <Route path="/plano" element={<PlanoEditalGateway />} />
                         <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
 
@@ -200,13 +201,13 @@ function LayoutProtegido() {
                         <Route path="/backup" element={<Backup />} />
                         <Route path="/configuracoes" element={<Configuracoes />} />
                         <Route path="/admin" element={<Admin />} />
-                        <Route path="/parceiro" element={<Parceiro />} />
-                        <Route path="/parceiro/mentoria" element={<Navigate to="/parceiro/cursos" replace />} />
-                        <Route path="/parceiro/mentoria/aluno/:userId" element={<Navigate to="/parceiro" replace />} />
-                        <Route path="/parceiro/cursos" element={<ParceiroCursos />} />
-                        <Route path="/parceiro/simulados" element={<ParceiroSimulados />} />
-                        <Route path="/parceiro/relatorios" element={<Navigate to="/parceiro" replace />} />
-                        <Route path="/meu-acesso" element={<MeuAcesso />} />
+                        <Route path="/parceiro" element={PARCERIAS_VISIVEIS ? <Parceiro /> : <Navigate to="/" replace />} />
+                        <Route path="/parceiro/mentoria" element={PARCERIAS_VISIVEIS ? <Navigate to="/parceiro/cursos" replace /> : <Navigate to="/" replace />} />
+                        <Route path="/parceiro/mentoria/aluno/:userId" element={PARCERIAS_VISIVEIS ? <Navigate to="/parceiro" replace /> : <Navigate to="/" replace />} />
+                        <Route path="/parceiro/cursos" element={PARCERIAS_VISIVEIS ? <ParceiroCursos /> : <Navigate to="/" replace />} />
+                        <Route path="/parceiro/simulados" element={PARCERIAS_VISIVEIS ? <ParceiroSimulados /> : <Navigate to="/" replace />} />
+                        <Route path="/parceiro/relatorios" element={PARCERIAS_VISIVEIS ? <Navigate to="/parceiro" replace /> : <Navigate to="/" replace />} />
+                        <Route path="/meu-acesso" element={PARCERIAS_VISIVEIS ? <MeuAcesso /> : <Navigate to="/" replace />} />
 
                         <Route path="*" element={<NotFound />} />
                       </Routes>
@@ -232,7 +233,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Auth />} />
               <Route path="/demo" element={<Demo />} />
-              <Route path="/convite/:codigo" element={<Convite />} />
+              <Route path="/convite/:codigo" element={PARCERIAS_VISIVEIS ? <Convite /> : <Navigate to="/login" replace />} />
               <Route path="/*" element={<LayoutProtegido />} />
             </Routes>
           </Suspense>

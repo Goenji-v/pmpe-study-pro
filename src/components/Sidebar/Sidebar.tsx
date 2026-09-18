@@ -12,6 +12,7 @@ import {
 
 import "./Sidebar.css";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
+import { PARCERIAS_VISIVEIS } from "../../config/recursos";
 
 type GrupoId =
   | "planejamento"
@@ -95,9 +96,12 @@ export default function Sidebar() {
   );
 
   const temAreaParceiro =
-    contexto?.papel === "proprietario" ||
-    contexto?.papel === "gestor" ||
-    contexto?.papel === "professor";
+    PARCERIAS_VISIVEIS &&
+    (
+      contexto?.papel === "proprietario" ||
+      contexto?.papel === "gestor" ||
+      contexto?.papel === "professor"
+    );
 
   useEffect(() => {
     if (location.pathname === "/estatisticas") {
@@ -198,7 +202,7 @@ export default function Sidebar() {
             onToggle={alternarGrupo}
           >
             <ItemMenu to="/central-estudos" texto="Central de Estudos" />
-            {contexto?.papel === "aluno" && <ItemMenu to="/curso-mentoria" texto="Curso do Parceiro" />}
+            {PARCERIAS_VISIVEIS && contexto?.papel === "aluno" && <ItemMenu to="/curso-mentoria" texto="Curso do Parceiro" />}
             <ItemMenu to="/cursos" texto="Meus Cursos" />
             <ItemMenu to="/estudos" texto="Conteúdos" />
             <ItemMenu to="/materiais" texto="Materiais" />
@@ -239,7 +243,7 @@ export default function Sidebar() {
             </GrupoMenu>
           )}
 
-          {contexto?.papel === "aluno" && <ItemMenu to="/meu-acesso" texto="Meu acesso" />}
+          {PARCERIAS_VISIVEIS && contexto?.papel === "aluno" && <ItemMenu to="/meu-acesso" texto="Meu acesso" />}
         </nav>
 
         <div className="sidebar-rodape">

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import "./Auth.css";
+import { PARCERIAS_VISIVEIS } from "../../config/recursos";
 import AuthHero from "./AuthHero";
 
 import {
@@ -47,7 +48,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const convite = searchParams.get("convite");
+  const convite = PARCERIAS_VISIVEIS ? searchParams.get("convite") : null;
 
   const [modo, setModo] = useState<Modo>(
     searchParams.get("modo") === "cadastro" ? "cadastro" : "login"

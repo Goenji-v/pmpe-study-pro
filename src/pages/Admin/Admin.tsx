@@ -7,6 +7,7 @@ import CuradoriaQuestoes from "../../components/CuradoriaQuestoes/CuradoriaQuest
 import ModeracaoDenuncias from "../../components/ModeracaoDenuncias/ModeracaoDenuncias";
 import PerformanceMonitorAdmin from "../../components/PerformanceMonitor/PerformanceMonitorAdmin";
 import { useAdminStatus } from "../../hooks/useAdminStatus";
+import { PARCERIAS_VISIVEIS } from "../../config/recursos";
 import {
   carregarResumoAdmin,
   carregarUsuariosAdmin,
@@ -63,7 +64,7 @@ export default function Admin() {
         <div>
           <span className="admin-etiqueta">ACESSO RESTRITO</span>
           <h1>🛡️ Administração</h1>
-          <p>Acompanhe usuários, parcerias, atividade geral, financeiro e a curadoria de conteúdo do Study Pro.</p>
+          <p>Acompanhe usuários, atividade geral, segurança, desempenho e a curadoria de conteúdo do Studio Pro.</p>
         </div>
         <div className="admin-seguranca"><strong>RLS + RPC protegida</strong><span>Somente administradores cadastrados no Supabase.</span></div>
       </header>
@@ -79,8 +80,12 @@ export default function Admin() {
         <Card titulo="Acertos" valor={resumo.acertosNoMes} detalhe="Acertos registrados" />
       </div>
 
-      <AdminFinanceiroGeral />
-      <AdminParcerias />
+      {PARCERIAS_VISIVEIS && (
+        <>
+          <AdminFinanceiroGeral />
+          <AdminParcerias />
+        </>
+      )}
       <ModeracaoDenuncias />
 
       <section className="admin-painel">
