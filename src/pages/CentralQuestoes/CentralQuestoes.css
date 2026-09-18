@@ -1481,3 +1481,64 @@
     box-shadow: none;
   }
 }
+
+
+/* Integração com banco real — preview-premium */
+.mqp-question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mqp-bank-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0;
+  padding: 18px 20px;
+  color: var(--studio-text, #f8fafc);
+  background: rgba(9, 24, 42, 0.88);
+  border: 1px solid rgba(92, 126, 160, 0.28);
+  border-radius: 16px;
+}
+
+.mqp-bank-state > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mqp-bank-state span {
+  color: var(--studio-muted, #94a3b8);
+  font-size: 0.9em;
+}
+
+.mqp-bank-error {
+  border-color: rgba(255, 119, 122, 0.35);
+  background: rgba(92, 22, 30, 0.22);
+}
+
+.mqp-spin {
+  animation: mqp-spin 0.85s linear infinite;
+}
+
+@keyframes mqp-spin {
+  to { transform: rotate(360deg); }
+}
+
+.mqp-enunciado-real {
+  white-space: pre-line;
+  line-height: 1.72;
+}
+
+.mqp button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+@media (max-width: 760px) {
+  .mqp-bank-state {
+    align-items: flex-start;
+    padding: 15px;
+  }
+}
