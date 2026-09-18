@@ -18,6 +18,8 @@ import type {
   RegistroQuestao,
 } from "../../types";
 
+import { normalizarBancaConcurso } from "../../utils/bancasConcurso";
+
 import "./CentralQuestoes.css";
 
 type AbaQuestoes =
@@ -83,8 +85,9 @@ export default function CentralQuestoes() {
       agruparDesempenho(
         questoes,
         (registro) =>
-          registro.banca ||
-          "Não informada"
+          normalizarBancaConcurso(
+            registro.banca
+          )
       ),
     [questoes]
   );
@@ -531,9 +534,10 @@ function VisaoGeral({
               </h2>
 
               <p>
-                Veja em quais bancas
-                você tem mais
-                dificuldade.
+                Variações do mesmo nome
+                são agrupadas. Registros
+                sem banca definida ficam
+                em “Não informada”.
               </p>
             </div>
           </div>
