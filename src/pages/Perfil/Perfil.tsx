@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import { calcularGamificacao } from "../../services/gamificacaoService";
+import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
 import {
   obterEstadoEconomia,
   type ConfiguracoesComEconomia,
@@ -109,19 +110,21 @@ export default function Perfil() {
     economia.tituloEquipado
   );
 
-  const totalQuestoes = questoes.reduce(
-    (total, item) => total + item.certas + item.erradas,
-    0
+  const metricasGerais = useMemo(
+    () =>
+      calcularMetricasConsolidadas({
+        questoes,
+        sessoes,
+        revisoes,
+        simulados,
+      }),
+    [questoes, sessoes, revisoes, simulados]
   );
-  const totalCertas = questoes.reduce((total, item) => total + item.certas, 0);
-  const aproveitamento = totalQuestoes
-    ? Math.round((totalCertas / totalQuestoes) * 100)
-    : 0;
-  const totalMinutos = sessoes.reduce(
-    (total, item) => total + Math.max(0, item.minutos || 0),
-    0
-  );
-  const revisoesConcluidas = revisoes.filter((item) => item.concluida).length;
+  const totalQuestoes = metricasGerais.questoes;
+  const totalCertas = metricasGerais.certas;
+  const aproveitamento = metricasGerais.aproveitamento;
+  const totalMinutos = metricasGerais.minutos;
+  const revisoesConcluidas = metricasGerais.revisoesConcluidas;
   const desbloqueadas = conquistas.filter((item) => item.desbloqueada).length;
   const nome = configuracoes.nomeUsuario.trim() || "Estudante";
   const iniciais = nome
@@ -241,7 +244,11 @@ export default function Perfil() {
 
       <section className="perfil-estatisticas" aria-label="Estatísticas do perfil">
         <Card titulo="Questões" valor={formatarNumero(totalQuestoes)} detalhe={`${formatarNumero(totalCertas)} certas`} />
-        <Card titulo="Aproveitamento" valor={`${aproveitamento}%`} detalhe="Histórico registrado" />
+        <Card
+          titulo="Aproveitamento"
+          valor={`${aproveitamento}%`}
+          detalhe={`${metricasGerais.emBranco} em branco · ${metricasGerais.anuladas} anuladas`}
+        />
         <Card titulo="Tempo estudado" valor={formatarTempo(totalMinutos)} detalhe={`${sessoes.length} sessões`} />
         <Card titulo="Revisões" valor={formatarNumero(revisoesConcluidas)} detalhe={`${simulados.length} simulados`} />
       </section>
