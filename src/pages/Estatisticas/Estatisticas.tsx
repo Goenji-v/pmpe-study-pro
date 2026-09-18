@@ -16,6 +16,7 @@ import {
 import "./Estatisticas.css";
 
 import { useApp } from "../../context/AppContext";
+import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
 import {
   consolidarEvolucaoMensal,
   consolidarPorAssunto,
@@ -177,7 +178,31 @@ export default function Estatisticas() {
   );
 
   const resumo = useMemo(() => resumirQuestoes(questoesFiltradas), [questoesFiltradas]);
-  const classificacao = classificarDesempenho(resumo.aproveitamento, resumo.total);
+  const escopoGlobal = !materiaSelecionada && !assuntoSelecionado;
+  const metricasGerais = useMemo(
+    () =>
+      calcularMetricasConsolidadas({
+        questoes,
+        sessoes,
+        revisoes,
+        simulados,
+        inicio: intervalo.inicio,
+        fim: intervalo.fim,
+      }),
+    [questoes, sessoes, revisoes, simulados, intervalo]
+  );
+  const resumoExibido = escopoGlobal
+    ? {
+        certas: metricasGerais.certas,
+        erradas: metricasGerais.erradas,
+        total: metricasGerais.questoes,
+        aproveitamento: metricasGerais.aproveitamento,
+      }
+    : resumo;
+  const classificacao = classificarDesempenho(
+    resumoExibido.aproveitamento,
+    resumoExibido.total
+  );
   const linhasDesempenho = materiaSelecionada ? porAssunto : porMateria;
   const dadosGrafico: DadoCategoria[] = linhasDesempenho.slice(0, 12).map((linha) => {
     const nome = materiaSelecionada ? linha.assunto || "Geral" : linha.materia;
@@ -189,10 +214,18 @@ export default function Estatisticas() {
     };
   });
 
-  const minutos = sessoesFiltradas.reduce((total, item) => total + (Number(item.minutos) || 0), 0);
-  const revisoesFeitas = revisoesFiltradas.filter((item) => item.concluida).length;
+  const minutosClassificados = sessoesFiltradas.reduce(
+    (total, item) => total + (Number(item.minutos) || 0),
+    0
+  );
+  const revisoesClassificadas = revisoesFiltradas.filter((item) => item.concluida).length;
+  const minutos = escopoGlobal ? metricasGerais.minutos : minutosClassificados;
+  const revisoesFeitas = escopoGlobal
+    ? metricasGerais.revisoesConcluidas
+    : revisoesClassificadas;
   const redacoes = sessoesFiltradas.filter((item) => item.tipo === "redacao");
-  const possuiDados = resumo.total + minutos + revisoesFeitas + simuladosFiltrados.length > 0;
+  const possuiDados =
+    resumoExibido.total + minutos + revisoesFeitas + simuladosFiltrados.length > 0;
 
   function limparFiltros() {
     setPeriodo("tudo");
@@ -212,6 +245,7 @@ export default function Estatisticas() {
       <h1 className="estatisticas-title">📊 Desempenho</h1>
       <p className="estatisticas-subtitle">
         Filtre seu histórico por período, matéria e assunto para descobrir onde você está forte e onde precisa revisar.
+        Na visão geral, os indicadores incluem questões avulsas e simulados sem duplicar tentativas; anuladas não entram no aproveitamento.
       </p>
 
       <div className="estatisticas-filtros-card estatisticas-entrada">
@@ -277,10 +311,18 @@ export default function Estatisticas() {
       </div>
 
       <div className="estatisticas-cards estatisticas-cards-resumo estatisticas-entrada">
-        <Card titulo="Certas" valor={String(resumo.certas)} />
-        <Card titulo="Erradas" valor={String(resumo.erradas)} />
-        <Card titulo="Questões" valor={String(resumo.total)} />
-        <Card titulo="Aproveitamento" valor={`${resumo.aproveitamento}%`} classe={classeClassificacao(classificacao)} />
+        <Card titulo="Certas" valor={String(resumoExibido.certas)} />
+        <Card titulo="Erradas" valor={String(resumoExibido.erradas)} />
+        <Card
+          titulo="Questões"
+          valor={String(resumoExibido.total)}
+          detalhe={
+            escopoGlobal
+              ? `${metricasGerais.emBranco} em branco · ${metricasGerais.anuladas} anuladas`
+              : "Escopo filtrado por conteúdo"
+          }
+        />
+        <Card titulo="Aproveitamento" valor={`${resumoExibido.aproveitamento}%`} classe={classeClassificacao(classificacao)} />
         <Card titulo="Situação" valor={rotuloClassificacao(classificacao)} classe={classeClassificacao(classificacao)} compacto />
       </div>
 
