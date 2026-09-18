@@ -163,9 +163,14 @@ export default function Sidebar() {
         <div className="sidebar-logo">
           <img
             className="sidebar-logo-imagem"
-            src="/assets/studio-pro-logo.webp"
-            alt="Studio Pro"
+            src="/assets/studio-pro-mark.svg"
+            alt=""
+            aria-hidden="true"
           />
+          <div className="sidebar-logo-texto">
+            <strong>STUDIO PRO</strong>
+            <span>PMPE • Preparação tática</span>
+          </div>
         </div>
 
         <nav className="sidebar-menu" aria-label="Navegação principal">
