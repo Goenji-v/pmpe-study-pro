@@ -8,6 +8,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import QuestaoComunidade from "../../components/QuestaoComunidade/QuestaoComunidade";
+import ExplicacaoQuestao from "../../components/ExplicacaoQuestao/ExplicacaoQuestao";
 
 import "./ResolverSimuladoIA.css";
 import "./ResolverSimuladoIADescartar.css";
@@ -1373,20 +1374,20 @@ export default function ResolverSimuladoIA() {
 
           {finalizado && (
             <>
-              <div className="resolver-ia-explicacao">
-                <h3>
-                  {comentarioGabarito !== null ? "Comentário do gabarito" : "Explicação"}
-                </h3>
-
-                <p>
-                  {comentarioGabarito ?? questao.explicacao}
-                </p>
-
-                <strong>
-                  Gabarito:{" "}
-                  {questao.respostaCorreta}
-                </strong>
-              </div>
+              <ExplicacaoQuestao
+                texto={
+                  comentarioGabarito ??
+                  questao.explicacao
+                }
+                gabarito={
+                  questao.respostaCorreta
+                }
+                titulo={
+                  comentarioGabarito !== null
+                    ? "Comentário do gabarito"
+                    : "Explicação"
+                }
+              />
 
               <QuestaoComunidade
                 questaoId={questao.id}
