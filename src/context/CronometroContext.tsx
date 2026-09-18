@@ -948,7 +948,7 @@ function criarIdSessaoLegada(sessao: SessaoAtiva) {
     hash = Math.imul(hash, 16777619);
   }
 
-  return `legacy-${(hash >>> 0).toString(16)`;
+  return `legacy-${(hash >>> 0).toString(16)}`;
 }
 
 function calcularSegundos(
