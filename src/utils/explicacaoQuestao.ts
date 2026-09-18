@@ -61,8 +61,8 @@ export function estruturarExplicacaoQuestao(
     alternativas.push({
       letra: letra.toUpperCase(),
       status:
-        /correta|certa/iu.test(
-          classificacao
+        ["correta", "certa"].includes(
+          classificacao.toLowerCase()
         )
           ? "correta"
           : "errada",
