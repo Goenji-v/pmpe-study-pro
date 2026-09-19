@@ -19,6 +19,17 @@ import {
   executarGeracaoIdempotente,
   obterEstadoGeracao,
 } from "./geracaoJobs.ts";
+import {
+  atualizarJobGeracaoIA,
+  buscarJobGeracaoIAPorRequestId,
+  criarOuBuscarJobGeracaoIA,
+  listarJobsGeracaoIAPorPrefixo,
+  type ContextoSupabaseJob,
+  type JobGeracaoIA,
+} from "./geracaoPersistente.ts";
+import {
+  agendarJobGeracaoIA,
+} from "./processarGeracaoPersistente.ts";
 
 const app = express();
 
@@ -111,6 +122,206 @@ app.get(
           erro instanceof Error
             ? erro.message
             : "Erro ao listar modelos.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/geracoes",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const prefixo = String(req.query.prefixo || "").trim();
+
+      if (!idGeracaoValido(prefixo)) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Prefixo de geração inválido.",
+        });
+        return;
+      }
+
+      const jobs = await listarJobsGeracaoIAPorPrefixo(
+        contexto,
+        prefixo
+      );
+
+      jobs.forEach((job) => {
+        if (job.status === "fila" || job.status === "processando") {
+          agendarJobGeracaoIA(job, contexto, {
+            ai,
+            modelo,
+            modeloFallback,
+          });
+        }
+      });
+
+      res.json({
+        sucesso: true,
+        jobs: jobs.map(serializarJobGeracaoIA),
+      });
+    } catch (erro) {
+      console.error("[geracao-ia-job] erro ao listar", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível consultar as gerações.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/geracoes/:id",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.params.id || "").trim();
+
+      if (!idGeracaoValido(requestId)) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Identificador de geração inválido.",
+        });
+        return;
+      }
+
+      const job = await buscarJobGeracaoIAPorRequestId(
+        contexto,
+        requestId
+      );
+
+      if (!job) {
+        res.status(404).json({
+          sucesso: false,
+          erro: "Geração não encontrada.",
+        });
+        return;
+      }
+
+      if (job.status === "fila" || job.status === "processando") {
+        agendarJobGeracaoIA(job, contexto, {
+          ai,
+          modelo,
+          modeloFallback,
+        });
+      }
+
+      res
+        .status(job.status === "concluida" ? 200 : 202)
+        .json({
+          sucesso: true,
+          job: serializarJobGeracaoIA(job),
+        });
+    } catch (erro) {
+      console.error("[geracao-ia-job] erro ao consultar", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível consultar a geração.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/geracoes",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.body?.requestId || "").trim();
+
+      if (!idGeracaoValido(requestId)) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Identificador de geração inválido.",
+        });
+        return;
+      }
+
+      const quantidade = Math.max(
+        1,
+        Math.min(60, Number(req.body?.quantidade) || 5)
+      );
+      const assunto = String(req.body?.assunto || "").trim();
+      const banca = String(req.body?.banca || "AOCP").trim();
+      const listaEvitar = Array.isArray(req.body?.enunciadosEvitar)
+        ? req.body.enunciadosEvitar
+            .filter((item: unknown): item is string => typeof item === "string")
+            .map((item: string) => item.trim().slice(0, 500))
+            .filter(Boolean)
+            .slice(0, 120)
+        : [];
+
+      if (!assunto) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Informe o assunto da geração.",
+        });
+        return;
+      }
+
+      let job = await criarOuBuscarJobGeracaoIA(
+        contexto,
+        {
+          requestId,
+          titulo: String(req.body?.titulo || "Questões por IA"),
+          descricao: String(req.body?.descricao || banca),
+          payload: {
+            assunto,
+            quantidade,
+            banca,
+            enunciadosEvitar: listaEvitar,
+          },
+        }
+      );
+
+      if (job.status === "erro" && req.body?.retomar === true) {
+        job =
+          (await atualizarJobGeracaoIA(
+            contexto,
+            job.id,
+            {
+              status: "fila",
+              etapa: "fila",
+              progresso: 0,
+              resultado: null,
+              erro: null,
+              concluida_em: null,
+              execucao_id: null,
+              lease_ate: null,
+              descricao: "Geração recolocada na fila.",
+            }
+          )) ?? job;
+      }
+
+      if (job.status === "fila" || job.status === "processando") {
+        agendarJobGeracaoIA(job, contexto, {
+          ai,
+          modelo,
+          modeloFallback,
+        });
+      }
+
+      res
+        .status(job.status === "concluida" ? 200 : 202)
+        .json({
+          sucesso: true,
+          job: serializarJobGeracaoIA(job),
+        });
+    } catch (erro) {
+      console.error("[geracao-ia-job] erro ao criar", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível iniciar a geração.",
       });
     }
   }
@@ -269,6 +480,62 @@ app.post(
     }
   }
 );
+
+function obterContextoSupabaseJob(
+  req: Request
+): ContextoSupabaseJob {
+  const userId = String(
+    req.header("x-study-user-id") || ""
+  ).trim();
+  const authorization = String(
+    req.header("authorization") || ""
+  ).trim();
+  const anonKey = String(
+    req.header("x-supabase-anon-key") ||
+    process.env.SUPABASE_ANON_KEY ||
+    ""
+  ).trim();
+
+  if (
+    !userId ||
+    !authorization.startsWith("Bearer ") ||
+    anonKey.length < 20
+  ) {
+    throw new Error(
+      "Sessão inválida para acompanhar a geração."
+    );
+  }
+
+  return {
+    supabaseUrl,
+    userId,
+    authorization,
+    anonKey,
+  };
+}
+
+function serializarJobGeracaoIA(
+  job: JobGeracaoIA
+) {
+  return {
+    id: job.id,
+    requestId: job.request_id,
+    status: job.status,
+    etapa: job.etapa,
+    progresso: job.progresso,
+    titulo: job.titulo,
+    descricao: job.descricao,
+    erro: job.erro,
+    resultado:
+      job.status === "concluida"
+        ? job.resultado
+        : null,
+    criadaEm: job.criada_em,
+    iniciadaEm: job.iniciada_em,
+    atualizadaEm: job.atualizada_em,
+    concluidaEm: job.concluida_em,
+  };
+}
 
 function idGeracaoValido(valor: string) {
   return /^[a-zA-Z0-9:_-]{8,220}$/.test(valor);
