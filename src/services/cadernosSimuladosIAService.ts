@@ -21,6 +21,7 @@ export type CadernoSimuladoIA = {
   atualizadoEm: string;
   estatisticas?: EstatisticasCadernoIA;
   tipo?: TipoSessaoQuestoesIA;
+  geracaoId?: string;
 };
 
 export type EstatisticasCadernoIA = {
@@ -127,7 +128,8 @@ export async function excluirCadernoSimuladoIA(id: string): Promise<void> {
 }
 
 export async function registrarQuestoesAtuaisComoCaderno(
-  tipo?: TipoSessaoQuestoesIA
+  tipo?: TipoSessaoQuestoesIA,
+  geracaoId?: string
 ): Promise<CadernoSimuladoIA | null> {
   const questoes = carregarQuestoesAtuais();
   if (questoes.length === 0) return null;
@@ -139,10 +141,14 @@ export async function registrarQuestoesAtuaisComoCaderno(
   );
 
   if (jaExiste) {
-    if (tipo && jaExiste.tipo !== tipo) {
+    if (
+      (tipo && jaExiste.tipo !== tipo) ||
+      (geracaoId && jaExiste.geracaoId !== geracaoId)
+    ) {
       const atualizado = {
         ...jaExiste,
-        tipo,
+        ...(tipo ? { tipo } : {}),
+        ...(geracaoId ? { geracaoId } : {}),
         atualizadoEm: new Date().toISOString(),
       };
       await salvarCadernoSimuladoIA(atualizado);
@@ -177,6 +183,7 @@ export async function registrarQuestoesAtuaisComoCaderno(
     criadoEm: agora,
     atualizadoEm: agora,
     tipo: tipo ?? inferirTipoSessaoQuestoesIA(questoes),
+    ...(geracaoId ? { geracaoId } : {}),
   };
 
   await salvarCadernoSimuladoIA(caderno);

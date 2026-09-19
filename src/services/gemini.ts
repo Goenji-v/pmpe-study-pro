@@ -4,10 +4,6 @@ import type {
 
 import { criarUrlApi } from "../config/api";
 import { fetchApiAutenticada } from "./apiAutenticada";
-import {
-  montarPromptRevisaoQuestoesIA,
-  validarLoteRevisado,
-} from "./revisaoQuestoesIAUtils";
 
 export type DificuldadeIA =
   | "Fácil"
@@ -20,6 +16,34 @@ export type ConteudoGeracaoIA = {
   modulo?: string;
   moduloId?: string;
   assunto: string;
+};
+
+export type EtapaJobGeracaoIA =
+  | "fila"
+  | "gerando"
+  | "revisando"
+  | "corrigindo"
+  | "salvando"
+  | "concluida"
+  | "erro";
+
+export type JobGeracaoIAPublico = {
+  id: string;
+  requestId: string;
+  status: "fila" | "processando" | "concluida" | "erro";
+  etapa: EtapaJobGeracaoIA;
+  progresso: number;
+  titulo: string;
+  descricao: string;
+  quantidade?: number;
+  erro?: string | null;
+  resultado?: {
+    questoes?: unknown[];
+  } | null;
+  criadaEm?: string;
+  iniciadaEm?: string | null;
+  atualizadaEm?: string;
+  concluidaEm?: string | null;
 };
 
 export type ParametrosGeracaoIA = {
@@ -36,213 +60,244 @@ export type ParametrosGeracaoIA = {
   enunciadosEvitar?: string[];
   /** Mantém a mesma geração recuperável sem disparar nova cobrança. */
   requestId?: string;
+  /** Recoloca na fila um job que terminou em erro quando o usuário pediu retomada. */
+  retomarErro?: boolean;
+  /** Informa a etapa real persistida no servidor. */
+  onEtapa?: (
+    etapa: "gerando" | "revisando" | "corrigindo" | "salvando"
+  ) => void;
 };
 
-type RespostaSucesso = {
-  sucesso: true;
-  questoes: unknown[];
+type RespostaJob = {
+  sucesso: boolean;
+  job?: JobGeracaoIAPublico;
+  erro?: string;
 };
 
-type RespostaErro = {
-  sucesso: false;
-  erro: string;
-  resposta?: string;
+type RespostaListaJobs = {
+  sucesso: boolean;
+  jobs?: JobGeracaoIAPublico[];
+  erro?: string;
 };
 
-type SolicitacaoLoteIA = {
-  assunto: string;
-  quantidade: number;
-  banca: string;
-  enunciadosEvitar?: string[];
-  etapa: "geração" | "revisão";
-  requestId?: string;
-};
-
-const API_URL = criarUrlApi("/api/gerar");
-const API_STATUS_URL = criarUrlApi("/api/gerar/status");
-const MAX_TENTATIVAS_REVISAO = 2;
+const API_JOBS_URL = criarUrlApi("/api/geracoes");
+const INTERVALO_CONSULTA_MS = 1_500;
+const LIMITE_ESPERA_MS = 15 * 60 * 1000;
 const LETRAS = ["A", "B", "C", "D", "E"] as const;
 
 export async function gerarQuestoesIA(
   parametros: ParametrosGeracaoIA
 ): Promise<{ sucesso: true; questoes: QuestaoIA[] }> {
-  const assuntoCompleto = montarContextoGeracao(parametros);
+  const job = await iniciarGeracaoQuestoesIA(parametros);
+  return aguardarGeracaoQuestoesIA(job, parametros);
+}
 
-  const loteInicial = await solicitarLoteIA({
+export async function iniciarGeracaoQuestoesIA(
+  parametros: ParametrosGeracaoIA
+) {
+  const assuntoCompleto = montarContextoGeracao(parametros);
+  const requestId =
+    parametros.requestId?.trim() ||
+    crypto.randomUUID();
+
+  const titulo =
+    parametros.origem === "semana"
+      ? `Simulado da Semana ${parametros.semana ?? 1}`
+      : parametros.materia || "Questões por assunto";
+
+  const descricao =
+    parametros.origem === "semana"
+      ? `Semana ${parametros.semana ?? 1} · ${parametros.dificuldade} · ${parametros.banca}`
+      : `${parametros.assunto || "Assunto"} · ${parametros.dificuldade} · ${parametros.banca}`;
+
+  return iniciarOuRetomarJobGeracaoIA({
+    requestId,
     assunto: assuntoCompleto,
     quantidade: parametros.quantidade,
     banca: parametros.banca,
     enunciadosEvitar: parametros.enunciadosEvitar ?? [],
-    etapa: "geração",
-    requestId: parametros.requestId
-      ? `${parametros.requestId}:geracao`
-      : undefined,
+    titulo,
+    descricao,
+    retomar: parametros.retomarErro === true,
   });
+}
 
-  if (loteInicial.length !== parametros.quantidade) {
+export async function aguardarGeracaoQuestoesIA(
+  jobInicial: JobGeracaoIAPublico,
+  parametros: ParametrosGeracaoIA
+): Promise<{ sucesso: true; questoes: QuestaoIA[] }> {
+  const job = await aguardarJobGeracaoIA(
+    jobInicial,
+    parametros.onEtapa
+  );
+
+  const questoesBrutas =
+    job.resultado &&
+    Array.isArray(job.resultado.questoes)
+      ? job.resultado.questoes
+      : [];
+
+  if (questoesBrutas.length !== parametros.quantidade) {
     throw new Error(
-      `A IA gerou ${loteInicial.length} questão(ões), mas eram esperadas ${parametros.quantidade}. O lote foi rejeitado antes da revisão.`
+      `A geração concluída retornou ${questoesBrutas.length} questão(ões), mas eram esperadas ${parametros.quantidade}.`
     );
   }
 
-  const promptRevisaoBase = montarPromptRevisaoQuestoesIA({
-    contextoOriginal: assuntoCompleto,
-    banca: parametros.banca,
-    questoes: loteInicial,
-  });
+  const questoes = normalizarQuestoes(
+    questoesBrutas,
+    parametros
+  );
 
-  let motivoReprovacao = "";
-
-  for (
-    let tentativa = 1;
-    tentativa <= MAX_TENTATIVAS_REVISAO;
-    tentativa += 1
-  ) {
-    const requestIdRevisao = parametros.requestId
-      ? tentativa === 1
-        ? `${parametros.requestId}:revisao`
-        : `${parametros.requestId}:revisao:correcao-${tentativa}`
-      : undefined;
-
-    const promptRevisao = motivoReprovacao
-      ? [
-          promptRevisaoBase,
-          "",
-          "A revisão anterior foi rejeitada pelo validador local.",
-          `Motivo objetivo da rejeição: ${motivoReprovacao}`,
-          "Corrija especificamente essa falha, revise novamente TODAS as questões e devolva o lote completo em JSON válido.",
-        ].join("\n")
-      : promptRevisaoBase;
-
-    const respostaRevisao = await solicitarLoteIA({
-      assunto: promptRevisao,
-      quantidade: parametros.quantidade,
-      banca: parametros.banca,
-      etapa: "revisão",
-      requestId: requestIdRevisao,
-    });
-
-    try {
-      const loteRevisado = validarLoteRevisado(
-        respostaRevisao,
-        parametros.quantidade,
-        assuntoCompleto
-      );
-
-      const questoes = normalizarQuestoes(loteRevisado, parametros);
-
-      if (questoes.length !== parametros.quantidade) {
-        throw new Error(
-          `A revisão de qualidade deixou ${questoes.length} questão(ões) válidas, mas eram esperadas ${parametros.quantidade}. O lote não foi liberado.`
-        );
-      }
-
-      return {
-        sucesso: true,
-        questoes,
-      };
-    } catch (erroValidacao) {
-      motivoReprovacao =
-        erroValidacao instanceof Error
-          ? erroValidacao.message.slice(0, 500)
-          : "A revisão não passou na validação editorial.";
-
-      await invalidarResultadoRevisao(requestIdRevisao);
-
-      if (tentativa >= MAX_TENTATIVAS_REVISAO) {
-        throw erroValidacao;
-      }
-    }
-  }
-
-  throw new Error("A revisão de qualidade não pôde ser concluída.");
+  return {
+    sucesso: true,
+    questoes,
+  };
 }
 
-async function invalidarResultadoRevisao(requestId?: string) {
-  if (!requestId) return;
+export async function listarJobsGeracaoIA(
+  prefixo = ""
+) {
+  const url = prefixo
+    ? `${API_JOBS_URL}?prefixo=${encodeURIComponent(prefixo)}`
+    : API_JOBS_URL;
 
-  try {
-    await fetchApiAutenticada(
-      `${API_STATUS_URL}/${encodeURIComponent(requestId)}`,
-      { method: "DELETE" }
+  const resposta = await fetchApiAutenticada(
+    url
+  );
+  const dados = (await lerJsonSeguro(resposta)) as RespostaListaJobs;
+
+  if (!resposta.ok || !dados.sucesso) {
+    throw new Error(
+      dados.erro ||
+      "Não foi possível consultar as gerações."
     );
-  } catch {
-    // A invalidação é best-effort. A próxima tentativa usa outro identificador
-    // e não fica bloqueada pelo resultado editorial rejeitado.
   }
+
+  return Array.isArray(dados.jobs)
+    ? dados.jobs
+    : [];
 }
 
-async function solicitarLoteIA({
-  assunto,
-  quantidade,
-  banca,
-  enunciadosEvitar = [],
-  etapa,
-  requestId,
-}: SolicitacaoLoteIA) {
-  let resposta: Response;
-
-  try {
-    resposta = await fetchApiAutenticada(API_URL, {
+async function iniciarOuRetomarJobGeracaoIA(entrada: {
+  requestId: string;
+  assunto: string;
+  quantidade: number;
+  banca: string;
+  enunciadosEvitar: string[];
+  titulo: string;
+  descricao: string;
+  retomar: boolean;
+}) {
+  const resposta = await fetchApiAutenticada(
+    API_JOBS_URL,
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(requestId ? { "x-generation-id": requestId } : {}),
       },
-      body: JSON.stringify({
-        assunto,
-        quantidade,
-        banca,
-        enunciadosEvitar,
-        etapa,
-      }),
-    });
-  } catch (erro) {
-    if (erro instanceof Error && erro.message.includes("sessão")) {
-      throw erro;
+      body: JSON.stringify(entrada),
+    }
+  );
+
+  const dados = (await lerJsonSeguro(resposta)) as RespostaJob;
+
+  if (!dados.job) {
+    throw new Error(
+      dados.erro ||
+      "Não foi possível iniciar a geração."
+    );
+  }
+
+  if (dados.job.status === "erro") {
+    throw new Error(
+      dados.job.erro ||
+      "A geração terminou com erro."
+    );
+  }
+
+  return dados.job;
+}
+
+async function consultarJobGeracaoIA(
+  requestId: string
+) {
+  const resposta = await fetchApiAutenticada(
+    `${API_JOBS_URL}/${encodeURIComponent(requestId)}`
+  );
+  const dados = (await lerJsonSeguro(resposta)) as RespostaJob;
+
+  if (!dados.job) {
+    throw new Error(
+      dados.erro ||
+      "Não foi possível consultar a geração."
+    );
+  }
+
+  return dados.job;
+}
+
+async function aguardarJobGeracaoIA(
+  inicial: JobGeracaoIAPublico,
+  onEtapa?: ParametrosGeracaoIA["onEtapa"]
+) {
+  const inicio = Date.now();
+  let job = inicial;
+  let ultimaEtapa = "";
+
+  while (true) {
+    if (job.etapa !== ultimaEtapa) {
+      ultimaEtapa = job.etapa;
+      if (
+        job.etapa === "gerando" ||
+        job.etapa === "revisando" ||
+        job.etapa === "corrigindo" ||
+        job.etapa === "salvando"
+      ) {
+        onEtapa?.(job.etapa);
+      }
     }
 
-    throw new Error(
-      etapa === "revisão"
-        ? "A revisão de qualidade das questões não conseguiu acessar a IA. Nenhuma questão não revisada foi liberada."
-        : "Não foi possível conectar à IA. Verifique se a API está online e tente novamente."
-    );
+    if (job.status === "concluida") {
+      return job;
+    }
+
+    if (job.status === "erro") {
+      throw new Error(
+        job.erro ||
+        "A geração terminou com erro."
+      );
+    }
+
+    if (Date.now() - inicio > LIMITE_ESPERA_MS) {
+      throw new Error(
+        "A geração continua no servidor. Você pode sair desta tela e acompanhar pela Central de Gerações."
+      );
+    }
+
+    await aguardar(INTERVALO_CONSULTA_MS);
+    job = await consultarJobGeracaoIA(job.requestId);
   }
+}
 
-  let dados: RespostaSucesso | RespostaErro;
-
+async function lerJsonSeguro(
+  resposta: Response
+) {
   try {
-    dados = (await resposta.json()) as RespostaSucesso | RespostaErro;
+    return await resposta.json() as unknown;
   } catch {
-    throw new Error(
-      etapa === "revisão"
-        ? "A revisão de qualidade retornou uma resposta inválida. O lote não foi liberado."
-        : "A API retornou uma resposta inválida."
-    );
+    return {
+      sucesso: false,
+      erro: "A API retornou uma resposta inválida.",
+    };
   }
+}
 
-  if (!resposta.ok || !dados.sucesso) {
-    const mensagemApi =
-      "erro" in dados
-        ? dados.erro
-        : `Erro HTTP ${resposta.status}`;
-
-    throw new Error(
-      etapa === "revisão"
-        ? `A revisão de qualidade falhou: ${mensagemApi}. O lote não foi liberado.`
-        : mensagemApi
-    );
-  }
-
-  if (!Array.isArray(dados.questoes)) {
-    throw new Error(
-      etapa === "revisão"
-        ? "A revisão de qualidade não retornou uma lista de questões. O lote não foi liberado."
-        : "A API não retornou uma lista válida de questões."
-    );
-  }
-
-  return dados.questoes;
+function aguardar(
+  milissegundos: number
+) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, milissegundos);
+  });
 }
 
 function montarContextoGeracao(

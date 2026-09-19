@@ -74,6 +74,30 @@ export async function selecionarDoCatalogoIA(
   );
 }
 
+export async function consultarResumoCatalogoIA(
+  filtros: FiltrosCatalogoIA
+) {
+  const questoes = await buscarCandidatas(filtros);
+  const idsRespondidos = await listarIdsRespondidos();
+  const naoRespondidas = questoes.filter(
+    (questao) => !idsRespondidos.has(questao.id)
+  );
+  const disponiveisParaReuso =
+    filtros.preferencia === "nao_respondidas"
+      ? naoRespondidas.length
+      : questoes.length;
+
+  return {
+    totalCompativeis: questoes.length,
+    naoRespondidas: naoRespondidas.length,
+    disponiveisParaReuso,
+    quantidadeGerar: Math.max(
+      0,
+      filtros.quantidade - disponiveisParaReuso
+    ),
+  };
+}
+
 export async function atualizarQuestoesAntesDoTreino(questoes: QuestaoIA[]) {
   if (questoes.length === 0) return [];
   const ids = [...new Set(questoes.map((q) => q.id).filter(ehUuid))];

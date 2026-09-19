@@ -12,9 +12,19 @@ import "./GerarSimuladoIA.css";
 import { useApp } from "../../context/AppContext";
 
 import {
+  aguardarGeracaoQuestoesIA,
   gerarQuestoesIA,
+  iniciarGeracaoQuestoesIA,
+  listarJobsGeracaoIA,
   type DificuldadeIA,
+  type JobGeracaoIAPublico,
+  type ParametrosGeracaoIA,
 } from "../../services/gemini";
+
+import {
+  salvarAtividadeGeracaoIA,
+  type EtapaGeracaoIA,
+} from "../../services/geracaoIAAtividadeService";
 
 import {
   listarModulosDaMateria,
@@ -26,11 +36,15 @@ import {
 } from "../../utils/conteudosSemana";
 
 import {
+  ativarCadernoSimuladoIA,
   definirTipoSessaoQuestoesIAAtiva,
+  listarCadernosSimuladosIA,
   registrarQuestoesAtuaisComoCaderno,
+  type CadernoSimuladoIA,
 } from "../../services/cadernosSimuladosIAService";
 
 import {
+  consultarResumoCatalogoIA,
   salvarQuestoesGeradasNoCatalogo,
   selecionarDoCatalogoIA,
 } from "../../services/catalogoQuestoesIAService";
@@ -68,6 +82,16 @@ type PrefillPendente = {
   assunto: string;
 };
 
+type SelecaoCatalogoBloco =
+  Awaited<ReturnType<typeof selecionarDoCatalogoIA>>;
+
+type PlanoBlocoAssunto = {
+  item: AssuntoSelecionavel;
+  selecaoCatalogo: SelecaoCatalogoBloco;
+  parametrosIA?: ParametrosGeracaoIA;
+  job?: JobGeracaoIAPublico;
+};
+
 type GeracaoPendente = {
   id: string;
   criadaEm: string;
@@ -81,6 +105,23 @@ type GeracaoPendente = {
   quantidade: number;
   salvarNoBanco: boolean;
   preferenciaReuso: PreferenciaReusoIA;
+};
+
+type AbaHistoricoIA =
+  | "todos"
+  | "gerando"
+  | "finalizados";
+
+type GrupoJobGeracaoIA = {
+  id: string;
+  jobs: JobGeracaoIAPublico[];
+  status: "gerando" | "finalizado" | "erro";
+  progresso: number;
+  titulo: string;
+  descricao: string;
+  quantidade: number;
+  criadaEm: string;
+  erro?: string;
 };
 
 const CHAVE_QUESTOES_IA = "pmpe_questoes_ia";
@@ -110,6 +151,20 @@ export default function GerarSimuladoIA() {
   const [questoesGeradas, setQuestoesGeradas] = useState<QuestaoIA[]>([]);
   const [geracaoPendente, setGeracaoPendente] =
     useState<GeracaoPendente | null>(null);
+  const [abaHistorico, setAbaHistorico] =
+    useState<AbaHistoricoIA>("todos");
+  const [jobsRecentes, setJobsRecentes] =
+    useState<JobGeracaoIAPublico[]>([]);
+  const [cadernosRecentes, setCadernosRecentes] =
+    useState<CadernoSimuladoIA[]>([]);
+  const [resumoBanco, setResumoBanco] = useState({
+    totalCompativeis: 0,
+    naoRespondidas: 0,
+    disponiveisParaReuso: 0,
+    quantidadeGerar: 0,
+  });
+  const [carregandoResumoBanco, setCarregandoResumoBanco] =
+    useState(false);
 
   useEffect(() => {
     const pendente = carregarGeracaoPendente();
@@ -125,9 +180,6 @@ export default function GerarSimuladoIA() {
       setSalvarNoBanco(pendente.salvarNoBanco);
       setPreferenciaReuso(pendente.preferenciaReuso);
       setGeracaoPendente(pendente);
-      setErro(
-        "Há uma geração anterior para recuperar. Use “Retomar geração” para consultar o mesmo processamento sem criar uma nova tentativa."
-      );
       return;
     }
     const modoSolicitado = sessionStorage.getItem("pmpe:gerar-ia:modo");
@@ -156,6 +208,53 @@ export default function GerarSimuladoIA() {
     } finally {
       sessionStorage.removeItem("pmpe:gerar-ia:prefill");
     }
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+
+    const atualizarHistorico = async () => {
+      try {
+        const [jobs, cadernos] = await Promise.all([
+          listarJobsGeracaoIA(),
+          listarCadernosSimuladosIA(),
+        ]);
+
+        if (!ativo) return;
+        setJobsRecentes(jobs);
+        setCadernosRecentes(cadernos);
+      } catch (erroHistorico) {
+        console.error(
+          "Erro ao atualizar histórico de gerações IA:",
+          erroHistorico
+        );
+      }
+    };
+
+    void atualizarHistorico();
+
+    const timer = window.setInterval(
+      () => void atualizarHistorico(),
+      2_500
+    );
+
+    const aoAtualizar = () => {
+      void atualizarHistorico();
+    };
+
+    window.addEventListener(
+      "pmpe-questoes-ia-atualizadas",
+      aoAtualizar
+    );
+
+    return () => {
+      ativo = false;
+      window.clearInterval(timer);
+      window.removeEventListener(
+        "pmpe-questoes-ia-atualizadas",
+        aoAtualizar
+      );
+    };
   }, []);
 
   const semanas = useMemo(
@@ -256,6 +355,116 @@ export default function GerarSimuladoIA() {
       ? validacaoMultiAssunto.total
       : quantidade;
 
+  useEffect(() => {
+    let ativo = true;
+
+    if (
+      origem !== "assunto" ||
+      !materiaSelecionada.trim() ||
+      assuntosParaGerar.length === 0 ||
+      !banca.trim()
+    ) {
+      setResumoBanco({
+        totalCompativeis: 0,
+        naoRespondidas: 0,
+        disponiveisParaReuso: 0,
+        quantidadeGerar: 0,
+      });
+      setCarregandoResumoBanco(false);
+      return () => {
+        ativo = false;
+      };
+    }
+
+    const carregarResumo = async () => {
+      setCarregandoResumoBanco(true);
+
+      try {
+        const concursoAlvo =
+          configuracoes.concurso || "PMPE";
+
+        const resumos = await Promise.all(
+          assuntosParaGerar.map((item) =>
+            consultarResumoCatalogoIA({
+              materia: materiaSelecionada,
+              materiaId: materiaAtual?.id,
+              modulo: item.modulo,
+              moduloId: item.moduloId,
+              assunto: item.assunto,
+              assuntoId: item.assuntoId,
+              banca: banca.trim(),
+              dificuldade,
+              quantidade,
+              preferencia: preferenciaReuso,
+              concursoAlvo,
+            })
+          )
+        );
+
+        if (!ativo) return;
+
+        setResumoBanco(
+          resumos.reduce(
+            (total, item) => ({
+              totalCompativeis:
+                total.totalCompativeis +
+                item.totalCompativeis,
+              naoRespondidas:
+                total.naoRespondidas +
+                item.naoRespondidas,
+              disponiveisParaReuso:
+                total.disponiveisParaReuso +
+                item.disponiveisParaReuso,
+              quantidadeGerar:
+                total.quantidadeGerar +
+                item.quantidadeGerar,
+            }),
+            {
+              totalCompativeis: 0,
+              naoRespondidas: 0,
+              disponiveisParaReuso: 0,
+              quantidadeGerar: 0,
+            }
+          )
+        );
+      } catch (erroResumo) {
+        console.error(
+          "Erro ao consultar resumo do banco de questões:",
+          erroResumo
+        );
+
+        if (ativo) {
+          setResumoBanco({
+            totalCompativeis: 0,
+            naoRespondidas: 0,
+            disponiveisParaReuso: 0,
+            quantidadeGerar: 0,
+          });
+        }
+      } finally {
+        if (ativo) {
+          setCarregandoResumoBanco(false);
+        }
+      }
+    };
+
+    void carregarResumo();
+
+    return () => {
+      ativo = false;
+    };
+  }, [
+    assuntosParaGerar,
+    banca,
+    configuracoes.concurso,
+    dificuldade,
+    materiaAtual?.id,
+    materiaSelecionada,
+    origem,
+    preferenciaReuso,
+    quantidade,
+  ]);
+
   const conteudosSemana = useMemo(
     () => pegarAssuntosDaSemana(semanaSelecionada),
     [semanaSelecionada]
@@ -283,6 +492,7 @@ export default function GerarSimuladoIA() {
     setQuestoesGeradas([]);
     localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
     setGeracaoPendente(null);
+    salvarAtividadeGeracaoIA(null);
   }
 
   function alterarMateria(novaMateria: string) {
@@ -321,14 +531,12 @@ export default function GerarSimuladoIA() {
     setErro("");
   }
 
-  async function gerarBlocoAssunto(
+  async function prepararBlocoAssunto(
     item: AssuntoSelecionavel,
-    requestId?: string
-  ): Promise<{
-    questoes: QuestaoIA[];
-    reutilizadas: number;
-    novas: number;
-  }> {
+    indice: number,
+    operacao: GeracaoPendente,
+    retomando: boolean
+  ): Promise<PlanoBlocoAssunto> {
     const concursoAlvo = configuracoes.concurso || "PMPE";
 
     const selecaoCatalogo = await selecionarDoCatalogoIA({
@@ -345,23 +553,67 @@ export default function GerarSimuladoIA() {
       concursoAlvo,
     });
 
+    if (selecaoCatalogo.quantidadeGerar <= 0) {
+      return {
+        item,
+        selecaoCatalogo,
+      };
+    }
+
+    const parametrosIA: ParametrosGeracaoIA = {
+      origem: "assunto",
+      materia: materiaSelecionada,
+      modulo: item.modulo,
+      moduloId: item.moduloId,
+      assunto: item.assunto,
+      banca: banca.trim(),
+      dificuldade,
+      quantidade: selecaoCatalogo.quantidadeGerar,
+      enunciadosEvitar: selecaoCatalogo.reutilizadas.map(
+        (questao) => questao.enunciado
+      ),
+      requestId: `${operacao.id}:assunto:${indice}`,
+      retomarErro: retomando,
+    };
+
+    const job = await iniciarGeracaoQuestoesIA(parametrosIA);
+
+    return {
+      item,
+      selecaoCatalogo,
+      parametrosIA,
+      job,
+    };
+  }
+
+  async function concluirBlocoAssunto(
+    plano: PlanoBlocoAssunto,
+    operacao: GeracaoPendente,
+    blocoAtual: number,
+    blocosTotal: number
+  ): Promise<{
+    questoes: QuestaoIA[];
+    reutilizadas: number;
+    novas: number;
+  }> {
+    const concursoAlvo = configuracoes.concurso || "PMPE";
     let novasQuestoes: QuestaoIA[] = [];
 
-    if (selecaoCatalogo.quantidadeGerar > 0) {
-      const resposta = await gerarQuestoesIA({
-        origem: "assunto",
-        materia: materiaSelecionada,
-        modulo: item.modulo,
-        moduloId: item.moduloId,
-        assunto: item.assunto,
-        banca: banca.trim(),
-        dificuldade,
-        quantidade: selecaoCatalogo.quantidadeGerar,
-        enunciadosEvitar: selecaoCatalogo.reutilizadas.map(
-          (questao) => questao.enunciado
-        ),
-        requestId,
-      });
+    if (plano.job && plano.parametrosIA) {
+      const resposta = await aguardarGeracaoQuestoesIA(
+        plano.job,
+        {
+          ...plano.parametrosIA,
+          onEtapa: (etapa) =>
+            atualizarAtividadeGeracao(
+              operacao,
+              etapa,
+              `${plano.item.assunto} · ${dificuldade} · ${banca.trim()}`,
+              blocoAtual,
+              blocosTotal
+            ),
+        }
+      );
 
       novasQuestoes = resposta.questoes;
     }
@@ -373,13 +625,13 @@ export default function GerarSimuladoIA() {
           concursoAlvo,
           editalAlvo: concursoAlvo,
           materiaId: materiaAtual?.id,
-          assuntoId: item.assuntoId,
+          assuntoId: plano.item.assuntoId,
         }
       );
     }
 
     const questoes = [
-      ...selecaoCatalogo.reutilizadas,
+      ...plano.selecaoCatalogo.reutilizadas,
       ...novasQuestoes,
     ]
       .slice(0, quantidade)
@@ -387,23 +639,53 @@ export default function GerarSimuladoIA() {
         ...questao,
         materia: materiaSelecionada,
         materiaId: materiaAtual?.id ?? questao.materiaId,
-        modulo: item.modulo,
-        moduloId: item.moduloId ?? questao.moduloId,
-        assunto: item.assunto,
-        assuntoId: item.assuntoId ?? questao.assuntoId,
+        modulo: plano.item.modulo,
+        moduloId: plano.item.moduloId ?? questao.moduloId,
+        assunto: plano.item.assunto,
+        assuntoId: plano.item.assuntoId ?? questao.assuntoId,
       }));
 
     if (questoes.length !== quantidade) {
       throw new Error(
-        `O subassunto “${item.assunto}” ficou com ${questoes.length} questões, mas eram esperadas ${quantidade}. Tente gerar novamente.`
+        `O subassunto “${plano.item.assunto}” ficou com ${questoes.length} questões, mas eram esperadas ${quantidade}. Tente gerar novamente.`
       );
     }
 
     return {
       questoes,
-      reutilizadas: selecaoCatalogo.reutilizadas.length,
+      reutilizadas: plano.selecaoCatalogo.reutilizadas.length,
       novas: novasQuestoes.length,
     };
+  }
+
+  function atualizarAtividadeGeracao(
+    operacao: GeracaoPendente,
+    etapa: EtapaGeracaoIA,
+    descricao: string,
+    blocoAtual = 1,
+    blocosTotal = 1,
+    erroDetalhe?: string
+  ) {
+    const totalQuestoes =
+      operacao.origem === "assunto"
+        ? Math.max(operacao.quantidade, quantidadeTotalPrevista)
+        : operacao.quantidade;
+
+    salvarAtividadeGeracaoIA({
+      id: operacao.id,
+      etapa,
+      titulo:
+        operacao.origem === "semana"
+          ? `Simulado da Semana ${operacao.semanaSelecionada}`
+          : operacao.materiaSelecionada || "Questões por assunto",
+      descricao,
+      quantidade: totalQuestoes,
+      blocoAtual,
+      blocosTotal,
+      criadaEm: operacao.criadaEm,
+      atualizadaEm: new Date().toISOString(),
+      ...(erroDetalhe ? { erro: erroDetalhe } : {}),
+    });
   }
 
   async function gerarSimulado(operacaoExistente?: GeracaoPendente) {
@@ -435,6 +717,8 @@ export default function GerarSimuladoIA() {
       return;
     }
 
+    const retomando = Boolean(operacaoExistente);
+
     const operacao: GeracaoPendente =
       operacaoExistente ?? {
         id: crypto.randomUUID(),
@@ -454,6 +738,21 @@ export default function GerarSimuladoIA() {
     localStorage.setItem(CHAVE_GERACAO_PENDENTE, JSON.stringify(operacao));
     setGeracaoPendente(operacao);
 
+    const totalBlocos =
+      operacao.origem === "assunto"
+        ? Math.max(1, assuntosParaGerar.length)
+        : 1;
+
+    atualizarAtividadeGeracao(
+      operacao,
+      "preparando",
+      operacao.origem === "assunto"
+        ? `${banca.trim()} · ${dificuldade} · preparando os subassuntos`
+        : `${banca.trim()} · ${dificuldade} · preparando o simulado`,
+      1,
+      totalBlocos
+    );
+
     try {
       setGerando(true);
       setQuestoesGeradas([]);
@@ -463,13 +762,37 @@ export default function GerarSimuladoIA() {
       let totalNovas = 0;
 
       if (origem === "assunto") {
+        atualizarAtividadeGeracao(
+          operacao,
+          "preparando",
+          "Enfileirando todos os subassuntos no servidor",
+          1,
+          totalBlocos
+        );
+
+        const planos = await Promise.all(
+          assuntosParaGerar.map((item, indice) =>
+            prepararBlocoAssunto(
+              item,
+              indice,
+              operacao,
+              retomando
+            )
+          )
+        );
+
         const blocos: QuestaoIA[][] = [];
 
-        for (const [indice, item] of assuntosParaGerar.entries()) {
-          const bloco = await gerarBlocoAssunto(
-            item,
-            `${operacao.id}:assunto:${indice}`
+        for (const [indice, plano] of planos.entries()) {
+          const blocoAtual = indice + 1;
+
+          const bloco = await concluirBlocoAssunto(
+            plano,
+            operacao,
+            blocoAtual,
+            totalBlocos
           );
+
           blocos.push(bloco.questoes);
           totalReutilizadas += bloco.reutilizadas;
           totalNovas += bloco.novas;
@@ -487,6 +810,15 @@ export default function GerarSimuladoIA() {
           dificuldade,
           quantidade,
           requestId: `${operacao.id}:semana`,
+          onEtapa: (etapa) =>
+            atualizarAtividadeGeracao(
+              operacao,
+              etapa,
+              `Semana ${semanaSelecionada} · ${banca.trim()}`,
+              1,
+              1
+            ),
+          retomarErro: retomando,
         });
 
         let novasQuestoes = resposta.questoes;
@@ -506,6 +838,14 @@ export default function GerarSimuladoIA() {
         questoesFinais = embaralhar(novasQuestoes).slice(0, quantidade);
       }
 
+      atualizarAtividadeGeracao(
+        operacao,
+        "salvando",
+        "Organizando e salvando o caderno",
+        totalBlocos,
+        totalBlocos
+      );
+
       localStorage.setItem(
         CHAVE_QUESTOES_IA,
         JSON.stringify(questoesFinais)
@@ -517,7 +857,10 @@ export default function GerarSimuladoIA() {
 
       const tipoSessao = origem === "assunto" ? "questoes" : "simulado";
       definirTipoSessaoQuestoesIAAtiva(tipoSessao);
-      await registrarQuestoesAtuaisComoCaderno(tipoSessao);
+      await registrarQuestoesAtuaisComoCaderno(
+        tipoSessao,
+        operacao.id
+      );
 
       setQuestoesGeradas(questoesFinais);
 
@@ -529,6 +872,14 @@ export default function GerarSimuladoIA() {
 
       localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
       setGeracaoPendente(null);
+
+      atualizarAtividadeGeracao(
+        operacao,
+        "concluida",
+        "Caderno pronto para resolver",
+        totalBlocos,
+        totalBlocos
+      );
 
       window.dispatchEvent(
         new Event("pmpe-questoes-ia-atualizadas")
@@ -542,6 +893,14 @@ export default function GerarSimuladoIA() {
       console.error("Erro ao gerar questões:", erroGeracao);
       setErro(
         `${mensagem} A operação foi preservada para uma retomada segura.`
+      );
+      atualizarAtividadeGeracao(
+        operacao,
+        "erro",
+        "A operação foi preservada para retomada",
+        1,
+        totalBlocos,
+        mensagem
       );
     } finally {
       setGerando(false);
@@ -574,6 +933,87 @@ export default function GerarSimuladoIA() {
     setErro("");
     setSucesso("");
     setQuestoesGeradas([]);
+    salvarAtividadeGeracaoIA(null);
+  }
+
+  const jobsDeHoje = useMemo(
+    () =>
+      jobsRecentes.filter((job) =>
+        ehDoDiaAtual(job.criadaEm)
+      ),
+    [jobsRecentes]
+  );
+
+  const cadernosDeHoje = useMemo(
+    () =>
+      cadernosRecentes.filter((caderno) =>
+        ehDoDiaAtual(caderno.criadoEm)
+      ),
+    [cadernosRecentes]
+  );
+
+  const gruposJobs = useMemo(
+    () => agruparJobsGeracaoIA(jobsDeHoje),
+    [jobsDeHoje]
+  );
+
+  const idsCadernosPorGeracao = useMemo(
+    () =>
+      new Set(
+        cadernosDeHoje
+          .map((caderno) => caderno.geracaoId)
+          .filter((id): id is string => Boolean(id))
+      ),
+    [cadernosDeHoje]
+  );
+
+  const gruposVisiveis = useMemo(
+    () =>
+      gruposJobs.filter((grupo) => {
+        if (
+          grupo.status === "finalizado" &&
+          idsCadernosPorGeracao.has(grupo.id)
+        ) {
+          return false;
+        }
+
+        if (abaHistorico === "gerando") {
+          return grupo.status !== "finalizado";
+        }
+
+        if (abaHistorico === "finalizados") {
+          return grupo.status === "finalizado";
+        }
+
+        return true;
+      }),
+    [abaHistorico, gruposJobs, idsCadernosPorGeracao]
+  );
+
+  const cadernosVisiveis = useMemo(
+    () =>
+      abaHistorico === "gerando"
+        ? []
+        : cadernosDeHoje,
+    [abaHistorico, cadernosDeHoje]
+  );
+
+  const totalEmGeracao = gruposJobs.filter(
+    (grupo) => grupo.status !== "finalizado"
+  ).length;
+
+  function abrirCaderno(caderno: CadernoSimuladoIA) {
+    ativarCadernoSimuladoIA(caderno);
+    navigate("/resolver-simulado-ia");
+  }
+
+  function irParaNovoPedido() {
+    document
+      .querySelector(".gerar-ia-card")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
   }
 
   const todosSelecionados =
@@ -591,11 +1031,258 @@ export default function GerarSimuladoIA() {
           </p>
         </div>
 
-        <div className="gerar-ia-status">
-          <span>Banco disponível</span>
-          <strong>{carregarBancoIA().length} questões</strong>
+        <div className="gerar-ia-status gerar-ia-status-banco">
+          <span>
+            {origem === "assunto"
+              ? "Banco para esta seleção"
+              : "Banco compartilhado"}
+          </span>
+
+          {origem !== "assunto" ? (
+            <>
+              <strong>Simulado semanal</strong>
+              <small>
+                Esse modo gera um lote novo com os conteúdos da semana.
+              </small>
+            </>
+          ) : carregandoResumoBanco ? (
+            <>
+              <strong>Consultando...</strong>
+              <small>
+                Verificando questões compatíveis no catálogo.
+              </small>
+            </>
+          ) : assuntosParaGerar.length === 0 ? (
+            <>
+              <strong>Selecione um assunto</strong>
+              <small>
+                O Study Pro mostra aqui o que pode reaproveitar.
+              </small>
+            </>
+          ) : (
+            <>
+              <strong>
+                {resumoBanco.totalCompativeis} compatíveis
+              </strong>
+              <small>
+                {resumoBanco.naoRespondidas} não respondidas ·{" "}
+                {resumoBanco.quantidadeGerar > 0
+                  ? `IA cria ${resumoBanco.quantidadeGerar}`
+                  : "IA não precisa criar novas"}
+              </small>
+            </>
+          )}
         </div>
       </div>
+
+      <section
+        className="gerar-ia-historico"
+        aria-label="Central de gerações e simulados"
+      >
+        <div className="gerar-ia-historico-topo">
+          <div>
+            <span>Central de gerações</span>
+            <h2>Questões e simulados</h2>
+            <p>
+              Aqui aparecem somente as gerações de hoje. Depois, elas continuam no Caderno de Questões e no histórico normal.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="gerar-ia-novo"
+            onClick={irParaNovoPedido}
+          >
+            ＋ Nova geração
+          </button>
+        </div>
+
+        <div
+          className="gerar-ia-historico-abas"
+          role="tablist"
+          aria-label="Filtrar gerações"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaHistorico === "todos"}
+            className={abaHistorico === "todos" ? "ativo" : ""}
+            onClick={() => setAbaHistorico("todos")}
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaHistorico === "gerando"}
+            className={abaHistorico === "gerando" ? "ativo" : ""}
+            onClick={() => setAbaHistorico("gerando")}
+          >
+            Em geração
+            {totalEmGeracao > 0 && <strong>{totalEmGeracao}</strong>}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaHistorico === "finalizados"}
+            className={abaHistorico === "finalizados" ? "ativo" : ""}
+            onClick={() => setAbaHistorico("finalizados")}
+          >
+            Finalizados
+          </button>
+        </div>
+
+        <div className="gerar-ia-historico-lista">
+          {gruposVisiveis.map((grupo) => {
+            const finalizado = grupo.status === "finalizado";
+            const comErro = grupo.status === "erro";
+            const podeFinalizar =
+              finalizado &&
+              geracaoPendente?.id === grupo.id;
+
+            return (
+              <article
+                key={grupo.id}
+                className={
+                  comErro
+                    ? "gerar-ia-historico-item erro"
+                    : finalizado
+                      ? "gerar-ia-historico-item finalizado"
+                      : "gerar-ia-historico-item gerando"
+                }
+              >
+                <div className="gerar-ia-historico-item-cabecalho">
+                  <span
+                    className="gerar-ia-historico-icone"
+                    aria-hidden="true"
+                  >
+                    {comErro ? "!" : finalizado ? "✓" : "✦"}
+                  </span>
+
+                  <div className="gerar-ia-historico-item-titulo">
+                    <div>
+                      <strong>{grupo.titulo}</strong>
+                      <span>
+                        {comErro
+                          ? "Precisa de atenção"
+                          : finalizado
+                            ? "IA finalizada"
+                            : obterRotuloGrupoJob(grupo)}
+                      </span>
+                    </div>
+                    <p>
+                      {grupo.quantidade} questão
+                      {grupo.quantidade === 1 ? "" : "ões"} ·{" "}
+                      {grupo.descricao}
+                    </p>
+                  </div>
+                </div>
+
+                {!finalizado && !comErro && (
+                  <div className="gerar-ia-historico-progresso">
+                    <div>
+                      <span>{obterTextoGrupoJob(grupo)}</span>
+                      <strong>{grupo.progresso}%</strong>
+                    </div>
+                    <div
+                      className="gerar-ia-historico-barra"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={grupo.progresso}
+                    >
+                      <span
+                        style={{
+                          width: `${grupo.progresso}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {comErro && grupo.erro && (
+                  <p className="gerar-ia-historico-erro">
+                    {grupo.erro}
+                  </p>
+                )}
+
+                <div className="gerar-ia-historico-acoes">
+                  {(comErro || podeFinalizar) && geracaoPendente && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void gerarSimulado(geracaoPendente)
+                      }
+                    >
+                      {comErro
+                        ? "Retomar geração"
+                        : "Finalizar caderno"}
+                    </button>
+                  )}
+                  {finalizado && !podeFinalizar && (
+                    <span>
+                      Processamento concluído no servidor
+                    </span>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+
+          {cadernosVisiveis.map((caderno) => (
+            <article
+              key={caderno.id}
+              className="gerar-ia-historico-item finalizado"
+            >
+              <div className="gerar-ia-historico-item-cabecalho">
+                <span
+                  className="gerar-ia-historico-icone"
+                  aria-hidden="true"
+                >
+                  ✓
+                </span>
+                <div className="gerar-ia-historico-item-titulo">
+                  <div>
+                    <strong>{caderno.nome}</strong>
+                    <span>Finalizado</span>
+                  </div>
+                  <p>
+                    {caderno.questoes.length} questão
+                    {caderno.questoes.length === 1 ? "" : "ões"} ·{" "}
+                    {caderno.banca} · {caderno.dificuldade}
+                  </p>
+                </div>
+              </div>
+
+              <div className="gerar-ia-historico-acoes">
+                <button
+                  type="button"
+                  onClick={() => abrirCaderno(caderno)}
+                >
+                  Resolver simulado
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {gruposVisiveis.length === 0 &&
+            cadernosVisiveis.length === 0 && (
+              <div className="gerar-ia-historico-vazio">
+                <span>⌁</span>
+                <strong>
+                  {abaHistorico === "gerando"
+                    ? "Nenhuma geração em andamento"
+                    : abaHistorico === "finalizados"
+                      ? "Nenhum simulado finalizado ainda"
+                      : "Nenhuma geração registrada ainda"}
+                </strong>
+                <p>
+                  Faça uma nova geração e acompanhe o processamento por aqui.
+                </p>
+              </div>
+            )}
+        </div>
+      </section>
 
       {erro && (
         <div className="gerar-ia-mensagem gerar-ia-erro" role="alert">
@@ -606,29 +1293,6 @@ export default function GerarSimuladoIA() {
       {sucesso && (
         <div className="gerar-ia-mensagem gerar-ia-sucesso" role="status">
           {sucesso}
-        </div>
-      )}
-
-      {geracaoPendente && !gerando && (
-        <div className="gerar-ia-mensagem" role="status">
-          <strong>Geração recuperável disponível.</strong>{" "}
-          O identificador original foi preservado para evitar uma nova chamada quando o servidor ainda possui o processamento.
-          <div className="gerar-ia-acoes">
-            <button
-              type="button"
-              className="gerar-ia-gerar"
-              onClick={() => void gerarSimulado(geracaoPendente)}
-            >
-              Retomar geração
-            </button>
-            <button
-              type="button"
-              className="gerar-ia-limpar"
-              onClick={limparFormulario}
-            >
-              Descartar tentativa
-            </button>
-          </div>
         </div>
       )}
 
@@ -947,7 +1611,7 @@ export default function GerarSimuladoIA() {
               <span>
                 {origem === "assunto"
                   ? "Os subassuntos são montados separadamente e misturados no final."
-                  : "Você pode navegar para outra área. Se a página for atualizada, use “Retomar geração” ao voltar."}
+                  : "Você pode navegar para outra área ou fechar o navegador. O servidor continua processando e a Central recupera o status quando você voltar."}
               </span>
             </div>
           </div>
@@ -994,6 +1658,180 @@ export default function GerarSimuladoIA() {
       )}
     </section>
   );
+}
+
+function ehDoDiaAtual(
+  valor?: string | null
+) {
+  if (!valor) return false;
+
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return false;
+
+  const hoje = new Date();
+
+  return (
+    data.getFullYear() === hoje.getFullYear() &&
+    data.getMonth() === hoje.getMonth() &&
+    data.getDate() === hoje.getDate()
+  );
+}
+
+function agruparJobsGeracaoIA(
+  jobs: JobGeracaoIAPublico[]
+): GrupoJobGeracaoIA[] {
+  const porGeracao = new Map<string, JobGeracaoIAPublico[]>();
+
+  jobs.forEach((job) => {
+    const raiz = obterRaizRequestId(job.requestId);
+    const lista = porGeracao.get(raiz) ?? [];
+    lista.push(job);
+    porGeracao.set(raiz, lista);
+  });
+
+  return Array.from(porGeracao.entries())
+    .map(([id, itens]) => {
+      const ordenados = [...itens].sort(
+        (a, b) =>
+          new Date(a.criadaEm || 0).getTime() -
+          new Date(b.criadaEm || 0).getTime()
+      );
+      const erro = ordenados.find(
+        (job) => job.status === "erro"
+      );
+      const finalizado =
+        !erro &&
+        ordenados.length > 0 &&
+        ordenados.every(
+          (job) => job.status === "concluida"
+        );
+      const progresso = Math.round(
+        ordenados.reduce(
+          (total, job) =>
+            total +
+            (job.status === "concluida"
+              ? 100
+              : Math.max(
+                  0,
+                  Math.min(100, job.progresso || 0)
+                )),
+          0
+        ) / Math.max(1, ordenados.length)
+      );
+      const descricoes = Array.from(
+        new Set(
+          ordenados
+            .map((job) => job.descricao)
+            .filter(Boolean)
+        )
+      );
+      const quantidade = ordenados.reduce(
+        (total, job) =>
+          total +
+          Math.max(
+            0,
+            Number(job.quantidade) ||
+              job.resultado?.questoes?.length ||
+              0
+          ),
+        0
+      );
+      const primeiro = ordenados[0];
+
+      return {
+        id,
+        jobs: ordenados,
+        status: erro
+          ? "erro"
+          : finalizado
+            ? "finalizado"
+            : "gerando",
+        progresso,
+        titulo:
+          primeiro?.titulo ||
+          "Geração de questões",
+        descricao:
+          descricoes.slice(0, 2).join(" · ") ||
+          "Processamento da IA",
+        quantidade,
+        criadaEm:
+          primeiro?.criadaEm ||
+          new Date().toISOString(),
+        erro: erro?.erro || undefined,
+      } satisfies GrupoJobGeracaoIA;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.criadaEm).getTime() -
+        new Date(a.criadaEm).getTime()
+    );
+}
+
+function obterRaizRequestId(
+  requestId: string
+) {
+  return requestId
+    .replace(/:assunto:\d+$/, "")
+    .replace(/:semana$/, "");
+}
+
+function obterRotuloGrupoJob(
+  grupo: GrupoJobGeracaoIA
+) {
+  const atual =
+    grupo.jobs.find(
+      (job) =>
+        job.status === "fila" ||
+        job.status === "processando"
+    ) ?? grupo.jobs[grupo.jobs.length - 1];
+
+  switch (atual?.etapa) {
+    case "fila":
+      return "Na fila";
+    case "gerando":
+      return "Gerando";
+    case "revisando":
+      return "Revisando";
+    case "corrigindo":
+      return "Corrigindo";
+    case "salvando":
+      return "Salvando";
+    default:
+      return "Em geração";
+  }
+}
+
+function obterTextoGrupoJob(
+  grupo: GrupoJobGeracaoIA
+) {
+  const indice = grupo.jobs.findIndex(
+    (job) =>
+      job.status === "fila" ||
+      job.status === "processando"
+  );
+  const atual =
+    indice >= 0
+      ? grupo.jobs[indice]
+      : grupo.jobs[grupo.jobs.length - 1];
+  const bloco =
+    grupo.jobs.length > 1
+      ? ` · bloco ${Math.max(1, indice + 1)}/${grupo.jobs.length}`
+      : "";
+
+  switch (atual?.etapa) {
+    case "fila":
+      return `Aguardando no servidor${bloco}`;
+    case "gerando":
+      return `A IA está gerando as questões${bloco}`;
+    case "revisando":
+      return `Revisão independente de qualidade${bloco}`;
+    case "corrigindo":
+      return `Corrigindo uma revisão rejeitada${bloco}`;
+    case "salvando":
+      return `Finalizando o lote${bloco}`;
+    default:
+      return `Processando${bloco}`;
+  }
 }
 
 function carregarGeracaoPendente(): GeracaoPendente | null {
