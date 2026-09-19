@@ -150,3 +150,11 @@
       flex-start;
   }
 }
+
+/* Na central, o H1 já é fornecido pelo contêiner principal. */
+.central-desempenho-conteudo .estatisticas-title,
+.central-desempenho-conteudo .historico-sessoes-cabecalho h1,
+.central-desempenho-conteudo .estatisticas-sessoes-cabecalho h1,
+.central-desempenho-conteudo .estatisticas-ia-cabecalho h1 {
+  display: none;
+}
