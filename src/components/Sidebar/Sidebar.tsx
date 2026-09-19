@@ -4,13 +4,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-
-import {
-  NavLink,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
-
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   BookOpen,
   CalendarDays,
@@ -24,6 +18,8 @@ import {
   Menu,
   RotateCcw,
   Route,
+  Settings,
+  ShieldCheck,
   Sparkles,
   Target,
   TrendingUp,
@@ -36,12 +32,14 @@ import { useContextoComercial } from "../../hooks/useContextoComercial";
 import { PARCERIAS_VISIVEIS } from "../../config/recursos";
 
 type Icone = ComponentType<{ size?: number; strokeWidth?: number }>;
+type GrupoId = "planejamento" | "estudos" | "pratica" | "parceiro";
 
-type GrupoId =
-  | "planejamento"
-  | "estudos"
-  | "pratica"
-  | "parceiro";
+type Item = {
+  to: string;
+  texto: string;
+  icone?: Icone;
+  final?: boolean;
+};
 
 type GrupoMenuProps = {
   id: GrupoId;
@@ -53,21 +51,13 @@ type GrupoMenuProps = {
   children: ReactNode;
 };
 
-type ItemMenuProps = {
-  to: string;
-  icone?: Icone;
-  texto: string;
-  final?: boolean;
-  onNavigate: () => void;
-};
-
 const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
   planejamento: [
     "/meu-edital",
-    "/cronograma-ia",
     "/plano",
     "/plano-estudos",
     "/calendario",
+    "/cronograma-ia",
   ],
   estudos: [
     "/central-estudos",
@@ -92,16 +82,12 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/desempenho",
     "/historico",
   ],
-  parceiro: [
-    "/parceiro",
-  ],
+  parceiro: ["/parceiro"],
 };
 
 function rotaPertenceAoGrupo(pathname: string, id: GrupoId) {
   return ROTAS_GRUPOS[id].some(
-    (rota) =>
-      pathname === rota ||
-      pathname.startsWith(`${rota}/`)
+    (rota) => pathname === rota || pathname.startsWith(`${rota}/`)
   );
 }
 
@@ -118,14 +104,6 @@ export default function Sidebar() {
   const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
     obterGrupoDaRota(location.pathname)
   );
-
-  const temAreaParceiro =
-    PARCERIAS_VISIVEIS &&
-    (
-      contexto?.papel === "proprietario" ||
-      contexto?.papel === "gestor" ||
-      contexto?.papel === "professor"
-    );
 
   useEffect(() => {
     if (location.pathname === "/estatisticas") {
@@ -144,20 +122,20 @@ export default function Sidebar() {
     }
 
     document.body.classList.add("menu-mobile-aberto");
-
-    return () => {
-      document.body.classList.remove("menu-mobile-aberto");
-    };
+    return () => document.body.classList.remove("menu-mobile-aberto");
   }, [menuMobileAberto]);
-
 
   function alternarGrupo(id: GrupoId) {
     setGrupoAberto((atual) => (atual === id ? null : id));
   }
 
-  function fecharMenuMobile() {
-    setMenuMobileAberto(false);
-  }
+  const podeVerParceiro =
+    PARCERIAS_VISIVEIS &&
+    (
+      contexto?.papel === "proprietario" ||
+      contexto?.papel === "gestor" ||
+      contexto?.papel === "professor"
+    );
 
   return (
     <>
@@ -168,7 +146,7 @@ export default function Sidebar() {
         aria-expanded={menuMobileAberto}
         onClick={() => setMenuMobileAberto((aberto) => !aberto)}
       >
-        {menuMobileAberto ? <X size={21} /> : <Menu size={21} />}
+        {menuMobileAberto ? <X size={22} /> : <Menu size={22} />}
       </button>
 
       {menuMobileAberto && (
@@ -181,25 +159,37 @@ export default function Sidebar() {
       )}
 
       <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
-        <div className="sidebar-logo">
-          <img
-            className="sidebar-logo-imagem sidebar-logo-completa"
-            src="/assets/studio-pro-logo.svg"
-            alt="STUDY PRO"
-          />
+        <div className="sidebar-logo studio-premium-brand">
+          <div className="studio-brand-shield" aria-hidden="true">
+            <svg viewBox="0 0 72 82">
+              <defs>
+                <linearGradient id="studioSidebarGold" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0" stopColor="#fff0a7" />
+                  <stop offset="0.28" stopColor="#f8c54d" />
+                  <stop offset="0.62" stopColor="#a96808" />
+                  <stop offset="1" stopColor="#f8d77b" />
+                </linearGradient>
+              </defs>
+              <path d="M36 3 66 14v23c0 20-12 33-30 42C18 70 6 57 6 37V14L36 3Z" fill="#07172b" stroke="url(#studioSidebarGold)" strokeWidth="3" />
+              <path d="M36 10 59 18v18c0 15-8 26-23 34-15-8-23-19-23-34V18l23-8Z" fill="none" stroke="url(#studioSidebarGold)" strokeWidth="1.6" opacity=".9" />
+              <text x="36" y="50" textAnchor="middle" fontSize="34" fontWeight="800" fill="url(#studioSidebarGold)" fontFamily="Georgia, serif">S</text>
+            </svg>
+          </div>
+          <div className="studio-brand-copy">
+            <strong>STUDY <span>PRO</span></strong>
+            <small>ESTUDO HOJE. CONQUISTA SEMPRE.</small>
+          </div>
         </div>
 
-        <div className="sidebar-navegacao">
-          <div className="sidebar-menu-scroll">
-            <nav className="sidebar-menu" aria-label="Navegação principal">
+        <nav className="sidebar-menu" aria-label="Navegação principal">
           <div className="sidebar-inicio">
             <span className="sidebar-secao-label">VISÃO GERAL</span>
             <ItemMenu
               to="/"
-              icone={Home}
               texto="Dashboard"
+              icone={Home}
               final
-              onNavigate={fecharMenuMobile}
+              onNavigate={() => setMenuMobileAberto(false)}
             />
           </div>
 
@@ -211,10 +201,10 @@ export default function Sidebar() {
             aberto={grupoAberto === "planejamento"}
             onToggle={alternarGrupo}
           >
-            <ItemMenu to="/meu-edital" texto="Meu Edital" icone={FileText} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/plano" texto="Plano de Estudos" icone={Route} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/calendario" texto="Calendário" icone={CalendarDays} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/cronograma-ia" texto="Cronograma IA" icone={Sparkles} onNavigate={fecharMenuMobile} />
+            <ItemMenu to="/meu-edital" texto="Meu Edital" icone={FileText} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/plano" texto="Plano de Estudos" icone={Route} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/calendario" texto="Calendário" icone={CalendarDays} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/cronograma-ia" texto="Cronograma IA" icone={Sparkles} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
           <GrupoMenu
@@ -225,14 +215,14 @@ export default function Sidebar() {
             aberto={grupoAberto === "estudos"}
             onToggle={alternarGrupo}
           >
-            <ItemMenu to="/central-estudos" texto="Central de Estudos" icone={BookOpen} onNavigate={fecharMenuMobile} />
+            <ItemMenu to="/central-estudos" texto="Central de Estudos" icone={BookOpen} onNavigate={() => setMenuMobileAberto(false)} />
             {PARCERIAS_VISIVEIS && contexto?.papel === "aluno" && (
-              <ItemMenu to="/curso-mentoria" texto="Curso do Parceiro" icone={UsersRound} onNavigate={fecharMenuMobile} />
+              <ItemMenu to="/curso-mentoria" texto="Curso do Parceiro" icone={UsersRound} onNavigate={() => setMenuMobileAberto(false)} />
             )}
-            <ItemMenu to="/cursos" texto="Meus Cursos" icone={GraduationCap} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/estudos" texto="Conteúdos" icone={Library} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/materiais" texto="Materiais" icone={FolderOpen} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/revisoes" texto="Revisões" icone={RotateCcw} onNavigate={fecharMenuMobile} />
+            <ItemMenu to="/cursos" texto="Meus Cursos" icone={GraduationCap} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/estudos" texto="Conteúdos" icone={Library} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/materiais" texto="Materiais" icone={FolderOpen} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/revisoes" texto="Revisões" icone={RotateCcw} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
           <GrupoMenu
@@ -243,19 +233,19 @@ export default function Sidebar() {
             aberto={grupoAberto === "pratica"}
             onToggle={alternarGrupo}
           >
-            <ItemMenu to="/questoes" texto="Questões" icone={ClipboardCheck} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/simulados" texto="Simulados" icone={Target} onNavigate={fecharMenuMobile} />
-            <ItemMenu to="/desempenho" texto="Desempenho" icone={TrendingUp} onNavigate={fecharMenuMobile} />
+            <ItemMenu to="/questoes" texto="Questões" icone={ClipboardCheck} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/simulados" texto="Simulados" icone={Target} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/desempenho" texto="Desempenho" icone={TrendingUp} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
           <ItemMenu
             to="/inteligencia"
-            icone={Sparkles}
             texto="Inteligência"
-            onNavigate={fecharMenuMobile}
+            icone={Sparkles}
+            onNavigate={() => setMenuMobileAberto(false)}
           />
 
-          {temAreaParceiro && (
+          {podeVerParceiro && (
             <GrupoMenu
               id="parceiro"
               titulo="Área do Parceiro"
@@ -264,28 +254,28 @@ export default function Sidebar() {
               aberto={grupoAberto === "parceiro"}
               onToggle={alternarGrupo}
             >
-              <ItemMenu to="/parceiro" texto="Resumo das turmas" icone={UsersRound} final onNavigate={fecharMenuMobile} />
-              <ItemMenu to="/parceiro/cursos" texto="Meu curso" icone={GraduationCap} onNavigate={fecharMenuMobile} />
-              <ItemMenu to="/parceiro/simulados" texto="Simulados" icone={Target} onNavigate={fecharMenuMobile} />
+              <ItemMenu to="/parceiro" texto="Resumo das turmas" icone={UsersRound} final onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/cursos" texto="Meu curso" icone={GraduationCap} onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/parceiro/simulados" texto="Simulados" icone={Target} onNavigate={() => setMenuMobileAberto(false)} />
             </GrupoMenu>
           )}
+        </nav>
 
+        <div className="sidebar-rodape-acoes">
           {PARCERIAS_VISIVEIS && contexto?.papel === "aluno" && (
             <ItemMenu
               to="/meu-acesso"
-              icone={UsersRound}
               texto="Meu acesso"
-              onNavigate={fecharMenuMobile}
+              icone={ShieldCheck}
+              onNavigate={() => setMenuMobileAberto(false)}
             />
           )}
-            </nav>
-          </div>
-        </div>
-
-        <div className="sidebar-rodape">
-          <span>Foco atual</span>
-          <strong>PMPE</strong>
-          <small>Planejamento tático</small>
+          <ItemMenu
+            to="/configuracoes"
+            texto="Configurações"
+            icone={Settings}
+            onNavigate={() => setMenuMobileAberto(false)}
+          />
         </div>
       </aside>
     </>
@@ -302,11 +292,7 @@ function GrupoMenu({
   children,
 }: GrupoMenuProps) {
   return (
-    <div
-      className={`sidebar-grupo ${
-        ativo ? "sidebar-grupo-ativo" : ""
-      } ${aberto ? "sidebar-grupo-aberto" : ""}`}
-    >
+    <div className={`sidebar-grupo ${ativo ? "sidebar-grupo-ativo" : ""} ${aberto ? "sidebar-grupo-aberto" : ""}`}>
       <button
         type="button"
         className="sidebar-grupo-botao"
@@ -315,55 +301,40 @@ function GrupoMenu({
       >
         <span className="sidebar-grupo-identidade">
           <span className="sidebar-grupo-icone" aria-hidden="true">
-            <Icone size={17} strokeWidth={1.8} />
+            <Icone size={18} strokeWidth={1.8} />
           </span>
           <span>{titulo}</span>
         </span>
-
-        <ChevronRight
-          className="sidebar-chevron"
-          size={15}
-          strokeWidth={1.8}
-          aria-hidden="true"
-        />
+        <ChevronRight className="sidebar-chevron" size={16} strokeWidth={1.8} aria-hidden="true" />
       </button>
 
-      {aberto && (
-        <div className="sidebar-submenu">
-          {children}
-        </div>
-      )}
+      {aberto && <div className="sidebar-submenu">{children}</div>}
     </div>
   );
 }
 
 function ItemMenu({
   to,
-  icone: Icone,
   texto,
+  icone: Icone,
   final = false,
   onNavigate,
-}: ItemMenuProps) {
+}: Item & { onNavigate: () => void }) {
   return (
     <NavLink
       to={to}
       end={final}
       onClick={onNavigate}
       className={({ isActive }) =>
-        `sidebar-link ${
-          isActive ? "sidebar-link-ativo" : ""
-        } ${Icone ? "sidebar-link-com-icone" : "sidebar-link-subitem"}`
+        `sidebar-link ${isActive ? "sidebar-link-ativo" : ""} ${Icone ? "sidebar-link-com-icone" : "sidebar-link-subitem"}`
       }
     >
       {Icone && (
         <span className="sidebar-link-icone" aria-hidden="true">
-          <Icone size={17} strokeWidth={1.8} />
+          <Icone size={18} strokeWidth={1.8} />
         </span>
       )}
-
-      <span className="sidebar-link-texto">
-        {texto}
-      </span>
+      <span className="sidebar-link-texto">{texto}</span>
     </NavLink>
   );
 }
