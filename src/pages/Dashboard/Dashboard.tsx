@@ -492,6 +492,7 @@ function iniciarProximaAulaPortugues() {
         <div>
           <h1>{saudacao}, {nomeCurto}</h1>
           <p>Vamos avançar na missão de hoje.</p>
+          <div className="dashboard-xp-host" aria-label="Progresso de nível" />
         </div>
         <div className="dashboard-pro-header-right">
           <button type="button" className="dashboard-pro-search" onClick={() => navigate("/buscar", { state: { focoBusca: true } })}>⌕ <span>Buscar conteúdos, questões...</span></button>

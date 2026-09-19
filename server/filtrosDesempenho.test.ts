@@ -73,6 +73,7 @@ test("resume certas erradas total e aproveitamento", () => {
 });
 
 test("classifica as faixas de desempenho", () => {
+  assert.equal(classificarDesempenho(100, 1), "amostra-pequena");
   assert.equal(classificarDesempenho(85, 20), "forte");
   assert.equal(classificarDesempenho(70, 20), "atencao");
   assert.equal(classificarDesempenho(50, 20), "fraco");

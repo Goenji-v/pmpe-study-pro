@@ -347,3 +347,56 @@
     transition: none;
   }
 }
+
+
+/* Estabilização: a gamificação ocupa uma faixa própria e nunca compete com a busca. */
+.dashboard-pro-header h1 {
+  display: block;
+  width: auto;
+  white-space: normal;
+}
+
+.dashboard-xp-host {
+  width: min(100%, 720px);
+  min-width: 0;
+  margin-top: 10px;
+}
+
+.dashboard-xp-host .dashboard-xp-inline {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 720px;
+}
+
+@media (max-width: 1280px) {
+  .dashboard-pro-header {
+    flex-wrap: wrap;
+  }
+
+  .dashboard-pro-header > div:first-child,
+  .dashboard-pro-header-right {
+    width: 100%;
+  }
+
+  .dashboard-pro-header-right {
+    justify-content: flex-start;
+  }
+
+  .dashboard-pro-search {
+    flex: 1 1 280px;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-pro-header h1 {
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .dashboard-xp-host {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
