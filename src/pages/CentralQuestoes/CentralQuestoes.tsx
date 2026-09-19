@@ -530,14 +530,11 @@ function VisaoGeral({
           <div className="cq-secao-topo">
             <div>
               <h2>
-                Desempenho por banca
+                Desempenho por banca organizadora
               </h2>
 
               <p>
-                Variações do mesmo nome
-                são agrupadas. Registros
-                sem banca definida ficam
-                em “Não informada”.
+                Variações do nome da organizadora são agrupadas. A origem da questão (prova oficial, simulado, IA ou pessoal) é tratada separadamente no banco.
               </p>
             </div>
           </div>
