@@ -36,6 +36,8 @@ export type ParametrosGeracaoIA = {
   enunciadosEvitar?: string[];
   /** Mantém a mesma geração recuperável sem disparar nova cobrança. */
   requestId?: string;
+  /** Informa a etapa real para a UI global de acompanhamento. */
+  onEtapa?: (etapa: "gerando" | "revisando" | "corrigindo") => void;
 };
 
 type RespostaSucesso = {
@@ -67,6 +69,8 @@ export async function gerarQuestoesIA(
   parametros: ParametrosGeracaoIA
 ): Promise<{ sucesso: true; questoes: QuestaoIA[] }> {
   const assuntoCompleto = montarContextoGeracao(parametros);
+
+  parametros.onEtapa?.("gerando");
 
   const loteInicial = await solicitarLoteIA({
     assunto: assuntoCompleto,
@@ -113,6 +117,10 @@ export async function gerarQuestoesIA(
           "Corrija especificamente essa falha, revise novamente TODAS as questões e devolva o lote completo em JSON válido.",
         ].join("\n")
       : promptRevisaoBase;
+
+    parametros.onEtapa?.(
+      tentativa === 1 ? "revisando" : "corrigindo"
+    );
 
     const respostaRevisao = await solicitarLoteIA({
       assunto: promptRevisao,
