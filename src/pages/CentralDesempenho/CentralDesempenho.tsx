@@ -33,9 +33,7 @@ export default function CentralDesempenho() {
           </h1>
 
           <p>
-            Visão geral, estatísticas,
-            histórico, sessões e simulados IA
-            reunidos em um único lugar.
+            Indicadores, histórico, sessões e simulados IA em uma única central.
           </p>
         </div>
       </div>
@@ -48,7 +46,7 @@ export default function CentralDesempenho() {
         <BotaoAba
           ativo={abaAtiva === "geral"}
           icone="📈"
-          texto="Visão geral e estatísticas"
+          texto="Visão geral"
           onClick={() => setAbaAtiva("geral")}
         />
 
