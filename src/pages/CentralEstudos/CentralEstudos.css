@@ -76,6 +76,11 @@
   margin-bottom: 22px;
 }
 
+/* A Central de Estudos oficial expõe somente Aula, Revisão e Redação. */
+.central-estudos-tipos > .central-tipo:nth-child(n + 4) {
+  display: none;
+}
+
 .central-tipo {
   display: flex;
   align-items: center;
