@@ -44,6 +44,7 @@ import {
 } from "../../services/cadernosSimuladosIAService";
 
 import {
+  consultarResumoCatalogoIA,
   salvarQuestoesGeradasNoCatalogo,
   selecionarDoCatalogoIA,
 } from "../../services/catalogoQuestoesIAService";
@@ -156,6 +157,14 @@ export default function GerarSimuladoIA() {
     useState<JobGeracaoIAPublico[]>([]);
   const [cadernosRecentes, setCadernosRecentes] =
     useState<CadernoSimuladoIA[]>([]);
+  const [resumoBanco, setResumoBanco] = useState({
+    totalCompativeis: 0,
+    naoRespondidas: 0,
+    disponiveisParaReuso: 0,
+    quantidadeGerar: 0,
+  });
+  const [carregandoResumoBanco, setCarregandoResumoBanco] =
+    useState(false);
 
   useEffect(() => {
     const pendente = carregarGeracaoPendente();
@@ -345,6 +354,116 @@ export default function GerarSimuladoIA() {
     origem === "assunto"
       ? validacaoMultiAssunto.total
       : quantidade;
+
+  useEffect(() => {
+    let ativo = true;
+
+    if (
+      origem !== "assunto" ||
+      !materiaSelecionada.trim() ||
+      assuntosParaGerar.length === 0 ||
+      !banca.trim()
+    ) {
+      setResumoBanco({
+        totalCompativeis: 0,
+        naoRespondidas: 0,
+        disponiveisParaReuso: 0,
+        quantidadeGerar: 0,
+      });
+      setCarregandoResumoBanco(false);
+      return () => {
+        ativo = false;
+      };
+    }
+
+    const carregarResumo = async () => {
+      setCarregandoResumoBanco(true);
+
+      try {
+        const concursoAlvo =
+          configuracoes.concurso || "PMPE";
+
+        const resumos = await Promise.all(
+          assuntosParaGerar.map((item) =>
+            consultarResumoCatalogoIA({
+              materia: materiaSelecionada,
+              materiaId: materiaAtual?.id,
+              modulo: item.modulo,
+              moduloId: item.moduloId,
+              assunto: item.assunto,
+              assuntoId: item.assuntoId,
+              banca: banca.trim(),
+              dificuldade,
+              quantidade,
+              preferencia: preferenciaReuso,
+              concursoAlvo,
+            })
+          )
+        );
+
+        if (!ativo) return;
+
+        setResumoBanco(
+          resumos.reduce(
+            (total, item) => ({
+              totalCompativeis:
+                total.totalCompativeis +
+                item.totalCompativeis,
+              naoRespondidas:
+                total.naoRespondidas +
+                item.naoRespondidas,
+              disponiveisParaReuso:
+                total.disponiveisParaReuso +
+                item.disponiveisParaReuso,
+              quantidadeGerar:
+                total.quantidadeGerar +
+                item.quantidadeGerar,
+            }),
+            {
+              totalCompativeis: 0,
+              naoRespondidas: 0,
+              disponiveisParaReuso: 0,
+              quantidadeGerar: 0,
+            }
+          )
+        );
+      } catch (erroResumo) {
+        console.error(
+          "Erro ao consultar resumo do banco de questões:",
+          erroResumo
+        );
+
+        if (ativo) {
+          setResumoBanco({
+            totalCompativeis: 0,
+            naoRespondidas: 0,
+            disponiveisParaReuso: 0,
+            quantidadeGerar: 0,
+          });
+        }
+      } finally {
+        if (ativo) {
+          setCarregandoResumoBanco(false);
+        }
+      }
+    };
+
+    void carregarResumo();
+
+    return () => {
+      ativo = false;
+    };
+  }, [
+    assuntosParaGerar,
+    banca,
+    configuracoes.concurso,
+    dificuldade,
+    materiaAtual?.id,
+    materiaSelecionada,
+    origem,
+    preferenciaReuso,
+    quantidade,
+  ]);
 
   const conteudosSemana = useMemo(
     () => pegarAssuntosDaSemana(semanaSelecionada),
@@ -912,9 +1031,47 @@ export default function GerarSimuladoIA() {
           </p>
         </div>
 
-        <div className="gerar-ia-status">
-          <span>Banco disponível</span>
-          <strong>{carregarBancoIA().length} questões</strong>
+        <div className="gerar-ia-status gerar-ia-status-banco">
+          <span>
+            {origem === "assunto"
+              ? "Banco para esta seleção"
+              : "Banco compartilhado"}
+          </span>
+
+          {origem !== "assunto" ? (
+            <>
+              <strong>Simulado semanal</strong>
+              <small>
+                Esse modo gera um lote novo com os conteúdos da semana.
+              </small>
+            </>
+          ) : carregandoResumoBanco ? (
+            <>
+              <strong>Consultando...</strong>
+              <small>
+                Verificando questões compatíveis no catálogo.
+              </small>
+            </>
+          ) : assuntosParaGerar.length === 0 ? (
+            <>
+              <strong>Selecione um assunto</strong>
+              <small>
+                O Study Pro mostra aqui o que pode reaproveitar.
+              </small>
+            </>
+          ) : (
+            <>
+              <strong>
+                {resumoBanco.totalCompativeis} compatíveis
+              </strong>
+              <small>
+                {resumoBanco.naoRespondidas} não respondidas ·{" "}
+                {resumoBanco.quantidadeGerar > 0
+                  ? `IA cria ${resumoBanco.quantidadeGerar}`
+                  : "IA não precisa criar novas"}
+              </small>
+            </>
+          )}
         </div>
       </div>
 
