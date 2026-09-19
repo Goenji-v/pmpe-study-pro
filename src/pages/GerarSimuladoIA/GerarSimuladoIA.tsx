@@ -524,7 +524,7 @@ export default function GerarSimuladoIA() {
           atualizarAtividadeGeracao(
             operacao,
             "preparando",
-            item.assunto,
+            `${item.assunto} · ${dificuldade} · ${banca.trim()}`,
             blocoAtual,
             totalBlocos
           );
@@ -536,7 +536,7 @@ export default function GerarSimuladoIA() {
               atualizarAtividadeGeracao(
                 operacao,
                 etapa,
-                item.assunto,
+                `${item.assunto} · ${dificuldade} · ${banca.trim()}`,
                 blocoAtual,
                 totalBlocos
               )
