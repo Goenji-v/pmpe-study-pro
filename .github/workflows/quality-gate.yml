@@ -29,13 +29,16 @@ jobs:
 
           verificar_dependencias_inalteradas() {
             if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              git fetch origin "${{ github.base_ref }}" --depth=1
-              git diff --quiet "origin/${{ github.base_ref }}...HEAD" -- package.json package-lock.json
+              base_sha="${{ github.event.pull_request.base.sha }}"
+              git fetch origin "$base_sha" --depth=1
+              git diff --quiet "$base_sha" HEAD -- package.json package-lock.json
               return $?
             fi
 
-            if git rev-parse HEAD^ >/dev/null 2>&1; then
-              git diff --quiet HEAD^ HEAD -- package.json package-lock.json
+            before_sha="${{ github.event.before }}"
+            if [[ -n "$before_sha" && ! "$before_sha" =~ ^0+$ ]]; then
+              git fetch origin "$before_sha" --depth=1
+              git diff --quiet "$before_sha" HEAD -- package.json package-lock.json
               return $?
             fi
 
