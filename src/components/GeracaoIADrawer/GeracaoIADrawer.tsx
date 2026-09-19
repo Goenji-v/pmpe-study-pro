@@ -10,12 +10,19 @@ import {
   salvarAtividadeGeracaoIA,
   type AtividadeGeracaoIA,
 } from "../../services/geracaoIAAtividadeService";
+import {
+  listarJobsGeracaoIA,
+  type JobGeracaoIAPublico,
+} from "../../services/gemini";
+
+const INTERVALO_ATUALIZACAO_MS = 1_800;
 
 export default function GeracaoIADrawer() {
   const navigate = useNavigate();
   const [atividade, setAtividade] = useState<AtividadeGeracaoIA | null>(
     carregarAtividadeGeracaoIA
   );
+  const [jobs, setJobs] = useState<JobGeracaoIAPublico[]>([]);
   const [aberto, setAberto] = useState(false);
   const ultimoId = useRef<string | null>(atividade?.id ?? null);
 
@@ -40,29 +47,79 @@ export default function GeracaoIADrawer() {
     };
   }, []);
 
-  const progresso = useMemo(
-    () =>
-      atividade
-        ? calcularProgressoAtividadeGeracaoIA(atividade)
-        : 0,
-    [atividade]
+  useEffect(() => {
+    if (!atividade?.id) {
+      setJobs([]);
+      return;
+    }
+
+    let ativo = true;
+
+    const consultar = async () => {
+      try {
+        const encontrados = await listarJobsGeracaoIA(atividade.id);
+        if (ativo) setJobs(encontrados);
+      } catch {
+        // O estado local continua visível caso a consulta esteja temporariamente indisponível.
+      }
+    };
+
+    void consultar();
+
+    const timer = window.setInterval(
+      () => void consultar(),
+      INTERVALO_ATUALIZACAO_MS
+    );
+
+    return () => {
+      ativo = false;
+      window.clearInterval(timer);
+    };
+  }, [atividade?.id]);
+
+  const estadoServidor = useMemo(
+    () => resumirJobsServidor(jobs),
+    [jobs]
   );
 
   if (!atividade) return null;
 
+  const prontaNoServidor =
+    atividade.etapa !== "concluida" &&
+    estadoServidor.pronta;
+  const erroServidor =
+    atividade.etapa !== "concluida"
+      ? estadoServidor.erro
+      : null;
+
   const ativa =
+    !prontaNoServidor &&
+    !erroServidor &&
     atividade.etapa !== "concluida" &&
     atividade.etapa !== "erro";
-  const rotulo = obterRotuloEtapa(atividade);
+
+  const progresso =
+    estadoServidor.temJobs
+      ? estadoServidor.progresso
+      : calcularProgressoAtividadeGeracaoIA(atividade);
+
+  const rotulo =
+    prontaNoServidor
+      ? "IA finalizada"
+      : erroServidor
+        ? "A geração precisa de atenção"
+        : estadoServidor.jobAtual
+          ? obterRotuloJob(estadoServidor.jobAtual)
+          : obterRotuloEtapa(atividade);
+
   const icone =
-    atividade.etapa === "concluida"
+    atividade.etapa === "concluida" || prontaNoServidor
       ? "✓"
-      : atividade.etapa === "erro"
+      : atividade.etapa === "erro" || erroServidor
         ? "!"
         : "✦";
 
   function abrirResultado() {
-    if (!atividade) return;
     setAberto(false);
     navigate("/resolver-simulado-ia");
   }
@@ -75,6 +132,7 @@ export default function GeracaoIADrawer() {
   function dispensar() {
     salvarAtividadeGeracaoIA(null);
     setAtividade(null);
+    setJobs([]);
     setAberto(false);
   }
 
@@ -82,7 +140,15 @@ export default function GeracaoIADrawer() {
     <>
       <button
         type="button"
-        className={`geracao-ia-dock ${ativa ? "ativa" : atividade.etapa}`}
+        className={`geracao-ia-dock ${
+          ativa
+            ? "ativa"
+            : erroServidor
+              ? "erro"
+              : prontaNoServidor
+                ? "concluida"
+                : atividade.etapa
+        }`}
         onClick={() => setAberto(true)}
         aria-label="Abrir Central de Gerações"
       >
@@ -91,11 +157,19 @@ export default function GeracaoIADrawer() {
         </span>
         <span className="geracao-ia-dock-texto">
           <strong>
-            {ativa ? "1 geração em andamento" : rotulo}
+            {ativa
+              ? "1 geração em andamento"
+              : prontaNoServidor
+                ? "Geração pronta"
+                : rotulo}
           </strong>
           <small>{atividade.titulo}</small>
         </span>
-        {ativa && <span className="geracao-ia-dock-progresso">{progresso}%</span>}
+        {ativa && (
+          <span className="geracao-ia-dock-progresso">
+            {progresso}%
+          </span>
+        )}
       </button>
 
       {aberto && (
@@ -116,7 +190,13 @@ export default function GeracaoIADrawer() {
                 <span className="geracao-ia-sobretitulo">
                   Central de Gerações
                 </span>
-                <h2>{ativa ? "Em geração" : rotulo}</h2>
+                <h2>
+                  {ativa
+                    ? "Em geração"
+                    : prontaNoServidor
+                      ? "Pronta no servidor"
+                      : rotulo}
+                </h2>
               </div>
               <button
                 type="button"
@@ -130,12 +210,27 @@ export default function GeracaoIADrawer() {
 
             {ativa && (
               <p className="geracao-ia-explicacao">
-                Você pode continuar usando o Study Pro. A geração permanece
-                acompanhável por esta central.
+                Pode fechar esta tela ou continuar estudando. O servidor
+                continua a geração e a revisão independentemente desta página.
               </p>
             )}
 
-            <article className={`geracao-ia-card-global ${atividade.etapa}`}>
+            {prontaNoServidor && (
+              <p className="geracao-ia-explicacao">
+                A IA terminou no servidor. Abra a geração para o Study Pro
+                organizar o caderno e liberar as questões para resolver.
+              </p>
+            )}
+
+            <article
+              className={`geracao-ia-card-global ${
+                erroServidor
+                  ? "erro"
+                  : prontaNoServidor
+                    ? "concluida"
+                    : atividade.etapa
+              }`}
+            >
               <div className="geracao-ia-card-linha">
                 <span className="geracao-ia-card-icone" aria-hidden="true">
                   {icone}
@@ -148,7 +243,7 @@ export default function GeracaoIADrawer() {
                   <p>
                     {atividade.quantidade} questão
                     {atividade.quantidade === 1 ? "" : "ões"} ·{" "}
-                    {atividade.descricao}
+                    {estadoServidor.jobAtual?.descricao || atividade.descricao}
                   </p>
                 </div>
               </div>
@@ -156,7 +251,15 @@ export default function GeracaoIADrawer() {
               {ativa && (
                 <>
                   <div className="geracao-ia-etapa-atual">
-                    <span>{obterTextoEtapa(atividade)}</span>
+                    <span>
+                      {estadoServidor.jobAtual
+                        ? obterTextoJob(
+                            estadoServidor.jobAtual,
+                            estadoServidor.indiceAtual,
+                            estadoServidor.totalJobs
+                          )
+                        : obterTextoEtapa(atividade)}
+                    </span>
                     <strong>{progresso}%</strong>
                   </div>
                   <div
@@ -169,39 +272,84 @@ export default function GeracaoIADrawer() {
                     <span style={{ width: `${progresso}%` }} />
                   </div>
                   <div className="geracao-ia-passos" aria-label="Etapas da geração">
-                    <span className={passoAtivo(atividade, "gerando") ? "ativo" : ""}>
+                    <span
+                      className={
+                        passoServidorAtivo(estadoServidor.jobAtual, "gerando")
+                          ? "ativo"
+                          : ""
+                      }
+                    >
                       Gerar
                     </span>
-                    <span className={passoAtivo(atividade, "revisando") ? "ativo" : ""}>
+                    <span
+                      className={
+                        passoServidorAtivo(estadoServidor.jobAtual, "revisando")
+                          ? "ativo"
+                          : ""
+                      }
+                    >
                       Revisar
                     </span>
-                    <span className={passoAtivo(atividade, "salvando") ? "ativo" : ""}>
+                    <span
+                      className={
+                        passoServidorAtivo(estadoServidor.jobAtual, "salvando")
+                          ? "ativo"
+                          : ""
+                      }
+                    >
                       Salvar
                     </span>
                   </div>
                 </>
               )}
 
-              {atividade.etapa === "erro" && atividade.erro && (
-                <p className="geracao-ia-erro-texto">{atividade.erro}</p>
+              {(erroServidor || atividade.etapa === "erro") && (
+                <p className="geracao-ia-erro-texto">
+                  {erroServidor || atividade.erro}
+                </p>
               )}
 
               <div className="geracao-ia-painel-acoes">
                 {atividade.etapa === "concluida" && (
-                  <button type="button" className="primario" onClick={abrirResultado}>
+                  <button
+                    type="button"
+                    className="primario"
+                    onClick={abrirResultado}
+                  >
                     Resolver agora
                   </button>
                 )}
-                {atividade.etapa === "erro" && (
-                  <button type="button" className="primario" onClick={voltarGerador}>
-                    Voltar para geração
+
+                {prontaNoServidor && (
+                  <button
+                    type="button"
+                    className="primario"
+                    onClick={voltarGerador}
+                  >
+                    Finalizar caderno
                   </button>
                 )}
-                {!ativa && (
-                  <button type="button" className="secundario" onClick={dispensar}>
+
+                {(erroServidor || atividade.etapa === "erro") && (
+                  <button
+                    type="button"
+                    className="primario"
+                    onClick={voltarGerador}
+                  >
+                    Retomar geração
+                  </button>
+                )}
+
+                {!ativa && !prontaNoServidor && (
+                  <button
+                    type="button"
+                    className="secundario"
+                    onClick={dispensar}
+                  >
                     Fechar
                   </button>
                 )}
+
                 {ativa && (
                   <button
                     type="button"
@@ -220,7 +368,128 @@ export default function GeracaoIADrawer() {
   );
 }
 
-function obterRotuloEtapa(atividade: AtividadeGeracaoIA) {
+function resumirJobsServidor(
+  jobs: JobGeracaoIAPublico[]
+) {
+  if (jobs.length === 0) {
+    return {
+      temJobs: false,
+      pronta: false,
+      erro: null as string | null,
+      progresso: 0,
+      jobAtual: null as JobGeracaoIAPublico | null,
+      indiceAtual: 0,
+      totalJobs: 0,
+    };
+  }
+
+  const erro = jobs.find((job) => job.status === "erro");
+  const atual = jobs.find(
+    (job) => job.status === "fila" || job.status === "processando"
+  );
+  const pronta = !erro && jobs.every((job) => job.status === "concluida");
+  const progresso = Math.round(
+    jobs.reduce(
+      (total, job) =>
+        total +
+        (job.status === "concluida"
+          ? 100
+          : Math.max(0, Math.min(100, job.progresso || 0))),
+      0
+    ) / jobs.length
+  );
+
+  return {
+    temJobs: true,
+    pronta,
+    erro: erro?.erro || null,
+    progresso,
+    jobAtual: atual || erro || jobs[jobs.length - 1],
+    indiceAtual: atual
+      ? jobs.findIndex((job) => job.id === atual.id) + 1
+      : jobs.length,
+    totalJobs: jobs.length,
+  };
+}
+
+function obterRotuloJob(
+  job: JobGeracaoIAPublico
+) {
+  switch (job.etapa) {
+    case "fila":
+      return "Na fila";
+    case "gerando":
+      return "Gerando";
+    case "revisando":
+      return "Revisando qualidade";
+    case "corrigindo":
+      return "Corrigindo revisão";
+    case "salvando":
+      return "Finalizando";
+    case "concluida":
+      return "Finalizada";
+    case "erro":
+      return "Precisa de atenção";
+  }
+}
+
+function obterTextoJob(
+  job: JobGeracaoIAPublico,
+  indice: number,
+  total: number
+) {
+  const bloco =
+    total > 1
+      ? ` · bloco ${Math.max(1, indice)}/${total}`
+      : "";
+
+  switch (job.etapa) {
+    case "fila":
+      return `Aguardando a vez no servidor${bloco}`;
+    case "gerando":
+      return `A IA está criando as questões${bloco}`;
+    case "revisando":
+      return `Revisão independente de qualidade${bloco}`;
+    case "corrigindo":
+      return `Corrigindo uma revisão rejeitada${bloco}`;
+    case "salvando":
+      return `Salvando o lote aprovado${bloco}`;
+    case "concluida":
+      return "Lote concluído";
+    case "erro":
+      return "O lote precisa de atenção";
+  }
+}
+
+function passoServidorAtivo(
+  job: JobGeracaoIAPublico | null,
+  passo: "gerando" | "revisando" | "salvando"
+) {
+  if (!job) return false;
+
+  const ordem = {
+    fila: 0,
+    gerando: 1,
+    revisando: 2,
+    corrigindo: 2,
+    salvando: 3,
+    concluida: 4,
+    erro: 0,
+  } as const;
+
+  const minimo =
+    passo === "gerando"
+      ? 1
+      : passo === "revisando"
+        ? 2
+        : 3;
+
+  return ordem[job.etapa] >= minimo;
+}
+
+function obterRotuloEtapa(
+  atividade: AtividadeGeracaoIA
+) {
   switch (atividade.etapa) {
     case "preparando":
       return "Preparando";
@@ -239,7 +508,9 @@ function obterRotuloEtapa(atividade: AtividadeGeracaoIA) {
   }
 }
 
-function obterTextoEtapa(atividade: AtividadeGeracaoIA) {
+function obterTextoEtapa(
+  atividade: AtividadeGeracaoIA
+) {
   const bloco =
     atividade.blocosTotal > 1
       ? ` · bloco ${atividade.blocoAtual}/${atividade.blocosTotal}`
@@ -259,22 +530,4 @@ function obterTextoEtapa(atividade: AtividadeGeracaoIA) {
     default:
       return obterRotuloEtapa(atividade);
   }
-}
-
-function passoAtivo(
-  atividade: AtividadeGeracaoIA,
-  passo: "gerando" | "revisando" | "salvando"
-) {
-  const ordem = {
-    preparando: 0,
-    gerando: 1,
-    revisando: 2,
-    corrigindo: 2,
-    salvando: 3,
-    concluida: 4,
-    erro: 0,
-  } as const;
-
-  const minimo = passo === "gerando" ? 1 : passo === "revisando" ? 2 : 3;
-  return ordem[atividade.etapa] >= minimo;
 }
