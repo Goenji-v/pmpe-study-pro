@@ -1,3 +1,3 @@
-// Recursos temporariamente ocultos da interface.
-// Altere para true quando a parceria estiver pronta para ser reaberta ao público.
-export const PARCERIAS_VISIVEIS = false;
+// Área do Parceiro liberada: curso, turmas, simulados e financeiro
+// usam permissões por papel + RLS/RPC no Supabase.
+export const PARCERIAS_VISIVEIS = true;
