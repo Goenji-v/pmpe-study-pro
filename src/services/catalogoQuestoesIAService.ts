@@ -74,6 +74,141 @@ export async function selecionarDoCatalogoIA(
   );
 }
 
+export async function selecionarDoCatalogoParaSimuladoIA(
+  entrada: {
+    conteudos: Array<{
+      materia: string;
+      assunto: string;
+    }>;
+    banca: string;
+    dificuldade: FiltrosCatalogoIA["dificuldade"];
+    quantidade: number;
+    preferencia: PreferenciaReusoIA;
+    concursoAlvo?: string;
+  }
+) {
+  const conteudosUnicos = Array.from(
+    new Map(
+      entrada.conteudos
+        .filter(
+          (item) =>
+            item.materia.trim() &&
+            item.assunto.trim()
+        )
+        .map((item) => [
+          `${normalizarChaveIA(item.materia)}::${normalizarChaveIA(item.assunto)}`,
+          item,
+        ])
+    ).values()
+  );
+
+  if (
+    conteudosUnicos.length === 0 ||
+    entrada.quantidade <= 0
+  ) {
+    return {
+      reutilizadas: [] as QuestaoIA[],
+      quantidadeGerar: Math.max(
+        0,
+        entrada.quantidade
+      ),
+    };
+  }
+
+  const idsRespondidos =
+    entrada.preferencia === "nao_respondidas"
+      ? await listarIdsRespondidos()
+      : new Set<string>();
+
+  const lotes = await Promise.all(
+    conteudosUnicos.map((conteudo) =>
+      buscarCandidatas({
+        materia: conteudo.materia,
+        assunto: conteudo.assunto,
+        banca: entrada.banca,
+        dificuldade: entrada.dificuldade,
+        quantidade: entrada.quantidade,
+        preferencia: entrada.preferencia,
+        concursoAlvo: entrada.concursoAlvo,
+      })
+    )
+  );
+
+  const reutilizadas: QuestaoIA[] = [];
+  const idsUsados = new Set<string>();
+  const base = Math.floor(
+    entrada.quantidade / conteudosUnicos.length
+  );
+  const resto =
+    entrada.quantidade % conteudosUnicos.length;
+
+  lotes.forEach((lote, indice) => {
+    const alvo =
+      base + (indice < resto ? 1 : 0);
+
+    if (alvo <= 0) return;
+
+    const selecionadas =
+      selecionarQuestoesParaReuso(
+        lote,
+        idsRespondidos,
+        alvo,
+        entrada.preferencia
+      ).reutilizadas;
+
+    selecionadas.forEach((questao) => {
+      if (
+        reutilizadas.length >= entrada.quantidade ||
+        idsUsados.has(questao.id)
+      ) {
+        return;
+      }
+
+      idsUsados.add(questao.id);
+      reutilizadas.push(questao);
+    });
+  });
+
+  const faltantes =
+    entrada.quantidade - reutilizadas.length;
+
+  if (faltantes > 0) {
+    const mapaExtras = new Map<string, QuestaoIA>();
+
+    lotes.flat().forEach((questao) => {
+      if (!idsUsados.has(questao.id)) {
+        mapaExtras.set(questao.id, questao);
+      }
+    });
+
+    const extras =
+      selecionarQuestoesParaReuso(
+        Array.from(mapaExtras.values()),
+        idsRespondidos,
+        faltantes,
+        entrada.preferencia
+      ).reutilizadas;
+
+    extras.forEach((questao) => {
+      if (
+        reutilizadas.length < entrada.quantidade &&
+        !idsUsados.has(questao.id)
+      ) {
+        idsUsados.add(questao.id);
+        reutilizadas.push(questao);
+      }
+    });
+  }
+
+  return {
+    reutilizadas,
+    quantidadeGerar: Math.max(
+      0,
+      entrada.quantidade - reutilizadas.length
+    ),
+  };
+}
+
 export async function consultarResumoCatalogoIA(
   filtros: FiltrosCatalogoIA
 ) {

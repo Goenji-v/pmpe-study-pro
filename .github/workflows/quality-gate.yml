@@ -23,7 +23,54 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
       - name: Verificar vulnerabilidades high
-        run: npm audit --audit-level=high
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          verificar_dependencias_inalteradas() {
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              base_sha="${{ github.event.pull_request.base.sha }}"
+              git fetch origin "$base_sha" --depth=1
+              git diff --quiet "$base_sha" HEAD -- package.json package-lock.json
+              return $?
+            fi
+
+            before_sha="${{ github.event.before }}"
+            if [[ -n "$before_sha" && ! "$before_sha" =~ ^0+$ ]]; then
+              git fetch origin "$before_sha" --depth=1
+              git diff --quiet "$before_sha" HEAD -- package.json package-lock.json
+              return $?
+            fi
+
+            return 1
+          }
+
+          for tentativa in 1 2 3; do
+            set +e
+            saida="$(npm audit --audit-level=high 2>&1)"
+            codigo=$?
+            set -e
+
+            echo "$saida"
+
+            if [[ $codigo -eq 0 ]]; then
+              exit 0
+            fi
+
+            if echo "$saida" | grep -Eqi               "503 Service Unavailable|audit endpoint returned an error|currently performing maintenance"; then
+              if [[ $tentativa -lt 3 ]]; then
+                sleep 3
+                continue
+              fi
+
+              if verificar_dependencias_inalteradas; then
+                echo "::warning::npm audit indisponível por manutenção externa; dependências não foram alteradas neste commit/PR."
+                exit 0
+              fi
+            fi
+
+            exit $codigo
+          done
       - name: Executar lint sem avisos
         run: npm run lint -- --deny-warnings --format=agent
       - name: Executar testes
