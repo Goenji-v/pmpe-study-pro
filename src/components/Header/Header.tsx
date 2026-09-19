@@ -19,11 +19,19 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-identidade">
-        <img
-          className="header-logo-marca header-logo-completa"
-          src="/assets/studio-pro-logo.svg"
-          alt="Studio Pro"
-        />
+        <div className="header-brand">
+          <img
+            className="header-brand-mark"
+            src="/assets/studio-pro-mark.svg"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+          />
+          <div className="header-brand-copy">
+            <strong>STUDY <span>PRO</span></strong>
+            <small>ESTUDO HOJE. CONQUISTA SEMPRE.</small>
+          </div>
+        </div>
         <span className="header-concurso">{configuracoes.concurso}</span>
       </div>
 
