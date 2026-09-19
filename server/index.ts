@@ -42,6 +42,11 @@ const { modelo, modeloFallback } = resolverModelosGemini(process.env);
 const apiKey =
   process.env.GEMINI_API_KEY;
 
+const versaoServidor =
+  process.env.RENDER_GIT_COMMIT?.slice(0, 8) ||
+  process.env.GITHUB_SHA?.slice(0, 8) ||
+  "local";
+
 const supabaseUrl =
   process.env.SUPABASE_URL ||
   "https://kibnmdwabpiwyprkrhvq.supabase.co";
@@ -78,6 +83,7 @@ app.get(
       modeloFallback,
       chaveCarregada:
         Boolean(apiKey),
+      versao: versaoServidor,
     });
   }
 );
