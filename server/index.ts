@@ -20,7 +20,6 @@ import {
   obterEstadoGeracao,
 } from "./geracaoJobs.ts";
 import {
-  atualizarJobGeracaoIA,
   buscarJobGeracaoIAPorRequestId,
   criarOuBuscarJobGeracaoIA,
   listarJobsGeracaoIAPorPrefixo,
