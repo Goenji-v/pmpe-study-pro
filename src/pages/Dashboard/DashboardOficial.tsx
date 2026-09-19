@@ -2,33 +2,39 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
-import type { RegistroQuestao, Simulado } from "../../types/index";
 import Dashboard from "./Dashboard";
+import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
 import "./DashboardDesempenhoDonut.css";
 
 export default function DashboardOficial() {
   const navigate = useNavigate();
-  const { questoes, revisoes, simulados } = useApp();
+  const { questoes, revisoes, simulados, sessoes } = useApp();
   const [alvo, setAlvo] = useState<HTMLElement | null>(null);
 
   const desempenho = useMemo(() => {
-    const simuladosContabilizaveis = filtrarSimuladosSemEspelhoQuestoes(simulados, questoes);
-
-    const certas =
-      questoes.reduce((total, registro) => total + Math.max(0, Number(registro.certas) || 0), 0) +
-      simuladosContabilizaveis.reduce((total, simulado) => total + Math.max(0, Number(simulado.certas) || 0), 0);
-
-    const erros =
-      questoes.reduce((total, registro) => total + Math.max(0, Number(registro.erradas) || 0), 0) +
-      simuladosContabilizaveis.reduce((total, simulado) => total + Math.max(0, Number(simulado.erradas) || 0), 0);
-
-    const total = certas + erros;
-    const aproveitamento = total === 0 ? 0 : Math.round((certas / total) * 100);
-    const percentualErros = total === 0 ? 0 : Math.max(0, 100 - aproveitamento);
+    const metricas = calcularMetricasConsolidadas({
+      questoes,
+      sessoes,
+      revisoes,
+      simulados,
+    });
+    const baseAproveitamento =
+      metricas.certas + metricas.erradas + metricas.emBranco;
+    const percentualErros =
+      baseAproveitamento === 0
+        ? 0
+        : Math.round((metricas.erradas / baseAproveitamento) * 100);
     const emRevisao = revisoes.filter((revisao) => !revisao.concluida).length;
 
-    return { certas, erros, total, aproveitamento, percentualErros, emRevisao };
-  }, [questoes, revisoes, simulados]);
+    return {
+      certas: metricas.certas,
+      erros: metricas.erradas,
+      total: baseAproveitamento,
+      aproveitamento: metricas.aproveitamento,
+      percentualErros,
+      emRevisao,
+    };
+  }, [questoes, sessoes, revisoes, simulados]);
 
   useEffect(() => {
     let cancelado = false;
@@ -102,7 +108,7 @@ function DesempenhoGeral({
         <div>
           <span className="dashboard-pro-kicker">DESEMPENHO</span>
           <h2>Desempenho geral</h2>
-          <p>Seu esforço, traduzido em evolução.</p>
+          <p>Questões avulsas e simulados, sem duplicar tentativas; anuladas não entram no aproveitamento.</p>
         </div>
         <button type="button" onClick={onDetalhes}>Ver detalhes ↗</button>
       </header>
@@ -187,17 +193,3 @@ function obterMensagemDesempenho(aproveitamento: number, totalQuestoes: number) 
   };
 }
 
-function filtrarSimuladosSemEspelhoQuestoes(
-  simulados: Simulado[],
-  questoes: RegistroQuestao[]
-): Simulado[] {
-  const tentativasJaContabilizadas = new Set(
-    questoes
-      .map((registro) => registro.tentativaId)
-      .filter((id): id is string => typeof id === "string" && id.length > 0)
-  );
-
-  return simulados.filter(
-    (simulado) => !simulado.tentativaId || !tentativasJaContabilizadas.has(simulado.tentativaId)
-  );
-}
