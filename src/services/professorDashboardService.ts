@@ -22,34 +22,6 @@ export type SaudeTurma = {
   risco: number;
 };
 
-export type AlunoAtencaoProfessor = {
-  userId: string;
-  nome: string;
-  email: string;
-  turmaId: string | null;
-  turma: string;
-  saude: "atencao" | "risco";
-  motivo: string | null;
-  diasSemEstudar: number;
-  revisoesAtrasadas: number;
-  acuraciaMes: number;
-  questoesMes: number;
-  sequencia: number;
-};
-
-export type RankingProfessor = {
-  posicao: number;
-  userId: string;
-  nome: string;
-  xp: number;
-  minutos: number;
-  questoes: number;
-  acertos: number;
-  revisoes: number;
-  simulados: number;
-  nivel: number;
-};
-
 export type TurmaResumoProfessor = {
   id: string;
   nome: string;
@@ -72,8 +44,6 @@ export type DashboardProfessor = {
   parceiroNome: string;
   indicadores: IndicadoresProfessor;
   saude: SaudeTurma;
-  alunosAtencao: AlunoAtencaoProfessor[];
-  ranking: RankingProfessor[];
   turmas: TurmaResumoProfessor[];
   atividade7Dias: AtividadeProfessor[];
 };
@@ -109,32 +79,6 @@ export async function carregarDashboardProfessor(): Promise<DashboardProfessor> 
       atencao: numero(saude.atencao),
       risco: numero(saude.risco),
     },
-    alunosAtencao: lista(valor.alunos_atencao).map((item) => ({
-      userId: texto(item.user_id),
-      nome: texto(item.nome) || "Aluno",
-      email: texto(item.email),
-      turmaId: texto(item.turma_id) || null,
-      turma: texto(item.turma) || "Sem turma",
-      saude: texto(item.saude) === "risco" ? "risco" : "atencao",
-      motivo: texto(item.motivo) || null,
-      diasSemEstudar: numero(item.dias_sem_estudar),
-      revisoesAtrasadas: numero(item.revisoes_atrasadas),
-      acuraciaMes: numero(item.acuracia_mes),
-      questoesMes: numero(item.questoes_mes),
-      sequencia: numero(item.sequencia),
-    })),
-    ranking: lista(valor.ranking).map((item) => ({
-      posicao: numero(item.posicao),
-      userId: texto(item.user_id),
-      nome: texto(item.nome) || "Aluno",
-      xp: numero(item.xp),
-      minutos: numero(item.minutos),
-      questoes: numero(item.questoes),
-      acertos: numero(item.acertos),
-      revisoes: numero(item.revisoes),
-      simulados: numero(item.simulados),
-      nivel: numero(item.nivel) || 1,
-    })),
     turmas: lista(valor.turmas).map((item) => ({
       id: texto(item.id),
       nome: texto(item.nome) || "Turma",
