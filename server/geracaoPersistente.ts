@@ -38,6 +38,7 @@ export type ContextoSupabaseJob = {
   userId: string;
   authorization: string;
   anonKey: string;
+  serviceRoleKey: string;
 };
 
 type CriarJobEntrada = {
@@ -152,44 +153,12 @@ export async function reivindicarJobGeracaoIA(
   execucaoId: string,
   leaseMs = 5 * 60 * 1000
 ) {
-  if (job.status === "concluida" || job.status === "erro") {
-    return null;
-  }
+  if (job.status === "concluida" || job.status === "erro") return null;
 
-  const leaseSegundos = Math.max(30, Math.min(600, Math.round(leaseMs / 1000)));
-  const resposta = await fetch(
-    `${contexto.supabaseUrl}/rest/v1/rpc/reivindicar_geracao_ia_job`,
-    {
-      method: "POST",
-      headers: cabecalhos(contexto),
-      body: JSON.stringify({
-        p_job_id: job.id,
-        p_execucao_id: execucaoId,
-        p_lease_segundos: leaseSegundos,
-      }),
-    }
-  );
-
-  if (resposta.ok) {
-    const itens = (await resposta.json()) as JobGeracaoIA[];
-    return itens[0] ?? null;
-  }
-
-  if (await rpcAindaNaoDisponivel(resposta, "reivindicar_geracao_ia_job")) {
-    return reivindicarJobLegado(contexto, job, execucaoId, leaseMs);
-  }
-
-  throw new Error(await mensagemSupabase(resposta, "Não foi possível assumir a geração."));
-}
-
-async function reivindicarJobLegado(
-  contexto: ContextoSupabaseJob,
-  job: JobGeracaoIA,
-  execucaoId: string,
-  leaseMs: number
-) {
   const agora = new Date();
-  const leaseAte = new Date(agora.getTime() + leaseMs).toISOString();
+  const leaseAte = new Date(
+    agora.getTime() + Math.max(30_000, Math.min(600_000, leaseMs))
+  ).toISOString();
   const filtrosBase =
     `id=eq.${encodeURIComponent(job.id)}&user_id=eq.${encodeURIComponent(contexto.userId)}`;
   const filtroPosse =
@@ -201,7 +170,7 @@ async function reivindicarJobLegado(
     `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?${filtrosBase}${filtroPosse}`,
     {
       method: "PATCH",
-      headers: cabecalhos(contexto, {
+      headers: cabecalhosPrivilegiados(contexto, {
         Prefer: "return=representation",
       }),
       body: JSON.stringify({
@@ -244,70 +213,21 @@ export async function atualizarJobGeracaoIA(
   execucaoIdAtual?: string
 ) {
   if (!execucaoIdAtual) {
-    throw new Error("A atualização de uma geração exige a execução que possui o lease.");
+    throw new Error("A atualização do job exige a execução que possui o lease.");
   }
 
-  const status = atualizacao.status ?? "processando";
-  const etapa = atualizacao.etapa ?? "gerando";
-  const progresso = Math.max(0, Math.min(100, Number(atualizacao.progresso) || 0));
+  if (
+    atualizacao.status &&
+    !["processando", "concluida", "erro"].includes(atualizacao.status)
+  ) {
+    throw new Error("Transição de status não permitida nesta operação.");
+  }
 
   const resposta = await fetch(
-    `${contexto.supabaseUrl}/rest/v1/rpc/atualizar_geracao_ia_job`,
-    {
-      method: "POST",
-      headers: cabecalhos(contexto),
-      body: JSON.stringify({
-        p_job_id: id,
-        p_execucao_id: execucaoIdAtual,
-        p_status: status,
-        p_etapa: etapa,
-        p_progresso: progresso,
-        p_descricao: atualizacao.descricao ?? null,
-        p_resultado: atualizacao.resultado ?? null,
-        p_erro: atualizacao.erro ?? null,
-        p_concluida_em: atualizacao.concluida_em ?? null,
-        p_lease_segundos: 300,
-      }),
-    }
-  );
-
-  if (resposta.ok) {
-    const itens = (await resposta.json()) as JobGeracaoIA[];
-    return itens[0] ?? null;
-  }
-
-  if (await rpcAindaNaoDisponivel(resposta, "atualizar_geracao_ia_job")) {
-    return atualizarJobLegado(contexto, id, atualizacao, execucaoIdAtual);
-  }
-
-  throw new Error(await mensagemSupabase(resposta, "Não foi possível atualizar a geração."));
-}
-
-async function atualizarJobLegado(
-  contexto: ContextoSupabaseJob,
-  id: string,
-  atualizacao: Partial<
-    Pick<
-      JobGeracaoIA,
-      | "status"
-      | "etapa"
-      | "progresso"
-      | "resultado"
-      | "erro"
-      | "iniciada_em"
-      | "concluida_em"
-      | "descricao"
-      | "execucao_id"
-      | "lease_ate"
-    >
-  >,
-  execucaoIdAtual: string
-) {
-  const resposta = await fetch(
-    `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(contexto.userId)}&execucao_id=eq.${encodeURIComponent(execucaoIdAtual)}`,
+    `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(contexto.userId)}&status=eq.processando&execucao_id=eq.${encodeURIComponent(execucaoIdAtual)}`,
     {
       method: "PATCH",
-      headers: cabecalhos(contexto, {
+      headers: cabecalhosPrivilegiados(contexto, {
         Prefer: "return=representation",
       }),
       body: JSON.stringify({
@@ -325,17 +245,40 @@ async function atualizarJobLegado(
   return itens[0] ?? null;
 }
 
-async function rpcAindaNaoDisponivel(
-  resposta: Response,
-  nomeFuncao: string
+export async function reiniciarJobGeracaoIA(
+  contexto: ContextoSupabaseJob,
+  job: JobGeracaoIA
 ) {
-  if (resposta.status !== 404 && resposta.status !== 400) return false;
+  if (job.status !== "erro") return job;
 
-  const texto = await resposta.clone().text();
-  return (
-    texto.includes(nomeFuncao) &&
-    /PGRST202|schema cache|Could not find the function/i.test(texto)
+  const resposta = await fetch(
+    `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?id=eq.${encodeURIComponent(job.id)}&user_id=eq.${encodeURIComponent(contexto.userId)}&status=eq.erro`,
+    {
+      method: "PATCH",
+      headers: cabecalhosPrivilegiados(contexto, {
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify({
+        status: "fila",
+        etapa: "fila",
+        progresso: 0,
+        resultado: null,
+        erro: null,
+        iniciada_em: null,
+        concluida_em: null,
+        execucao_id: null,
+        lease_ate: null,
+        atualizada_em: new Date().toISOString(),
+      }),
+    }
   );
+
+  if (!resposta.ok) {
+    throw new Error(await mensagemSupabase(resposta, "Não foi possível retomar a geração."));
+  }
+
+  const itens = (await resposta.json()) as JobGeracaoIA[];
+  return itens[0] ?? job;
 }
 
 function cabecalhos(
@@ -345,6 +288,19 @@ function cabecalhos(
   return {
     apikey: contexto.anonKey,
     Authorization: contexto.authorization,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...extras,
+  };
+}
+
+function cabecalhosPrivilegiados(
+  contexto: ContextoSupabaseJob,
+  extras: Record<string, string> = {}
+) {
+  return {
+    apikey: contexto.serviceRoleKey,
+    Authorization: `Bearer ${contexto.serviceRoleKey}`,
     "Content-Type": "application/json",
     Accept: "application/json",
     ...extras,
