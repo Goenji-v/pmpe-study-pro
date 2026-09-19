@@ -35,6 +35,7 @@ export type JobGeracaoIAPublico = {
   progresso: number;
   titulo: string;
   descricao: string;
+  quantidade?: number;
   erro?: string | null;
   resultado?: {
     questoes?: unknown[];
@@ -154,10 +155,14 @@ export async function aguardarGeracaoQuestoesIA(
 }
 
 export async function listarJobsGeracaoIA(
-  prefixo: string
+  prefixo = ""
 ) {
+  const url = prefixo
+    ? `${API_JOBS_URL}?prefixo=${encodeURIComponent(prefixo)}`
+    : API_JOBS_URL;
+
   const resposta = await fetchApiAutenticada(
-    `${API_JOBS_URL}?prefixo=${encodeURIComponent(prefixo)}`
+    url
   );
   const dados = (await lerJsonSeguro(resposta)) as RespostaListaJobs;
 
