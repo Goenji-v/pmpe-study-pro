@@ -192,15 +192,35 @@ export function redistribuirRevisoesPendentes(
     );
 
   const hoje = inicioDoDia(new Date());
+  const ocupacao = new Map<string, number>();
 
-  const reorganizadas = pendentes.map((revisao, indice) => {
-    const deslocamentoDias = Math.floor(indice / limiteDiario);
-    const prevista = adicionarDias(hoje, deslocamentoDias);
-    prevista.setHours(12, 0, 0, 0);
+  /*
+   * A reorganização só empurra pendências para a frente quando o dia atingiu
+   * o limite. Revisões futuras nunca são antecipadas e conclusões nunca mudam.
+   * Itens atrasados entram a partir de hoje, preservando a ordem original.
+   */
+  const reorganizadas = pendentes.map((revisao) => {
+    const original = inicioDoDia(new Date(revisao.dataPrevista));
+    const candidatoInicial =
+      original.getTime() < hoje.getTime()
+        ? new Date(hoje)
+        : new Date(original);
+    const candidato = new Date(candidatoInicial);
+    candidato.setHours(12, 0, 0, 0);
+
+    for (let tentativa = 0; tentativa < 365; tentativa += 1) {
+      const chave = chaveData(candidato);
+      const quantidade = ocupacao.get(chave) ?? 0;
+      if (quantidade < limiteDiario) {
+        ocupacao.set(chave, quantidade + 1);
+        break;
+      }
+      candidato.setDate(candidato.getDate() + 1);
+    }
 
     return {
       ...revisao,
-      dataPrevista: prevista.toISOString(),
+      dataPrevista: candidato.toISOString(),
     };
   });
 

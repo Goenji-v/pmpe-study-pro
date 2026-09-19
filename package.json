@@ -13,13 +13,14 @@
     "start:api": "tsx server/secureEntry.ts",
     "test": "node --import tsx --test server/*.test.ts",
     "lint": "oxlint src server",
-    "build": "tsc -b && vite build",
-    "check": "npm run lint && npm test && npm run build",
+    "build": "npm run lint && npm test && npm run build:app",
+    "check": "npm run build",
     "e2e": "playwright test",
     "e2e:smoke": "playwright test e2e/smoke.spec.ts",
     "e2e:auth": "playwright test e2e/authenticated-critical.spec.ts e2e/mobile-navigation.spec.ts e2e/mobile-secondary.spec.ts e2e/mobile-complete-audit.spec.ts",
     "e2e:mobile-secondary": "playwright test e2e/mobile-secondary.spec.ts --project=mobile-chrome",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "build:app": "tsc -b && vite build"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

@@ -38,6 +38,8 @@ type StatusCronometro =
   | "pausado";
 
 export type SessaoAtiva = {
+  /** Identificador estável criado no início para deduplicar finalizações multiaba. */
+  sessaoId?: string;
   materia: string;
   materiaId?: string;
   modulo?: string;
@@ -219,6 +221,23 @@ export function CronometroProvider({
     );
   }, [chaveStorage, sessaoAtiva]);
 
+  useEffect(() => {
+    function sincronizarEntreAbas() {
+      const recebida = carregarSessao(chaveStorage);
+      setSessaoAtiva((anterior) => {
+        if (JSON.stringify(anterior) === JSON.stringify(recebida)) return anterior;
+        if (recebida.sessaoId !== anterior.sessaoId) {
+          finalizacaoConsumida.current = false;
+        }
+        return recebida;
+      });
+      setAgora(Date.now());
+    }
+
+    window.addEventListener("storage", sincronizarEntreAbas);
+    return () => window.removeEventListener("storage", sincronizarEntreAbas);
+  }, [chaveStorage]);
+
   // Sessões vinculadas a conteúdo canônico são revalidadas após atualizações
   // do catálogo. Missões livres/adaptativas preservam a matéria escolhida pelo
   // diagnóstico e não podem ser sobrescritas pela definição estática do plano.
@@ -342,6 +361,7 @@ export function CronometroProvider({
 
     finalizacaoConsumida.current = false;
     setSessaoAtiva({
+      sessaoId: crypto.randomUUID(),
       materia: materiaEfetiva,
       materiaId: dados.materiaId,
       modulo: dados.modulo?.trim() || undefined,
@@ -513,12 +533,24 @@ export function CronometroProvider({
       return null;
     }
     const avaliacaoRevisao = revisaoPorQuestoes ? avaliacaoAutomatica ?? undefined : dados.avaliacaoRevisao;
+    const sessaoId = sessaoAtiva.sessaoId ?? criarIdSessaoLegada(sessaoAtiva);
+    const chaveUltimaFinalizacao = `${chaveStorage}:ultima-finalizacao`;
+
+    if (localStorage.getItem(chaveUltimaFinalizacao) === sessaoId) {
+      finalizacaoConsumida.current = true;
+      setSessaoAtiva({ ...sessaoInicial });
+      localStorage.removeItem(chaveStorage);
+      showToast("Esta sessão já foi finalizada em outra aba.", "info");
+      return null;
+    }
+
     finalizacaoConsumida.current = true;
+    localStorage.setItem(chaveUltimaFinalizacao, sessaoId);
     const finalizadaEm = new Date().toISOString();
 
     const novaSessao:
       SessaoEstudo = {
-      id: crypto.randomUUID(),
+      id: sessaoId,
       revisaoId: sessaoAtiva.revisaoId,
       tipo: sessaoAtiva.tipo,
       materia: sessaoAtiva.materia,
@@ -569,11 +601,10 @@ export function CronometroProvider({
     // Simulado possui histórico próprio. Persisti-lo também como sessão faria
     // o Dashboard somar o mesmo tempo duas vezes.
     if (sessaoAtiva.tipo !== "simulado") {
-      setSessoes(
-        (anteriores) => [
-          novaSessao,
-          ...anteriores,
-        ]
+      setSessoes((anteriores) =>
+        anteriores.some((item) => item.id === novaSessao.id)
+          ? anteriores
+          : [novaSessao, ...anteriores]
       );
     }
 
@@ -593,7 +624,7 @@ export function CronometroProvider({
       setQuestoes(
         (anteriores) => [
           {
-            id: crypto.randomUUID(),
+            id: `${sessaoId}:questoes`,
             materia: sessaoAtiva.materia,
             materiaId: sessaoAtiva.materiaId,
             modulo: sessaoAtiva.modulo,
@@ -609,7 +640,10 @@ export function CronometroProvider({
             observacao: dados.observacao?.trim() || undefined,
           },
           ...anteriores,
-        ]
+        ].filter(
+          (item, indice, lista) =>
+            lista.findIndex((candidato) => candidato.id === item.id) === indice
+        )
       );
     }
 
@@ -621,7 +655,7 @@ export function CronometroProvider({
     ) {
       setSimulados((anteriores) => [
         {
-          id: crypto.randomUUID(),
+          id: `${sessaoId}:simulado`,
           nome: sessaoAtiva.assunto || "Simulado",
           banca: dados.banca?.trim() || "Não informada",
           certas: quantidadeAcertos,
@@ -634,17 +668,20 @@ export function CronometroProvider({
             dados.observacao?.trim() ||
             sessaoAtiva.observacao ||
             undefined,
-          origem: "manual",
+          origem: "manual" as const,
         },
         ...anteriores,
-      ]);
+      ].filter(
+        (item, indice, lista) =>
+          lista.findIndex((candidato) => candidato.id === item.id) === indice
+      ));
     }
 
     const revisaoConcluida = Boolean(avaliacaoRevisao && revisoes.some(
       (revisao) => !revisao.concluida && revisaoCorrespondeASessao(revisao, novaSessao)
     ));
     if (sessaoAtiva.tipo === "revisao" && sessaoAtiva.revisaoId && avaliacaoRevisao) {
-      const proximaId = crypto.randomUUID();
+      const proximaId = `${sessaoId}:revisao:${sessaoAtiva.revisaoId}:proxima`;
       setRevisoes((anteriores) => concluirRevisaoNaLista({
         revisoes: anteriores, revisaoId: sessaoAtiva.revisaoId!,
         desempenho: avaliacaoRevisao, limiteDiario: configuracoes.metaRevisoesDiaria,
@@ -879,15 +916,39 @@ function carregarSessao(
   }
 
   try {
-    return {
+    const carregada = {
       ...sessaoInicial,
       ...JSON.parse(salvo),
     } as SessaoAtiva;
+
+    if (carregada.status !== "parado" && !carregada.sessaoId) {
+      carregada.sessaoId = criarIdSessaoLegada(carregada);
+    }
+
+    return carregada;
   } catch {
     return {
       ...sessaoInicial,
     };
   }
+}
+
+function criarIdSessaoLegada(sessao: SessaoAtiva) {
+  const base = [
+    sessao.iniciadoEm ?? "sem-inicio",
+    sessao.materia,
+    sessao.modulo ?? "",
+    sessao.assunto,
+    sessao.tipo,
+  ].join("|");
+
+  let hash = 2166136261;
+  for (let indice = 0; indice < base.length; indice += 1) {
+    hash ^= base.charCodeAt(indice);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return `legacy-${(hash >>> 0).toString(16)}`;
 }
 
 function calcularSegundos(

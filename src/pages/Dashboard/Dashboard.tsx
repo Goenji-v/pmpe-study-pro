@@ -11,6 +11,7 @@ import "./Dashboard.css";
 
 import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
+import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
 import {
   listarAssuntosDaMateria,
   listarModulosDaMateria,
@@ -207,89 +208,30 @@ export default function Dashboard() {
 
   const hoje = obterDataLocal();
 
-  // Simulados gerados por IA já criam registros em `questoes`.
-  // Só somamos aqui os simulados que ainda não possuem esse espelho,
-  // evitando contar a mesma tentativa duas vezes.
+  // Fonte canônica para os indicadores globais. A mesma regra é usada pela
+  // Inteligência e pelo Desempenho: remove espelhos de Simulado IA, separa
+  // anuladas/em branco e calcula o aproveitamento de forma ponderada.
+  const metricasTotais = useMemo(
+    () =>
+      calcularMetricasConsolidadas({
+        questoes,
+        sessoes,
+        revisoes,
+        simulados,
+      }),
+    [questoes, sessoes, revisoes, simulados]
+  );
+
+  const totalQuestoes = metricasTotais.questoes;
+  const totalCertas = metricasTotais.certas;
+  const aproveitamento = metricasTotais.aproveitamento;
+  const minutosTotais = metricasTotais.minutos;
+
+  // Mantido para visões que precisam tratar simulados sem o espelho por assunto.
   const simuladosContabilizaveis = useMemo(
     () => filtrarSimuladosSemEspelhoQuestoes(simulados, questoes),
     [simulados, questoes]
   );
-
-  const totalQuestoes =
-    questoes.reduce(
-      (
-        total: number,
-        registro: RegistroQuestao
-      ) =>
-        total +
-        registro.certas +
-        registro.erradas,
-      0
-    ) +
-    simuladosContabilizaveis.reduce(
-      (total, simulado) =>
-        total + obterQuestoesRespondidasSimulado(simulado),
-      0
-    );
-
-  const totalCertas =
-    questoes.reduce(
-      (
-        total: number,
-        registro: RegistroQuestao
-      ) =>
-        total +
-        registro.certas,
-      0
-    ) +
-    simuladosContabilizaveis.reduce(
-      (total, simulado) => total + (Number(simulado.certas) || 0),
-      0
-    );
-
-  const aproveitamento =
-    totalQuestoes === 0
-      ? 0
-      : Math.round(
-          (totalCertas /
-            totalQuestoes) *
-            100
-        );
-
-  const minutosSessoes =
-    sessoes.reduce(
-      (
-        total: number,
-        sessao: SessaoEstudo
-      ) =>
-        total +
-        sessao.minutos,
-      0
-    );
-
-  const minutosQuestoes =
-    questoes.reduce(
-      (total: number, registro: RegistroQuestao) => {
-        const duplicadoPorSessao = sessoes.some((sessao) =>
-          sessao.tipo === "questoes" &&
-          sessao.materia === registro.materia &&
-          sessao.assunto === registro.assunto &&
-          Math.abs(new Date(sessao.data).getTime() - new Date(registro.data).getTime()) < 5000
-        );
-
-        return total + (duplicadoPorSessao ? 0 : registro.minutos);
-      },
-      0
-    );
-
-  const minutosSimulados =
-    simuladosContabilizaveis.reduce(
-      (total, simulado) => total + Math.max(0, Number(simulado.minutos) || 0),
-      0
-    );
-
-  const minutosTotais =
-    minutosSessoes + minutosQuestoes + minutosSimulados;
 
   const assuntosTotais =
     materias.reduce(
@@ -335,74 +277,20 @@ export default function Dashboard() {
     };
   }, [materias]);
 
-  const registrosQuestoesHoje =
-    questoes.filter(
-      (registro) =>
-        obterDataLocal(
-          new Date(
-            registro.data
-          )
-        ) === hoje
-    );
-
-  const simuladosHoje =
-    simuladosContabilizaveis.filter(
-      (simulado) => obterDataLocalSeguro(simulado.data) === hoje
-    );
-
-  const questoesHoje =
-    registrosQuestoesHoje.reduce(
-      (total, registro) =>
-        total +
-        registro.certas +
-        registro.erradas,
-      0
-    ) +
-    simuladosHoje.reduce(
-      (total, simulado) =>
-        total + obterQuestoesRespondidasSimulado(simulado),
-      0
-    );
-
-  const minutosQuestoesHoje =
-    registrosQuestoesHoje.reduce((total, registro) => {
-      const duplicadoPorSessao = sessoes.some((sessao) =>
-        sessao.tipo === "questoes" &&
-        sessao.materia === registro.materia &&
-        sessao.assunto === registro.assunto &&
-        Math.abs(new Date(sessao.data).getTime() - new Date(registro.data).getTime()) < 5000
-      );
-      return total + (duplicadoPorSessao ? 0 : registro.minutos);
-    }, 0);
-
-  const sessoesHoje =
-    sessoes.filter(
-      (sessao) =>
-        obterDataLocal(
-          new Date(
-            sessao.data
-          )
-        ) === hoje
-    );
-
-  const minutosSessoesHoje =
-    sessoesHoje.reduce(
-      (total, sessao) =>
-        total +
-        sessao.minutos,
-      0
-    );
-
-  const minutosSimuladosHoje =
-    simuladosHoje.reduce(
-      (total, simulado) => total + Math.max(0, Number(simulado.minutos) || 0),
-      0
-    );
-
-  const minutosHoje =
-    minutosQuestoesHoje +
-    minutosSessoesHoje +
-    minutosSimuladosHoje;
+  const inicioHojeMetricas = new Date();
+  inicioHojeMetricas.setHours(0, 0, 0, 0);
+  const fimHojeMetricas = new Date();
+  fimHojeMetricas.setHours(23, 59, 59, 999);
+  const metricasHoje = calcularMetricasConsolidadas({
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    inicio: inicioHojeMetricas,
+    fim: fimHojeMetricas,
+  });
+  const questoesHoje = metricasHoje.questoes;
+  const minutosHoje = metricasHoje.minutos;
 
   const revisoesConcluidasHoje =
     revisoes.filter(
@@ -648,8 +536,8 @@ function iniciarProximaAulaPortugues() {
             </>
           ) : dadosPlano.hojeConcluido ? (
             <div className="dashboard-pro-empty">
-              <h2>Missão de hoje concluída</h2>
-              <p>A próxima missão será liberada no próximo dia do calendário.</p>
+              <h2>Plano de hoje concluído</h2>
+              <p>Não há tarefa obrigatória pendente hoje. A Inteligência pode continuar mostrando sugestões complementares, sem reabrir o plano.</p>
               <div className="dashboard-pro-actions">
                 <button type="button" onClick={() => navigate("/plano", { state: { semana: dadosPlano.semanaAtual, dia: dadosPlano.diaAtual } })}>Ver dia de hoje</button>
               </div>

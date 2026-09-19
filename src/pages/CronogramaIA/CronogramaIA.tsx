@@ -1,4 +1,4 @@
-import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
+import { armazenamentoLocalDaConta as localStorage, armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
   useMemo,
@@ -30,6 +30,7 @@ import {
 } from "../../data/planoPMPE";
 
 import {
+  aprovarCronogramaIA,
   excluirCronogramaIA,
   gerarCronogramaIA,
   listarCronogramasIA,
@@ -129,6 +130,7 @@ export default function CronogramaIA() {
     configuracoes.metaMinutosDiaria || 120
   );
   const [gerando, setGerando] = useState(false);
+  const [aprovando, setAprovando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [cronogramas, setCronogramas] = useState<CronogramaGeradoIA[]>([]);
@@ -220,10 +222,19 @@ export default function CronogramaIA() {
         : [],
     [cronogramaAtual]
   );
+  const tarefasPendentes = useMemo(
+    () =>
+      tarefasOrdenadas.filter(
+        (tarefa) =>
+          !tarefa.missaoId || !missoesConcluidas.includes(tarefa.missaoId)
+      ),
+    [tarefasOrdenadas, missoesConcluidas]
+  );
 
-  const tarefaAtual = tarefasOrdenadas[0];
+  const tarefaAtual = tarefasPendentes[0];
   const planoAtualAprovado = cronogramaAtual
-    ? aprovados.includes(identificadorCronograma(cronogramaAtual))
+    ? Boolean(cronogramaAtual.aprovadoEm) ||
+      aprovados.includes(identificadorCronograma(cronogramaAtual))
     : false;
   const ultimoAjuste = ajustes[0];
   const ajusteAtivo = ajustes.find((item) => item.ativo);
@@ -300,11 +311,27 @@ export default function CronogramaIA() {
     return cronograma.id || cronograma.geradoEm;
   }
 
-  function aprovarCronograma(cronograma: CronogramaGeradoIA) {
-    const id = identificadorCronograma(cronograma);
-    const novaLista = Array.from(new Set([...aprovados, id]));
-    setAprovados(novaLista);
-    localStorage.setItem(chaveAprovados, JSON.stringify(novaLista));
+  async function aprovarCronograma(cronograma: CronogramaGeradoIA) {
+    if (aprovando) return;
+    try {
+      setAprovando(true);
+      setErro("");
+      const atualizado = await aprovarCronogramaIA(cronograma);
+      const id = identificadorCronograma(atualizado);
+      const novaLista = Array.from(new Set([...aprovados, id]));
+      setAprovados(novaLista);
+      localStorage.setItem(chaveAprovados, JSON.stringify(novaLista));
+      setCronogramaAtual(atualizado);
+      setCronogramas((anteriores) =>
+        anteriores.map((item) =>
+          item.id === atualizado.id ? atualizado : item
+        )
+      );
+    } catch (erroAprovacao) {
+      setErro(obterMensagemErro(erroAprovacao));
+    } finally {
+      setAprovando(false);
+    }
   }
 
   function alternarAutomacao(ativa: boolean) {
@@ -469,9 +496,31 @@ export default function CronogramaIA() {
   }
 
   function iniciarTarefa(tarefa: TarefaCronogramaIA) {
-    const cronometro = {
-      ativo: true,
-      pausado: false,
+    const vinculoPlano = tarefa.missaoId
+      ? planoPMPE
+          .flatMap((semana) =>
+            semana.dias.flatMap((dia) =>
+              dia.missoes.map((missao) => ({
+                missao,
+                semana: semana.numero,
+                dia: dia.numero,
+              }))
+            )
+          )
+          .find((item) => item.missao.id === tarefa.missaoId)
+      : undefined;
+    const revisaoRelacionada =
+      tarefa.tipo === "revisao"
+        ? revisoes.find(
+            (item) =>
+              !item.concluida &&
+              normalizarTextoCronograma(item.materia) ===
+                normalizarTextoCronograma(tarefa.materia) &&
+              normalizarTextoCronograma(item.assunto) ===
+                normalizarTextoCronograma(tarefa.assunto)
+          )
+        : undefined;
+    const prefill = {
       materia: tarefa.materia,
       assunto: tarefa.assunto,
       tipo:
@@ -481,19 +530,20 @@ export default function CronogramaIA() {
             ? "questoes"
             : "estudo",
       objetivo: tarefa.titulo,
-      iniciadaEm: new Date().toISOString(),
-      pausadaEm: null,
-      segundosPausados: 0,
+      revisaoId: revisaoRelacionada?.id,
       missaoId: tarefa.missaoId,
+      semana: vinculoPlano?.semana,
+      dia: vinculoPlano?.dia,
     };
 
-    localStorage.setItem(
-      "pmpe_cronometro_estudo",
-      JSON.stringify(cronometro)
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify(prefill)
     );
 
-    window.dispatchEvent(new Event("pmpe-cronometro-atualizado"));
-    navigate("/central-estudos");
+    navigate("/central-estudos", {
+      state: { origem: "plano", prefillSessao: prefill },
+    });
   }
 
   function executarAcaoPrincipal() {
@@ -511,7 +561,7 @@ export default function CronogramaIA() {
     }
 
     if (!planoAtualAprovado) {
-      aprovarCronograma(cronogramaAtual);
+      void aprovarCronograma(cronogramaAtual);
       return;
     }
 
@@ -522,6 +572,8 @@ export default function CronogramaIA() {
     ? "Carregando plano..."
     : gerando
       ? "Montando plano..."
+      : aprovando
+        ? "Aprovando plano..."
       : !cronogramaAtual || !tarefaAtual
         ? "Gerar missão"
         : !planoAtualAprovado
@@ -617,7 +669,7 @@ export default function CronogramaIA() {
             type="button"
             className="tatico-botao-principal"
             onClick={executarAcaoPrincipal}
-            disabled={carregando || gerando}
+            disabled={carregando || gerando || aprovando}
           >
             {textoAcaoPrincipal}
           </button>
@@ -891,7 +943,12 @@ export default function CronogramaIA() {
 
                     {aberto && (
                       <div className="tatico-dia-detalhes">
-                        {grupo.tarefas.map((tarefa) => (
+                        {grupo.tarefas.map((tarefa) => {
+                          const concluida = Boolean(
+                            tarefa.missaoId &&
+                            missoesConcluidas.includes(tarefa.missaoId)
+                          );
+                          return (
                           <div key={tarefa.id} className="tatico-tarefa-linha">
                             <div className="tatico-tarefa-ordem">{tarefa.ordem}</div>
                             <div className="tatico-tarefa-info">
@@ -912,13 +969,18 @@ export default function CronogramaIA() {
                               <button
                                 type="button"
                                 onClick={() => iniciarTarefa(tarefa)}
-                                disabled={!planoAtualAprovado}
+                                disabled={!planoAtualAprovado || concluida}
                               >
-                                {planoAtualAprovado ? "Iniciar" : "Aprovar plano"}
+                                {concluida
+                                  ? "Concluída"
+                                  : planoAtualAprovado
+                                    ? "Iniciar"
+                                    : "Aprovar plano"}
                               </button>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </article>
@@ -1251,6 +1313,15 @@ function agruparPorDia(tarefas: TarefaCronogramaIA[]) {
       dia,
       tarefas: [...lista].sort((a, b) => a.ordem - b.ordem),
     }));
+}
+
+function normalizarTextoCronograma(valor: string) {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function formatarTipo(tipo: TarefaCronogramaIA["tipo"]) {

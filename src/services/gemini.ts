@@ -34,6 +34,8 @@ export type ParametrosGeracaoIA = {
   dificuldade: DificuldadeIA;
   quantidade: number;
   enunciadosEvitar?: string[];
+  /** Mantém a mesma geração recuperável sem disparar nova cobrança. */
+  requestId?: string;
 };
 
 type RespostaSucesso = {
@@ -53,6 +55,7 @@ type SolicitacaoLoteIA = {
   banca: string;
   enunciadosEvitar?: string[];
   etapa: "geração" | "revisão";
+  requestId?: string;
 };
 
 const API_URL = criarUrlApi("/api/gerar");
@@ -69,6 +72,9 @@ export async function gerarQuestoesIA(
     banca: parametros.banca,
     enunciadosEvitar: parametros.enunciadosEvitar ?? [],
     etapa: "geração",
+    requestId: parametros.requestId
+      ? `${parametros.requestId}:geracao`
+      : undefined,
   });
 
   if (loteInicial.length !== parametros.quantidade) {
@@ -89,6 +95,9 @@ export async function gerarQuestoesIA(
       quantidade: parametros.quantidade,
       banca: parametros.banca,
       etapa: "revisão",
+      requestId: parametros.requestId
+        ? `${parametros.requestId}:revisao`
+        : undefined,
     }),
     parametros.quantidade,
     assuntoCompleto
@@ -114,6 +123,7 @@ async function solicitarLoteIA({
   banca,
   enunciadosEvitar = [],
   etapa,
+  requestId,
 }: SolicitacaoLoteIA) {
   let resposta: Response;
 
@@ -122,6 +132,7 @@ async function solicitarLoteIA({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(requestId ? { "x-generation-id": requestId } : {}),
       },
       body: JSON.stringify({
         assunto,
