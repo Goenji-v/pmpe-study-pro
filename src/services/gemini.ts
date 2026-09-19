@@ -87,6 +87,13 @@ const LETRAS = ["A", "B", "C", "D", "E"] as const;
 export async function gerarQuestoesIA(
   parametros: ParametrosGeracaoIA
 ): Promise<{ sucesso: true; questoes: QuestaoIA[] }> {
+  const job = await iniciarGeracaoQuestoesIA(parametros);
+  return aguardarGeracaoQuestoesIA(job, parametros);
+}
+
+export async function iniciarGeracaoQuestoesIA(
+  parametros: ParametrosGeracaoIA
+) {
   const assuntoCompleto = montarContextoGeracao(parametros);
   const requestId =
     parametros.requestId?.trim() ||
@@ -102,7 +109,7 @@ export async function gerarQuestoesIA(
       ? `Semana ${parametros.semana ?? 1} · ${parametros.dificuldade} · ${parametros.banca}`
       : `${parametros.assunto || "Assunto"} · ${parametros.dificuldade} · ${parametros.banca}`;
 
-  let job = await iniciarOuRetomarJobGeracaoIA({
+  return iniciarOuRetomarJobGeracaoIA({
     requestId,
     assunto: assuntoCompleto,
     quantidade: parametros.quantidade,
@@ -112,9 +119,14 @@ export async function gerarQuestoesIA(
     descricao,
     retomar: parametros.retomarErro === true,
   });
+}
 
-  job = await aguardarJobGeracaoIA(
-    job,
+export async function aguardarGeracaoQuestoesIA(
+  jobInicial: JobGeracaoIAPublico,
+  parametros: ParametrosGeracaoIA
+): Promise<{ sucesso: true; questoes: QuestaoIA[] }> {
+  const job = await aguardarJobGeracaoIA(
+    jobInicial,
     parametros.onEtapa
   );
 
