@@ -16,6 +16,71 @@
   border-bottom: 1px solid rgba(75, 113, 151, .22) !important;
 }
 
+.studio-premium-brand {
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  min-width: 0;
+}
+
+.studio-brand-shield {
+  width: 50px;
+  height: 56px;
+  flex: 0 0 50px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  filter: drop-shadow(0 7px 16px rgba(0, 102, 255, .18));
+}
+
+.studio-brand-shield img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.studio-brand-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.studio-brand-copy strong {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+  color: #f7fbff !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: .35px !important;
+  white-space: nowrap;
+}
+
+.studio-brand-copy strong span {
+  margin: 0 !important;
+  color: #f1c86f !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: .8px !important;
+}
+
+.studio-brand-copy small {
+  display: block;
+  margin-top: 6px !important;
+  color: #8fa4bd !important;
+  font-size: 6.5px !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+  letter-spacing: .7px !important;
+  white-space: nowrap;
+}
+
+
 .sidebar-logo-imagem.sidebar-logo-completa {
   display: block !important;
   width: 214px !important;
@@ -315,6 +380,14 @@
     width: 244px !important;
     min-width: 244px !important;
   }
+
+  .content {
+    flex: 0 0 calc(100% - 244px) !important;
+    width: calc(100% - 244px) !important;
+    max-width: calc(100% - 244px) !important;
+    margin-left: 244px !important;
+    min-width: 0 !important;
+  }
 }
 
 @media (max-width: 900px) {
@@ -345,9 +418,19 @@
     padding-bottom: 14px !important;
   }
 
-  .sidebar-logo-imagem.sidebar-logo-completa {
-    width: 210px !important;
-    height: 72px !important;
+  .studio-brand-shield {
+    width: 46px;
+    height: 52px;
+    flex-basis: 46px;
+  }
+
+  .studio-brand-copy strong {
+    font-size: 16px !important;
+  }
+
+  .studio-brand-copy small {
+    font-size: 6px !important;
+    letter-spacing: .6px !important;
   }
 
   .sidebar-link,

@@ -161,19 +161,11 @@ export default function Sidebar() {
       <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
         <div className="sidebar-logo studio-premium-brand">
           <div className="studio-brand-shield" aria-hidden="true">
-            <svg viewBox="0 0 72 82">
-              <defs>
-                <linearGradient id="studioSidebarGold" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0" stopColor="#fff0a7" />
-                  <stop offset="0.28" stopColor="#f8c54d" />
-                  <stop offset="0.62" stopColor="#a96808" />
-                  <stop offset="1" stopColor="#f8d77b" />
-                </linearGradient>
-              </defs>
-              <path d="M36 3 66 14v23c0 20-12 33-30 42C18 70 6 57 6 37V14L36 3Z" fill="#07172b" stroke="url(#studioSidebarGold)" strokeWidth="3" />
-              <path d="M36 10 59 18v18c0 15-8 26-23 34-15-8-23-19-23-34V18l23-8Z" fill="none" stroke="url(#studioSidebarGold)" strokeWidth="1.6" opacity=".9" />
-              <text x="36" y="50" textAnchor="middle" fontSize="34" fontWeight="800" fill="url(#studioSidebarGold)" fontFamily="Georgia, serif">S</text>
-            </svg>
+            <img
+              src="/assets/studio-pro-mark.svg"
+              alt=""
+              draggable={false}
+            />
           </div>
           <div className="studio-brand-copy">
             <strong>STUDY <span>PRO</span></strong>
