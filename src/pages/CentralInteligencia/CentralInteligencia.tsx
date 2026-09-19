@@ -74,7 +74,7 @@ export default function CentralInteligencia() {
         <div>
           <span className="inteligencia-etiqueta">ANÁLISE AUTOMÁTICA</span>
           <h1>🧠 Central de Inteligência</h1>
-          <p>Diagnóstico completo baseado nos seus estudos, questões, revisões e simulados.</p>
+          <p>Diagnóstico baseado nos seus estudos, questões, revisões e simulados. O tamanho da amostra é considerado antes de classificar domínio.</p>
         </div>
         <div className="inteligencia-indice">
           <span>Índice de prontidão</span>
@@ -248,7 +248,7 @@ export default function CentralInteligencia() {
         />
         <PainelAssuntos
           titulo="✅ Assuntos dominados"
-          descricao="Conteúdos com desempenho consistente."
+          descricao="Critério: pelo menos 10 questões válidas e 80% de aproveitamento."
           vazio="Resolva mais questões para identificar conteúdos dominados."
           itens={dados.assuntosDominados}
           classe="assunto-dominado"
@@ -334,7 +334,7 @@ function PainelAssuntos({
   titulo: string;
   descricao: string;
   vazio: string;
-  itens: Array<{ chave: string; materia: string; assunto: string; percentual: number }>;
+  itens: Array<{ chave: string; materia: string; assunto: string; percentual: number; total: number }>;
   classe: string;
 }) {
   return (
@@ -349,7 +349,7 @@ function PainelAssuntos({
           {itens.map((assunto) => (
             <article key={assunto.chave} className={`inteligencia-assunto-card ${classe}`}>
               <div><span>{assunto.materia}</span><strong>{assunto.assunto}</strong></div>
-              <b>{assunto.percentual}%</b>
+              <b>{assunto.percentual}% <small>· {assunto.total} questões</small></b>
             </article>
           ))}
         </div>
