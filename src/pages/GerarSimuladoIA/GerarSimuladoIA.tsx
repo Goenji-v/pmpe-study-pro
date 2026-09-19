@@ -817,19 +817,35 @@ export default function GerarSimuladoIA() {
     salvarAtividadeGeracaoIA(null);
   }
 
-  const gruposJobs = useMemo(
-    () => agruparJobsGeracaoIA(jobsRecentes),
+  const jobsDeHoje = useMemo(
+    () =>
+      jobsRecentes.filter((job) =>
+        ehDoDiaAtual(job.criadaEm)
+      ),
     [jobsRecentes]
+  );
+
+  const cadernosDeHoje = useMemo(
+    () =>
+      cadernosRecentes.filter((caderno) =>
+        ehDoDiaAtual(caderno.criadoEm)
+      ),
+    [cadernosRecentes]
+  );
+
+  const gruposJobs = useMemo(
+    () => agruparJobsGeracaoIA(jobsDeHoje),
+    [jobsDeHoje]
   );
 
   const idsCadernosPorGeracao = useMemo(
     () =>
       new Set(
-        cadernosRecentes
+        cadernosDeHoje
           .map((caderno) => caderno.geracaoId)
           .filter((id): id is string => Boolean(id))
       ),
-    [cadernosRecentes]
+    [cadernosDeHoje]
   );
 
   const gruposVisiveis = useMemo(
@@ -859,8 +875,8 @@ export default function GerarSimuladoIA() {
     () =>
       abaHistorico === "gerando"
         ? []
-        : cadernosRecentes,
-    [abaHistorico, cadernosRecentes]
+        : cadernosDeHoje,
+    [abaHistorico, cadernosDeHoje]
   );
 
   const totalEmGeracao = gruposJobs.filter(
@@ -911,7 +927,7 @@ export default function GerarSimuladoIA() {
             <span>Central de gerações</span>
             <h2>Questões e simulados</h2>
             <p>
-              A IA continua trabalhando no servidor mesmo se você sair desta tela.
+              Aqui aparecem somente as gerações de hoje. Depois, elas continuam no Caderno de Questões e no histórico normal.
             </p>
           </div>
 
@@ -1484,6 +1500,23 @@ export default function GerarSimuladoIA() {
         </div>
       )}
     </section>
+  );
+}
+
+function ehDoDiaAtual(
+  valor?: string | null
+) {
+  if (!valor) return false;
+
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return false;
+
+  const hoje = new Date();
+
+  return (
+    data.getFullYear() === hoje.getFullYear() &&
+    data.getMonth() === hoje.getMonth() &&
+    data.getDate() === hoje.getDate()
   );
 }
 
