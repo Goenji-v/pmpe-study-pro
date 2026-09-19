@@ -95,12 +95,14 @@ export default function AdminFinanceiroParceiro({ parceiroId, valorAlunoCentavos
       <button type="button" className="admin-financeiro-toggle" onClick={() => setAberto((valor) => !valor)}><span>FINANCEIRO</span><strong>{aberto ? "Ocultar financeiro" : "Gerenciar financeiro"}</strong></button>
       {aberto && (
         <div className="admin-financeiro-conteudo">
-          <p className="admin-financeiro-regra">O fechamento registra uma fotografia do mês. Taxa atual: <b>{moeda(taxaCentavos)}</b> por aluno ativo.</p>
+          <p className="admin-financeiro-regra">
+            O fechamento registra uma fotografia mensal dos alunos ativos. Esta é somente a taxa do Study Pro; o preço e o recebimento do curso do parceiro ficam fora deste cálculo. Taxa atual: <b>{moeda(taxaCentavos)}</b> por aluno ativo/mês.
+          </p>
           {erro && <div className="admin-financeiro-aviso erro" role="alert">{erro}</div>}
           {mensagem && <div className="admin-financeiro-aviso sucesso" role="status">{mensagem}</div>}
 
           <form className="admin-financeiro-taxa" onSubmit={salvarTaxa}>
-            <label>Taxa por aluno (R$)<input value={taxaReais} onChange={(e) => setTaxaReais(e.target.value)} type="number" min="0" step="0.01" required /></label>
+            <label>Taxa Study Pro por aluno/mês (R$)<input value={taxaReais} onChange={(e) => setTaxaReais(e.target.value)} type="number" min="0" step="0.01" required /></label>
             <div><small>Aplica-se aos próximos fechamentos e recálculos.</small><button disabled={processando === "taxa"}>{processando === "taxa" ? "Salvando..." : "Salvar taxa"}</button></div>
           </form>
 
