@@ -527,6 +527,7 @@ function obterIntervalo(
 }
 
 function classeClassificacao(classificacao: ClassificacaoDesempenho) {
+  if (classificacao === "amostra-pequena") return "desempenho-sem-dados";
   return `desempenho-${classificacao}`;
 }
 
