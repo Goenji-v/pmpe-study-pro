@@ -9,7 +9,7 @@ services:
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
-        value: 20.20.0
+        value: 24.21.0
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
@@ -18,5 +18,9 @@ services:
         value: gemini-3.6-flash
       - key: SUPABASE_URL
         value: https://kibnmdwabpiwyprkrhvq.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
       - key: FRONTEND_URL
         sync: false
