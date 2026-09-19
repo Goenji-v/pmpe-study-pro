@@ -37,18 +37,6 @@ export type PainelSimuladoProfessor = {
   treinosConcluidos: number;
   mediaPercentual: number;
   alertasIntegridade: number;
-  ranking: Array<{
-    usuarioId: string;
-    nome: string;
-    turma: string;
-    certas: number;
-    erradas: number;
-    emBranco: number;
-    percentual: number;
-    minutos: number;
-    finalizadaEm: string;
-    alertas: number;
-  }>;
 };
 
 export async function listarSimuladosProfessor(parceiroId: string): Promise<SimuladoProfessor[]> {
@@ -138,18 +126,6 @@ export async function carregarPainelSimuladoProfessor(id: string): Promise<Paine
     treinosConcluidos: numero(valor.treinos_concluidos),
     mediaPercentual: numero(valor.media_percentual),
     alertasIntegridade: numero(valor.alertas_integridade),
-    ranking: lista(valor.ranking).map((item) => ({
-      usuarioId: texto(item.usuario_id),
-      nome: texto(item.nome) || "Aluno",
-      turma: texto(item.turma) || "Sem turma",
-      certas: numero(item.certas),
-      erradas: numero(item.erradas),
-      emBranco: numero(item.em_branco),
-      percentual: numero(item.percentual),
-      minutos: numero(item.minutos),
-      finalizadaEm: texto(item.finalizada_em),
-      alertas: numero(item.alertas),
-    })),
   };
 }
 
