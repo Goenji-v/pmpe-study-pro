@@ -330,7 +330,10 @@ export default function GerarSimuladoIA() {
   async function gerarBlocoAssunto(
     item: AssuntoSelecionavel,
     requestId?: string,
-    onEtapa?: (etapa: "gerando" | "revisando" | "corrigindo") => void
+    onEtapa?: (
+      etapa: "gerando" | "revisando" | "corrigindo" | "salvando"
+    ) => void,
+    retomarErro = false
   ): Promise<{
     questoes: QuestaoIA[];
     reutilizadas: number;
@@ -369,6 +372,7 @@ export default function GerarSimuladoIA() {
         ),
         requestId,
         onEtapa,
+        retomarErro,
       });
 
       novasQuestoes = resposta.questoes;
@@ -473,6 +477,8 @@ export default function GerarSimuladoIA() {
       return;
     }
 
+    const retomando = Boolean(operacaoExistente);
+
     const operacao: GeracaoPendente =
       operacaoExistente ?? {
         id: crypto.randomUUID(),
@@ -539,7 +545,8 @@ export default function GerarSimuladoIA() {
                 `${item.assunto} · ${dificuldade} · ${banca.trim()}`,
                 blocoAtual,
                 totalBlocos
-              )
+              ),
+            retomando
           );
           blocos.push(bloco.questoes);
           totalReutilizadas += bloco.reutilizadas;
@@ -566,6 +573,7 @@ export default function GerarSimuladoIA() {
               1,
               1
             ),
+          retomarErro: retomando,
         });
 
         let novasQuestoes = resposta.questoes;
