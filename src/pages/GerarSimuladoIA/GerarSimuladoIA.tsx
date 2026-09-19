@@ -128,7 +128,7 @@ export default function GerarSimuladoIA() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [questoesGeradas, setQuestoesGeradas] = useState<QuestaoIA[]>([]);
-  const [geracaoPendente, setGeracaoPendente] =
+  const [, setGeracaoPendente] =
     useState<GeracaoPendente | null>(null);
   const [resumoBanco, setResumoBanco] = useState({
     totalCompativeis: 0,
