@@ -13,6 +13,7 @@ export type FiltroDesempenho = {
 
 export type ClassificacaoDesempenho =
   | "forte"
+  | "amostra-pequena"
   | "atencao"
   | "fraco"
   | "urgente"
@@ -112,6 +113,7 @@ export function classificarDesempenho(
   totalQuestoes: number
 ): ClassificacaoDesempenho {
   if (totalQuestoes <= 0) return "sem-dados";
+  if (totalQuestoes < 5) return "amostra-pequena";
   if (aproveitamento >= 80) return "forte";
   if (aproveitamento >= 60) return "atencao";
   if (aproveitamento >= 40) return "fraco";
@@ -124,6 +126,8 @@ export function rotuloClassificacao(
   switch (classificacao) {
     case "forte":
       return "Forte";
+    case "amostra-pequena":
+      return "Amostra pequena";
     case "atencao":
       return "Atenção";
     case "fraco":
