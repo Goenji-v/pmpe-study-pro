@@ -43,6 +43,7 @@ import {
   consultarResumoCatalogoIA,
   salvarQuestoesGeradasNoCatalogo,
   selecionarDoCatalogoIA,
+  selecionarDoCatalogoParaSimuladoIA,
 } from "../../services/catalogoQuestoesIAService";
 
 import {
@@ -728,40 +729,81 @@ export default function GerarSimuladoIA() {
           consolidarBlocosMultiAssunto(blocos, quantidade)
         );
       } else {
-        const resposta = await gerarQuestoesIA({
-          origem: "semana",
-          semana: semanaSelecionada,
-          conteudosSemana,
-          banca: banca.trim(),
-          dificuldade,
-          quantidade,
-          requestId: `${operacao.id}:semana`,
-          onEtapa: (etapa) =>
-            atualizarAtividadeGeracao(
-              operacao,
-              etapa,
-              `Semana ${semanaSelecionada} · ${banca.trim()}`,
-              1,
-              1
-            ),
-          retomarErro: retomando,
-        });
+        atualizarAtividadeGeracao(
+          operacao,
+          "preparando",
+          "Consultando o banco para montar o simulado",
+          1,
+          1
+        );
 
-        let novasQuestoes = resposta.questoes;
+        const concursoAlvo =
+          configuracoes.concurso || "PMPE";
 
-        if (salvarNoBanco && novasQuestoes.length > 0) {
-          const concursoAlvo = configuracoes.concurso || "PMPE";
-          novasQuestoes = await salvarQuestoesGeradasNoCatalogo(
-            novasQuestoes,
-            {
-              concursoAlvo,
-              editalAlvo: concursoAlvo,
-            }
-          );
+        const selecaoBanco =
+          await selecionarDoCatalogoParaSimuladoIA({
+            conteudos: conteudosSemana,
+            banca: banca.trim(),
+            dificuldade,
+            quantidade,
+            preferencia: preferenciaReuso,
+            concursoAlvo,
+          });
+
+        totalReutilizadas =
+          selecaoBanco.reutilizadas.length;
+
+        let novasQuestoes: QuestaoIA[] = [];
+
+        if (selecaoBanco.quantidadeGerar > 0) {
+          const resposta = await gerarQuestoesIA({
+            origem: "semana",
+            semana: semanaSelecionada,
+            conteudosSemana,
+            banca: banca.trim(),
+            dificuldade,
+            quantidade: selecaoBanco.quantidadeGerar,
+            enunciadosEvitar:
+              selecaoBanco.reutilizadas.map(
+                (questao) => questao.enunciado
+              ),
+            requestId: `${operacao.id}:semana`,
+            onEtapa: (etapa) =>
+              atualizarAtividadeGeracao(
+                operacao,
+                etapa,
+                `Semana ${semanaSelecionada} · ${banca.trim()}`,
+                1,
+                1
+              ),
+            retomarErro: retomando,
+          });
+
+          novasQuestoes = resposta.questoes;
+
+          if (salvarNoBanco && novasQuestoes.length > 0) {
+            novasQuestoes =
+              await salvarQuestoesGeradasNoCatalogo(
+                novasQuestoes,
+                {
+                  concursoAlvo,
+                  editalAlvo: concursoAlvo,
+                }
+              );
+          }
         }
 
         totalNovas = novasQuestoes.length;
-        questoesFinais = embaralhar(novasQuestoes).slice(0, quantidade);
+        questoesFinais = embaralhar([
+          ...selecaoBanco.reutilizadas,
+          ...novasQuestoes,
+        ]).slice(0, quantidade);
+
+        if (questoesFinais.length !== quantidade) {
+          throw new Error(
+            `O simulado ficou com ${questoesFinais.length} questões, mas eram esperadas ${quantidade}. Tente novamente.`
+          );
+        }
       }
 
       atualizarAtividadeGeracao(
@@ -793,7 +835,7 @@ export default function GerarSimuladoIA() {
       setSucesso(
         origem === "assunto"
           ? `${questoesFinais.length} questões prontas em ${assuntosParaGerar.length} subassunto(s): ${totalReutilizadas} reutilizadas do banco e ${totalNovas} novas geradas por IA.${salvarNoBanco && totalNovas > 0 ? " As novas aguardam curadoria antes de entrarem no banco compartilhado." : ""}`
-          : `${questoesFinais.length} questões prontas para o simulado da semana.${salvarNoBanco && totalNovas > 0 ? " As novas aguardam curadoria antes de entrarem no banco compartilhado." : ""}`
+          : `${questoesFinais.length} questões prontas para o simulado da semana: ${totalReutilizadas} reutilizadas do banco e ${totalNovas} novas geradas por IA.${salvarNoBanco && totalNovas > 0 ? " As novas aguardam curadoria antes de entrarem no banco compartilhado." : ""}`
       );
 
       localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
@@ -888,7 +930,7 @@ export default function GerarSimuladoIA() {
             <>
               <strong>Simulado semanal</strong>
               <small>
-                Esse modo gera um lote novo com os conteúdos da semana.
+                O banco é usado primeiro; a IA completa apenas o que faltar.
               </small>
             </>
           ) : carregandoResumoBanco ? (
