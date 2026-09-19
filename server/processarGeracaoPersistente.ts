@@ -170,7 +170,7 @@ async function processarJobGeracaoIA(
         corrigindo ? 75 : 55,
         corrigindo
           ? "A primeira revisão foi rejeitada; a IA está corrigindo o lote."
-          : "Uma revisão independente está validando gabaritos e fontes."
+          : "Uma checagem automática adicional está revisando gabaritos, consistência e fontes."
       );
 
       const promptRevisao = motivoReprovacao
@@ -210,7 +210,7 @@ async function processarJobGeracaoIA(
             status: "concluida",
             etapa: "concluida",
             progresso: 100,
-            descricao: "Questões prontas.",
+            descricao: "Questões prontas após checagens automáticas. Se algo parecer inconsistente, sinalize para revisão.",
             resultado: {
               questoes: loteRevisado,
             },
