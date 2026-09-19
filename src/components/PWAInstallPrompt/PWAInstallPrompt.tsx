@@ -11,7 +11,8 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<ResultadoInstalacao>;
 };
 
-const CHAVE_DISPENSADO = "studio-pro:pwa-prompt-dispensado";
+const CHAVE_DISPENSADO = "study-pro:pwa-prompt-dispensado";
+const CHAVE_DISPENSADO_LEGADO = "studio-pro:pwa-prompt-dispensado";
 const SETE_DIAS = 7 * 24 * 60 * 60 * 1000;
 
 function estaEmModoAplicativo() {
@@ -23,11 +24,15 @@ function estaEmModoAplicativo() {
 }
 
 function foiDispensadoRecentemente() {
-  const valor = localStorage.getItem(CHAVE_DISPENSADO);
-  if (!valor) return false;
+  const valores = [
+    localStorage.getItem(CHAVE_DISPENSADO),
+    localStorage.getItem(CHAVE_DISPENSADO_LEGADO),
+  ].filter((valor): valor is string => Boolean(valor));
 
-  const quando = Number(valor);
-  return Number.isFinite(quando) && Date.now() - quando < SETE_DIAS;
+  return valores.some((valor) => {
+    const quando = Number(valor);
+    return Number.isFinite(quando) && Date.now() - quando < SETE_DIAS;
+  });
 }
 
 export default function PWAInstallPrompt() {
@@ -88,7 +93,7 @@ export default function PWAInstallPrompt() {
   if (!eventoInstalacao && !mostrarIOS) return null;
 
   return (
-    <aside className="pwa-install" role="dialog" aria-label="Instalar Studio Pro">
+    <aside className="pwa-install" role="dialog" aria-label="Instalar Study Pro">
       <button
         type="button"
         className="pwa-install-fechar"
@@ -106,11 +111,11 @@ export default function PWAInstallPrompt() {
       />
 
       <div className="pwa-install-conteudo">
-        <strong>Instalar Studio Pro</strong>
+        <strong>Instalar Study Pro</strong>
 
         {mostrarIOS ? (
           <>
-            <span>Use o Studio Pro como um aplicativo na tela inicial.</span>
+            <span>Use o Study Pro como um aplicativo na tela inicial.</span>
             {mostrarAjudaIOS && (
               <small>
                 No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.
