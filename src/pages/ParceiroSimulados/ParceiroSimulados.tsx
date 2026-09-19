@@ -215,7 +215,7 @@ export default function ParceiroSimulados() {
   return (
     <section className="parceiro-simulados">
       <header className="psim-hero">
-        <div><span>MENTORIA · SIMULADOS</span><h1>Simulados do Professor</h1><p>Crie provas por turma, defina janela de aplicação e acompanhe ranking, desempenho e eventos de integridade.</p></div>
+        <div><span>ÁREA DO PARCEIRO · SIMULADOS</span><h1>Simulados do curso</h1><p>Crie provas por turma, defina a janela de aplicação e acompanhe somente os resultados consolidados.</p></div>
         <div className="psim-acoes"><button type="button" className="secundario" onClick={() => navigate("/parceiro")}>Painel do parceiro</button><button type="button" onClick={() => setCriando((v) => !v)}>{criando ? "Fechar editor" : "+ Novo simulado"}</button></div>
       </header>
 
