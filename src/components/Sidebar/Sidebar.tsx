@@ -129,14 +129,6 @@ export default function Sidebar() {
     setGrupoAberto((atual) => (atual === id ? null : id));
   }
 
-  const podeVerParceiro =
-    PARCERIAS_VISIVEIS &&
-    (
-      contexto?.papel === "proprietario" ||
-      contexto?.papel === "gestor" ||
-      contexto?.papel === "professor"
-    );
-
   return (
     <>
       <button
@@ -237,20 +229,6 @@ export default function Sidebar() {
             onNavigate={() => setMenuMobileAberto(false)}
           />
 
-          {podeVerParceiro && (
-            <GrupoMenu
-              id="parceiro"
-              titulo="Área do Parceiro"
-              icone={UsersRound}
-              ativo={rotaPertenceAoGrupo(location.pathname, "parceiro")}
-              aberto={grupoAberto === "parceiro"}
-              onToggle={alternarGrupo}
-            >
-              <ItemMenu to="/parceiro" texto="Resumo das turmas" icone={UsersRound} final onNavigate={() => setMenuMobileAberto(false)} />
-              <ItemMenu to="/parceiro/cursos" texto="Meu curso" icone={GraduationCap} onNavigate={() => setMenuMobileAberto(false)} />
-              <ItemMenu to="/parceiro/simulados" texto="Simulados" icone={Target} onNavigate={() => setMenuMobileAberto(false)} />
-            </GrupoMenu>
-          )}
         </nav>
 
         <div className="sidebar-rodape-acoes">
