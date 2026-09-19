@@ -178,6 +178,7 @@ function LayoutProtegido() {
                         <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
                         <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
                         <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
+                        <Route path="/caderno-questoes" element={<MeusSimuladosIA />} />
                         <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
                         <Route path="/resolver-simulado-ia/revisao/:cadernoId" element={<RevisaoCadernoIA />} />
                         <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
