@@ -34,6 +34,10 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
 const { modelo: modeloEdital, modeloFallback: modeloFallbackEdital } = resolverModelosGemini(process.env);
 const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
+if (!serviceRoleKey || serviceRoleKey.length < 20) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada no backend.");
+}
+
 const origensPermitidas = new Set(
   [
     "https://pmpe-study-pro-two.vercel.app",
