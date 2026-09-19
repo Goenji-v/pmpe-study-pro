@@ -35,8 +35,11 @@ import {
 } from "../../utils/conteudosSemana";
 
 import {
+  ativarCadernoSimuladoIA,
   definirTipoSessaoQuestoesIAAtiva,
+  listarCadernosSimuladosIA,
   registrarQuestoesAtuaisComoCaderno,
+  type CadernoSimuladoIA,
 } from "../../services/cadernosSimuladosIAService";
 
 import {
@@ -102,6 +105,23 @@ type GeracaoPendente = {
   preferenciaReuso: PreferenciaReusoIA;
 };
 
+type AbaHistoricoIA =
+  | "todos"
+  | "gerando"
+  | "finalizados";
+
+type GrupoJobGeracaoIA = {
+  id: string;
+  jobs: JobGeracaoIAPublico[];
+  status: "gerando" | "finalizado" | "erro";
+  progresso: number;
+  titulo: string;
+  descricao: string;
+  quantidade: number;
+  criadaEm: string;
+  erro?: string;
+};
+
 const CHAVE_QUESTOES_IA = "pmpe_questoes_ia";
 const CHAVE_BANCO_IA = "pmpe_banco_questoes_ia";
 const CHAVE_GERACAO_PENDENTE = "pmpe:geracao-questoes-ia:pendente";
@@ -129,6 +149,12 @@ export default function GerarSimuladoIA() {
   const [questoesGeradas, setQuestoesGeradas] = useState<QuestaoIA[]>([]);
   const [geracaoPendente, setGeracaoPendente] =
     useState<GeracaoPendente | null>(null);
+  const [abaHistorico, setAbaHistorico] =
+    useState<AbaHistoricoIA>("todos");
+  const [jobsRecentes, setJobsRecentes] =
+    useState<JobGeracaoIAPublico[]>([]);
+  const [cadernosRecentes, setCadernosRecentes] =
+    useState<CadernoSimuladoIA[]>([]);
 
   useEffect(() => {
     const pendente = carregarGeracaoPendente();
@@ -175,6 +201,53 @@ export default function GerarSimuladoIA() {
     } finally {
       sessionStorage.removeItem("pmpe:gerar-ia:prefill");
     }
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+
+    const atualizarHistorico = async () => {
+      try {
+        const [jobs, cadernos] = await Promise.all([
+          listarJobsGeracaoIA(),
+          listarCadernosSimuladosIA(),
+        ]);
+
+        if (!ativo) return;
+        setJobsRecentes(jobs);
+        setCadernosRecentes(cadernos);
+      } catch (erroHistorico) {
+        console.error(
+          "Erro ao atualizar histórico de gerações IA:",
+          erroHistorico
+        );
+      }
+    };
+
+    void atualizarHistorico();
+
+    const timer = window.setInterval(
+      () => void atualizarHistorico(),
+      2_500
+    );
+
+    const aoAtualizar = () => {
+      void atualizarHistorico();
+    };
+
+    window.addEventListener(
+      "pmpe-questoes-ia-atualizadas",
+      aoAtualizar
+    );
+
+    return () => {
+      ativo = false;
+      window.clearInterval(timer);
+      window.removeEventListener(
+        "pmpe-questoes-ia-atualizadas",
+        aoAtualizar
+      );
+    };
   }, []);
 
   const semanas = useMemo(
@@ -667,7 +740,10 @@ export default function GerarSimuladoIA() {
 
       const tipoSessao = origem === "assunto" ? "questoes" : "simulado";
       definirTipoSessaoQuestoesIAAtiva(tipoSessao);
-      await registrarQuestoesAtuaisComoCaderno(tipoSessao);
+      await registrarQuestoesAtuaisComoCaderno(
+        tipoSessao,
+        operacao.id
+      );
 
       setQuestoesGeradas(questoesFinais);
 
@@ -743,6 +819,70 @@ export default function GerarSimuladoIA() {
     salvarAtividadeGeracaoIA(null);
   }
 
+  const gruposJobs = useMemo(
+    () => agruparJobsGeracaoIA(jobsRecentes),
+    [jobsRecentes]
+  );
+
+  const idsCadernosPorGeracao = useMemo(
+    () =>
+      new Set(
+        cadernosRecentes
+          .map((caderno) => caderno.geracaoId)
+          .filter((id): id is string => Boolean(id))
+      ),
+    [cadernosRecentes]
+  );
+
+  const gruposVisiveis = useMemo(
+    () =>
+      gruposJobs.filter((grupo) => {
+        if (
+          grupo.status === "finalizado" &&
+          idsCadernosPorGeracao.has(grupo.id)
+        ) {
+          return false;
+        }
+
+        if (abaHistorico === "gerando") {
+          return grupo.status !== "finalizado";
+        }
+
+        if (abaHistorico === "finalizados") {
+          return grupo.status === "finalizado";
+        }
+
+        return true;
+      }),
+    [abaHistorico, gruposJobs, idsCadernosPorGeracao]
+  );
+
+  const cadernosVisiveis = useMemo(
+    () =>
+      abaHistorico === "gerando"
+        ? []
+        : cadernosRecentes,
+    [abaHistorico, cadernosRecentes]
+  );
+
+  const totalEmGeracao = gruposJobs.filter(
+    (grupo) => grupo.status !== "finalizado"
+  ).length;
+
+  function abrirCaderno(caderno: CadernoSimuladoIA) {
+    ativarCadernoSimuladoIA(caderno);
+    navigate("/resolver-simulado-ia");
+  }
+
+  function irParaNovoPedido() {
+    document
+      .querySelector(".gerar-ia-card")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  }
+
   const todosSelecionados =
     opcoesAssuntos.length > 0 &&
     opcoesAssuntos.every((item) => assuntosSelecionados.includes(item.chave));
@@ -763,6 +903,215 @@ export default function GerarSimuladoIA() {
           <strong>{carregarBancoIA().length} questões</strong>
         </div>
       </div>
+
+      <section
+        className="gerar-ia-historico"
+        aria-label="Central de gerações e simulados"
+      >
+        <div className="gerar-ia-historico-topo">
+          <div>
+            <span>Central de gerações</span>
+            <h2>Questões e simulados</h2>
+            <p>
+              A IA continua trabalhando no servidor mesmo se você sair desta tela.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="gerar-ia-novo"
+            onClick={irParaNovoPedido}
+          >
+            ＋ Nova geração
+          </button>
+        </div>
+
+        <div
+          className="gerar-ia-historico-abas"
+          role="tablist"
+          aria-label="Filtrar gerações"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaHistorico === "todos"}
+            className={abaHistorico === "todos" ? "ativo" : ""}
+            onClick={() => setAbaHistorico("todos")}
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaHistorico === "gerando"}
+            className={abaHistorico === "gerando" ? "ativo" : ""}
+            onClick={() => setAbaHistorico("gerando")}
+          >
+            Em geração
+            {totalEmGeracao > 0 && <strong>{totalEmGeracao}</strong>}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaHistorico === "finalizados"}
+            className={abaHistorico === "finalizados" ? "ativo" : ""}
+            onClick={() => setAbaHistorico("finalizados")}
+          >
+            Finalizados
+          </button>
+        </div>
+
+        <div className="gerar-ia-historico-lista">
+          {gruposVisiveis.map((grupo) => {
+            const finalizado = grupo.status === "finalizado";
+            const comErro = grupo.status === "erro";
+            const podeFinalizar =
+              finalizado &&
+              geracaoPendente?.id === grupo.id;
+
+            return (
+              <article
+                key={grupo.id}
+                className={
+                  comErro
+                    ? "gerar-ia-historico-item erro"
+                    : finalizado
+                      ? "gerar-ia-historico-item finalizado"
+                      : "gerar-ia-historico-item gerando"
+                }
+              >
+                <div className="gerar-ia-historico-item-cabecalho">
+                  <span
+                    className="gerar-ia-historico-icone"
+                    aria-hidden="true"
+                  >
+                    {comErro ? "!" : finalizado ? "✓" : "✦"}
+                  </span>
+
+                  <div className="gerar-ia-historico-item-titulo">
+                    <div>
+                      <strong>{grupo.titulo}</strong>
+                      <span>
+                        {comErro
+                          ? "Precisa de atenção"
+                          : finalizado
+                            ? "IA finalizada"
+                            : obterRotuloGrupoJob(grupo)}
+                      </span>
+                    </div>
+                    <p>
+                      {grupo.quantidade} questão
+                      {grupo.quantidade === 1 ? "" : "ões"} ·{" "}
+                      {grupo.descricao}
+                    </p>
+                  </div>
+                </div>
+
+                {!finalizado && !comErro && (
+                  <div className="gerar-ia-historico-progresso">
+                    <div>
+                      <span>{obterTextoGrupoJob(grupo)}</span>
+                      <strong>{grupo.progresso}%</strong>
+                    </div>
+                    <div
+                      className="gerar-ia-historico-barra"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={grupo.progresso}
+                    >
+                      <span
+                        style={{
+                          width: `${grupo.progresso}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {comErro && grupo.erro && (
+                  <p className="gerar-ia-historico-erro">
+                    {grupo.erro}
+                  </p>
+                )}
+
+                <div className="gerar-ia-historico-acoes">
+                  {(comErro || podeFinalizar) && geracaoPendente && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void gerarSimulado(geracaoPendente)
+                      }
+                    >
+                      {comErro
+                        ? "Retomar geração"
+                        : "Finalizar caderno"}
+                    </button>
+                  )}
+                  {finalizado && !podeFinalizar && (
+                    <span>
+                      Processamento concluído no servidor
+                    </span>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+
+          {cadernosVisiveis.map((caderno) => (
+            <article
+              key={caderno.id}
+              className="gerar-ia-historico-item finalizado"
+            >
+              <div className="gerar-ia-historico-item-cabecalho">
+                <span
+                  className="gerar-ia-historico-icone"
+                  aria-hidden="true"
+                >
+                  ✓
+                </span>
+                <div className="gerar-ia-historico-item-titulo">
+                  <div>
+                    <strong>{caderno.nome}</strong>
+                    <span>Finalizado</span>
+                  </div>
+                  <p>
+                    {caderno.questoes.length} questão
+                    {caderno.questoes.length === 1 ? "" : "ões"} ·{" "}
+                    {caderno.banca} · {caderno.dificuldade}
+                  </p>
+                </div>
+              </div>
+
+              <div className="gerar-ia-historico-acoes">
+                <button
+                  type="button"
+                  onClick={() => abrirCaderno(caderno)}
+                >
+                  Resolver simulado
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {gruposVisiveis.length === 0 &&
+            cadernosVisiveis.length === 0 && (
+              <div className="gerar-ia-historico-vazio">
+                <span>⌁</span>
+                <strong>
+                  {abaHistorico === "gerando"
+                    ? "Nenhuma geração em andamento"
+                    : abaHistorico === "finalizados"
+                      ? "Nenhum simulado finalizado ainda"
+                      : "Nenhuma geração registrada ainda"}
+                </strong>
+                <p>
+                  Faça uma nova geração e acompanhe o processamento por aqui.
+                </p>
+              </div>
+            )}
+        </div>
+      </section>
 
       {erro && (
         <div className="gerar-ia-mensagem gerar-ia-erro" role="alert">
@@ -1161,6 +1510,163 @@ export default function GerarSimuladoIA() {
       )}
     </section>
   );
+}
+
+function agruparJobsGeracaoIA(
+  jobs: JobGeracaoIAPublico[]
+): GrupoJobGeracaoIA[] {
+  const porGeracao = new Map<string, JobGeracaoIAPublico[]>();
+
+  jobs.forEach((job) => {
+    const raiz = obterRaizRequestId(job.requestId);
+    const lista = porGeracao.get(raiz) ?? [];
+    lista.push(job);
+    porGeracao.set(raiz, lista);
+  });
+
+  return Array.from(porGeracao.entries())
+    .map(([id, itens]) => {
+      const ordenados = [...itens].sort(
+        (a, b) =>
+          new Date(a.criadaEm || 0).getTime() -
+          new Date(b.criadaEm || 0).getTime()
+      );
+      const erro = ordenados.find(
+        (job) => job.status === "erro"
+      );
+      const finalizado =
+        !erro &&
+        ordenados.length > 0 &&
+        ordenados.every(
+          (job) => job.status === "concluida"
+        );
+      const progresso = Math.round(
+        ordenados.reduce(
+          (total, job) =>
+            total +
+            (job.status === "concluida"
+              ? 100
+              : Math.max(
+                  0,
+                  Math.min(100, job.progresso || 0)
+                )),
+          0
+        ) / Math.max(1, ordenados.length)
+      );
+      const descricoes = Array.from(
+        new Set(
+          ordenados
+            .map((job) => job.descricao)
+            .filter(Boolean)
+        )
+      );
+      const quantidade = ordenados.reduce(
+        (total, job) =>
+          total +
+          Math.max(
+            0,
+            Number(job.quantidade) ||
+              job.resultado?.questoes?.length ||
+              0
+          ),
+        0
+      );
+      const primeiro = ordenados[0];
+
+      return {
+        id,
+        jobs: ordenados,
+        status: erro
+          ? "erro"
+          : finalizado
+            ? "finalizado"
+            : "gerando",
+        progresso,
+        titulo:
+          primeiro?.titulo ||
+          "Geração de questões",
+        descricao:
+          descricoes.slice(0, 2).join(" · ") ||
+          "Processamento da IA",
+        quantidade,
+        criadaEm:
+          primeiro?.criadaEm ||
+          new Date().toISOString(),
+        erro: erro?.erro || undefined,
+      } satisfies GrupoJobGeracaoIA;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.criadaEm).getTime() -
+        new Date(a.criadaEm).getTime()
+    );
+}
+
+function obterRaizRequestId(
+  requestId: string
+) {
+  return requestId
+    .replace(/:assunto:\d+$/, "")
+    .replace(/:semana$/, "");
+}
+
+function obterRotuloGrupoJob(
+  grupo: GrupoJobGeracaoIA
+) {
+  const atual =
+    grupo.jobs.find(
+      (job) =>
+        job.status === "fila" ||
+        job.status === "processando"
+    ) ?? grupo.jobs[grupo.jobs.length - 1];
+
+  switch (atual?.etapa) {
+    case "fila":
+      return "Na fila";
+    case "gerando":
+      return "Gerando";
+    case "revisando":
+      return "Revisando";
+    case "corrigindo":
+      return "Corrigindo";
+    case "salvando":
+      return "Salvando";
+    default:
+      return "Em geração";
+  }
+}
+
+function obterTextoGrupoJob(
+  grupo: GrupoJobGeracaoIA
+) {
+  const indice = grupo.jobs.findIndex(
+    (job) =>
+      job.status === "fila" ||
+      job.status === "processando"
+  );
+  const atual =
+    indice >= 0
+      ? grupo.jobs[indice]
+      : grupo.jobs[grupo.jobs.length - 1];
+  const bloco =
+    grupo.jobs.length > 1
+      ? ` · bloco ${Math.max(1, indice + 1)}/${grupo.jobs.length}`
+      : "";
+
+  switch (atual?.etapa) {
+    case "fila":
+      return `Aguardando no servidor${bloco}`;
+    case "gerando":
+      return `A IA está gerando as questões${bloco}`;
+    case "revisando":
+      return `Revisão independente de qualidade${bloco}`;
+    case "corrigindo":
+      return `Corrigindo uma revisão rejeitada${bloco}`;
+    case "salvando":
+      return `Finalizando o lote${bloco}`;
+    default:
+      return `Processando${bloco}`;
+  }
 }
 
 function carregarGeracaoPendente(): GeracaoPendente | null {
