@@ -12,6 +12,7 @@ import {
   criarPrimeiraRevisao,
   concluirRevisaoNaLista,
   formatarDataRevisao,
+  encontrarDataDisponivelParaRevisao,
   statusDaRevisao,
   redistribuirRevisoesPendentes,
   reagendarRevisao,
@@ -261,10 +262,33 @@ export default function Revisoes() {
   }
 
   function reagendar(revisao: Revisao, dias: number) {
+    const proposta = reagendarRevisao(revisao, dias);
+    const dataIdeal = new Date(proposta.dataPrevista);
+    const dataDisponivel = encontrarDataDisponivelParaRevisao({
+      dataBase: dataIdeal,
+      revisoes: revisoes.filter((item) => item.id !== revisao.id),
+      limiteDiario: configuracoes.metaRevisoesDiaria,
+    });
+    const dataFinal = dataDisponivel.toISOString();
+    const foiAdiadaPeloLimite =
+      dataCalendario(dataFinal) !== dataCalendario(proposta.dataPrevista);
+
     setRevisoes((anteriores) =>
-      anteriores.map((item) => (item.id === revisao.id ? reagendarRevisao(item, dias) : item))
+      anteriores.map((item) =>
+        item.id === revisao.id
+          ? { ...proposta, dataPrevista: dataFinal }
+          : item
+      )
     );
-    showToast(`Revisão reagendada para daqui a ${dias} dia(s).`, "success");
+
+    showToast(
+      `Revisão reagendada para ${formatarDataRevisao(dataFinal)}.${
+        foiAdiadaPeloLimite
+          ? ` O dia escolhido já atingiu o limite de ${configuracoes.metaRevisoesDiaria} ${configuracoes.metaRevisoesDiaria === 1 ? "revisão" : "revisões"}; a atividade foi movida para a próxima data disponível.`
+          : ""
+      }`,
+      "success"
+    );
   }
 
   function excluirRevisao(revisaoExcluida: Revisao) {
@@ -330,7 +354,13 @@ export default function Revisoes() {
 
       <div className="revisoes-toolbar">
         <span>
-          Limite atual: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia
+          Limite atual:{" "}
+          <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong>
+          {configuracoes.metaRevisoesDiaria > 0
+            ? configuracoes.metaRevisoesDiaria === 1
+              ? " revisão/dia"
+              : " revisões/dia"
+            : ""}
         </span>
         <button type="button" onClick={reorganizarAgenda} title="Redistribui atrasos e excesso diário sem antecipar revisões futuras nem alterar conclusões.">Reorganizar agenda</button>
       </div>
@@ -380,7 +410,7 @@ export default function Revisoes() {
                     </small>
                   )}
                   {typeof revisao.certas === "number" && typeof revisao.erradas === "number" && (
-                    <small>{revisao.certas} acerto(s) · {revisao.erradas} erro(s)</small>
+                    <small>{revisao.certas} {revisao.certas === 1 ? "acerto" : "acertos"} · {revisao.erradas} {revisao.erradas === 1 ? "erro" : "erros"}</small>
                   )}
                 </div>
               </div>
@@ -453,10 +483,10 @@ function GrupoRevisoes({
                 <span>Etapa {revisao.etapa} • {formatarDataRevisao(revisao.dataPrevista)}</span>
                 <small>
                   {diferenca < 0
-                    ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
+                    ? `Atrasada há ${Math.abs(diferenca)} ${Math.abs(diferenca) === 1 ? "dia" : "dias"}`
                     : diferenca === 0
                       ? "Vence hoje"
-                      : `Daqui a ${diferenca} dia(s)`}
+                      : `Daqui a ${diferenca} ${diferenca === 1 ? "dia" : "dias"}`}
                 </small>
               </div>
 
