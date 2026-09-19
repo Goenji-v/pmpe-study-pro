@@ -1,20 +1,14 @@
--- Endurece os jobs persistentes de IA e cria uma cota persistente por usuário.
--- Esta migração deve ser aplicada somente depois de SUPABASE_SERVICE_ROLE_KEY
--- estar configurada no backend (Render). O frontend continua apenas com leitura
--- dos próprios jobs via RLS.
+-- Fase 1: prepara a cota persistente e a escrita privilegiada do backend.
+-- Esta fase é intencionalmente não destrutiva para o cliente atual.
+-- Ordem de rollout:
+-- 1) configurar SUPABASE_SERVICE_ROLE_KEY no Render;
+-- 2) aplicar esta migração;
+-- 3) publicar o backend novo;
+-- 4) somente depois aplicar 20260919193000_finalize_ai_generation_job_security.sql.
 
--- Clientes autenticados podem consultar os próprios jobs, mas não criar,
--- alterar, apagar ou truncar registros de execução.
-drop policy if exists geracoes_ia_jobs_insert_own on public.geracoes_ia_jobs;
-drop policy if exists geracoes_ia_jobs_update_own on public.geracoes_ia_jobs;
-drop policy if exists geracoes_ia_jobs_delete_own on public.geracoes_ia_jobs;
-
-revoke all on table public.geracoes_ia_jobs from anon, authenticated, public;
-grant select on table public.geracoes_ia_jobs to authenticated;
-grant select, insert, update, delete on table public.geracoes_ia_jobs to service_role;
-
--- Mantém a política de leitura por proprietário criada na migração original.
--- A service_role é usada exclusivamente pelo backend validado.
+grant select, insert, update, delete
+  on table public.geracoes_ia_jobs
+  to service_role;
 
 create table if not exists public.ia_consumo_janelas (
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -30,7 +24,9 @@ create table if not exists public.ia_consumo_janelas (
 alter table public.ia_consumo_janelas enable row level security;
 
 revoke all on table public.ia_consumo_janelas from anon, authenticated, public;
-grant select, insert, update, delete on table public.ia_consumo_janelas to service_role;
+grant select, insert, update, delete
+  on table public.ia_consumo_janelas
+  to service_role;
 
 create index if not exists ia_consumo_janelas_limpeza_idx
   on public.ia_consumo_janelas (janela_inicio);
@@ -98,7 +94,6 @@ begin
         atualizada_em = excluded.atualizada_em
   returning quantidade into v_usados;
 
-  -- Limpeza oportunista, restrita ao próprio usuário.
   delete from public.ia_consumo_janelas
    where user_id = p_user_id
      and janela_inicio < v_agora - interval '2 days';
