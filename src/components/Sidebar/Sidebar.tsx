@@ -157,8 +157,10 @@ export default function Sidebar() {
   }, [menuMobileAberto]);
 
   useEffect(() => {
-    const areaAtual = menuScrollRef.current;
-    if (!areaAtual) return;
+    const areaEncontrada = menuScrollRef.current;
+    if (!areaEncontrada) return;
+
+    const areaAtual: HTMLDivElement = areaEncontrada;
 
     function atualizarControles() {
       const limiteInferior =
