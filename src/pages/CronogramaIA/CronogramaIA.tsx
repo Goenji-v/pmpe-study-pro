@@ -636,6 +636,16 @@ export default function CronogramaIA() {
                 "Gere o plano para transformar seu diagnóstico em uma missão objetiva."}
             </p>
 
+            {tarefaAtual &&
+              prioridadeAtiva &&
+              normalizarTextoCronograma(tarefaAtual.materia) !==
+                normalizarTextoCronograma(prioridadeAtiva) && (
+                <p className="tatico-ajuda-inline">
+                  A prioridade continua sendo {prioridadeAtiva}. Esta missão aparece agora para
+                  respeitar revisões, continuidade do ciclo e a distribuição do tempo do plano.
+                </p>
+              )}
+
             {tarefaAtual && (
               <div className="tatico-missao-meta">
                 <span>{tarefaAtual.duracaoMinutos} min</span>
