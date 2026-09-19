@@ -852,8 +852,8 @@ const [
 
           <p>
             Uma sessão, um único tempo.
-            Teoria, questões e revisão ficam
-            vinculadas ao conteúdo correto.
+            Aula, revisão e redação ficam
+            organizadas no conteúdo correto.
           </p>
         </div>
 
@@ -910,27 +910,13 @@ const [
             <BotaoTipo
               ativo={
                 estado.tipo ===
-                "questoes"
+                "redacao"
               }
-              icone="📝"
-              texto="Questões"
+              icone="✍️"
+              texto="Redação"
               onClick={() =>
                 alterarTipo(
-                  "questoes"
-                )
-              }
-            />
-
-            <BotaoTipo
-              ativo={
-                estado.tipo ===
-                "simulado"
-              }
-              icone="🎯"
-              texto="Simulado"
-              onClick={() =>
-                alterarTipo(
-                  "simulado"
+                  "redacao"
                 )
               }
             />
