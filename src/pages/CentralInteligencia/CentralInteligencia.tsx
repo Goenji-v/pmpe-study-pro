@@ -108,7 +108,7 @@ export default function CentralInteligencia() {
         <ResumoCard
           titulo="Revisões hoje"
           valor={String(dados.hoje.revisoesConcluidas)}
-          detalhe={`${dados.revisoesHoje.length} pendentes para hoje`}
+          detalhe={`${dados.revisoesHoje.length} ${dados.revisoesHoje.length === 1 ? "pendente" : "pendentes"} para hoje`}
         />
         <ResumoCard
           titulo="Dias ativos"
@@ -248,7 +248,7 @@ export default function CentralInteligencia() {
         />
         <PainelAssuntos
           titulo="✅ Assuntos dominados"
-          descricao="Conteúdos com desempenho consistente."
+          descricao="Critério: pelo menos 5 questões válidas e 80% de aproveitamento. A amostra aparece em cada item."
           vazio="Resolva mais questões para identificar conteúdos dominados."
           itens={dados.assuntosDominados}
           classe="assunto-dominado"
@@ -334,7 +334,7 @@ function PainelAssuntos({
   titulo: string;
   descricao: string;
   vazio: string;
-  itens: Array<{ chave: string; materia: string; assunto: string; percentual: number }>;
+  itens: Array<{ chave: string; materia: string; assunto: string; percentual: number; total: number }>;
   classe: string;
 }) {
   return (
@@ -349,7 +349,7 @@ function PainelAssuntos({
           {itens.map((assunto) => (
             <article key={assunto.chave} className={`inteligencia-assunto-card ${classe}`}>
               <div><span>{assunto.materia}</span><strong>{assunto.assunto}</strong></div>
-              <b>{assunto.percentual}%</b>
+              <b>{assunto.percentual}% <small>({assunto.total} {assunto.total === 1 ? "questão" : "questões"})</small></b>
             </article>
           ))}
         </div>
