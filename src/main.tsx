@@ -16,6 +16,10 @@ import "./styles/responsive-critical-fixes.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./components/Sidebar/SidebarPremiumVisual.css";
 
+declare const __APP_VERSION__: string;
+
+document.documentElement.dataset.appVersion = __APP_VERSION__;
+
 const CHAVE_RECUPERACAO_ASSET = "study-pro:asset-reload";
 
 function mensagemDoErro(valor: unknown) {
