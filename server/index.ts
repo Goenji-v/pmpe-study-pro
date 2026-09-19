@@ -191,15 +191,25 @@ app.post(
           throw new Error("O Gemini não retornou texto.");
         }
 
-        const texto = limparJson(resposta.text);
         try {
-          const questoes = JSON.parse(texto);
+          const questoes = parsearJsonDaIA(
+            resposta.text,
+            etapa === "revisão"
+              ? "a revisão de qualidade das questões"
+              : "a geração das questões"
+          );
+
           if (!Array.isArray(questoes)) {
             throw new Error("A resposta não é uma lista de questões.");
           }
+
           return questoes as unknown[];
         } catch (erroJson) {
-          console.error("JSON inválido retornado pela IA:", texto);
+          console.error(
+            "JSON inválido retornado pela IA:",
+            erroJson instanceof Error ? erroJson.message : String(erroJson)
+          );
+
           throw erroJson instanceof Error
             ? erroJson
             : new Error("A IA retornou um JSON inválido.");

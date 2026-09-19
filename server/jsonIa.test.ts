@@ -19,6 +19,16 @@ test("remove cercas de markdown", () => {
   );
 });
 
+test("tolera vírgula final em objeto e lista sem alterar texto", () => {
+  assert.deepEqual(
+    parsearJsonDaIA(
+      '[{"texto":"mantenha, dentro da string", "auditoria":{"ok":true,},},]',
+      "teste"
+    ),
+    [{ texto: "mantenha, dentro da string", auditoria: { ok: true } }]
+  );
+});
+
 test("extrai o primeiro JSON completo quando a IA acrescenta explicação", () => {
   const resposta = 'Segue o resultado:\n{"texto":"chaves { dentro da string }","itens":[1,2]}\nFim.';
 
