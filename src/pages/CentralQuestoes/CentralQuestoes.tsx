@@ -167,9 +167,9 @@ export default function CentralQuestoes() {
           <button
             type="button"
             className="secundario"
-            onClick={() => navigate("/resolver-simulado-ia")}
+            onClick={() => navigate("/caderno-questoes")}
           >
-            Meus cadernos IA
+            Caderno de Questões
           </button>
         </div>
       </header>

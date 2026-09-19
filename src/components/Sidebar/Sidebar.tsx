@@ -86,6 +86,7 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/banco-questoes",
     "/simulados",
     "/resolver-simulado-ia",
+    "/caderno-questoes",
     "/gerar-simulado-ia",
     "/estatisticas-simulado-ia",
     "/desempenho",
