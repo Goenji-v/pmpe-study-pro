@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type ComponentType,
   type ReactNode,
@@ -14,7 +15,9 @@ import {
 import {
   BookOpen,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   ClipboardCheck,
   FileText,
   FolderOpen,
@@ -118,6 +121,9 @@ export default function Sidebar() {
   const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
     obterGrupoDaRota(location.pathname)
   );
+  const menuScrollRef = useRef<HTMLDivElement | null>(null);
+  const [podeSubir, setPodeSubir] = useState(false);
+  const [podeDescer, setPodeDescer] = useState(false);
 
   const temAreaParceiro =
     PARCERIAS_VISIVEIS &&
@@ -149,6 +155,62 @@ export default function Sidebar() {
       document.body.classList.remove("menu-mobile-aberto");
     };
   }, [menuMobileAberto]);
+
+  useEffect(() => {
+    const areaEncontrada = menuScrollRef.current;
+    if (!areaEncontrada) return;
+
+    const areaAtual: HTMLDivElement = areaEncontrada;
+
+    function atualizarControles() {
+      const limiteInferior =
+        areaAtual.scrollHeight - areaAtual.clientHeight - 3;
+
+      setPodeSubir(areaAtual.scrollTop > 3);
+      setPodeDescer(
+        limiteInferior > 0 &&
+        areaAtual.scrollTop < limiteInferior
+      );
+    }
+
+    atualizarControles();
+    areaAtual.addEventListener("scroll", atualizarControles, {
+      passive: true,
+    });
+
+    const observador = new ResizeObserver(atualizarControles);
+    observador.observe(areaAtual);
+
+    const quadro = window.requestAnimationFrame(atualizarControles);
+
+    return () => {
+      window.cancelAnimationFrame(quadro);
+      observador.disconnect();
+      areaAtual.removeEventListener("scroll", atualizarControles);
+    };
+  }, [
+    grupoAberto,
+    menuMobileAberto,
+    contexto?.papel,
+  ]);
+
+  function rolarMenu(direcao: "subir" | "descer") {
+    const area = menuScrollRef.current;
+    if (!area) return;
+
+    const deslocamento = Math.max(
+      150,
+      Math.round(area.clientHeight * 0.56)
+    );
+
+    area.scrollBy({
+      top: direcao === "subir"
+        ? -deslocamento
+        : deslocamento,
+      behavior: "smooth",
+    });
+  }
+
 
   function alternarGrupo(id: GrupoId) {
     setGrupoAberto((atual) => (atual === id ? null : id));
@@ -184,11 +246,27 @@ export default function Sidebar() {
           <img
             className="sidebar-logo-imagem sidebar-logo-completa"
             src="/assets/studio-pro-logo.svg"
-            alt="Studio Pro"
+            alt="STUDY PRO"
           />
         </div>
 
-        <nav className="sidebar-menu" aria-label="Navegação principal">
+        <div className="sidebar-navegacao">
+          <button
+            type="button"
+            className="sidebar-scroll-controle sidebar-scroll-controle-topo"
+            aria-label="Subir no menu"
+            title="Subir no menu"
+            disabled={!podeSubir}
+            onClick={() => rolarMenu("subir")}
+          >
+            <ChevronUp size={16} strokeWidth={2} />
+          </button>
+
+          <div
+            ref={menuScrollRef}
+            className="sidebar-menu-scroll"
+          >
+            <nav className="sidebar-menu" aria-label="Navegação principal">
           <div className="sidebar-inicio">
             <span className="sidebar-secao-label">VISÃO GERAL</span>
             <ItemMenu
@@ -275,7 +353,20 @@ export default function Sidebar() {
               onNavigate={fecharMenuMobile}
             />
           )}
-        </nav>
+            </nav>
+          </div>
+
+          <button
+            type="button"
+            className="sidebar-scroll-controle sidebar-scroll-controle-base"
+            aria-label="Descer no menu"
+            title="Descer no menu"
+            disabled={!podeDescer}
+            onClick={() => rolarMenu("descer")}
+          >
+            <ChevronDown size={16} strokeWidth={2} />
+          </button>
+        </div>
 
         <div className="sidebar-rodape">
           <span>Foco atual</span>
