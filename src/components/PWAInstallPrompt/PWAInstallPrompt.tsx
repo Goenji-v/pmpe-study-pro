@@ -88,7 +88,7 @@ export default function PWAInstallPrompt() {
   if (!eventoInstalacao && !mostrarIOS) return null;
 
   return (
-    <aside className="pwa-install" role="dialog" aria-label="Instalar Studio Pro">
+    <aside className="pwa-install" role="dialog" aria-label="Instalar Study Pro">
       <button
         type="button"
         className="pwa-install-fechar"
@@ -106,11 +106,11 @@ export default function PWAInstallPrompt() {
       />
 
       <div className="pwa-install-conteudo">
-        <strong>Instalar Studio Pro</strong>
+        <strong>Instalar Study Pro</strong>
 
         {mostrarIOS ? (
           <>
-            <span>Use o Studio Pro como um aplicativo na tela inicial.</span>
+            <span>Use o Study Pro como um aplicativo na tela inicial.</span>
             {mostrarAjudaIOS && (
               <small>
                 No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.
