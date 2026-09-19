@@ -134,7 +134,7 @@ app.get(
       const contexto = obterContextoSupabaseJob(req);
       const prefixo = String(req.query.prefixo || "").trim();
 
-      if (!idGeracaoValido(prefixo)) {
+      if (prefixo && !idGeracaoValido(prefixo)) {
         res.status(400).json({
           sucesso: false,
           erro: "Prefixo de geração inválido.",
@@ -526,6 +526,8 @@ function serializarJobGeracaoIA(
     titulo: job.titulo,
     descricao: job.descricao,
     erro: job.erro,
+    quantidade:
+      Math.max(0, Number(job.payload?.quantidade) || 0),
     resultado:
       job.status === "concluida"
         ? job.resultado
