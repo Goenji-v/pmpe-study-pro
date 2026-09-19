@@ -72,7 +72,7 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
     void navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
       .catch((erro) => {
-        console.warn("Não foi possível registrar o modo aplicativo do Studio Pro.", erro);
+        console.warn("Não foi possível registrar o modo aplicativo do Study Pro.", erro);
       });
   });
 }
