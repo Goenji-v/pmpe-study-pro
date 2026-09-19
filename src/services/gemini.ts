@@ -59,6 +59,8 @@ type SolicitacaoLoteIA = {
 };
 
 const API_URL = criarUrlApi("/api/gerar");
+const API_STATUS_URL = criarUrlApi("/api/gerar/status");
+const MAX_TENTATIVAS_REVISAO = 2;
 const LETRAS = ["A", "B", "C", "D", "E"] as const;
 
 export async function gerarQuestoesIA(
@@ -83,38 +85,91 @@ export async function gerarQuestoesIA(
     );
   }
 
-  const promptRevisao = montarPromptRevisaoQuestoesIA({
+  const promptRevisaoBase = montarPromptRevisaoQuestoesIA({
     contextoOriginal: assuntoCompleto,
     banca: parametros.banca,
     questoes: loteInicial,
   });
 
-  const loteRevisado = validarLoteRevisado(
-    await solicitarLoteIA({
+  let motivoReprovacao = "";
+
+  for (
+    let tentativa = 1;
+    tentativa <= MAX_TENTATIVAS_REVISAO;
+    tentativa += 1
+  ) {
+    const requestIdRevisao = parametros.requestId
+      ? tentativa === 1
+        ? `${parametros.requestId}:revisao`
+        : `${parametros.requestId}:revisao:correcao-${tentativa}`
+      : undefined;
+
+    const promptRevisao = motivoReprovacao
+      ? [
+          promptRevisaoBase,
+          "",
+          "A revisão anterior foi rejeitada pelo validador local.",
+          `Motivo objetivo da rejeição: ${motivoReprovacao}`,
+          "Corrija especificamente essa falha, revise novamente TODAS as questões e devolva o lote completo em JSON válido.",
+        ].join("\n")
+      : promptRevisaoBase;
+
+    const respostaRevisao = await solicitarLoteIA({
       assunto: promptRevisao,
       quantidade: parametros.quantidade,
       banca: parametros.banca,
       etapa: "revisão",
-      requestId: parametros.requestId
-        ? `${parametros.requestId}:revisao`
-        : undefined,
-    }),
-    parametros.quantidade,
-    assuntoCompleto
-  );
+      requestId: requestIdRevisao,
+    });
 
-  const questoes = normalizarQuestoes(loteRevisado, parametros);
+    try {
+      const loteRevisado = validarLoteRevisado(
+        respostaRevisao,
+        parametros.quantidade,
+        assuntoCompleto
+      );
 
-  if (questoes.length !== parametros.quantidade) {
-    throw new Error(
-      `A revisão de qualidade deixou ${questoes.length} questão(ões) válidas, mas eram esperadas ${parametros.quantidade}. O lote não foi liberado.`
-    );
+      const questoes = normalizarQuestoes(loteRevisado, parametros);
+
+      if (questoes.length !== parametros.quantidade) {
+        throw new Error(
+          `A revisão de qualidade deixou ${questoes.length} questão(ões) válidas, mas eram esperadas ${parametros.quantidade}. O lote não foi liberado.`
+        );
+      }
+
+      return {
+        sucesso: true,
+        questoes,
+      };
+    } catch (erroValidacao) {
+      motivoReprovacao =
+        erroValidacao instanceof Error
+          ? erroValidacao.message.slice(0, 500)
+          : "A revisão não passou na validação editorial.";
+
+      await invalidarResultadoRevisao(requestIdRevisao);
+
+      if (tentativa >= MAX_TENTATIVAS_REVISAO) {
+        throw erroValidacao;
+      }
+    }
   }
 
-  return {
-    sucesso: true,
-    questoes,
-  };
+  throw new Error("A revisão de qualidade não pôde ser concluída.");
+}
+
+async function invalidarResultadoRevisao(requestId?: string) {
+  if (!requestId) return;
+
+  try {
+    await fetchApiAutenticada(
+      `${API_STATUS_URL}/${encodeURIComponent(requestId)}`,
+      { method: "DELETE" }
+    );
+  } catch {
+    // A invalidação é best-effort. A próxima tentativa usa outro identificador
+    // e não fica bloqueada pelo resultado editorial rejeitado.
+  }
 }
 
 async function solicitarLoteIA({

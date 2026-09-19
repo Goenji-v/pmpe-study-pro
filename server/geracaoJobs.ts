@@ -47,6 +47,11 @@ export async function executarGeracaoIdempotente<T>(
   return promessa;
 }
 
+export function descartarEstadoGeracao(chave: string) {
+  limparExpiradas();
+  return geracoes.delete(chave);
+}
+
 export function obterEstadoGeracao<T>(chave: string) {
   limparExpiradas();
   const estado = geracoes.get(chave) as EstadoGeracao<T> | undefined;
