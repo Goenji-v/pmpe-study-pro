@@ -46,6 +46,12 @@ type EstadoNavegacaoCentral = {
   prefillSessao?: DadosIniciarSessao;
 };
 
+const TIPOS_ATIVIDADE_CENTRAL = [
+  { tipo: "aula", icone: "🎥", texto: "Aula" },
+  { tipo: "revisao", icone: "🔁", texto: "Revisão" },
+  { tipo: "redacao", icone: "✍️", texto: "Redação" },
+] as const;
+
 export default function CentralEstudos() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -881,45 +887,15 @@ const [
           </h2>
 
           <div className="central-estudos-tipos">
-            <BotaoTipo
-              ativo={
-                estado.tipo ===
-                "aula"
-              }
-              icone="🎥"
-              texto="Aula"
-              onClick={() =>
-                alterarTipo("aula")
-              }
-            />
-
-            <BotaoTipo
-              ativo={
-                estado.tipo ===
-                "revisao"
-              }
-              icone="🔁"
-              texto="Revisão"
-              onClick={() =>
-                alterarTipo(
-                  "revisao"
-                )
-              }
-            />
-
-            <BotaoTipo
-              ativo={
-                estado.tipo ===
-                "redacao"
-              }
-              icone="✍️"
-              texto="Redação"
-              onClick={() =>
-                alterarTipo(
-                  "redacao"
-                )
-              }
-            />
+            {TIPOS_ATIVIDADE_CENTRAL.map((atividade) => (
+              <BotaoTipo
+                key={atividade.tipo}
+                ativo={estado.tipo === atividade.tipo}
+                icone={atividade.icone}
+                texto={atividade.texto}
+                onClick={() => alterarTipo(atividade.tipo)}
+              />
+            ))}
           </div>
 
           <div className="central-estudos-formulario">
