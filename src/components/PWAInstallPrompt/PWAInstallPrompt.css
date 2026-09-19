@@ -77,15 +77,24 @@
   right: 7px;
   width: 24px;
   height: 24px;
-  display: none;
+  display: grid;
   place-items: center;
   padding: 0;
-  color: #7f96ae;
+  color: #a9bdd2;
   background: transparent;
   border: 0;
   font-size: 21px;
   line-height: 1;
   cursor: pointer;
+  border-radius: 8px;
+}
+
+.pwa-install-fechar:hover,
+.pwa-install-fechar:focus-visible {
+  color: #ffffff;
+  background: rgba(148, 163, 184, .12);
+  outline: 2px solid rgba(82, 178, 255, .7);
+  outline-offset: 2px;
 }
 
 @media (max-width: 600px) {
