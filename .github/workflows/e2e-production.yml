@@ -19,6 +19,8 @@ jobs:
       E2E_BASE_URL: https://pmpe-study-pro-two.vercel.app
       E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
       E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      E2E_EXPECTED_COMMIT: ${{ github.sha }}
+      E2E_API_URL: https://pmpe-study-pro-api.onrender.com
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -31,6 +33,8 @@ jobs:
         run: npm ci
       - name: Instalar Chromium do Playwright
         run: npx playwright install --with-deps chromium
+      - name: Aguardar frontend e backend do commit atual
+        run: npx playwright test e2e/deployment-readiness.spec.ts --project=desktop-chrome
       - name: Smoke obrigatório
         run: npm run e2e:smoke
       - name: Verificar conta E2E dedicada
