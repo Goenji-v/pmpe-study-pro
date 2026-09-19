@@ -15,6 +15,7 @@ import {
   aguardarGeracaoQuestoesIA,
   gerarQuestoesIA,
   iniciarGeracaoQuestoesIA,
+  listarJobsGeracaoIA,
   type DificuldadeIA,
   type JobGeracaoIAPublico,
   type ParametrosGeracaoIA,
