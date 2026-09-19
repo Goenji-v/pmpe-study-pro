@@ -401,15 +401,19 @@ async function autenticarEControlarUso(
       return;
     }
 
-    const chave = `${userId}:${importacao ? "importacao" : "geral"}`;
-    const agora = Date.now();
+    const categoria = importacao ? "importacao" : "geral";
     const janela = importacao ? janelaImportacaoMs : janelaGeralMs;
     const limite = importacao ? limiteImportacao : limiteGeral;
-    const recentes = (acessos.get(chave) ?? []).filter(
-      (instante) => agora - instante < janela
-    );
 
-    if (recentes.length >= limite) {
+    const cotaPersistente = await consumirCotaPersistente({
+      autorizacao,
+      anonKey,
+      categoria,
+      janelaMs: janela,
+      limite,
+    });
+
+    if (cotaPersistente === false) {
       res.setHeader("Retry-After", String(Math.ceil(janela / 1000)));
       res.status(429).json({
         sucesso: false,
@@ -418,8 +422,29 @@ async function autenticarEControlarUso(
       return;
     }
 
-    recentes.push(agora);
-    acessos.set(chave, recentes);
+    // Compatibilidade enquanto a migração de cota persistente ainda não foi
+    // aplicada no ambiente. Depois da migração, o banco passa a ser a fonte
+    // canônica e este mapa deixa de participar da decisão.
+    if (cotaPersistente === null) {
+      const chave = `${userId}:${categoria}`;
+      const agora = Date.now();
+      const recentes = (acessos.get(chave) ?? []).filter(
+        (instante) => agora - instante < janela
+      );
+
+      if (recentes.length >= limite) {
+        res.setHeader("Retry-After", String(Math.ceil(janela / 1000)));
+        res.status(429).json({
+          sucesso: false,
+          erro: "Limite temporário de uso da IA atingido. Aguarde alguns minutos e tente novamente.",
+        });
+        return;
+      }
+
+      recentes.push(agora);
+      acessos.set(chave, recentes);
+    }
+
     res.locals.userId = userId;
     next();
   } catch (erro) {
@@ -428,6 +453,59 @@ async function autenticarEControlarUso(
       sucesso: false,
       erro: "Não foi possível validar sua sessão agora.",
     });
+  }
+}
+
+type EntradaCotaPersistente = {
+  autorizacao: string;
+  anonKey: string;
+  categoria: "geral" | "importacao";
+  janelaMs: number;
+  limite: number;
+};
+
+async function consumirCotaPersistente(
+  entrada: EntradaCotaPersistente
+): Promise<boolean | null> {
+  try {
+    const resposta = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/consumir_cota_ia`,
+      {
+        method: "POST",
+        headers: {
+          apikey: entrada.anonKey,
+          Authorization: entrada.autorizacao,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          p_categoria: entrada.categoria,
+          p_janela_segundos: Math.max(60, Math.round(entrada.janelaMs / 1000)),
+          p_limite: entrada.limite,
+        }),
+      }
+    );
+
+    if (resposta.ok) {
+      const dados = (await resposta.json()) as Array<{ permitido?: boolean }>;
+      return dados[0]?.permitido !== false;
+    }
+
+    // PGRST202/404: função ainda não existe no ambiente da prévia.
+    if (resposta.status === 404 || resposta.status === 400) {
+      const texto = await resposta.text();
+      if (/consumir_cota_ia|PGRST202|schema cache/i.test(texto)) {
+        console.warn("[cota-ia] migração persistente ainda não aplicada; usando fallback em memória.");
+        return null;
+      }
+    }
+
+    throw new Error(`Falha ao consultar cota persistente: HTTP ${resposta.status}`);
+  } catch (erro) {
+    console.warn("[cota-ia] consulta persistente indisponível; usando fallback em memória.", {
+      erro: erro instanceof Error ? erro.message : String(erro),
+    });
+    return null;
   }
 }
 
