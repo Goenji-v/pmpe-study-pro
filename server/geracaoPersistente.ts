@@ -121,16 +121,19 @@ export async function buscarJobGeracaoIAPorRequestId(
 
 export async function listarJobsGeracaoIAPorPrefixo(
   contexto: ContextoSupabaseJob,
-  prefixo: string,
-  limite = 30
+  prefixo = "",
+  limite = 50
 ) {
   const parametros = new URLSearchParams({
     select: "*",
     user_id: `eq.${contexto.userId}`,
-    request_id: `like.${prefixo}%`,
-    order: "criada_em.asc",
+    order: prefixo ? "criada_em.asc" : "criada_em.desc",
     limit: String(Math.max(1, Math.min(100, limite))),
   });
+
+  if (prefixo) {
+    parametros.set("request_id", `like.${prefixo}%`);
+  }
 
   const resposta = await fetch(
     `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?${parametros.toString()}`,
