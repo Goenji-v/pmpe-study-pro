@@ -422,12 +422,9 @@ export default function GerarSimuladoIA() {
     blocosTotal = 1,
     erroDetalhe?: string
   ) {
-    const quantidadeAssuntos =
-      operacao.assuntosSelecionados.length +
-      (operacao.assuntoPersonalizado.trim() ? 1 : 0);
     const totalQuestoes =
       operacao.origem === "assunto"
-        ? Math.max(1, quantidadeAssuntos) * operacao.quantidade
+        ? Math.max(operacao.quantidade, quantidadeTotalPrevista)
         : operacao.quantidade;
 
     salvarAtividadeGeracaoIA({
