@@ -170,9 +170,6 @@ export default function GerarSimuladoIA() {
       setSalvarNoBanco(pendente.salvarNoBanco);
       setPreferenciaReuso(pendente.preferenciaReuso);
       setGeracaoPendente(pendente);
-      setErro(
-        "Há uma geração anterior para recuperar. Use “Retomar geração” para consultar o mesmo processamento sem criar uma nova tentativa."
-      );
       return;
     }
     const modoSolicitado = sessionStorage.getItem("pmpe:gerar-ia:modo");
@@ -1125,29 +1122,6 @@ export default function GerarSimuladoIA() {
         </div>
       )}
 
-      {geracaoPendente && !gerando && (
-        <div className="gerar-ia-mensagem" role="status">
-          <strong>Geração recuperável disponível.</strong>{" "}
-          O identificador original foi preservado para evitar uma nova chamada quando o servidor ainda possui o processamento.
-          <div className="gerar-ia-acoes">
-            <button
-              type="button"
-              className="gerar-ia-gerar"
-              onClick={() => void gerarSimulado(geracaoPendente)}
-            >
-              Retomar geração
-            </button>
-            <button
-              type="button"
-              className="gerar-ia-limpar"
-              onClick={limparFormulario}
-            >
-              Descartar tentativa
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="gerar-ia-card">
         <div className="gerar-ia-origem">
           <h2>Modo de treino</h2>
@@ -1463,7 +1437,7 @@ export default function GerarSimuladoIA() {
               <span>
                 {origem === "assunto"
                   ? "Os subassuntos são montados separadamente e misturados no final."
-                  : "Você pode navegar para outra área. Se a página for atualizada, use “Retomar geração” ao voltar."}
+                  : "Você pode navegar para outra área ou fechar o navegador. O servidor continua processando e a Central recupera o status quando você voltar."}
               </span>
             </div>
           </div>
