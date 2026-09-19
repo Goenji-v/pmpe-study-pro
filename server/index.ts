@@ -495,11 +495,15 @@ function obterContextoSupabaseJob(
     process.env.SUPABASE_ANON_KEY ||
     ""
   ).trim();
+  const serviceRoleKey = String(
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  ).trim();
 
   if (
     !userId ||
     !authorization.startsWith("Bearer ") ||
-    anonKey.length < 20
+    anonKey.length < 20 ||
+    serviceRoleKey.length < 20
   ) {
     throw new Error(
       "Sessão inválida para acompanhar a geração."
@@ -511,6 +515,7 @@ function obterContextoSupabaseJob(
     userId,
     authorization,
     anonKey,
+    serviceRoleKey,
   };
 }
 
