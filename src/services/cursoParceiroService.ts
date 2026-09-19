@@ -16,7 +16,13 @@ export type AulaCursoParceiro = {
 };
 export type ModuloCursoParceiro = { id: string; titulo: string; descricao: string; ordem: number; ativo: boolean; aulas: AulaCursoParceiro[] };
 export type DisciplinaCursoParceiro = { id: string; titulo: string; descricao: string; ordem: number; ativo: boolean; modulos: ModuloCursoParceiro[] };
-export type ProgressoAlunoCurso = { userId: string; nome: string; turma: string; concluidas: number; totalAulas: number; percentual: number };
+export type ResumoProgressoCurso = {
+  alunosLiberados: number;
+  alunosComAtividade: number;
+  mediaPercentual: number;
+  conclusoesTotal: number;
+  aulasTotal: number;
+};
 export type CursoParceiro = {
   id: string;
   nome: string;
@@ -28,7 +34,7 @@ export type CursoParceiro = {
   possuiProgresso: boolean;
   turmaIds: string[];
   disciplinas: DisciplinaCursoParceiro[];
-  progresso: ProgressoAlunoCurso[];
+  resumoProgresso: ResumoProgressoCurso;
 };
 export type PainelCursosParceiro = { parceiroId: string; turmas: TurmaCursoParceiro[]; cursos: CursoParceiro[] };
 export type CursoMentoriaAluno = Pick<CursoParceiro, "id" | "nome" | "descricao" | "disciplinas">;
@@ -329,14 +335,16 @@ function normalizarCursoParceiro(item: Record<string, unknown>): CursoParceiro {
         })),
       })),
     })),
-    progresso: lista(item.progresso).map((p) => ({
-      userId: texto(p.user_id),
-      nome: texto(p.nome) || "Aluno",
-      turma: texto(p.turma) || "Sem turma",
-      concluidas: numero(p.concluidas),
-      totalAulas: numero(p.total_aulas),
-      percentual: numero(p.percentual),
-    })),
+    resumoProgresso: (() => {
+      const resumo = objeto(item.resumo_progresso);
+      return {
+        alunosLiberados: numero(resumo.alunos_liberados),
+        alunosComAtividade: numero(resumo.alunos_com_atividade),
+        mediaPercentual: numero(resumo.media_percentual),
+        conclusoesTotal: numero(resumo.conclusoes_total),
+        aulasTotal: numero(resumo.aulas_total),
+      };
+    })(),
   };
 }
 
