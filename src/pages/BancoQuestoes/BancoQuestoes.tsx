@@ -647,8 +647,8 @@ export default function BancoQuestoes() {
                     <strong>{questao.assunto}</strong>
                     <small>
                       {questao.subassunto ? `${questao.subassunto} · ` : ""}
-                      {questao.banca} · {rotuloDificuldade(questao.dificuldade)}
-                      {` · ${rotuloFonteQuestao(questao)}`}
+                      Banca organizadora: {questao.banca} · {rotuloDificuldade(questao.dificuldade)}
+                      {` · Origem: ${rotuloFonteQuestao(questao)}`}
                     </small>
                   </div>
                   <div className="banco-biblioteca-tags">
@@ -821,7 +821,7 @@ export default function BancoQuestoes() {
 
           <div className="banco-form-row">
             <div className="banco-form-group">
-              <label>Banca</label>
+              <label>Banca organizadora</label>
               <select value={banca} onChange={(evento) => setBanca(evento.target.value)}>
                 {['AOCP', 'CEBRASPE', 'IAUPE', 'FGV', 'FCC', 'VUNESP', 'IBFC', 'IDECAN', 'Outra'].map((item) => (
                   <option key={item} value={item}>{item}</option>
