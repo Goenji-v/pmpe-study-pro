@@ -74,6 +74,7 @@ jobs:
           fi
 
   permissoes-parceiro:
+    needs: e2e
     name: Auditoria da Área do Parceiro
     runs-on: ubuntu-latest
     timeout-minutes: 15
