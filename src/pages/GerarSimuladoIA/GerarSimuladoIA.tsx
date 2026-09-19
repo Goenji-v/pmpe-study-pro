@@ -17,6 +17,11 @@ import {
 } from "../../services/gemini";
 
 import {
+  salvarAtividadeGeracaoIA,
+  type EtapaGeracaoIA,
+} from "../../services/geracaoIAAtividadeService";
+
+import {
   listarModulosDaMateria,
 } from "../../services/conteudos/navegarConteudos";
 
@@ -283,6 +288,7 @@ export default function GerarSimuladoIA() {
     setQuestoesGeradas([]);
     localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
     setGeracaoPendente(null);
+    salvarAtividadeGeracaoIA(null);
   }
 
   function alterarMateria(novaMateria: string) {
@@ -323,7 +329,8 @@ export default function GerarSimuladoIA() {
 
   async function gerarBlocoAssunto(
     item: AssuntoSelecionavel,
-    requestId?: string
+    requestId?: string,
+    onEtapa?: (etapa: "gerando" | "revisando" | "corrigindo") => void
   ): Promise<{
     questoes: QuestaoIA[];
     reutilizadas: number;
@@ -361,6 +368,7 @@ export default function GerarSimuladoIA() {
           (questao) => questao.enunciado
         ),
         requestId,
+        onEtapa,
       });
 
       novasQuestoes = resposta.questoes;
@@ -404,6 +412,39 @@ export default function GerarSimuladoIA() {
       reutilizadas: selecaoCatalogo.reutilizadas.length,
       novas: novasQuestoes.length,
     };
+  }
+
+  function atualizarAtividadeGeracao(
+    operacao: GeracaoPendente,
+    etapa: EtapaGeracaoIA,
+    descricao: string,
+    blocoAtual = 1,
+    blocosTotal = 1,
+    erroDetalhe?: string
+  ) {
+    const quantidadeAssuntos =
+      operacao.assuntosSelecionados.length +
+      (operacao.assuntoPersonalizado.trim() ? 1 : 0);
+    const totalQuestoes =
+      operacao.origem === "assunto"
+        ? Math.max(1, quantidadeAssuntos) * operacao.quantidade
+        : operacao.quantidade;
+
+    salvarAtividadeGeracaoIA({
+      id: operacao.id,
+      etapa,
+      titulo:
+        operacao.origem === "semana"
+          ? `Simulado da Semana ${operacao.semanaSelecionada}`
+          : operacao.materiaSelecionada || "Questões por assunto",
+      descricao,
+      quantidade: totalQuestoes,
+      blocoAtual,
+      blocosTotal,
+      criadaEm: operacao.criadaEm,
+      atualizadaEm: new Date().toISOString(),
+      ...(erroDetalhe ? { erro: erroDetalhe } : {}),
+    });
   }
 
   async function gerarSimulado(operacaoExistente?: GeracaoPendente) {
@@ -454,6 +495,21 @@ export default function GerarSimuladoIA() {
     localStorage.setItem(CHAVE_GERACAO_PENDENTE, JSON.stringify(operacao));
     setGeracaoPendente(operacao);
 
+    const totalBlocos =
+      operacao.origem === "assunto"
+        ? Math.max(1, assuntosParaGerar.length)
+        : 1;
+
+    atualizarAtividadeGeracao(
+      operacao,
+      "preparando",
+      operacao.origem === "assunto"
+        ? `${banca.trim()} · ${dificuldade} · preparando os subassuntos`
+        : `${banca.trim()} · ${dificuldade} · preparando o simulado`,
+      1,
+      totalBlocos
+    );
+
     try {
       setGerando(true);
       setQuestoesGeradas([]);
@@ -466,9 +522,27 @@ export default function GerarSimuladoIA() {
         const blocos: QuestaoIA[][] = [];
 
         for (const [indice, item] of assuntosParaGerar.entries()) {
+          const blocoAtual = indice + 1;
+
+          atualizarAtividadeGeracao(
+            operacao,
+            "preparando",
+            item.assunto,
+            blocoAtual,
+            totalBlocos
+          );
+
           const bloco = await gerarBlocoAssunto(
             item,
-            `${operacao.id}:assunto:${indice}`
+            `${operacao.id}:assunto:${indice}`,
+            (etapa) =>
+              atualizarAtividadeGeracao(
+                operacao,
+                etapa,
+                item.assunto,
+                blocoAtual,
+                totalBlocos
+              )
           );
           blocos.push(bloco.questoes);
           totalReutilizadas += bloco.reutilizadas;
@@ -487,6 +561,14 @@ export default function GerarSimuladoIA() {
           dificuldade,
           quantidade,
           requestId: `${operacao.id}:semana`,
+          onEtapa: (etapa) =>
+            atualizarAtividadeGeracao(
+              operacao,
+              etapa,
+              `Semana ${semanaSelecionada} · ${banca.trim()}`,
+              1,
+              1
+            ),
         });
 
         let novasQuestoes = resposta.questoes;
@@ -505,6 +587,14 @@ export default function GerarSimuladoIA() {
         totalNovas = novasQuestoes.length;
         questoesFinais = embaralhar(novasQuestoes).slice(0, quantidade);
       }
+
+      atualizarAtividadeGeracao(
+        operacao,
+        "salvando",
+        "Organizando e salvando o caderno",
+        totalBlocos,
+        totalBlocos
+      );
 
       localStorage.setItem(
         CHAVE_QUESTOES_IA,
@@ -530,6 +620,14 @@ export default function GerarSimuladoIA() {
       localStorage.removeItem(CHAVE_GERACAO_PENDENTE);
       setGeracaoPendente(null);
 
+      atualizarAtividadeGeracao(
+        operacao,
+        "concluida",
+        "Caderno pronto para resolver",
+        totalBlocos,
+        totalBlocos
+      );
+
       window.dispatchEvent(
         new Event("pmpe-questoes-ia-atualizadas")
       );
@@ -542,6 +640,14 @@ export default function GerarSimuladoIA() {
       console.error("Erro ao gerar questões:", erroGeracao);
       setErro(
         `${mensagem} A operação foi preservada para uma retomada segura.`
+      );
+      atualizarAtividadeGeracao(
+        operacao,
+        "erro",
+        "A operação foi preservada para retomada",
+        1,
+        totalBlocos,
+        mensagem
       );
     } finally {
       setGerando(false);
@@ -574,6 +680,7 @@ export default function GerarSimuladoIA() {
     setErro("");
     setSucesso("");
     setQuestoesGeradas([]);
+    salvarAtividadeGeracaoIA(null);
   }
 
   const todosSelecionados =
