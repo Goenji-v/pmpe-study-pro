@@ -157,34 +157,34 @@ export default function Sidebar() {
   }, [menuMobileAberto]);
 
   useEffect(() => {
-    const area = menuScrollRef.current;
-    if (!area) return;
+    const areaAtual = menuScrollRef.current;
+    if (!areaAtual) return;
 
     function atualizarControles() {
       const limiteInferior =
-        area.scrollHeight - area.clientHeight - 3;
+        areaAtual.scrollHeight - areaAtual.clientHeight - 3;
 
-      setPodeSubir(area.scrollTop > 3);
+      setPodeSubir(areaAtual.scrollTop > 3);
       setPodeDescer(
         limiteInferior > 0 &&
-        area.scrollTop < limiteInferior
+        areaAtual.scrollTop < limiteInferior
       );
     }
 
     atualizarControles();
-    area.addEventListener("scroll", atualizarControles, {
+    areaAtual.addEventListener("scroll", atualizarControles, {
       passive: true,
     });
 
     const observador = new ResizeObserver(atualizarControles);
-    observador.observe(area);
+    observador.observe(areaAtual);
 
     const quadro = window.requestAnimationFrame(atualizarControles);
 
     return () => {
       window.cancelAnimationFrame(quadro);
       observador.disconnect();
-      area.removeEventListener("scroll", atualizarControles);
+      areaAtual.removeEventListener("scroll", atualizarControles);
     };
   }, [
     grupoAberto,
