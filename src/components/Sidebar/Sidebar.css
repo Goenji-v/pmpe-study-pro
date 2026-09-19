@@ -115,47 +115,6 @@
   line-height: 1.15;
 }
 
-.sidebar-scroll-controle {
-  width: 100%;
-  height: 27px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  color: #93a7c2;
-  background: linear-gradient(
-    180deg,
-    rgba(30, 41, 59, .62),
-    rgba(15, 23, 42, .28)
-  );
-  border: 1px solid rgba(51, 65, 85, .58);
-  border-radius: 9px;
-  cursor: pointer;
-  transition:
-    color .18s ease,
-    background-color .18s ease,
-    border-color .18s ease,
-    opacity .18s ease;
-}
-
-.sidebar-scroll-controle:hover:not(:disabled) {
-  color: #fff;
-  background: rgba(37, 99, 235, .17);
-  border-color: rgba(96, 165, 250, .42);
-}
-
-.sidebar-scroll-controle:disabled {
-  opacity: .2;
-  cursor: default;
-}
-
-.sidebar-scroll-controle-topo {
-  margin-bottom: 1px;
-}
-
-.sidebar-scroll-controle-base {
-  margin-top: 1px;
-}
-
 .sidebar-principal {
   display: flex;
   flex-direction: column;
@@ -465,10 +424,6 @@
     overflow: visible;
   }
 
-  .sidebar-scroll-controle {
-    display: none;
-  }
-
   .sidebar-menu {
     display: grid;
     grid-template-columns:
@@ -568,10 +523,6 @@
   .sidebar-menu-scroll {
     min-height: 0;
     overflow-y: auto;
-  }
-
-  .sidebar-scroll-controle {
-    display: grid;
   }
 
   .sidebar-menu {
