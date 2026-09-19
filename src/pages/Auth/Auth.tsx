@@ -261,11 +261,13 @@ export default function Auth() {
             </label>
 
             {modo !== "recuperar" && (
-              <label>
-                <span>Senha</span>
+              <div>
+                <label htmlFor="auth-senha"><span>Senha</span></label>
                 <div className="auth-input-com-icone auth-input-senha">
                   <LockKeyhole size={19} aria-hidden="true" />
                   <input
+                    id="auth-senha"
+                    aria-label="Senha"
                     type={mostrarSenha ? "text" : "password"}
                     value={senha}
                     onChange={(evento) => setSenha(evento.target.value)}
@@ -281,15 +283,17 @@ export default function Auth() {
                     {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-              </label>
+              </div>
             )}
 
             {modo === "cadastro" && (
-              <label>
-                <span>Confirmar senha</span>
+              <div>
+                <label htmlFor="auth-confirmar-senha"><span>Confirmar senha</span></label>
                 <div className="auth-input-com-icone auth-input-senha">
                   <LockKeyhole size={19} aria-hidden="true" />
                   <input
+                    id="auth-confirmar-senha"
+                    aria-label="Confirmar senha"
                     type={mostrarConfirmarSenha ? "text" : "password"}
                     value={confirmarSenha}
                     onChange={(evento) => setConfirmarSenha(evento.target.value)}
@@ -305,7 +309,7 @@ export default function Auth() {
                     {mostrarConfirmarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-              </label>
+              </div>
             )}
 
             {modo === "login" && (
