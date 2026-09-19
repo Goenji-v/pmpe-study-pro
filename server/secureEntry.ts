@@ -18,6 +18,7 @@ import {
   modeloGeminiIndisponivel,
 } from "./retryGemini.ts";
 import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
+import { consumirCotaIaPersistente } from "./limiteIaPersistente.ts";
 
 const portaPublica = Number(process.env.PORT || 3001);
 const portaInterna = Number(
@@ -29,6 +30,7 @@ const supabaseUrl =
 const anonKeyServidor =
   process.env.SUPABASE_ANON_KEY?.trim() || "";
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "";
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
 const { modelo: modeloEdital, modeloFallback: modeloFallbackEdital } = resolverModelosGemini(process.env);
 const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
@@ -46,7 +48,6 @@ const janelaGeralMs = 10 * 60 * 1000;
 const limiteGeral = 60;
 const janelaImportacaoMs = 60 * 60 * 1000;
 const limiteImportacao = 8;
-const acessos = new Map<string, number[]>();
 
 const app = express();
 
@@ -401,25 +402,26 @@ async function autenticarEControlarUso(
       return;
     }
 
-    const chave = `${userId}:${importacao ? "importacao" : "geral"}`;
-    const agora = Date.now();
     const janela = importacao ? janelaImportacaoMs : janelaGeralMs;
     const limite = importacao ? limiteImportacao : limiteGeral;
-    const recentes = (acessos.get(chave) ?? []).filter(
-      (instante) => agora - instante < janela
-    );
+    const categoria = importacao ? "importacao" : "geral";
+    const consumo = await consumirCotaIaPersistente({
+      supabaseUrl,
+      serviceRoleKey,
+      userId,
+      categoria,
+      janelaMs: janela,
+      limite,
+    });
 
-    if (recentes.length >= limite) {
-      res.setHeader("Retry-After", String(Math.ceil(janela / 1000)));
+    if (!consumo.permitido) {
+      res.setHeader("Retry-After", String(consumo.retryAfterSegundos));
       res.status(429).json({
         sucesso: false,
         erro: "Limite temporário de uso da IA atingido. Aguarde alguns minutos e tente novamente.",
       });
       return;
     }
-
-    recentes.push(agora);
-    acessos.set(chave, recentes);
     res.locals.userId = userId;
     next();
   } catch (erro) {
