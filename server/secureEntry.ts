@@ -388,6 +388,19 @@ async function autenticarEControlarUso(
 
     const importacao =
       req.path === "/analisar-prova" || req.path === "/analisar-edital";
+    const consultaLeve =
+      req.method === "GET" &&
+      (
+        req.path.startsWith("/geracoes") ||
+        req.path.startsWith("/gerar/status/")
+      );
+
+    if (consultaLeve) {
+      res.locals.userId = userId;
+      next();
+      return;
+    }
+
     const chave = `${userId}:${importacao ? "importacao" : "geral"}`;
     const agora = Date.now();
     const janela = importacao ? janelaImportacaoMs : janelaGeralMs;
