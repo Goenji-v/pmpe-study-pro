@@ -24,6 +24,7 @@ import {
   buscarJobGeracaoIAPorRequestId,
   criarOuBuscarJobGeracaoIA,
   listarJobsGeracaoIAPorPrefixo,
+  reiniciarJobGeracaoIA,
   type ContextoSupabaseJob,
   type JobGeracaoIA,
 } from "./geracaoPersistente.ts";
@@ -282,22 +283,7 @@ app.post(
       );
 
       if (job.status === "erro" && req.body?.retomar === true) {
-        job =
-          (await atualizarJobGeracaoIA(
-            contexto,
-            job.id,
-            {
-              status: "fila",
-              etapa: "fila",
-              progresso: 0,
-              resultado: null,
-              erro: null,
-              concluida_em: null,
-              execucao_id: null,
-              lease_ate: null,
-              descricao: "Geração recolocada na fila.",
-            }
-          )) ?? job;
+        job = await reiniciarJobGeracaoIA(contexto, job);
       }
 
       if (job.status === "fila" || job.status === "processando") {
@@ -495,11 +481,15 @@ function obterContextoSupabaseJob(
     process.env.SUPABASE_ANON_KEY ||
     ""
   ).trim();
+  const serviceRoleKey = String(
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  ).trim();
 
   if (
     !userId ||
     !authorization.startsWith("Bearer ") ||
-    anonKey.length < 20
+    anonKey.length < 20 ||
+    serviceRoleKey.length < 20
   ) {
     throw new Error(
       "Sessão inválida para acompanhar a geração."
@@ -511,6 +501,7 @@ function obterContextoSupabaseJob(
     userId,
     authorization,
     anonKey,
+    serviceRoleKey,
   };
 }
 
