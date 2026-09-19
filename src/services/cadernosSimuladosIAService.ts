@@ -70,7 +70,9 @@ export async function listarCadernosSimuladosIA(): Promise<CadernoSimuladoIA[]> 
   locais.forEach((item) => mapa.set(item.id, item));
   remotos.forEach((item) => mapa.set(item.id, item));
 
-  const unidos = ordenar(Array.from(mapa.values()));
+  const unidos = normalizarDuplicados(
+    Array.from(mapa.values())
+  );
   if (obterEscopoArmazenamento() !== escopoInicial) return [];
   salvarLocais(unidos);
   return unidos;
@@ -277,6 +279,116 @@ function salvarLocal(caderno: CadernoSimuladoIA) {
 
 function salvarLocais(cadernos: CadernoSimuladoIA[]) {
   localStorage.setItem(CHAVE_LOCAL, JSON.stringify(ordenar(cadernos)));
+}
+
+function normalizarDuplicados(
+  cadernos: CadernoSimuladoIA[]
+) {
+  const grupos = new Map<
+    string,
+    CadernoSimuladoIA
+  >();
+
+  for (const caderno of cadernos) {
+    const chave =
+      caderno.geracaoId?.trim()
+        ? `geracao:${caderno.geracaoId.trim()}`
+        : `assinatura:${assinatura(caderno.questoes)}`;
+
+    const existente = grupos.get(chave);
+
+    if (!existente) {
+      grupos.set(chave, caderno);
+      continue;
+    }
+
+    grupos.set(
+      chave,
+      escolherCadernoMaisCompleto(
+        existente,
+        caderno
+      )
+    );
+  }
+
+  return ordenar(
+    Array.from(grupos.values())
+  );
+}
+
+function escolherCadernoMaisCompleto(
+  a: CadernoSimuladoIA,
+  b: CadernoSimuladoIA
+) {
+  const tentativasA =
+    a.estatisticas?.tentativas ?? 0;
+  const tentativasB =
+    b.estatisticas?.tentativas ?? 0;
+
+  const atualizadoA =
+    new Date(
+      a.atualizadoEm || a.criadoEm
+    ).getTime();
+  const atualizadoB =
+    new Date(
+      b.atualizadoEm || b.criadoEm
+    ).getTime();
+
+  const preferido =
+    tentativasB > tentativasA ||
+    (
+      tentativasB === tentativasA &&
+      atualizadoB > atualizadoA
+    )
+      ? b
+      : a;
+
+  const outro =
+    preferido.id === a.id
+      ? b
+      : a;
+
+  const criadoEm =
+    new Date(a.criadoEm).getTime() <=
+    new Date(b.criadoEm).getTime()
+      ? a.criadoEm
+      : b.criadoEm;
+
+  return {
+    ...preferido,
+    criadoEm,
+    atualizadoEm:
+      atualizadoA >= atualizadoB
+        ? a.atualizadoEm
+        : b.atualizadoEm,
+    geracaoId:
+      preferido.geracaoId ||
+      outro.geracaoId,
+    estatisticas:
+      escolherEstatisticasMaisCompletas(
+        preferido.estatisticas,
+        outro.estatisticas
+      ),
+  };
+}
+
+function escolherEstatisticasMaisCompletas(
+  a?: EstatisticasCadernoIA,
+  b?: EstatisticasCadernoIA
+) {
+  if (!a) return b;
+  if (!b) return a;
+
+  if (a.tentativas !== b.tentativas) {
+    return a.tentativas > b.tentativas
+      ? a
+      : b;
+  }
+
+  return new Date(a.ultimaTentativaEm).getTime() >=
+    new Date(b.ultimaTentativaEm).getTime()
+    ? a
+    : b;
 }
 
 function ordenar(cadernos: CadernoSimuladoIA[]) {
