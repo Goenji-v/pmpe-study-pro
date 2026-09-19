@@ -12,8 +12,12 @@ import "./GerarSimuladoIA.css";
 import { useApp } from "../../context/AppContext";
 
 import {
+  aguardarGeracaoQuestoesIA,
   gerarQuestoesIA,
+  iniciarGeracaoQuestoesIA,
   type DificuldadeIA,
+  type JobGeracaoIAPublico,
+  type ParametrosGeracaoIA,
 } from "../../services/gemini";
 
 import {
@@ -71,6 +75,16 @@ type AssuntoSelecionavel = {
 type PrefillPendente = {
   modulo?: string;
   assunto: string;
+};
+
+type SelecaoCatalogoBloco =
+  Awaited<ReturnType<typeof selecionarDoCatalogoIA>>;
+
+type PlanoBlocoAssunto = {
+  item: AssuntoSelecionavel;
+  selecaoCatalogo: SelecaoCatalogoBloco;
+  parametrosIA?: ParametrosGeracaoIA;
+  job?: JobGeracaoIAPublico;
 };
 
 type GeracaoPendente = {
@@ -327,18 +341,12 @@ export default function GerarSimuladoIA() {
     setErro("");
   }
 
-  async function gerarBlocoAssunto(
+  async function prepararBlocoAssunto(
     item: AssuntoSelecionavel,
-    requestId?: string,
-    onEtapa?: (
-      etapa: "gerando" | "revisando" | "corrigindo" | "salvando"
-    ) => void,
-    retomarErro = false
-  ): Promise<{
-    questoes: QuestaoIA[];
-    reutilizadas: number;
-    novas: number;
-  }> {
+    indice: number,
+    operacao: GeracaoPendente,
+    retomando: boolean
+  ): Promise<PlanoBlocoAssunto> {
     const concursoAlvo = configuracoes.concurso || "PMPE";
 
     const selecaoCatalogo = await selecionarDoCatalogoIA({
@@ -355,25 +363,67 @@ export default function GerarSimuladoIA() {
       concursoAlvo,
     });
 
+    if (selecaoCatalogo.quantidadeGerar <= 0) {
+      return {
+        item,
+        selecaoCatalogo,
+      };
+    }
+
+    const parametrosIA: ParametrosGeracaoIA = {
+      origem: "assunto",
+      materia: materiaSelecionada,
+      modulo: item.modulo,
+      moduloId: item.moduloId,
+      assunto: item.assunto,
+      banca: banca.trim(),
+      dificuldade,
+      quantidade: selecaoCatalogo.quantidadeGerar,
+      enunciadosEvitar: selecaoCatalogo.reutilizadas.map(
+        (questao) => questao.enunciado
+      ),
+      requestId: `${operacao.id}:assunto:${indice}`,
+      retomarErro: retomando,
+    };
+
+    const job = await iniciarGeracaoQuestoesIA(parametrosIA);
+
+    return {
+      item,
+      selecaoCatalogo,
+      parametrosIA,
+      job,
+    };
+  }
+
+  async function concluirBlocoAssunto(
+    plano: PlanoBlocoAssunto,
+    operacao: GeracaoPendente,
+    blocoAtual: number,
+    blocosTotal: number
+  ): Promise<{
+    questoes: QuestaoIA[];
+    reutilizadas: number;
+    novas: number;
+  }> {
+    const concursoAlvo = configuracoes.concurso || "PMPE";
     let novasQuestoes: QuestaoIA[] = [];
 
-    if (selecaoCatalogo.quantidadeGerar > 0) {
-      const resposta = await gerarQuestoesIA({
-        origem: "assunto",
-        materia: materiaSelecionada,
-        modulo: item.modulo,
-        moduloId: item.moduloId,
-        assunto: item.assunto,
-        banca: banca.trim(),
-        dificuldade,
-        quantidade: selecaoCatalogo.quantidadeGerar,
-        enunciadosEvitar: selecaoCatalogo.reutilizadas.map(
-          (questao) => questao.enunciado
-        ),
-        requestId,
-        onEtapa,
-        retomarErro,
-      });
+    if (plano.job && plano.parametrosIA) {
+      const resposta = await aguardarGeracaoQuestoesIA(
+        plano.job,
+        {
+          ...plano.parametrosIA,
+          onEtapa: (etapa) =>
+            atualizarAtividadeGeracao(
+              operacao,
+              etapa,
+              `${plano.item.assunto} · ${dificuldade} · ${banca.trim()}`,
+              blocoAtual,
+              blocosTotal
+            ),
+        }
+      );
 
       novasQuestoes = resposta.questoes;
     }
@@ -385,13 +435,13 @@ export default function GerarSimuladoIA() {
           concursoAlvo,
           editalAlvo: concursoAlvo,
           materiaId: materiaAtual?.id,
-          assuntoId: item.assuntoId,
+          assuntoId: plano.item.assuntoId,
         }
       );
     }
 
     const questoes = [
-      ...selecaoCatalogo.reutilizadas,
+      ...plano.selecaoCatalogo.reutilizadas,
       ...novasQuestoes,
     ]
       .slice(0, quantidade)
@@ -399,21 +449,21 @@ export default function GerarSimuladoIA() {
         ...questao,
         materia: materiaSelecionada,
         materiaId: materiaAtual?.id ?? questao.materiaId,
-        modulo: item.modulo,
-        moduloId: item.moduloId ?? questao.moduloId,
-        assunto: item.assunto,
-        assuntoId: item.assuntoId ?? questao.assuntoId,
+        modulo: plano.item.modulo,
+        moduloId: plano.item.moduloId ?? questao.moduloId,
+        assunto: plano.item.assunto,
+        assuntoId: plano.item.assuntoId ?? questao.assuntoId,
       }));
 
     if (questoes.length !== quantidade) {
       throw new Error(
-        `O subassunto “${item.assunto}” ficou com ${questoes.length} questões, mas eram esperadas ${quantidade}. Tente gerar novamente.`
+        `O subassunto “${plano.item.assunto}” ficou com ${questoes.length} questões, mas eram esperadas ${quantidade}. Tente gerar novamente.`
       );
     }
 
     return {
       questoes,
-      reutilizadas: selecaoCatalogo.reutilizadas.length,
+      reutilizadas: plano.selecaoCatalogo.reutilizadas.length,
       novas: novasQuestoes.length,
     };
   }
@@ -522,32 +572,37 @@ export default function GerarSimuladoIA() {
       let totalNovas = 0;
 
       if (origem === "assunto") {
+        atualizarAtividadeGeracao(
+          operacao,
+          "preparando",
+          "Enfileirando todos os subassuntos no servidor",
+          1,
+          totalBlocos
+        );
+
+        const planos = await Promise.all(
+          assuntosParaGerar.map((item, indice) =>
+            prepararBlocoAssunto(
+              item,
+              indice,
+              operacao,
+              retomando
+            )
+          )
+        );
+
         const blocos: QuestaoIA[][] = [];
 
-        for (const [indice, item] of assuntosParaGerar.entries()) {
+        for (const [indice, plano] of planos.entries()) {
           const blocoAtual = indice + 1;
 
-          atualizarAtividadeGeracao(
+          const bloco = await concluirBlocoAssunto(
+            plano,
             operacao,
-            "preparando",
-            `${item.assunto} · ${dificuldade} · ${banca.trim()}`,
             blocoAtual,
             totalBlocos
           );
 
-          const bloco = await gerarBlocoAssunto(
-            item,
-            `${operacao.id}:assunto:${indice}`,
-            (etapa) =>
-              atualizarAtividadeGeracao(
-                operacao,
-                etapa,
-                `${item.assunto} · ${dificuldade} · ${banca.trim()}`,
-                blocoAtual,
-                totalBlocos
-              ),
-            retomando
-          );
           blocos.push(bloco.questoes);
           totalReutilizadas += bloco.reutilizadas;
           totalNovas += bloco.novas;
