@@ -219,15 +219,15 @@ export default function ParceiroCursos() {
     <section className="pc-pagina">
       <header className="pc-hero">
         <div>
-          <span>ÁREA DO PARCEIRO · CONTEÚDOS</span>
-          <h1>Links do curso</h1>
+          <span>ÁREA DO PARCEIRO · MEU CURSO</span>
+          <h1>Rota do Concurseiro</h1>
           <p>
-            O Study Pro organiza o estudo; as videoaulas continuam hospedadas na plataforma externa do parceiro. Cada aula pode apontar para um endereço diferente.
+            Organize disciplinas, módulos, videoaulas e materiais uma vez. O Study Pro distribui a mesma estrutura para as turmas liberadas e preserva o progresso dos alunos.
           </p>
         </div>
         <div className="pc-hero-acoes">
-          <Link to="/parceiro">← Área do Parceiro</Link>
-          <Link to="/parceiro/mentoria">Cronograma da turma</Link>
+          <Link to="/parceiro">← Resumo das turmas</Link>
+          <Link to="/parceiro/simulados">Simulados</Link>
         </div>
       </header>
 
@@ -326,7 +326,7 @@ export default function ParceiroCursos() {
                     valor={contarModulos(curso)}
                   />
                   <Resumo titulo="Aulas externas" valor={contarAulas(curso)} />
-                  <Resumo titulo="Alunos liberados" valor={curso.progresso.length} />
+                  <Resumo titulo="Alunos liberados" valor={curso.resumoProgresso.alunosLiberados} />
                 </section>
 
                 {curso.status === "rascunho" ? (
@@ -362,9 +362,9 @@ export default function ParceiroCursos() {
                 <section className="pc-card">
                   <div className="pc-card-cabecalho">
                     <div>
-                      <h3>Conteúdo e links externos</h3>
+                      <h3>Estrutura da Rota do Concurseiro</h3>
                       <p>
-                        Cadastre um link por aula. Alterações de link preservam o ID da aula e o progresso já feito. Exclusões em curso publicado ou em item com progresso são bloqueadas.
+                        Cadastre as disciplinas e organize cada uma em módulos e aulas. Alterações de link preservam o ID da aula e o progresso já feito; exclusões em conteúdo com progresso continuam protegidas.
                       </p>
                     </div>
                   </div>
@@ -530,28 +530,42 @@ export default function ParceiroCursos() {
                 <section className="pc-card">
                   <div className="pc-card-cabecalho">
                     <div>
-                      <h3>Progresso dos alunos</h3>
-                      <p>Acompanhamento das aulas concluídas dentro deste curso.</p>
+                      <h3>Progresso geral do curso</h3>
+                      <p>
+                        Visão consolidada das turmas liberadas. O parceiro não recebe nomes, e-mails ou progresso individual dos alunos.
+                      </p>
                     </div>
-                    <strong>{mediaProgresso(curso)}% média</strong>
+                    <strong>{Math.round(curso.resumoProgresso.mediaPercentual)}% média</strong>
                   </div>
-                  {curso.progresso.length === 0 ? (
+
+                  {curso.resumoProgresso.alunosLiberados === 0 ? (
                     <div className="pc-vazio pequeno">Nenhum aluno ativo nas turmas liberadas.</div>
                   ) : (
-                    <div className="pc-progresso-lista">
-                      {curso.progresso.map((aluno) => (
-                        <Link to={`/parceiro/mentoria/aluno/${aluno.userId}`} key={aluno.userId}>
-                          <div>
-                            <strong>{aluno.nome}</strong>
-                            <small>{aluno.turma} · {aluno.concluidas}/{aluno.totalAulas} concluídas</small>
-                          </div>
-                          <div className="pc-progresso-barra">
-                            <span style={{ width: `${Math.min(100, aluno.percentual)}%` }} />
-                          </div>
-                          <b>{Math.round(aluno.percentual)}%</b>
-                        </Link>
-                      ))}
-                    </div>
+                    <>
+                      <div className="pc-progresso-resumo">
+                        <Resumo titulo="Alunos liberados" valor={curso.resumoProgresso.alunosLiberados} />
+                        <Resumo titulo="Com atividade" valor={curso.resumoProgresso.alunosComAtividade} />
+                        <Resumo titulo="Conclusões registradas" valor={curso.resumoProgresso.conclusoesTotal} />
+                        <Resumo titulo="Aulas na rota" valor={curso.resumoProgresso.aulasTotal} />
+                      </div>
+
+                      <div className="pc-progresso-geral">
+                        <div>
+                          <span>Avanço médio da turma</span>
+                          <strong>{Math.round(curso.resumoProgresso.mediaPercentual)}%</strong>
+                        </div>
+                        <div className="pc-progresso-barra">
+                          <span
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.max(0, curso.resumoProgresso.mediaPercentual)
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
                 </section>
               </>
@@ -576,12 +590,6 @@ function contarAulas(curso: CursoParceiro) {
 
 function contarModulos(curso: CursoParceiro) {
   return curso.disciplinas.reduce((n, disciplina) => n + disciplina.modulos.length, 0);
-}
-
-function mediaProgresso(curso: CursoParceiro) {
-  return curso.progresso.length
-    ? Math.round(curso.progresso.reduce((n, aluno) => n + aluno.percentual, 0) / curso.progresso.length)
-    : 0;
 }
 
 function rotuloStatusCurto(status: CursoStatusParceiro) {

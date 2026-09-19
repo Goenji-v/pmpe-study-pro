@@ -54,13 +54,15 @@ export default function ParceiroFinanceiro({ alunosAtivos = 0, valorMensal = 0 }
         <div>
           <span>FINANCEIRO DA PARCERIA</span>
           <h2>Cobranças da plataforma</h2>
-          <p>A estimativa acompanha os alunos ativos de hoje. Quando uma competência é fechada, quantidade de alunos, taxa, ajustes e vencimento ficam registrados naquele mês.</p>
+          <p>
+            Esta área mostra somente a taxa do Study Pro por aluno ativo. O valor do curso vendido pelo parceiro não é descontado nem controlado aqui. Mesmo em cursos anuais, a taxa da plataforma é acompanhada por competência mensal conforme os alunos ativos.
+          </p>
         </div>
       </div>
 
       <div className="parceiro-financeiro-resumo">
         <article><span>Estimativa atual</span><strong>{moedaCentavos(resumo?.estimativaAtualCentavos ?? estimativaFallbackCentavos)}</strong><small>{resumo?.alunosAtivos ?? alunosAtivos} aluno(s) ativo(s)</small></article>
-        <article><span>Taxa atual</span><strong>{moedaCentavos(resumo?.valorUnitarioCentavos ?? taxaFallbackCentavos)}</strong><small>por aluno ativo / mês</small></article>
+        <article><span>Taxa atual</span><strong>{moedaCentavos(resumo?.valorUnitarioCentavos ?? taxaFallbackCentavos)}</strong><small>Study Pro · por aluno ativo / mês</small></article>
         <article><span>Em aberto</span><strong>{moedaCentavos(indicadores.pendente)}</strong><small>{indicadores.vencidos ? `${indicadores.vencidos} competência(s) vencida(s)` : "nenhuma competência vencida"}</small></article>
         <article><span>Pago no histórico</span><strong>{moedaCentavos(indicadores.pago)}</strong><small>{itens.filter((item) => item.status === "pago").length} competência(s)</small></article>
       </div>
