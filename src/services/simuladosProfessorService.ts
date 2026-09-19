@@ -183,4 +183,3 @@ function normalizarBonificacoes(valor: unknown): Array<{ posicao: number; premio
 }
 function texto(valor: unknown) { return typeof valor === "string" ? valor : ""; }
 function numero(valor: unknown) { const n = Number(valor ?? 0); return Number.isFinite(n) ? n : 0; }
-function lista(valor: unknown): Record<string, unknown>[] { return Array.isArray(valor) ? valor.filter((x): x is Record<string, unknown> => !!x && typeof x === "object") : []; }
