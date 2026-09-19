@@ -17,7 +17,7 @@ grant select, insert, update, delete on table public.geracoes_ia_jobs to service
 -- A service_role é usada exclusivamente pelo backend validado.
 
 create table if not exists public.ia_consumo_janelas (
-  user_id uuid not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
   categoria text not null
     check (categoria in ('geral', 'importacao')),
   janela_inicio timestamptz not null,
@@ -65,7 +65,11 @@ begin
     raise exception 'categoria invalida';
   end if;
 
-  if p_janela_segundos < 60 or p_limite < 1 then
+  if p_janela_segundos < 60 or p_janela_segundos > 86400 then
+    raise exception 'janela invalida';
+  end if;
+
+  if p_limite < 1 or p_limite > 1000 then
     raise exception 'limite invalido';
   end if;
 
