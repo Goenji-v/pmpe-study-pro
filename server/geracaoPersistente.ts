@@ -29,6 +29,8 @@ export type JobGeracaoIA = {
   iniciada_em: string | null;
   atualizada_em: string;
   concluida_em: string | null;
+  execucao_id: string | null;
+  lease_ate: string | null;
 };
 
 export type ContextoSupabaseJob = {
@@ -144,6 +146,52 @@ export async function listarJobsGeracaoIAPorPrefixo(
   return (await resposta.json()) as JobGeracaoIA[];
 }
 
+export async function reivindicarJobGeracaoIA(
+  contexto: ContextoSupabaseJob,
+  job: JobGeracaoIA,
+  execucaoId: string,
+  leaseMs = 5 * 60 * 1000
+) {
+  if (job.status === "concluida" || job.status === "erro") {
+    return null;
+  }
+
+  const agora = new Date();
+  const leaseAte = new Date(agora.getTime() + leaseMs).toISOString();
+  const filtrosBase =
+    `id=eq.${encodeURIComponent(job.id)}&user_id=eq.${encodeURIComponent(contexto.userId)}`;
+
+  const filtroPosse =
+    job.status === "fila"
+      ? "&status=eq.fila"
+      : `&status=eq.processando&or=(lease_ate.is.null,lease_ate.lt.${encodeURIComponent(agora.toISOString())})`;
+
+  const resposta = await fetch(
+    `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?${filtrosBase}${filtroPosse}`,
+    {
+      method: "PATCH",
+      headers: cabecalhos(contexto, {
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify({
+        status: "processando",
+        execucao_id: execucaoId,
+        lease_ate: leaseAte,
+        iniciada_em: job.iniciada_em || agora.toISOString(),
+        atualizada_em: agora.toISOString(),
+        erro: null,
+      }),
+    }
+  );
+
+  if (!resposta.ok) {
+    throw new Error(await mensagemSupabase(resposta, "Não foi possível assumir a geração."));
+  }
+
+  const itens = (await resposta.json()) as JobGeracaoIA[];
+  return itens[0] ?? null;
+}
+
 export async function atualizarJobGeracaoIA(
   contexto: ContextoSupabaseJob,
   id: string,
@@ -158,11 +206,14 @@ export async function atualizarJobGeracaoIA(
       | "iniciada_em"
       | "concluida_em"
       | "descricao"
+      | "execucao_id"
+      | "lease_ate"
     >
-  >
+  >,
+  execucaoIdAtual?: string
 ) {
   const resposta = await fetch(
-    `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(contexto.userId)}`,
+    `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(contexto.userId)}${execucaoIdAtual ? `&execucao_id=eq.${encodeURIComponent(execucaoIdAtual)}` : ""}`,
     {
       method: "PATCH",
       headers: cabecalhos(contexto, {
