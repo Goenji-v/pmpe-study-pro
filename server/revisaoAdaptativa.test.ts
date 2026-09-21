@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   aplicarRevisaoAdaptativa,
   diagnosticarRevisaoAdaptativa,
+  orientarRevisaoPorResultado,
 } from "../src/utils/revisaoAdaptativa";
 
 import type { Revisao } from "../src/types";
@@ -126,3 +127,32 @@ function criarRevisao(
     ...alteracoes,
   };
 }
+
+
+test("orienta reforço de conteúdo abaixo de 60% e questões a partir de 60%", () => {
+  assert.equal(orientarRevisaoPorResultado(3, 7)?.modo, "teoria_questoes");
+  assert.equal(orientarRevisaoPorResultado(5, 5)?.modo, "teoria_questoes");
+  assert.equal(orientarRevisaoPorResultado(6, 4)?.modo, "questoes");
+  assert.equal(orientarRevisaoPorResultado(8, 2)?.modo, "ciclo_normal");
+  assert.equal(orientarRevisaoPorResultado(5, 0)?.modo, "ciclo_normal");
+  assert.equal(orientarRevisaoPorResultado(3, 1), null);
+});
+
+test("bom desempenho não antecipa o ciclo, mas fica registrado na revisão pendente", () => {
+  const existente = criarRevisao({
+    dataPrevista: "2026-08-27T12:00:00",
+  });
+
+  const resultado = aplicarRevisaoAdaptativa({
+    revisoes: [existente],
+    ...referencia,
+    certas: 5,
+    erradas: 0,
+    agora: AGORA,
+  });
+
+  assert.equal(resultado.acao, "registrada");
+  assert.equal(resultado.revisoes[0].dataPrevista, existente.dataPrevista);
+  assert.equal(resultado.revisoes[0].certas, 5);
+  assert.equal(resultado.revisoes[0].erradas, 0);
+});
