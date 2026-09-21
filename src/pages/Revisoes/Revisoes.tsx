@@ -18,6 +18,7 @@ import {
 } from "../../utils/revisoes";
 import type { Materia, Revisao } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
+import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
 
 type RevisaoIA = {
   id: string;
@@ -229,6 +230,7 @@ export default function Revisoes() {
         materia: dados.materia,
         modulo: dados.modulo,
         assunto: dados.assunto,
+        quantidade: 10,
       })
     );
     sessionStorage.setItem(
@@ -325,7 +327,7 @@ export default function Revisoes() {
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
       <p className="revisoes-subtitle">
-        Revisões conforme seu desempenho: fácil avança no ciclo 0-1-7-15; média repete em 3 dias; difícil, em 1 dia. A agenda respeita sua meta diária.
+        O Study Pro usa seu desempenho para indicar como revisar: abaixo de 60% reforça o conteúdo antes das questões; a partir de 60% prioriza questões; com bom domínio, mantém o ciclo normal.
       </p>
 
       <div className="revisoes-toolbar">
@@ -443,6 +445,16 @@ function GrupoRevisoes({
           const diferenca = calcularDiasDiferenca(revisao.dataPrevista);
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
+          const plano = planejarRevisaoPendente(revisao);
+          const mostrarEstudo = plano.modo === "teoria_questoes";
+          const quando =
+            diferenca < 0
+              ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
+              : diferenca === 0
+                ? "Hoje"
+                : diferenca === 1
+                  ? "Amanhã"
+                  : `Daqui a ${diferenca} dias`;
 
           return (
             <article key={revisao.id} className="revisao-card">
@@ -458,23 +470,39 @@ function GrupoRevisoes({
                       ? "Vence hoje"
                       : `Daqui a ${diferenca} dia(s)`}
                 </small>
+
+                <div className={`revisao-orientacao revisao-orientacao-${plano.modo}`}>
+                  <div className="revisao-orientacao-topo">
+                    <strong>{quando} · {plano.titulo}</strong>
+                    {typeof plano.percentual === "number" && typeof plano.total === "number" ? (
+                      <span>
+                        Último resultado: {revisao.certas}/{plano.total} ({plano.percentual}%)
+                      </span>
+                    ) : (
+                      <span>Sem nota medida ainda</span>
+                    )}
+                  </div>
+                  <p>{plano.descricao}</p>
+                </div>
               </div>
 
               <div className="revisao-lateral">
                 <div className="revisao-acoes-compactas">
-                  <button
-                    type="button"
-                    className="revisao-iniciar"
-                    onClick={() => abrirEstudo(revisao)}
-                  >
-                    ▶ Estudar
-                  </button>
+                  {mostrarEstudo && (
+                    <button
+                      type="button"
+                      className="revisao-iniciar"
+                      onClick={() => abrirEstudo(revisao)}
+                    >
+                      📚 Rever conteúdo
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="revisao-questoes"
                     onClick={() => abrirQuestoes(revisao)}
                   >
-                    ❓ Questões
+                    ❓ Fazer {plano.quantidadeQuestoes} questões
                   </button>
                   <button
                     type="button"
