@@ -59,6 +59,31 @@
   border-radius: 11px;
 }
 
+.gerar-ia-mensagem.gerar-ia-erro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gerar-ia-mensagem.gerar-ia-erro > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.gerar-ia-mensagem.gerar-ia-erro > button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(254, 202, 202, .42);
+  border-radius: 9px;
+  background: rgba(127, 29, 29, .28);
+  color: #fee2e2;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .gerar-ia-erro {
   color: #fecaca;
   background: rgba(220, 38, 38, 0.14);
@@ -487,6 +512,17 @@
 
   .gerar-ia-multiassunto-topo {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 700px) {
+  .gerar-ia-mensagem.gerar-ia-erro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .gerar-ia-mensagem.gerar-ia-erro > button {
+    width: 100%;
   }
 }
 
