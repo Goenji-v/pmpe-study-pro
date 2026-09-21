@@ -37,6 +37,10 @@ type AuthContextValue = {
     precisaConfirmarEmail: boolean;
   }>;
 
+  entrarComGoogle: (
+    redirectTo?: string
+  ) => Promise<void>;
+
   recuperarSenha: (
     email: string
   ) => Promise<void>;
@@ -187,6 +191,31 @@ export function AuthProvider({
     };
   }
 
+  async function entrarComGoogle(
+    redirectTo?: string
+  ) {
+    const {
+      error,
+    } =
+      await supabase.auth
+        .signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo:
+              redirectTo ??
+              `${window.location.origin}/`,
+          },
+        });
+
+    if (error) {
+      throw new Error(
+        traduzirErro(
+          error.message
+        )
+      );
+    }
+  }
+
   async function recuperarSenha(
     email: string
   ) {
@@ -240,6 +269,7 @@ export function AuthProvider({
         carregando,
         entrar,
         cadastrar,
+        entrarComGoogle,
         recuperarSenha,
         sair,
       }),
@@ -317,6 +347,13 @@ function traduzirErro(
     )
   ) {
     return "Digite um e-mail válido.";
+  }
+
+  if (
+    texto.includes("provider is not enabled") ||
+    texto.includes("unsupported provider")
+  ) {
+    return "O login com Google ainda não foi ativado no servidor.";
   }
 
   return mensagem;
