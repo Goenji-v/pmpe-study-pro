@@ -18,7 +18,7 @@ import {
 } from "../../utils/revisoes";
 import type { Materia, Revisao } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
-import { orientarRevisaoPorResultado } from "../../utils/revisaoAdaptativa";
+import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
 
 type RevisaoIA = {
   id: string;
@@ -445,12 +445,16 @@ function GrupoRevisoes({
           const diferenca = calcularDiasDiferenca(revisao.dataPrevista);
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
-          const orientacao = orientarRevisaoPorResultado(
-            revisao.certas,
-            revisao.erradas
-          );
-          const mostrarEstudo =
-            !orientacao || orientacao.modo === "teoria_questoes";
+          const plano = planejarRevisaoPendente(revisao);
+          const mostrarEstudo = plano.modo === "teoria_questoes";
+          const quando =
+            diferenca < 0
+              ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
+              : diferenca === 0
+                ? "Hoje"
+                : diferenca === 1
+                  ? "Amanhã"
+                  : `Daqui a ${diferenca} dias`;
 
           return (
             <article key={revisao.id} className="revisao-card">
@@ -467,17 +471,19 @@ function GrupoRevisoes({
                       : `Daqui a ${diferenca} dia(s)`}
                 </small>
 
-                {orientacao && (
-                  <div className={`revisao-orientacao revisao-orientacao-${orientacao.modo}`}>
-                    <div className="revisao-orientacao-topo">
-                      <strong>{orientacao.titulo}</strong>
+                <div className={`revisao-orientacao revisao-orientacao-${plano.modo}`}>
+                  <div className="revisao-orientacao-topo">
+                    <strong>{quando} · {plano.titulo}</strong>
+                    {typeof plano.percentual === "number" && typeof plano.total === "number" ? (
                       <span>
-                        Último resultado: {revisao.certas}/{orientacao.total} ({orientacao.percentual}%)
+                        Último resultado: {revisao.certas}/{plano.total} ({plano.percentual}%)
                       </span>
-                    </div>
-                    <p>{orientacao.descricao}</p>
+                    ) : (
+                      <span>Sem nota medida ainda</span>
+                    )}
                   </div>
-                )}
+                  <p>{plano.descricao}</p>
+                </div>
               </div>
 
               <div className="revisao-lateral">
@@ -488,9 +494,7 @@ function GrupoRevisoes({
                       className="revisao-iniciar"
                       onClick={() => abrirEstudo(revisao)}
                     >
-                      {orientacao?.modo === "teoria_questoes"
-                        ? "📚 Rever conteúdo"
-                        : "▶ Estudar"}
+                      📚 Rever conteúdo
                     </button>
                   )}
                   <button
@@ -498,7 +502,7 @@ function GrupoRevisoes({
                     className="revisao-questoes"
                     onClick={() => abrirQuestoes(revisao)}
                   >
-                    {orientacao ? "❓ Fazer 10 questões" : "❓ Questões"}
+                    ❓ Fazer {plano.quantidadeQuestoes} questões
                   </button>
                   <button
                     type="button"
