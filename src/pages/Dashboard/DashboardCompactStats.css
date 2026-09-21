@@ -1,0 +1,189 @@
+/* Preview Premium — cards de métricas compactos no padrão visual aprovado. */
+.dashboard-pro-v3 .dashboard-pro-stats.dashboard-pro-stats-art {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-bottom: 14px !important;
+}
+
+/* Ordem visual da referência: Sequência, Tempo, Desempenho, Questões. */
+.dashboard-pro-v3 .dashboard-pro-stats-art > :nth-child(4) { order: 1; }
+.dashboard-pro-v3 .dashboard-pro-stats-art > :nth-child(1) { order: 2; }
+.dashboard-pro-v3 .dashboard-pro-stats-art > :nth-child(3) { order: 3; }
+.dashboard-pro-v3 .dashboard-pro-stats-art > :nth-child(2) { order: 4; }
+
+.dashboard-pro-v3 .dashboard-pro-stat.dashboard-pro-stat-art {
+  position: relative !important;
+  min-height: 102px !important;
+  padding: 14px 36px 14px 14px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(78, 116, 154, .44) !important;
+  border-radius: 11px !important;
+  background: linear-gradient(145deg, #0d2035, #0a192a) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .10) !important;
+  transform: none !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-stat.dashboard-pro-stat-art:hover {
+  border-color: rgba(102, 147, 190, .62) !important;
+  background: linear-gradient(145deg, #102740, #0b1d31) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Remove as grandes bolhas decorativas dos cards antigos. */
+.dashboard-pro-v3 .dashboard-pro-stat-art::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Ícone pequeno em caixa, como na referência. */
+.dashboard-pro-v3 .dashboard-pro-stat-art > .dashboard-pro-stat-icon,
+.dashboard-pro-v3 .dashboard-pro-stat-streak .dashboard-pro-stat-icon {
+  width: 36px !important;
+  height: 36px !important;
+  flex: 0 0 36px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1px solid rgba(87, 124, 161, .28) !important;
+  border-radius: 9px !important;
+  background: #102b47 !important;
+  box-shadow: none !important;
+  font-size: 17px !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-stat-art.roxo > .dashboard-pro-stat-icon { color: #9c83ff !important; background: #18264b !important; }
+.dashboard-pro-v3 .dashboard-pro-stat-art.verde > .dashboard-pro-stat-icon { color: #67d9ad !important; background: #102f35 !important; }
+.dashboard-pro-v3 .dashboard-pro-stat-art.laranja .dashboard-pro-stat-icon { color: #efbd55 !important; background: #172c3d !important; }
+
+.dashboard-pro-v3 .dashboard-pro-stat-icon i {
+  width: 24px !important;
+  height: 24px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 16px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-stat-copy {
+  min-width: 0 !important;
+  display: flex !important;
+  flex: 1 !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+}
+
+/* Título primeiro, número logo abaixo. */
+.dashboard-pro-v3 .dashboard-pro-stat-art .dashboard-pro-stat-copy > b {
+  order: -1 !important;
+  margin: 0 0 4px !important;
+  color: #c8d6e7 !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  line-height: 1.1 !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-stat-art .dashboard-pro-stat-copy > strong {
+  margin: 0 !important;
+  color: #f7faff !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: -.025em !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-stat-art .dashboard-pro-stat-copy > small {
+  max-width: 100% !important;
+  margin-top: 6px !important;
+  color: #76d8ac !important;
+  font-size: 8px !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Setinha fina no canto superior direito. */
+.dashboard-pro-v3 .dashboard-pro-stat-art > .dashboard-pro-stat-arrow {
+  position: absolute !important;
+  top: 10px !important;
+  right: 11px !important;
+  width: auto !important;
+  height: auto !important;
+  display: block !important;
+  color: #7892ad !important;
+  background: transparent !important;
+  font-size: 0 !important;
+  opacity: .9 !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-stat-art > .dashboard-pro-stat-arrow::after {
+  content: "↗";
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Sequência usa o mesmo card compacto; a faixa semanal sai deste resumo. */
+.dashboard-pro-v3 .dashboard-pro-stat-streak {
+  display: flex !important;
+  min-height: 102px !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-stat-streak::before {
+  content: "↗";
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  color: #7892ad;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.dashboard-pro-v3 .dashboard-pro-streak-top {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.dashboard-pro-v3 .dashboard-pro-streak-week {
+  display: none !important;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-pro-v3 .dashboard-pro-stats.dashboard-pro-stats-art {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-pro-v3 .dashboard-pro-stats.dashboard-pro-stats-art {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+  }
+
+  .dashboard-pro-v3 .dashboard-pro-stat.dashboard-pro-stat-art {
+    min-height: 94px !important;
+    padding: 12px 28px 12px 11px !important;
+    gap: 9px !important;
+  }
+
+  .dashboard-pro-v3 .dashboard-pro-stat-art > .dashboard-pro-stat-icon,
+  .dashboard-pro-v3 .dashboard-pro-stat-streak .dashboard-pro-stat-icon {
+    width: 32px !important;
+    height: 32px !important;
+    flex-basis: 32px !important;
+  }
+
+  .dashboard-pro-v3 .dashboard-pro-stat-art .dashboard-pro-stat-copy > strong {
+    font-size: 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-pro-v3 .dashboard-pro-stats.dashboard-pro-stats-art {
+    grid-template-columns: 1fr !important;
+  }
+}
