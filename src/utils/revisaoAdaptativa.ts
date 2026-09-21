@@ -28,6 +28,36 @@ export type OrientacaoRevisao = {
   descricao: string;
 };
 
+export type PlanoRevisaoPendente = {
+  modo: ModoRevisaoRecomendado;
+  quantidadeQuestoes: number;
+  titulo: string;
+  descricao: string;
+  percentual?: number;
+  total?: number;
+};
+
+export function planejarRevisaoPendente(
+  revisao: Pick<Revisao, "certas" | "erradas">
+): PlanoRevisaoPendente {
+  const orientacao = orientarRevisaoPorResultado(
+    revisao.certas,
+    revisao.erradas
+  );
+
+  if (orientacao) {
+    return orientacao;
+  }
+
+  return {
+    modo: "teoria_questoes",
+    quantidadeQuestoes: 10,
+    titulo: "Teoria + 10 questões",
+    descricao:
+      "Ainda não há resultado suficiente para medir este assunto. Revise o conteúdo e finalize com 10 questões para o próximo ciclo ser calculado pela sua nota.",
+  };
+}
+
 export function orientarRevisaoPorResultado(
   certas?: number,
   erradas?: number
