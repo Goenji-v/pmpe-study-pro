@@ -20,10 +20,10 @@ const parametros = {
   revisaoId: revisao.id, desempenho: "facil" as const, limiteDiario: 2, agora, proximaId: "proxima", sessao,
 };
 
-test("avaliação usa acertos sobre o total sem arredondar os limites de 50% e 80%", () => {
+test("avaliação usa acertos sobre o total sem arredondar os limites de 60% e 80%", () => {
   for (const [total, certas, esperado] of [
-    [10, 8, "facil"], [10, 5, "media"], [10, 4, "dificil"], [10, 0, "dificil"],
-    [1000, 499, "dificil"], [1000, 799, "media"], [10, 10, "facil"],
+    [10, 8, "facil"], [10, 6, "media"], [10, 5, "dificil"], [10, 0, "dificil"],
+    [1000, 599, "dificil"], [1000, 799, "media"], [10, 10, "facil"],
   ] as const) assert.equal(avaliarRevisaoPorQuestoes(total, certas), esperado);
   // Questões em branco pertencem ao total, nunca aumentam a taxa de acertos.
   assert.equal(avaliarRevisaoPorQuestoes(10, 4), "dificil");
@@ -46,6 +46,8 @@ test("concluir a sessão guarda seu vínculo e resultado e agenda a próxima eta
   assert.equal(concluida.erradas, 2);
   assert.equal(resultado[0].etapa, 3);
   assert.equal(new Date(resultado[0].dataPrevista).getDate(), 9);
+  assert.equal(resultado[0].certas, 8);
+  assert.equal(resultado[0].erradas, 2);
   assert.equal(lista[0].concluida, false);
   assert.equal(concluirRevisaoNaLista({ ...parametros, revisoes: resultado }), resultado);
   // Replay do updater do React também produz exatamente os mesmos IDs e datas.
