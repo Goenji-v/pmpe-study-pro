@@ -678,46 +678,6 @@ export default function ResolverSimuladoIA() {
     }
   }
 
-  async function refazerSimulado() {
-    setCarregando(true);
-    setMensagem("");
-
-    try {
-      const verificadas = await atualizarQuestoesAntesDoTreino(questoes);
-      const retiradas = questoes.length - verificadas.length;
-
-      if (verificadas.length === 0) {
-        localStorage.removeItem(CHAVE_QUESTOES_IA);
-      } else {
-        localStorage.setItem(
-          CHAVE_QUESTOES_IA,
-          JSON.stringify(verificadas)
-        );
-      }
-
-      sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
-      setQuestoes(verificadas);
-      setRespostas({});
-      setAlternativasEliminadas({});
-      setQuestaoAtual(0);
-      setFinalizado(false);
-      setResumoRevisaoFinal(null);
-      setRevisaoConcluidaNoTreino(false);
-      setMensagem(
-        retiradas > 0
-          ? `${retiradas} questão(ões) retirada(s) antes do novo treino por denúncia, anulação ou indisponibilidade.`
-          : ""
-      );
-    } catch (erro) {
-      setMensagem(
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível validar as questões antes de refazer o treino."
-      );
-    } finally {
-      setCarregando(false);
-    }
-  }
 
   function treinarErros() {
     const questoesParaTreino =
@@ -1435,10 +1395,10 @@ export default function ResolverSimuladoIA() {
             ) : (
               <button
                 type="button"
-                onClick={refazerSimulado}
+                onClick={() => navigate("/caderno-questoes")}
                 className="resolver-ia-primario"
               >
-                Refazer simulado
+                ← Voltar para o Caderno de Questões
               </button>
             )}
           </div>
