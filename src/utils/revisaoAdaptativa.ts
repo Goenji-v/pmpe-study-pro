@@ -85,6 +85,7 @@ export function orientarRevisaoPorResultado(
 
 type AcaoRevisaoAdaptativa =
   | "ignorada"
+  | "registrada"
   | "criada"
   | "atualizada";
 
@@ -179,9 +180,40 @@ export function aplicarRevisaoAdaptativa(
   );
 
   if (!diagnostico) {
+    const total = params.certas + params.erradas;
+    if (total < MINIMO_QUESTOES_REVISAO_ADAPTATIVA) {
+      return {
+        revisoes: params.revisoes,
+        acao: "ignorada",
+        diagnostico: null,
+      };
+    }
+
+    const indiceExistente = params.revisoes.findIndex(
+      (revisao) =>
+        !revisao.concluida &&
+        mesmaReferencia(revisao, params)
+    );
+
+    if (indiceExistente < 0) {
+      return {
+        revisoes: params.revisoes,
+        acao: "ignorada",
+        diagnostico: null,
+      };
+    }
+
     return {
-      revisoes: params.revisoes,
-      acao: "ignorada",
+      revisoes: params.revisoes.map((revisao, indice) =>
+        indice === indiceExistente
+          ? {
+              ...revisao,
+              certas: params.certas,
+              erradas: params.erradas,
+            }
+          : revisao
+      ),
+      acao: "registrada",
       diagnostico: null,
     };
   }
