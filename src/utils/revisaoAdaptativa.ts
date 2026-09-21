@@ -14,6 +14,75 @@ export type DiagnosticoRevisaoAdaptativa = {
   diasParaRevisao: number;
 };
 
+export type ModoRevisaoRecomendado =
+  | "teoria_questoes"
+  | "questoes"
+  | "ciclo_normal";
+
+export type OrientacaoRevisao = {
+  percentual: number;
+  total: number;
+  modo: ModoRevisaoRecomendado;
+  quantidadeQuestoes: number;
+  titulo: string;
+  descricao: string;
+};
+
+export function orientarRevisaoPorResultado(
+  certas?: number,
+  erradas?: number
+): OrientacaoRevisao | null {
+  if (
+    typeof certas !== "number" ||
+    typeof erradas !== "number" ||
+    !Number.isInteger(certas) ||
+    !Number.isInteger(erradas) ||
+    certas < 0 ||
+    erradas < 0
+  ) {
+    return null;
+  }
+
+  const total = certas + erradas;
+  if (total < MINIMO_QUESTOES_REVISAO_ADAPTATIVA) return null;
+
+  const percentual = Math.round((certas / total) * 100);
+
+  if (percentual < 60) {
+    return {
+      percentual,
+      total,
+      modo: "teoria_questoes",
+      quantidadeQuestoes: 10,
+      titulo: "Reforçar o conteúdo",
+      descricao:
+        "Revise a aula, resumo ou material deste assunto antes de resolver 10 novas questões.",
+    };
+  }
+
+  if (percentual < 80) {
+    return {
+      percentual,
+      total,
+      modo: "questoes",
+      quantidadeQuestoes: 10,
+      titulo: "Fixar por questões",
+      descricao:
+        "Seu desempenho já permite seguir por questões. Resolva 10 novas para confirmar a evolução.",
+    };
+  }
+
+  return {
+    percentual,
+    total,
+    modo: "ciclo_normal",
+    quantidadeQuestoes: 10,
+    titulo: "Manter o ciclo normal",
+    descricao:
+      "Bom domínio do assunto. Continue a revisão no ciclo normal, priorizando questões.",
+  };
+}
+
 type AcaoRevisaoAdaptativa =
   | "ignorada"
   | "criada"
