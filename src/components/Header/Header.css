@@ -138,22 +138,35 @@
   .header-acoes {
     width: 100%;
     margin-left: 0;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px 46px;
+    align-items: center;
+    justify-content: stretch;
     gap: 7px;
   }
 
+  .header-acoes .cloud-status-wrap {
+    min-width: 0;
+    justify-self: start;
+  }
+
+  .header-acoes .cloud-status {
+    max-width: min(145px, calc(100vw - 176px));
+  }
+
   .header-acoes .user-profile-menu {
-    position: fixed;
-    top: 7px;
-    right: 8px;
-    z-index: 1301;
+    position: static;
+    z-index: auto;
+    grid-column: 3;
+    justify-self: end;
   }
 
   .header .header-notification-button {
-    position: fixed;
-    top: 7px;
-    right: 62px;
-    z-index: 1301;
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: auto;
+    grid-column: 2;
     width: 42px;
     height: 42px;
     display: grid;
