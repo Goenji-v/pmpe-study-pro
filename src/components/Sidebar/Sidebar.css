@@ -305,10 +305,13 @@
     transform: translateX(-105%);
     transition: transform .24s ease;
     overscroll-behavior: contain;
+    pointer-events: none;
   }
 
   .sidebar.sidebar-mobile-aberta {
+    z-index: 1300;
     transform: translateX(0);
+    pointer-events: auto;
   }
 
   .sidebar-logo {
