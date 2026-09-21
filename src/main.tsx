@@ -15,6 +15,7 @@ import "./styles/visual-qa-final.css";
 import "./styles/responsive-critical-fixes.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./components/Sidebar/SidebarPremiumVisual.css";
+import "./pages/Dashboard/DashboardHeroPremium.css";
 
 const CHAVE_RECUPERACAO_ASSET = "study-pro:asset-reload";
 
