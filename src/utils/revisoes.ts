@@ -124,6 +124,8 @@ export function criarProximaRevisao(
     dataCriacao: agora.toISOString(),
     dataPrevista: dataPrevista.toISOString(),
     concluida: false,
+    ...(typeof revisaoAtual.certas === "number" ? { certas: revisaoAtual.certas } : {}),
+    ...(typeof revisaoAtual.erradas === "number" ? { erradas: revisaoAtual.erradas } : {}),
   };
 }
 
