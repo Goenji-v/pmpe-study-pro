@@ -28,6 +28,7 @@ import {
 
 import type {
   Dificuldade,
+  Revisao,
   SessaoEstudo,
   TipoSessao,
 } from "../types/index";
@@ -109,6 +110,7 @@ type ResultadoFinalizacao = {
   sessao: SessaoEstudo;
   revisaoCriada: boolean;
   revisaoConcluida: boolean;
+  proximaRevisao?: Revisao;
 };
 
 type CronometroContextType = {
@@ -526,13 +528,26 @@ export function CronometroProvider({
 
     const formatoRevisao = dados.formatoRevisao ?? sessaoAtiva.formatoRevisao;
     const revisaoPorQuestoes = sessaoAtiva.tipo === "revisao" && formatoRevisao === "questoes";
-    const avaliacaoAutomatica = revisaoPorQuestoes
-      ? avaliarRevisaoPorQuestoes(dados.quantidadeQuestoes, dados.quantidadeAcertos) : null;
+    const revisaoComResultadoQuestoes =
+      sessaoAtiva.tipo === "revisao" &&
+      typeof dados.quantidadeQuestoes === "number" &&
+      typeof dados.quantidadeAcertos === "number";
+    const avaliacaoAutomatica =
+      revisaoPorQuestoes || revisaoComResultadoQuestoes
+        ? avaliarRevisaoPorQuestoes(
+            dados.quantidadeQuestoes,
+            dados.quantidadeAcertos
+          )
+        : null;
     if (revisaoPorQuestoes && !avaliacaoAutomatica && !dados.resultadoJaRegistrado) {
       showToast("Informe o total de questões e uma quantidade válida de acertos.", "warning");
       return null;
     }
-    const avaliacaoRevisao = revisaoPorQuestoes ? avaliacaoAutomatica ?? undefined : dados.avaliacaoRevisao;
+    const avaliacaoRevisao = revisaoComResultadoQuestoes
+      ? avaliacaoAutomatica ?? undefined
+      : revisaoPorQuestoes
+        ? avaliacaoAutomatica ?? undefined
+        : dados.avaliacaoRevisao;
     const sessaoId = sessaoAtiva.sessaoId ?? criarIdSessaoLegada(sessaoAtiva);
     const chaveUltimaFinalizacao = `${chaveStorage}:ultima-finalizacao`;
 
@@ -680,12 +695,29 @@ export function CronometroProvider({
     const revisaoConcluida = Boolean(avaliacaoRevisao && revisoes.some(
       (revisao) => !revisao.concluida && revisaoCorrespondeASessao(revisao, novaSessao)
     ));
+    let proximaRevisao: Revisao | undefined;
     if (sessaoAtiva.tipo === "revisao" && sessaoAtiva.revisaoId && avaliacaoRevisao) {
       const proximaId = `${sessaoId}:revisao:${sessaoAtiva.revisaoId}:proxima`;
+      const agoraConclusao = new Date(finalizadaEm);
+      const previsao = concluirRevisaoNaLista({
+        revisoes,
+        revisaoId: sessaoAtiva.revisaoId,
+        desempenho: avaliacaoRevisao,
+        limiteDiario: configuracoes.metaRevisoesDiaria,
+        agora: agoraConclusao,
+        proximaId,
+        sessao: novaSessao,
+      });
+      proximaRevisao = previsao.find((item) => item.id === proximaId);
+
       setRevisoes((anteriores) => concluirRevisaoNaLista({
-        revisoes: anteriores, revisaoId: sessaoAtiva.revisaoId!,
-        desempenho: avaliacaoRevisao, limiteDiario: configuracoes.metaRevisoesDiaria,
-        agora: new Date(finalizadaEm), proximaId, sessao: novaSessao,
+        revisoes: anteriores,
+        revisaoId: sessaoAtiva.revisaoId!,
+        desempenho: avaliacaoRevisao,
+        limiteDiario: configuracoes.metaRevisoesDiaria,
+        agora: agoraConclusao,
+        proximaId,
+        sessao: novaSessao,
       }));
     }
 
@@ -847,6 +879,7 @@ export function CronometroProvider({
       sessao: novaSessao,
       revisaoCriada,
       revisaoConcluida,
+      proximaRevisao,
     };
   }
 
