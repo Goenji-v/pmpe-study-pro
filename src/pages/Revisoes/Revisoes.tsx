@@ -18,6 +18,7 @@ import {
 } from "../../utils/revisoes";
 import type { Materia, Revisao } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
+import { orientarRevisaoPorResultado } from "../../utils/revisaoAdaptativa";
 
 type RevisaoIA = {
   id: string;
@@ -229,6 +230,7 @@ export default function Revisoes() {
         materia: dados.materia,
         modulo: dados.modulo,
         assunto: dados.assunto,
+        quantidade: 10,
       })
     );
     sessionStorage.setItem(
@@ -325,7 +327,7 @@ export default function Revisoes() {
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
       <p className="revisoes-subtitle">
-        Revisões conforme seu desempenho: fácil avança no ciclo 0-1-7-15; média repete em 3 dias; difícil, em 1 dia. A agenda respeita sua meta diária.
+        O Study Pro usa seu desempenho para indicar como revisar: abaixo de 60% reforça o conteúdo antes das questões; a partir de 60% prioriza questões; com bom domínio, mantém o ciclo normal.
       </p>
 
       <div className="revisoes-toolbar">
@@ -443,6 +445,12 @@ function GrupoRevisoes({
           const diferenca = calcularDiasDiferenca(revisao.dataPrevista);
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
+          const orientacao = orientarRevisaoPorResultado(
+            revisao.certas,
+            revisao.erradas
+          );
+          const mostrarEstudo =
+            !orientacao || orientacao.modo === "teoria_questoes";
 
           return (
             <article key={revisao.id} className="revisao-card">
@@ -458,23 +466,39 @@ function GrupoRevisoes({
                       ? "Vence hoje"
                       : `Daqui a ${diferenca} dia(s)`}
                 </small>
+
+                {orientacao && (
+                  <div className={`revisao-orientacao revisao-orientacao-${orientacao.modo}`}>
+                    <div className="revisao-orientacao-topo">
+                      <strong>{orientacao.titulo}</strong>
+                      <span>
+                        Último resultado: {revisao.certas}/{orientacao.total} ({orientacao.percentual}%)
+                      </span>
+                    </div>
+                    <p>{orientacao.descricao}</p>
+                  </div>
+                )}
               </div>
 
               <div className="revisao-lateral">
                 <div className="revisao-acoes-compactas">
-                  <button
-                    type="button"
-                    className="revisao-iniciar"
-                    onClick={() => abrirEstudo(revisao)}
-                  >
-                    ▶ Estudar
-                  </button>
+                  {mostrarEstudo && (
+                    <button
+                      type="button"
+                      className="revisao-iniciar"
+                      onClick={() => abrirEstudo(revisao)}
+                    >
+                      {orientacao?.modo === "teoria_questoes"
+                        ? "📚 Rever conteúdo"
+                        : "▶ Estudar"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="revisao-questoes"
                     onClick={() => abrirQuestoes(revisao)}
                   >
-                    ❓ Questões
+                    {orientacao ? "❓ Fazer 10 questões" : "❓ Questões"}
                   </button>
                   <button
                     type="button"
