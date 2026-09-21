@@ -127,7 +127,6 @@ export default function Questoes() {
     let tipoToast: "success" | "warning" = "success";
 
     if (
-      diagnostico &&
       materiaSelecionada?.id &&
       assuntoSelecionado?.id
     ) {
@@ -145,16 +144,18 @@ export default function Questoes() {
         }).revisoes
       );
 
-      const quando =
-        diagnostico.diasParaRevisao === 0
-          ? "para hoje"
-          : diagnostico.diasParaRevisao === 1
-            ? "para amanhã"
-            : `para daqui a ${diagnostico.diasParaRevisao} dias`;
+      if (diagnostico) {
+        const quando =
+          diagnostico.diasParaRevisao === 0
+            ? "para hoje"
+            : diagnostico.diasParaRevisao === 1
+              ? "para amanhã"
+              : `para daqui a ${diagnostico.diasParaRevisao} dias`;
 
-      mensagemSalvamento = `${rotuloPrioridadeRevisaoAdaptativa(
-        diagnostico.prioridade
-      )} de ${assunto} criada ${quando} (${diagnostico.percentual}% de acerto).`;
+        mensagemSalvamento = `${rotuloPrioridadeRevisaoAdaptativa(
+          diagnostico.prioridade
+        )} de ${assunto} criada ${quando} (${diagnostico.percentual}% de acerto).`;
+      }
     } else if (diagnostico) {
       mensagemSalvamento =
         "Registro salvo, mas não foi possível localizar o assunto para criar a revisão automática.";
