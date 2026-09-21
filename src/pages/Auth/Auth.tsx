@@ -42,6 +42,7 @@ export default function Auth() {
     carregando,
     entrar,
     cadastrar,
+    entrarComGoogle,
     recuperarSenha,
   } = useAuth();
 
@@ -73,6 +74,7 @@ export default function Auth() {
     }
   });
   const [enviando, setEnviando] = useState(false);
+  const [enviandoGoogle, setEnviandoGoogle] = useState(false);
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
 
@@ -157,6 +159,33 @@ export default function Auth() {
     }
   }
 
+  async function entrarGoogle() {
+    if (enviando || enviandoGoogle) {
+      return;
+    }
+
+    setErro("");
+    setMensagem("");
+
+    try {
+      setEnviandoGoogle(true);
+
+      const destino =
+        origem.startsWith("/")
+          ? new URL(origem, window.location.origin).toString()
+          : `${window.location.origin}/`;
+
+      await entrarComGoogle(destino);
+    } catch (erroGoogle) {
+      setErro(
+        erroGoogle instanceof Error
+          ? erroGoogle.message
+          : "Não foi possível entrar com o Google."
+      );
+      setEnviandoGoogle(false);
+    }
+  }
+
   function validarEmail() {
     if (!email.trim() || !email.includes("@")) {
       throw new Error("Digite um e-mail válido.");
@@ -228,6 +257,26 @@ export default function Auth() {
                   : "Informe o e-mail cadastrado para recuperar o acesso."}
             </p>
           </div>
+
+          {modo !== "recuperar" && (
+            <div className="auth-social">
+              <button
+                type="button"
+                className="auth-google"
+                onClick={() => void entrarGoogle()}
+                disabled={enviando || enviandoGoogle}
+              >
+                <span className="auth-google-icone" aria-hidden="true">G</span>
+                <span>{enviandoGoogle ? "Conectando..." : "Continuar com Google"}</span>
+              </button>
+
+              <div className="auth-divisor" aria-hidden="true">
+                <span />
+                <small>ou</small>
+                <span />
+              </div>
+            </div>
+          )}
 
           <form onSubmit={enviar} className="auth-formulario">
             {modo === "cadastro" && (
