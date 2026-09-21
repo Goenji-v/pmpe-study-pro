@@ -1,0 +1,204 @@
+/* Preview isolada — Meta do Dia + Meta Semanal v2 */
+.dashboard-pro-v3 .dashboard-goals-v2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin: 16px 0 18px;
+}
+
+.dashboard-pro-v3 .dashboard-goal-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(112, 132, 158, .28);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(40, 112, 194, .08), transparent 38%),
+    linear-gradient(145deg, rgba(19, 31, 49, .98), rgba(13, 24, 40, .98));
+  box-shadow: 0 12px 28px rgba(2, 8, 23, .12);
+}
+
+.dashboard-pro-v3 .dashboard-goal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.dashboard-pro-v3 .dashboard-goal-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #78aee8;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.dashboard-pro-v3 .dashboard-goal-heading h2 {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.dashboard-pro-v3 .dashboard-goal-percent,
+.dashboard-pro-v3 .dashboard-goal-days-total {
+  color: #f6c95d;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -.03em;
+}
+
+.dashboard-pro-v3 .dashboard-goal-days-total span {
+  margin-left: 2px;
+  color: #75869d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-pro-v3 .dashboard-goal-value {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 20px;
+}
+
+.dashboard-pro-v3 .dashboard-goal-value strong {
+  color: #f8fbff;
+  font-size: 29px;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+
+.dashboard-pro-v3 .dashboard-goal-value span {
+  color: #8fa0b7;
+  font-size: 12px;
+}
+
+.dashboard-pro-v3 .dashboard-goal-progress {
+  height: 8px;
+  margin-top: 13px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #243247;
+}
+
+.dashboard-pro-v3 .dashboard-goal-progress > div {
+  height: 100%;
+  max-width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f83db, #64aef3);
+  box-shadow: 0 0 14px rgba(63, 145, 226, .22);
+  transition: width .45s ease;
+}
+
+.dashboard-pro-v3 .dashboard-goal-card p {
+  margin: 10px 0 0;
+  color: #8294ab;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dashboard-pro-v3 .dashboard-goal-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 19px;
+}
+
+.dashboard-pro-v3 .dashboard-goal-day {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dashboard-pro-v3 .dashboard-goal-day span {
+  color: #70839c;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.dashboard-pro-v3 .dashboard-goal-day i {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #3e4d61;
+  border-radius: 50%;
+  color: transparent;
+  background: rgba(15, 26, 42, .68);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.dashboard-pro-v3 .dashboard-goal-day.concluido i {
+  border-color: rgba(61, 175, 122, .76);
+  background: rgba(41, 135, 91, .18);
+  color: #65d59c;
+}
+
+.dashboard-pro-v3 .dashboard-goal-day.hoje i {
+  border-color: #d3a93f;
+  box-shadow: 0 0 0 3px rgba(211, 169, 63, .10);
+}
+
+.dashboard-pro-v3 .dashboard-goal-day.futuro {
+  opacity: .42;
+}
+
+@media (max-width: 760px) {
+  .dashboard-pro-v3 .dashboard-goals-v2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 12px 0 15px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-card {
+    padding: 15px;
+    border-radius: 14px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-heading h2 {
+    font-size: 16px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-percent,
+  .dashboard-pro-v3 .dashboard-goal-days-total {
+    font-size: 21px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-value {
+    margin-top: 15px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-value strong {
+    font-size: 25px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-days {
+    gap: 5px;
+    margin-top: 15px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-day i {
+    width: 25px;
+    height: 25px;
+  }
+}
+
+@media (max-width: 390px) {
+  .dashboard-pro-v3 .dashboard-goal-card {
+    padding: 13px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-day span {
+    font-size: 7px;
+  }
+
+  .dashboard-pro-v3 .dashboard-goal-day i {
+    width: 23px;
+    height: 23px;
+  }
+}
