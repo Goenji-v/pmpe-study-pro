@@ -77,6 +77,7 @@ type AssuntoSelecionavel = {
 type PrefillPendente = {
   modulo?: string;
   assunto: string;
+  quantidade?: number;
 };
 
 type SelecaoCatalogoBloco =
@@ -169,14 +170,22 @@ export default function GerarSimuladoIA() {
         materia?: string;
         modulo?: string;
         assunto?: string;
+        quantidade?: number;
       };
 
       setOrigem("assunto");
       if (prefill.materia) setMateriaSelecionada(prefill.materia);
+      if (
+        typeof prefill.quantidade === "number" &&
+        QUANTIDADES_DISPONIVEIS.includes(prefill.quantidade)
+      ) {
+        setQuantidade(prefill.quantidade);
+      }
       if (prefill.assunto) {
         setPrefillPendente({
           modulo: prefill.modulo,
           assunto: prefill.assunto,
+          quantidade: prefill.quantidade,
         });
       }
     } finally {
