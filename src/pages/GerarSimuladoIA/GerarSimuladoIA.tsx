@@ -129,7 +129,7 @@ export default function GerarSimuladoIA() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [questoesGeradas, setQuestoesGeradas] = useState<QuestaoIA[]>([]);
-  const [, setGeracaoPendente] =
+  const [geracaoPendente, setGeracaoPendente] =
     useState<GeracaoPendente | null>(null);
   const [resumoBanco, setResumoBanco] = useState({
     totalCompativeis: 0,
@@ -853,14 +853,11 @@ export default function GerarSimuladoIA() {
         new Event("pmpe-questoes-ia-atualizadas")
       );
     } catch (erroGeracao) {
-      const mensagem =
-        erroGeracao instanceof Error
-          ? erroGeracao.message
-          : "Erro desconhecido ao gerar questões.";
+      const mensagem = mensagemAmigavelGeracao(erroGeracao);
 
       console.error("Erro ao gerar questões:", erroGeracao);
       setErro(
-        `${mensagem} A operação foi preservada para uma retomada segura.`
+        `${mensagem} Sua seleção foi preservada e você pode tentar novamente.`
       );
       atualizarAtividadeGeracao(
         operacao,
@@ -965,7 +962,15 @@ export default function GerarSimuladoIA() {
 
       {erro && (
         <div className="gerar-ia-mensagem gerar-ia-erro" role="alert">
-          {erro}
+          <span>{erro}</span>
+          {geracaoPendente && !gerando && (
+            <button
+              type="button"
+              onClick={() => void gerarSimulado(geracaoPendente)}
+            >
+              Tentar novamente
+            </button>
+          )}
         </div>
       )}
 
@@ -1441,4 +1446,21 @@ function normalizarTexto(valor: string) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function mensagemAmigavelGeracao(erro: unknown) {
+  const mensagem =
+    erro instanceof Error
+      ? erro.message
+      : String(erro || "");
+
+  if (
+    /failed to fetch|fetch failed|networkerror|network error|load failed/i.test(
+      mensagem
+    )
+  ) {
+    return "Não foi possível conectar ao servidor de geração agora. Verifique sua internet e tente novamente em instantes.";
+  }
+
+  return mensagem || "Não foi possível concluir a geração agora.";
 }

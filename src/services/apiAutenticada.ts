@@ -11,13 +11,15 @@ export async function fetchApiAutenticada(
 ) {
   const { data, error } = await supabase.auth.getSession();
   const token = data.session?.access_token;
+  const usuarioId = data.session?.user?.id;
 
-  if (error || !token) {
+  if (error || !token || !usuarioId) {
     throw new Error("Sua sessão expirou. Entre novamente para usar a inteligência artificial.");
   }
 
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
+  headers.set("X-Study-User-Id", usuarioId);
 
   if (chavePublicaSupabase) {
     headers.set("X-Supabase-Anon-Key", chavePublicaSupabase);
@@ -33,7 +35,23 @@ export async function fetchApiAutenticada(
   }
 
   for (let tentativa = 0; tentativa <= ATRASOS_GERACAO_IA_MS.length; tentativa += 1) {
-    const resposta = await executar();
+    let resposta: Response;
+
+    try {
+      resposta = await executar();
+    } catch (erroRede) {
+      if (tentativa < ATRASOS_GERACAO_IA_MS.length) {
+        await aguardar(ATRASOS_GERACAO_IA_MS[tentativa]);
+        continue;
+      }
+
+      console.warn("Falha de rede ao acessar a geração de questões:", erroRede);
+      return respostaAmigavelIa(
+        "Não foi possível conectar ao servidor de geração agora. Sua operação continua salva e pode ser retomada sem perder a seleção.",
+        503
+      );
+    }
+
     const falha = await classificarFalhaTemporariaIa(resposta);
 
     if (falha === "limite") {
@@ -66,9 +84,10 @@ export async function fetchApiAutenticada(
 
 function ehRotaGeracaoQuestoes(url: string) {
   try {
-    return new URL(url, window.location.origin).pathname.endsWith("/api/gerar");
+    const caminho = new URL(url, window.location.origin).pathname;
+    return caminho === "/api/gerar" || caminho.startsWith("/api/geracoes");
   } catch {
-    return url.includes("/api/gerar");
+    return url.includes("/api/gerar") || url.includes("/api/geracoes");
   }
 }
 
