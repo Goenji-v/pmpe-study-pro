@@ -1,5 +1,5 @@
 import { armazenamentoLocalDaConta as localStorage, armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import "./QuestaoIACronometroBridge.css";
@@ -14,6 +14,7 @@ import type { QuestaoIA } from "../../types";
 const CHAVE_QUESTOES_IA = "pmpe_questoes_ia";
 const CHAVE_ORIGEM_REVISAO = "pmpe:questoes-ia:origem-revisao";
 const MARCADOR_OBJETIVO = "[Questões IA]";
+const CHAVE_POSICAO_CRONOMETRO = "pmpe:questoes-crono:posicao";
 
 type OrigemRevisao = {
   materia: string;
@@ -53,6 +54,17 @@ export default function QuestaoIACronometroBridge() {
   } = useCronometro();
 
   const [finalizadaNestaTela, setFinalizadaNestaTela] = useState(false);
+  const cronometroMiniRef = useRef<HTMLElement | null>(null);
+  const arrasteRef = useRef<{
+    pointerId: number;
+    inicioX: number;
+    inicioY: number;
+    inicioLeft: number;
+    inicioTop: number;
+  } | null>(null);
+  const [posicaoCronometro, setPosicaoCronometro] = useState<PosicaoCronometro | null>(
+    carregarPosicaoCronometro
+  );
   const emTelaDeProva = location.pathname === "/resolver-simulado-ia/prova";
   const cronometroQuestoesIA =
     cronometroAtivo && sessaoAtiva.objetivo.startsWith(MARCADOR_OBJETIVO);
@@ -175,6 +187,58 @@ export default function QuestaoIACronometroBridge() {
     navigate("/resolver-simulado-ia/prova");
   }
 
+  function iniciarArraste(evento: ReactPointerEvent<HTMLDivElement>) {
+    if (evento.button !== 0 || (evento.target as Element).closest("button")) return;
+
+    const elemento = cronometroMiniRef.current;
+    if (!elemento) return;
+
+    const caixa = elemento.getBoundingClientRect();
+    arrasteRef.current = {
+      pointerId: evento.pointerId,
+      inicioX: evento.clientX,
+      inicioY: evento.clientY,
+      inicioLeft: caixa.left,
+      inicioTop: caixa.top,
+    };
+
+    evento.currentTarget.setPointerCapture(evento.pointerId);
+    evento.preventDefault();
+  }
+
+  function moverArraste(evento: ReactPointerEvent<HTMLDivElement>) {
+    const arraste = arrasteRef.current;
+    const elemento = cronometroMiniRef.current;
+    if (!arraste || !elemento || arraste.pointerId !== evento.pointerId) return;
+
+    const proxima = limitarPosicaoCronometro(
+      arraste.inicioLeft + evento.clientX - arraste.inicioX,
+      arraste.inicioTop + evento.clientY - arraste.inicioY,
+      elemento
+    );
+    setPosicaoCronometro(proxima);
+    evento.preventDefault();
+  }
+
+  function finalizarArraste(evento: ReactPointerEvent<HTMLDivElement>) {
+    if (arrasteRef.current?.pointerId !== evento.pointerId) return;
+    arrasteRef.current = null;
+
+    if (evento.currentTarget.hasPointerCapture(evento.pointerId)) {
+      evento.currentTarget.releasePointerCapture(evento.pointerId);
+    }
+
+    if (posicaoCronometro) {
+      sessionStorage.setItem(CHAVE_POSICAO_CRONOMETRO, JSON.stringify(posicaoCronometro));
+    }
+  }
+
+  function restaurarPosicaoCronometro() {
+    arrasteRef.current = null;
+    sessionStorage.removeItem(CHAVE_POSICAO_CRONOMETRO);
+    setPosicaoCronometro(null);
+  }
+
   const deveBloquearInicio =
     emTelaDeProva &&
     questoes.length > 0 &&
@@ -227,10 +291,36 @@ export default function QuestaoIACronometroBridge() {
       )}
 
       {cronometroQuestoesIA && (
-        <aside className="questoes-crono-mini" aria-label="Cronômetro das questões">
-          <div>
+        <aside
+          ref={cronometroMiniRef}
+          className={`questoes-crono-mini ${posicaoCronometro ? "reposicionado" : ""}`}
+          aria-label="Cronômetro das questões"
+          style={
+            posicaoCronometro
+              ? { left: posicaoCronometro.left, top: posicaoCronometro.top, right: "auto", bottom: "auto" }
+              : undefined
+          }
+        >
+          <div
+            className="questoes-crono-mini-cabecalho"
+            onPointerDown={iniciarArraste}
+            onPointerMove={moverArraste}
+            onPointerUp={finalizarArraste}
+            onPointerCancel={finalizarArraste}
+            title="Arraste para mover o cronômetro"
+          >
+            <span className="questoes-crono-arraste" aria-hidden="true">⋮⋮</span>
             <span>⏱ QUESTÕES</span>
             <strong>{formatarTempo(segundosDecorridos)}</strong>
+            <button
+              type="button"
+              className="questoes-crono-restaurar"
+              onClick={restaurarPosicaoCronometro}
+              aria-label="Restaurar posição do cronômetro"
+              title="Restaurar posição"
+            >
+              ↺
+            </button>
           </div>
           <small>{sessaoAtiva.assunto}</small>
           <div className="questoes-crono-mini-acoes">
@@ -313,4 +403,35 @@ function normalizar(valor: string) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+
+type PosicaoCronometro = { left: number; top: number };
+
+function carregarPosicaoCronometro(): PosicaoCronometro | null {
+  const salvo = sessionStorage.getItem(CHAVE_POSICAO_CRONOMETRO);
+  if (!salvo) return null;
+
+  try {
+    const valor = JSON.parse(salvo) as Partial<PosicaoCronometro>;
+    if (typeof valor.left !== "number" || typeof valor.top !== "number") return null;
+    return {
+      left: Math.max(8, valor.left),
+      top: Math.max(8, valor.top),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function limitarPosicaoCronometro(left: number, top: number, elemento: HTMLElement): PosicaoCronometro {
+  const margem = 8;
+  const caixa = elemento.getBoundingClientRect();
+  const maxLeft = Math.max(margem, window.innerWidth - caixa.width - margem);
+  const maxTop = Math.max(margem, window.innerHeight - caixa.height - margem);
+
+  return {
+    left: Math.min(maxLeft, Math.max(margem, left)),
+    top: Math.min(maxTop, Math.max(margem, top)),
+  };
 }

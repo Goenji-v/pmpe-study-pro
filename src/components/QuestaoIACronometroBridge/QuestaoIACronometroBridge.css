@@ -115,11 +115,55 @@
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28);
 }
 
-.questoes-crono-mini > div:first-child {
-  display: flex;
+.questoes-crono-mini-cabecalho {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 7px;
+  margin: -4px -4px 0;
+  padding: 4px;
+  border-radius: 8px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.questoes-crono-mini-cabecalho:active {
+  cursor: grabbing;
+}
+
+.questoes-crono-arraste {
+  color: #64748b !important;
+  font-size: 13px !important;
+  letter-spacing: -3px !important;
+}
+
+.questoes-crono-mini-cabecalho strong {
+  justify-self: end;
+}
+
+.questoes-crono-restaurar {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #94a3b8;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.questoes-crono-restaurar:hover,
+.questoes-crono-restaurar:focus-visible {
+  color: #fff;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.questoes-crono-mini.reposicionado {
+  transition: none;
 }
 
 .questoes-crono-mini span {
@@ -205,5 +249,12 @@
 
   .questoes-crono-mini strong {
     font-size: 14px;
+  }
+}
+
+
+@media (hover: hover) and (pointer: fine) {
+  .questoes-crono-mini-cabecalho:hover {
+    background: rgba(148, 163, 184, 0.07);
   }
 }

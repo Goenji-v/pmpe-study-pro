@@ -22,7 +22,6 @@ import MentoriaCronometroBridge from "./components/MentoriaCronometroBridge/Ment
 import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
 import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
 import PWAInstallPrompt from "./components/PWAInstallPrompt/PWAInstallPrompt";
-import GeracaoIADrawer from "./components/GeracaoIADrawer/GeracaoIADrawer";
 import { armazenamentoSessaoDaConta as sessionStorage } from "./services/armazenamentoConta";
 import { PARCERIAS_VISIVEIS } from "./config/recursos";
 
@@ -219,7 +218,6 @@ function LayoutProtegido() {
                 </main>
               </div>
             </div>
-            <GeracaoIADrawer />
           </CronometroProvider>
         </AppProvider>
       </ToastProvider>
