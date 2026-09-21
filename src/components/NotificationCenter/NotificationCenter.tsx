@@ -267,6 +267,11 @@ export default function NotificationCenter() {
     [jobsGeracao, atividadeGeracao]
   );
 
+  function abrirGeracaoPeloCard() {
+    setAberto(false);
+    navigate(estadoGeracao.concluida ? "/resolver-simulado-ia" : "/gerar-simulado-ia");
+  }
+
   const naoLidas = notificacoes.length;
   const alertasRotina =
     (missaoHoje ? 1 : 0) +
@@ -337,7 +342,20 @@ export default function NotificationCenter() {
             </header>
 
             {estadoGeracao.visivel && (
-              <section className="notificacoes-geracao" aria-label="Geração de questões">
+              <section
+                className="notificacoes-geracao notificacoes-geracao-clicavel"
+                aria-label="Abrir geração de questões"
+                role="button"
+                tabIndex={0}
+                onClick={abrirGeracaoPeloCard}
+                onKeyDown={(evento) => {
+                  if (evento.target !== evento.currentTarget) return;
+                  if (evento.key === "Enter" || evento.key === " ") {
+                    evento.preventDefault();
+                    abrirGeracaoPeloCard();
+                  }
+                }}
+              >
                 <div className="notificacoes-geracao-topo">
                   <div>
                     <span>EM ANDAMENTO</span>
@@ -375,17 +393,17 @@ export default function NotificationCenter() {
 
                 <div className="notificacoes-geracao-acoes">
                   {estadoGeracao.concluida && (
-                    <button type="button" onClick={() => { setAberto(false); navigate("/resolver-simulado-ia"); }}>
+                    <button type="button" onClick={(evento) => { evento.stopPropagation(); setAberto(false); navigate("/resolver-simulado-ia"); }}>
                       Abrir questões
                     </button>
                   )}
                   {estadoGeracao.prontaServidor && (
-                    <button type="button" onClick={() => { setAberto(false); navigate("/gerar-simulado-ia"); }}>
+                    <button type="button" onClick={(evento) => { evento.stopPropagation(); setAberto(false); navigate("/gerar-simulado-ia"); }}>
                       Finalizar caderno
                     </button>
                   )}
                   {estadoGeracao.erro && (
-                    <button type="button" onClick={() => { setAberto(false); navigate("/gerar-simulado-ia"); }}>
+                    <button type="button" onClick={(evento) => { evento.stopPropagation(); setAberto(false); navigate("/gerar-simulado-ia"); }}>
                       Tentar novamente
                     </button>
                   )}
@@ -393,7 +411,8 @@ export default function NotificationCenter() {
                     <button
                       type="button"
                       className="secundario"
-                      onClick={() => {
+                      onClick={(evento) => {
+                        evento.stopPropagation();
                         salvarAtividadeGeracaoIA(null);
                         setAtividadeGeracao(null);
                         setJobsGeracao([]);
