@@ -16,6 +16,16 @@ import {
   type NotificacaoInterna,
 } from "../../services/notificacoesService";
 import {
+  carregarAtividadeGeracaoIA,
+  EVENTO_ATIVIDADE_GERACAO_IA,
+  salvarAtividadeGeracaoIA,
+  type AtividadeGeracaoIA,
+} from "../../services/geracaoIAAtividadeService";
+import {
+  listarJobsGeracaoIA,
+  type JobGeracaoIAPublico,
+} from "../../services/gemini";
+import {
   criarPlanoCalendario,
   normalizarMissoesPorDia,
   obterDiaAtualPlano,
@@ -42,6 +52,10 @@ export default function NotificationCenter() {
   const [feedbacksPendentes, setFeedbacksPendentes] = useState<FeedbackBeta[]>([]);
   const [aviso, setAviso] = useState<AvisoRapido | null>(null);
   const [sumindo, setSumindo] = useState(false);
+  const [atividadeGeracao, setAtividadeGeracao] = useState<AtividadeGeracaoIA | null>(
+    carregarAtividadeGeracaoIA
+  );
+  const [jobsGeracao, setJobsGeracao] = useState<JobGeracaoIAPublico[]>([]);
 
   const plano = useMemo(
     () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false),
@@ -96,6 +110,40 @@ export default function NotificationCenter() {
       console.warn("Não foi possível atualizar notificações:", error);
     }
   }, [administrador, usuario?.id]);
+
+  useEffect(() => {
+    const atualizarAtividade = () => setAtividadeGeracao(carregarAtividadeGeracaoIA());
+    window.addEventListener(EVENTO_ATIVIDADE_GERACAO_IA, atualizarAtividade);
+    window.addEventListener("storage", atualizarAtividade);
+    return () => {
+      window.removeEventListener(EVENTO_ATIVIDADE_GERACAO_IA, atualizarAtividade);
+      window.removeEventListener("storage", atualizarAtividade);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!atividadeGeracao?.id) {
+      setJobsGeracao([]);
+      return;
+    }
+
+    let ativo = true;
+    const consultar = async () => {
+      try {
+        const encontrados = await listarJobsGeracaoIA(atividadeGeracao.id);
+        if (ativo) setJobsGeracao(encontrados);
+      } catch {
+        // Mantém o estado local se a consulta ao servidor falhar temporariamente.
+      }
+    };
+
+    void consultar();
+    const intervalo = window.setInterval(() => void consultar(), 1800);
+    return () => {
+      ativo = false;
+      window.clearInterval(intervalo);
+    };
+  }, [atividadeGeracao?.id]);
 
   useEffect(() => {
     void carregar();
@@ -214,6 +262,11 @@ export default function NotificationCenter() {
     }
   }
 
+  const estadoGeracao = useMemo(
+    () => resumirGeracao(jobsGeracao, atividadeGeracao),
+    [jobsGeracao, atividadeGeracao]
+  );
+
   const naoLidas = notificacoes.length;
   const alertasRotina =
     (missaoHoje ? 1 : 0) +
@@ -222,7 +275,8 @@ export default function NotificationCenter() {
   const totalPendencias =
     naoLidas +
     alertasRotina +
-    (administrador ? feedbacksPendentes.length : 0);
+    (administrador ? feedbacksPendentes.length : 0) +
+    (estadoGeracao.visivel ? 1 : 0);
 
   useEffect(() => {
     function clicarNoSino(evento: MouseEvent) {
@@ -239,14 +293,18 @@ export default function NotificationCenter() {
   }, [carregar]);
 
   useEffect(() => {
-    const botao = document.querySelector<HTMLButtonElement>(
-      '.dashboard-pro-icon[aria-label="Notificações"]'
+    const botoes = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        '.dashboard-pro-icon[aria-label="Notificações"], .header-notification-button[aria-label="Notificações"]'
+      )
     );
-    if (!botao) return;
 
-    botao.dataset.notificacoes = String(totalPendencias);
-    botao.classList.toggle("tem-notificacoes", totalPendencias > 0);
-  }, [totalPendencias]);
+    botoes.forEach((botao) => {
+      botao.dataset.notificacoes = String(totalPendencias);
+      botao.classList.toggle("tem-notificacoes", totalPendencias > 0);
+      botao.classList.toggle("geracao-ativa", estadoGeracao.ativa);
+    });
+  }, [estadoGeracao.ativa, totalPendencias]);
 
   return (
     <>
@@ -277,6 +335,76 @@ export default function NotificationCenter() {
               </div>
               <button type="button" onClick={() => setAberto(false)} aria-label="Fechar">×</button>
             </header>
+
+            {estadoGeracao.visivel && (
+              <section className="notificacoes-geracao" aria-label="Geração de questões">
+                <div className="notificacoes-geracao-topo">
+                  <div>
+                    <span>EM ANDAMENTO</span>
+                    <strong>{atividadeGeracao?.titulo || "Geração de questões"}</strong>
+                  </div>
+                  <b>{estadoGeracao.rotulo}</b>
+                </div>
+                <p>
+                  {atividadeGeracao?.quantidade || 0} questão{(atividadeGeracao?.quantidade || 0) === 1 ? "" : "ões"}
+                  {" · "}
+                  {estadoGeracao.descricao}
+                </p>
+
+                {estadoGeracao.ativa && (
+                  <>
+                    <div className="notificacoes-geracao-progresso-linha">
+                      <span>{estadoGeracao.textoEtapa}</span>
+                      <strong>{estadoGeracao.progresso}%</strong>
+                    </div>
+                    <div
+                      className="notificacoes-geracao-barra"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={estadoGeracao.progresso}
+                    >
+                      <span style={{ width: `${estadoGeracao.progresso}%` }} />
+                    </div>
+                  </>
+                )}
+
+                {estadoGeracao.erro && (
+                  <small className="notificacoes-geracao-erro">{estadoGeracao.erro}</small>
+                )}
+
+                <div className="notificacoes-geracao-acoes">
+                  {estadoGeracao.concluida && (
+                    <button type="button" onClick={() => { setAberto(false); navigate("/resolver-simulado-ia"); }}>
+                      Abrir questões
+                    </button>
+                  )}
+                  {estadoGeracao.prontaServidor && (
+                    <button type="button" onClick={() => { setAberto(false); navigate("/gerar-simulado-ia"); }}>
+                      Finalizar caderno
+                    </button>
+                  )}
+                  {estadoGeracao.erro && (
+                    <button type="button" onClick={() => { setAberto(false); navigate("/gerar-simulado-ia"); }}>
+                      Tentar novamente
+                    </button>
+                  )}
+                  {!estadoGeracao.ativa && (
+                    <button
+                      type="button"
+                      className="secundario"
+                      onClick={() => {
+                        salvarAtividadeGeracaoIA(null);
+                        setAtividadeGeracao(null);
+                        setJobsGeracao([]);
+                      }}
+                    >
+                      Dispensar
+                    </button>
+                  )}
+                </div>
+              </section>
+            )}
 
             {revisoesAtrasadas.length > 0 && (
               <button className="notificacao-item revisao-atrasada" type="button" onClick={() => { setAberto(false); navigate("/revisoes"); }}>
@@ -355,4 +483,107 @@ function formatarData(valor: string) {
         hour: "2-digit",
         minute: "2-digit",
       });
+}
+
+
+type EstadoGeracaoNotificacao = {
+  visivel: boolean;
+  ativa: boolean;
+  concluida: boolean;
+  prontaServidor: boolean;
+  erro: string | null;
+  progresso: number;
+  rotulo: string;
+  descricao: string;
+  textoEtapa: string;
+};
+
+function resumirGeracao(
+  jobs: JobGeracaoIAPublico[],
+  atividade: AtividadeGeracaoIA | null
+): EstadoGeracaoNotificacao {
+  if (!atividade) {
+    return {
+      visivel: false,
+      ativa: false,
+      concluida: false,
+      prontaServidor: false,
+      erro: null,
+      progresso: 0,
+      rotulo: "",
+      descricao: "",
+      textoEtapa: "",
+    };
+  }
+
+  const jobErro = jobs.find((job) => job.status === "erro");
+  const jobAtual = jobs.find((job) => job.status === "fila" || job.status === "processando");
+  const prontaServidor = jobs.length > 0 && !jobErro && jobs.every((job) => job.status === "concluida");
+  const concluida = atividade.etapa === "concluida";
+  const erro = atividade.etapa === "erro" ? atividade.erro || "A geração precisa de atenção." : jobErro?.erro || null;
+  const ativa = !concluida && !prontaServidor && !erro;
+
+  const progresso = jobs.length > 0
+    ? Math.round(
+        jobs.reduce(
+          (total, job) => total + (job.status === "concluida" ? 100 : Math.max(0, Math.min(100, job.progresso || 0))),
+          0
+        ) / jobs.length
+      )
+    : atividade.etapa === "salvando"
+      ? 92
+      : atividade.etapa === "concluida"
+        ? 100
+        : atividade.etapa === "revisando"
+          ? 68
+          : atividade.etapa === "corrigindo"
+            ? 82
+            : atividade.etapa === "gerando"
+              ? 36
+              : 12;
+
+  const etapa = jobAtual?.etapa || atividade.etapa;
+  const rotulo =
+    concluida || prontaServidor
+      ? "Concluída"
+      : erro
+        ? "Atenção"
+        : etapa === "fila"
+          ? "Na fila"
+          : etapa === "gerando"
+            ? "Gerando"
+            : etapa === "revisando"
+              ? "Revisando"
+              : etapa === "corrigindo"
+                ? "Corrigindo"
+                : etapa === "salvando"
+                  ? "Finalizando"
+                  : "Preparando";
+
+  const textoEtapa =
+    etapa === "fila"
+      ? "Aguardando a vez no servidor"
+      : etapa === "gerando"
+        ? "Criando as questões"
+        : etapa === "revisando"
+          ? "Revisando a qualidade"
+          : etapa === "corrigindo"
+            ? "Corrigindo uma revisão"
+            : etapa === "salvando"
+              ? "Salvando o caderno"
+              : concluida || prontaServidor
+                ? "Geração finalizada"
+                : "Preparando o pedido";
+
+  return {
+    visivel: true,
+    ativa,
+    concluida,
+    prontaServidor: prontaServidor && !concluida,
+    erro,
+    progresso: Math.max(0, Math.min(100, progresso)),
+    rotulo,
+    descricao: jobAtual?.descricao || atividade.descricao,
+    textoEtapa,
+  };
 }
