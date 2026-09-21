@@ -398,6 +398,16 @@ export default function Dashboard() {
     sessoes,
     simuladosContabilizaveis
   );
+  const indiceHojeSemana = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const diasMetaBatida = desempenhoSemanal.filter(
+    (item, indice) =>
+      indice <= indiceHojeSemana &&
+      item.minutos >= configuracoes.metaMinutosDiaria
+  ).length;
+  const minutosRestantesHoje = Math.max(
+    0,
+    configuracoes.metaMinutosDiaria - minutosHoje
+  );
   const revisoesDashboard = montarRevisoesDashboard(revisoes);
 
   const recomendacaoCoach = montarRecomendacaoCoach({
@@ -638,10 +648,69 @@ function iniciarProximaAulaPortugues() {
         </article>
       </section>
 
-      <section className="dashboard-pro-weekly">
-        <div><span className="dashboard-pro-kicker">META DO DIA</span><h2>{formatarMinutos(minutosHoje)} / {formatarMinutos(configuracoes.metaMinutosDiaria)}</h2></div>
-        <div className="dashboard-pro-weekly-progress"><div style={{width:`${progressoTempoHoje}%`}} /></div>
-        <strong>{progressoTempoHoje}%</strong>
+      <section className="dashboard-goals-v2" aria-label="Metas de estudo">
+        <article className="dashboard-goal-card dashboard-goal-daily">
+          <div className="dashboard-goal-heading">
+            <div>
+              <span className="dashboard-goal-kicker">META DO DIA</span>
+              <h2>Ritmo de hoje</h2>
+            </div>
+            <strong className="dashboard-goal-percent">{progressoTempoHoje}%</strong>
+          </div>
+
+          <div className="dashboard-goal-value">
+            <strong>{formatarMinutos(minutosHoje)}</strong>
+            <span>de {formatarMinutos(configuracoes.metaMinutosDiaria)}</span>
+          </div>
+
+          <div className="dashboard-goal-progress" aria-label={"Progresso diário: " + progressoTempoHoje + "%"}>
+            <div style={{ width: String(progressoTempoHoje) + "%" }} />
+          </div>
+
+          <p>
+            {progressoTempoHoje >= 100
+              ? "Meta de hoje concluída."
+              : formatarMinutos(minutosRestantesHoje) + " para concluir a meta."}
+          </p>
+        </article>
+
+        <article className="dashboard-goal-card dashboard-goal-week">
+          <div className="dashboard-goal-heading">
+            <div>
+              <span className="dashboard-goal-kicker">META SEMANAL</span>
+              <h2>Constância na semana</h2>
+            </div>
+            <strong className="dashboard-goal-days-total">
+              {diasMetaBatida}<span>/7</span>
+            </strong>
+          </div>
+
+          <div className="dashboard-goal-days" aria-label={diasMetaBatida + " de 7 dias com a meta diária concluída"}>
+            {desempenhoSemanal.map((item, indice) => {
+              const concluido = item.minutos >= configuracoes.metaMinutosDiaria;
+              const hojeDia = indice === indiceHojeSemana;
+              const futuro = indice > indiceHojeSemana;
+
+              return (
+                <div
+                  key={item.chave}
+                  className={[
+                    "dashboard-goal-day",
+                    concluido ? "concluido" : "",
+                    hojeDia ? "hoje" : "",
+                    futuro ? "futuro" : "",
+                  ].filter(Boolean).join(" ")}
+                  title={item.rotulo + ": " + formatarMinutos(item.minutos)}
+                >
+                  <span>{item.rotulo.slice(0, 3).toUpperCase()}</span>
+                  <i>{concluido ? "✓" : ""}</i>
+                </div>
+              );
+            })}
+          </div>
+
+          <p>{diasMetaBatida} de 7 dias com a meta diária batida.</p>
+        </article>
       </section>
 
       <section className="dashboard-pro-footer-grid">
