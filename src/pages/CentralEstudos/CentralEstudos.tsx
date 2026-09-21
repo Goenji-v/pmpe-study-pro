@@ -12,6 +12,7 @@ import {
 } from "react-router-dom";
 
 import { avaliarRevisaoPorQuestoes } from "../../utils/revisoes";
+import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
 import { BANCAS_CONCURSO } from "../../utils/bancasConcurso";
 import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
@@ -719,8 +720,14 @@ const [
       estado.tipo === "questoes" ||
       estado.tipo === "simulado" ||
       (estado.tipo === "revisao" && formatoRevisao === "questoes");
+    const informouQuestoesNaRevisao =
+      estado.tipo === "revisao" &&
+      (quantidadeQuestoes.trim() !== "" ||
+        quantidadeAcertos.trim() !== "");
+    const deveValidarQuestoes =
+      exigeQuestoes || informouQuestoesNaRevisao;
 
-    if (exigeQuestoes) {
+    if (deveValidarQuestoes) {
       totalQuestoes =
         Number(
           quantidadeQuestoes
@@ -791,7 +798,7 @@ const [
           undefined,
 
         dificuldade:
-          exigeQuestoes
+          exigeQuestoes && estado.tipo !== "revisao"
             ? dificuldade
             : undefined,
 
@@ -832,7 +839,9 @@ const [
       estado.tipo === "simulado"
         ? "Simulado salvo no histórico."
         : resultado.revisaoConcluida
-          ? "Sessão salva e revisão concluída. Sua agenda foi atualizada automaticamente."
+          ? resultado.proximaRevisao
+            ? `Sessão salva e revisão concluída. ${descreverProximaRevisao(resultado.proximaRevisao)}`
+            : "Sessão salva e revisão concluída. Ciclo de revisões finalizado."
         : resultado.revisaoCriada
           ? "Sessão salva. Assunto concluído e revisão programada."
           : "Sessão salva sem duplicar o tempo.";
@@ -1409,7 +1418,7 @@ const [
 
               {(estado.tipo === "questoes" ||
                 estado.tipo === "simulado" ||
-                (estado.tipo === "revisao" && formatoRevisao === "questoes")) && (
+                estado.tipo === "revisao") && (
                 <>
                   <label>
                     Questões realizadas
@@ -1487,7 +1496,7 @@ const [
                     </datalist>
                   </label>
 
-                  {!revisaoPorQuestoes && <label>
+                  {estado.tipo !== "revisao" && <label>
                     Dificuldade
 
                     <select
@@ -1516,17 +1525,20 @@ const [
                 </>
               )}
 
-              {revisaoPorQuestoes && (
+              {estado.tipo === "revisao" &&
+                (revisaoPorQuestoes ||
+                  quantidadeQuestoes.trim() !== "" ||
+                  quantidadeAcertos.trim() !== "") && (
                 <div className="finalizacao-campo-largo finalizacao-avaliacao" role="status" aria-live="polite">
                   <strong>Avaliação automática da revisão</strong>
                   <p>{avaliacaoAutomatica
                     ? `${rotulosAvaliacao[avaliacaoAutomatica]} · ${Number(quantidadeAcertos)} de ${Number(quantidadeQuestoes)} acertos (${(Number(quantidadeAcertos) / Number(quantidadeQuestoes) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)`
                     : "Informe as questões realizadas e os acertos para calcular."}</p>
-                  <small>Fácil: 80% ou mais · Média: 50% a menos de 80% · Difícil: abaixo de 50%.</small>
-                  {estado.revisaoId && <p>Ao salvar, esta revisão será concluída. Fácil avança no ciclo; média repete em 3 dias; difícil, em 1 dia, conforme as vagas na agenda.</p>}
+                  <small>Fácil: 80% ou mais · Média: 60% a menos de 80% · Difícil: abaixo de 60%.</small>
+                  {estado.revisaoId && <p>Ao salvar, esta nota define automaticamente a data e o tipo da próxima revisão.</p>}
                 </div>
               )}
-              {estado.tipo === "revisao" && !revisaoPorQuestoes && (
+              {estado.tipo === "revisao" && !avaliacaoAutomatica && (
                 <label>
                   Como foi a revisão?
 
@@ -1752,6 +1764,27 @@ function BotaoTipo({
       <strong>{texto}</strong>
     </button>
   );
+}
+
+function descreverProximaRevisao(
+  revisao: import("../../types").Revisao
+) {
+  const plano = planejarRevisaoPendente(revisao);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const data = new Date(revisao.dataPrevista);
+  data.setHours(0, 0, 0, 0);
+  const dias = Math.round(
+    (data.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const quando =
+    dias <= 0
+      ? "Próxima revisão hoje"
+      : dias === 1
+        ? "Próxima revisão amanhã"
+        : `Próxima revisão daqui a ${dias} dias`;
+
+  return `${quando} (${new Date(revisao.dataPrevista).toLocaleDateString("pt-BR")}) — ${plano.titulo}.`;
 }
 
 function nomePorTipo(
