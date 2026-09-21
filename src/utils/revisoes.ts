@@ -133,7 +133,7 @@ export function avaliarRevisaoPorQuestoes(total?: number, acertos?: number): Non
   if (typeof total !== "number" || typeof acertos !== "number" ||
     !Number.isInteger(total) || !Number.isInteger(acertos) || total <= 0 || acertos < 0 || acertos > total) return null;
   const percentual = acertos / total;
-  return percentual >= 0.8 ? "facil" : percentual >= 0.5 ? "media" : "dificil";
+  return percentual >= 0.8 ? "facil" : percentual >= 0.6 ? "media" : "dificil";
 }
 
 export function revisaoCorrespondeASessao(revisao: Revisao, sessao: Pick<SessaoEstudo, "tipo" | "revisaoId" | "materiaId" | "moduloId" | "assuntoId" | "materia" | "assunto">) {
