@@ -5,6 +5,7 @@ import {
   aplicarRevisaoAdaptativa,
   diagnosticarRevisaoAdaptativa,
   orientarRevisaoPorResultado,
+  planejarRevisaoPendente,
 } from "../src/utils/revisaoAdaptativa";
 
 import type { Revisao } from "../src/types";
@@ -155,4 +156,24 @@ test("bom desempenho não antecipa o ciclo, mas fica registrado na revisão pend
   assert.equal(resultado.revisoes[0].dataPrevista, existente.dataPrevista);
   assert.equal(resultado.revisoes[0].certas, 5);
   assert.equal(resultado.revisoes[0].erradas, 0);
+});
+
+
+test("toda revisão pendente recebe um plano explícito", () => {
+  assert.equal(
+    planejarRevisaoPendente({ certas: undefined, erradas: undefined }).titulo,
+    "Teoria + 10 questões"
+  );
+  assert.equal(
+    planejarRevisaoPendente({ certas: 3, erradas: 7 }).modo,
+    "teoria_questoes"
+  );
+  assert.equal(
+    planejarRevisaoPendente({ certas: 6, erradas: 4 }).modo,
+    "questoes"
+  );
+  assert.equal(
+    planejarRevisaoPendente({ certas: 8, erradas: 2 }).modo,
+    "ciclo_normal"
+  );
 });
