@@ -1,4 +1,7 @@
-import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
+import {
+  armazenamentoLocalDaConta as localStorage,
+  armazenamentoSessaoDaConta as accountSessionStorage,
+} from "../../services/armazenamentoConta";
 import {
   useEffect,
   useMemo,
@@ -20,7 +23,11 @@ import type {
   TipoSessaoQuestoesIA,
 } from "../../types/index";
 import { useCronometro } from "../../context/CronometroContext";
-import { revisaoCorrespondeASessao } from "../../utils/revisoes";
+import {
+  avaliarRevisaoPorQuestoes,
+  concluirRevisaoNaLista,
+  revisaoCorrespondeASessao,
+} from "../../utils/revisoes";
 import { useApp } from "../../context/AppContext";
 
 import {
@@ -81,6 +88,9 @@ const CHAVE_QUESTOES_IA =
 const CHAVE_RESULTADOS_IA =
   "pmpe_resultados_simulados_ia";
 
+const CHAVE_ORIGEM_REVISAO_QUESTOES =
+  "pmpe:questoes-ia:origem-revisao";
+
 type RascunhoQuestoesIA = {
   assinatura: string;
   respostas: RespostasUsuario;
@@ -94,6 +104,7 @@ export default function ResolverSimuladoIA() {
   const {
     materias,
     revisoes,
+    configuracoes,
     setQuestoes: setRegistrosQuestoes,
     setRevisoes,
     setSimulados,
@@ -445,8 +456,11 @@ export default function ResolverSimuladoIA() {
         );
 
       let avisoSincronizacao = "";
-      let revisaoConcluida = false;
       const registroApp = registrarDesempenhoNoApp(novoResultado);
+      let revisaoConcluida = registroApp.revisaoConcluidaDireta;
+      if (revisaoConcluida) {
+        setRevisaoConcluidaNoTreino(true);
+      }
       const resumoRevisoes = registroApp.resumo;
       setResumoRevisaoFinal(resumoRevisoes);
 
@@ -456,8 +470,9 @@ export default function ResolverSimuladoIA() {
           registroApp.registros,
           registroApp.simulado,
           (concluida) => {
-            revisaoConcluida = concluida;
-            setRevisaoConcluidaNoTreino(concluida);
+            if (!concluida) return;
+            revisaoConcluida = true;
+            setRevisaoConcluidaNoTreino(true);
           }
         );
       } catch (erroSalvamento) {
@@ -469,6 +484,9 @@ export default function ResolverSimuladoIA() {
 
       setFinalizado(true);
       sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
+      if (registroApp.revisaoConcluidaDireta) {
+        accountSessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
+      }
 
       const respondidas = novoResultado.certas + novoResultado.erradas;
       const registroSimulado =
@@ -543,32 +561,106 @@ export default function ResolverSimuladoIA() {
       );
     }
 
-    const revisaoDaSessao = cronometroAtivo && sessaoAtiva.objetivo.startsWith("[Questões IA]")
-      ? revisoes.find((item) => revisaoCorrespondeASessao(item, sessaoAtiva)) : undefined;
-    const diagnosticoAtual = calcularDiagnosticoQuestoesIA(
+    const diagnosticoCompleto = calcularDiagnosticoQuestoesIA(
       novoResultado.questoes,
       novoResultado.respostas
-    ).filter((item) => !revisaoDaSessao || !revisaoCorrespondeASessao(revisaoDaSessao, {
-      ...item, tipo: "revisao", revisaoId: revisaoDaSessao.id,
-    }));
+    );
+
+    const revisaoDaSessao = cronometroAtivo && sessaoAtiva.objetivo.startsWith("[Questões IA]")
+      ? revisoes.find((item) => revisaoCorrespondeASessao(item, sessaoAtiva))
+      : undefined;
+
+    const origemRevisaoDireta = carregarOrigemRevisaoQuestoes();
+    const revisaoDireta = origemRevisaoDireta
+      ? revisoes.find(
+          (item) =>
+            !item.concluida &&
+            item.id === origemRevisaoDireta.revisaoId
+        )
+      : undefined;
+
+    const revisaoAlvo = revisaoDaSessao ?? revisaoDireta;
+    const diagnosticoDaRevisaoDireta = revisaoDireta
+      ? diagnosticoCompleto.find((item) =>
+          revisaoCorrespondeASessao(revisaoDireta, {
+            ...item,
+            tipo: "revisao",
+            revisaoId: revisaoDireta.id,
+          })
+        )
+      : undefined;
+
+    const avaliacaoDireta =
+      diagnosticoDaRevisaoDireta &&
+      diagnosticoDaRevisaoDireta.total >= 5
+        ? avaliarRevisaoPorQuestoes(
+            diagnosticoDaRevisaoDireta.total,
+            diagnosticoDaRevisaoDireta.certas
+          )
+        : null;
+
+    const diagnosticoAtual = diagnosticoCompleto.filter(
+      (item) =>
+        !revisaoAlvo ||
+        !revisaoCorrespondeASessao(revisaoAlvo, {
+          ...item,
+          tipo: "revisao",
+          revisaoId: revisaoAlvo.id,
+        })
+    );
+
     const resumo = aplicarRevisoesDoResultadoIA({
       revisoes,
       diagnostico: diagnosticoAtual,
       materias,
     });
 
-    setRevisoes((anteriores) =>
-      aplicarRevisoesDoResultadoIA({
+    setRevisoes((anteriores) => {
+      let proximas = aplicarRevisoesDoResultadoIA({
         revisoes: anteriores,
         diagnostico: diagnosticoAtual,
         materias,
-      }).revisoes
-    );
+      }).revisoes;
+
+      if (
+        revisaoDireta &&
+        diagnosticoDaRevisaoDireta &&
+        avaliacaoDireta
+      ) {
+        proximas = proximas.map((item) =>
+          item.id === revisaoDireta.id
+            ? {
+                ...item,
+                certas: diagnosticoDaRevisaoDireta.certas,
+                erradas:
+                  diagnosticoDaRevisaoDireta.erradas +
+                  diagnosticoDaRevisaoDireta.emBranco,
+              }
+            : item
+        );
+
+        proximas = concluirRevisaoNaLista({
+          revisoes: proximas,
+          revisaoId: revisaoDireta.id,
+          desempenho: avaliacaoDireta,
+          limiteDiario: configuracoes.metaRevisoesDiaria,
+          agora: new Date(novoResultado.data),
+          proximaId: `${novoResultado.id}:revisao:${revisaoDireta.id}:proxima`,
+        });
+      }
+
+      return proximas;
+    });
 
     return {
       resumo,
       registros,
       simulado,
+      revisaoConcluidaDireta: Boolean(
+        revisaoDireta &&
+        diagnosticoDaRevisaoDireta &&
+        avaliacaoDireta
+      ),
     };
   }
 
@@ -1431,6 +1523,33 @@ export default function ResolverSimuladoIA() {
       </div>
     </section>
   );
+}
+
+function carregarOrigemRevisaoQuestoes() {
+  const salvo = accountSessionStorage.getItem(
+    CHAVE_ORIGEM_REVISAO_QUESTOES
+  );
+  if (!salvo) return null;
+
+  try {
+    const valor = JSON.parse(salvo) as {
+      revisaoId?: string;
+      materia?: string;
+      modulo?: string;
+      assunto?: string;
+      etapa?: number;
+      criadoEm?: string;
+    };
+
+    return valor.revisaoId?.trim()
+      ? valor
+      : null;
+  } catch {
+    accountSessionStorage.removeItem(
+      CHAVE_ORIGEM_REVISAO_QUESTOES
+    );
+    return null;
+  }
 }
 
 function assinaturaQuestoes(questoes: QuestaoIA[]) {
