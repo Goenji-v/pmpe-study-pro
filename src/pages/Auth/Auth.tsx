@@ -170,10 +170,11 @@ export default function Auth() {
     try {
       setEnviandoGoogle(true);
 
+      const origemOAuthEstavel = "https://pmpe-study-pro-two.vercel.app";
       const destino =
         origem.startsWith("/")
-          ? new URL(origem, window.location.origin).toString()
-          : `${window.location.origin}/`;
+          ? new URL(origem, origemOAuthEstavel).toString()
+          : origemOAuthEstavel;
 
       await entrarComGoogle(destino);
     } catch (erroGoogle) {
