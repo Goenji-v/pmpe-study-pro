@@ -28,6 +28,27 @@ jobs:
             --output /tmp/study-pro-home.html
           test -s /tmp/study-pro-home.html
 
+      - name: Verificar headers de segurança
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(curl --fail --silent --show-error --location --head --max-time 30 https://pmpe-study-pro-two.vercel.app/)"
+
+          exigir_header() {
+            local nome="$1"
+            local padrao="$2"
+            if ! printf '%s\n' "$headers" | grep -Eiq "^${nome}:.*${padrao}"; then
+              echo "::error::Header de segurança ausente ou inválido: ${nome}"
+              printf '%s\n' "$headers"
+              exit 1
+            fi
+          }
+
+          exigir_header "content-security-policy" "default-src"
+          exigir_header "x-content-type-options" "nosniff"
+          exigir_header "x-frame-options" "DENY"
+          exigir_header "referrer-policy" "strict-origin-when-cross-origin"
+
       - name: Verificar API
         shell: bash
         run: |
@@ -48,4 +69,5 @@ jobs:
           echo "## Uptime Production" >> "$GITHUB_STEP_SUMMARY"
           echo "- Frontend: https://pmpe-study-pro-two.vercel.app" >> "$GITHUB_STEP_SUMMARY"
           echo "- API: https://pmpe-study-pro-api.onrender.com/api/saude" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Headers de segurança: CSP, nosniff, anti-iframe e referrer policy" >> "$GITHUB_STEP_SUMMARY"
           echo "- Verificação automática: a cada hora" >> "$GITHUB_STEP_SUMMARY"
