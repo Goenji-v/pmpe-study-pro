@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import App from "./App";
+import { iniciarSentryFrontend } from "./lib/sentry";
 
 import "./global.css";
 import "./styles/mobile.css";
@@ -16,6 +17,8 @@ import "./styles/responsive-critical-fixes.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./components/Sidebar/SidebarPremiumVisual.css";
 import "./pages/Dashboard/DashboardHeroPremium.css";
+
+iniciarSentryFrontend();
 
 const CHAVE_RECUPERACAO_ASSET = "study-pro:asset-reload";
 
