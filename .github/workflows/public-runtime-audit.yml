@@ -41,8 +41,34 @@ jobs:
       - name: Instalar Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Auditar runtime público
-        run: npx playwright test e2e/public-runtime-health.spec.ts e2e/auth-form-security.spec.ts --project=desktop-chrome
+      - name: Auditar runtime público em produção
+        run: npx playwright test e2e/public-runtime-health.spec.ts --project=desktop-chrome
+
+      - name: Build local para auditoria do login
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-public-key-not-a-secret
+          VITE_API_URL: https://pmpe-study-pro-api.onrender.com
+        run: npm run build:app
+
+      - name: Iniciar preview local do PR
+        shell: bash
+        run: |
+          npm run preview -- --port 4173 > /tmp/study-pro-auth-preview.log 2>&1 &
+          echo $! > /tmp/study-pro-auth-preview.pid
+          for tentativa in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/login >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/study-pro-auth-preview.log
+          exit 1
+
+      - name: Auditar formulário do login do PR
+        env:
+          E2E_BASE_URL: http://127.0.0.1:4173
+        run: npx playwright test e2e/auth-form-security.spec.ts --project=desktop-chrome
 
       - name: Preservar diagnóstico em falha
         if: failure()
