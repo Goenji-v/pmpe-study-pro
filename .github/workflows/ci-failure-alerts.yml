@@ -8,6 +8,7 @@ on:
       - Uptime Production
       - Accessibility Audit
       - Lighthouse Quality Audit
+      - Public Runtime Audit
     types:
       - completed
 
@@ -39,6 +40,7 @@ jobs:
             "Uptime Production") TITLE="[Produção] Site ou API indisponível" ;;
             "Accessibility Audit") TITLE="[Produção] Auditoria de acessibilidade falhou" ;;
             "Lighthouse Quality Audit") TITLE="[Produção] Lighthouse falhou" ;;
+            "Public Runtime Audit") TITLE="[Produção] Runtime público falhou" ;;
             *) exit 0 ;;
           esac
 
