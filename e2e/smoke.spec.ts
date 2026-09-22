@@ -71,7 +71,7 @@ test.describe("smoke de autenticação e produção", () => {
   test("login vazio é rejeitado pelo cliente sem quebrar a página", async ({ page }) => {
     await page.goto("/login", { waitUntil: "domcontentloaded" });
 
-    await page.getByLabel("Senha").fill("qualquer-senha");
+    await page.locator('input[autocomplete="current-password"]').fill("qualquer-senha");
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await expect(page.getByText("Digite um e-mail válido.")).toBeVisible();
