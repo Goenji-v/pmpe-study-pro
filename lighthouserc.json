@@ -2,8 +2,8 @@
   "ci": {
     "collect": {
       "url": [
-        "http://127.0.0.1:4173/login",
-        "http://127.0.0.1:4173/demo"
+        "https://pmpe-study-pro-two.vercel.app/login",
+        "https://pmpe-study-pro-two.vercel.app/demo"
       ],
       "numberOfRuns": 1,
       "settings": {
