@@ -1,7 +1,9 @@
 import { readdir, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const raiz = new URL("../dist/assets/", import.meta.url);
+const arquivoAtual = fileURLToPath(import.meta.url);
+const raiz = join(dirname(arquivoAtual), "../dist/assets");
 
 const limitesKb = {
   ".js": 500,
@@ -43,7 +45,7 @@ for (const arquivo of arquivos) {
 
   if (!atual || tamanhoKb > atual.tamanhoKb) {
     maiores[extensao] = {
-      arquivo: relative(raiz.pathname, arquivo),
+      arquivo: relative(raiz, arquivo),
       tamanhoKb,
     };
   }
