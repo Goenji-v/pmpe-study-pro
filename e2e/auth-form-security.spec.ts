@@ -33,7 +33,7 @@ test.describe("segurança do formulário de autenticação", () => {
   test("controle de exibição da senha não altera autocomplete", async ({ page }) => {
     await page.goto("/login", { waitUntil: "domcontentloaded" });
 
-    const senha = page.getByLabel("Senha");
+    const senha = page.locator("#auth-senha");
 
     await page.getByRole("button", { name: "Mostrar senha" }).click();
     await expect(senha).toHaveAttribute("type", "text");
