@@ -6,6 +6,8 @@ on:
       - Quality Gate
       - E2E Production
       - Uptime Production
+      - Accessibility Audit
+      - Lighthouse Quality Audit
     types:
       - completed
 
@@ -35,6 +37,8 @@ jobs:
             "Quality Gate") TITLE="[Produção] Quality Gate falhou" ;;
             "E2E Production") TITLE="[Produção] E2E falhou" ;;
             "Uptime Production") TITLE="[Produção] Site ou API indisponível" ;;
+            "Accessibility Audit") TITLE="[Produção] Auditoria de acessibilidade falhou" ;;
+            "Lighthouse Quality Audit") TITLE="[Produção] Lighthouse falhou" ;;
             *) exit 0 ;;
           esac
 
