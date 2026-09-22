@@ -42,7 +42,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Auditar runtime público
-        run: npx playwright test e2e/public-runtime-health.spec.ts --project=desktop-chrome
+        run: npx playwright test e2e/public-runtime-health.spec.ts e2e/auth-form-security.spec.ts --project=desktop-chrome
 
       - name: Preservar diagnóstico em falha
         if: failure()
