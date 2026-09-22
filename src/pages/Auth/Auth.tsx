@@ -172,9 +172,11 @@ export default function Auth() {
 
       const origemOAuthEstavel = "https://pmpe-study-pro-two.vercel.app";
       const destino =
-        origem.startsWith("/")
-          ? new URL(origem, origemOAuthEstavel).toString()
-          : origemOAuthEstavel;
+        origem === "/"
+          ? origemOAuthEstavel
+          : origem.startsWith("/")
+            ? `${origemOAuthEstavel}${origem}`
+            : origemOAuthEstavel;
 
       await entrarComGoogle(destino);
     } catch (erroGoogle) {
