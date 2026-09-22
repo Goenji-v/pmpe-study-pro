@@ -1,0 +1,70 @@
+name: Lighthouse Quality Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "15 11 * * 4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    name: Auditar desempenho e qualidade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build de produção
+        run: npm run build:app
+
+      - name: Instalar Lighthouse CI
+        run: npm install --global @lhci/cli@0.15.x
+
+      - name: Iniciar preview local
+        shell: bash
+        run: |
+          npm run preview -- --port 4173 > /tmp/study-pro-preview.log 2>&1 &
+          echo $! > /tmp/study-pro-preview.pid
+          for tentativa in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/login >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/study-pro-preview.log
+          exit 1
+
+      - name: Executar Lighthouse
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: lhci autorun --config=./lighthouserc.json
+
+      - name: Preservar relatórios
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: lighthouse-quality-${{ github.run_number }}
+          path: |
+            lighthouse-report
+            .lighthouseci
+          if-no-files-found: ignore
+          retention-days: 7
