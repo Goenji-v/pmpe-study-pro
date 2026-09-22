@@ -51,6 +51,25 @@ jobs:
           exigir_header "permissions-policy" "camera=\(\)"
           exigir_header "strict-transport-security" "max-age="
 
+      - name: Verificar cache dos assets versionados
+        shell: bash
+        run: |
+          set -euo pipefail
+          html="$(curl --fail --silent --show-error --location --max-time 30 https://pmpe-study-pro-two.vercel.app/)"
+          asset="$(printf '%s' "$html" | grep -oE '/assets/[^"]+\.js' | head -n 1 || true)"
+
+          if [[ -z "$asset" ]]; then
+            echo "::error::Nenhum asset JavaScript versionado foi encontrado no HTML."
+            exit 1
+          fi
+
+          headers="$(curl --fail --silent --show-error --head --max-time 30 "https://pmpe-study-pro-two.vercel.app${asset}")"
+          if ! printf '%s\n' "$headers" | grep -Eiq '^cache-control:.*max-age=31536000.*immutable'; then
+            echo "::error::Asset sem cache imutável de 1 ano: ${asset}"
+            printf '%s\n' "$headers"
+            exit 1
+          fi
+
       - name: Verificar API
         shell: bash
         run: |
@@ -72,4 +91,5 @@ jobs:
           echo "- Frontend: https://pmpe-study-pro-two.vercel.app" >> "$GITHUB_STEP_SUMMARY"
           echo "- API: https://pmpe-study-pro-api.onrender.com/api/saude" >> "$GITHUB_STEP_SUMMARY"
           echo "- Headers de segurança: CSP, HSTS, Permissions Policy, nosniff, anti-iframe e referrer policy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cache de assets: 1 ano + immutable" >> "$GITHUB_STEP_SUMMARY"
           echo "- Verificação automática: a cada hora" >> "$GITHUB_STEP_SUMMARY"
