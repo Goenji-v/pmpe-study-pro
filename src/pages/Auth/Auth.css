@@ -462,7 +462,7 @@
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1100px) {
   .auth-pagina {
     display: block;
     padding: 0;
