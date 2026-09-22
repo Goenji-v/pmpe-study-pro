@@ -9,6 +9,7 @@ on:
       - Accessibility Audit
       - Lighthouse Quality Audit
       - Public Runtime Audit
+      - PWA Health
     types:
       - completed
 
@@ -41,6 +42,7 @@ jobs:
             "Accessibility Audit") TITLE="[Produção] Auditoria de acessibilidade falhou" ;;
             "Lighthouse Quality Audit") TITLE="[Produção] Lighthouse falhou" ;;
             "Public Runtime Audit") TITLE="[Produção] Runtime público falhou" ;;
+            "PWA Health") TITLE="[Produção] PWA/offline falhou" ;;
             *) exit 0 ;;
           esac
 
