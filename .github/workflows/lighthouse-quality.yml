@@ -33,25 +33,16 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Build de produção
-        run: npm run build:app
+      - name: Verificar produção
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location --max-time 30 \
+            https://pmpe-study-pro-two.vercel.app/login >/dev/null
+          curl --fail --silent --show-error --location --max-time 30 \
+            https://pmpe-study-pro-two.vercel.app/demo >/dev/null
 
       - name: Instalar Lighthouse CI
         run: npm install --global @lhci/cli@0.15.x
-
-      - name: Iniciar preview local
-        shell: bash
-        run: |
-          npm run preview -- --port 4173 > /tmp/study-pro-preview.log 2>&1 &
-          echo $! > /tmp/study-pro-preview.pid
-          for tentativa in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:4173/login >/dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/study-pro-preview.log
-          exit 1
 
       - name: Executar Lighthouse
         env:
