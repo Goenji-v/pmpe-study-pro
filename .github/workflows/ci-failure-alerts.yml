@@ -5,6 +5,7 @@ on:
     workflows:
       - Quality Gate
       - E2E Production
+      - Uptime Production
     types:
       - completed
 
@@ -33,6 +34,7 @@ jobs:
           case "$WORKFLOW_NAME" in
             "Quality Gate") TITLE="[Produção] Quality Gate falhou" ;;
             "E2E Production") TITLE="[Produção] E2E falhou" ;;
+            "Uptime Production") TITLE="[Produção] Site ou API indisponível" ;;
             *) exit 0 ;;
           esac
 

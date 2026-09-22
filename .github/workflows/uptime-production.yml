@@ -1,0 +1,51 @@
+name: Uptime Production
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uptime:
+    name: Verificar site e API
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verificar frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --location \
+            --max-time 30 \
+            --retry 3 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            https://pmpe-study-pro-two.vercel.app/ \
+            --output /tmp/study-pro-home.html
+          test -s /tmp/study-pro-home.html
+
+      - name: Verificar API
+        shell: bash
+        run: |
+          set -euo pipefail
+          resposta="$(curl --fail --silent --show-error \
+            --max-time 45 \
+            --retry 3 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            https://pmpe-study-pro-api.onrender.com/api/saude)"
+          echo "$resposta"
+          echo "$resposta" | jq -e '.ok == true' >/dev/null
+
+      - name: Resumo
+        if: always()
+        shell: bash
+        run: |
+          echo "## Uptime Production" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Frontend: https://pmpe-study-pro-two.vercel.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: https://pmpe-study-pro-api.onrender.com/api/saude" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Verificação automática: a cada hora" >> "$GITHUB_STEP_SUMMARY"
