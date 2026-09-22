@@ -38,6 +38,7 @@ export type ContextoSupabaseJob = {
   userId: string;
   authorization: string;
   anonKey: string;
+  serviceRoleKey: string;
 };
 
 type CriarJobEntrada = {
@@ -61,7 +62,7 @@ export async function criarOuBuscarJobGeracaoIA(
     `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs`,
     {
       method: "POST",
-      headers: cabecalhos(contexto, {
+      headers: cabecalhosPrivilegiados(contexto, {
         Prefer: "return=representation",
       }),
       body: JSON.stringify({
@@ -173,7 +174,7 @@ export async function reivindicarJobGeracaoIA(
     `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?${filtrosBase}${filtroPosse}`,
     {
       method: "PATCH",
-      headers: cabecalhos(contexto, {
+      headers: cabecalhosPrivilegiados(contexto, {
         Prefer: "return=representation",
       }),
       body: JSON.stringify({
@@ -219,7 +220,7 @@ export async function atualizarJobGeracaoIA(
     `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(contexto.userId)}${execucaoIdAtual ? `&execucao_id=eq.${encodeURIComponent(execucaoIdAtual)}` : ""}`,
     {
       method: "PATCH",
-      headers: cabecalhos(contexto, {
+      headers: cabecalhosPrivilegiados(contexto, {
         Prefer: "return=representation",
       }),
       body: JSON.stringify({
@@ -244,6 +245,19 @@ function cabecalhos(
   return {
     apikey: contexto.anonKey,
     Authorization: contexto.authorization,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...extras,
+  };
+}
+
+function cabecalhosPrivilegiados(
+  contexto: ContextoSupabaseJob,
+  extras: Record<string, string> = {}
+) {
+  return {
+    apikey: contexto.serviceRoleKey,
+    Authorization: `Bearer ${contexto.serviceRoleKey}`,
     "Content-Type": "application/json",
     Accept: "application/json",
     ...extras,

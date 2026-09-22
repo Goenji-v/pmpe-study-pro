@@ -92,7 +92,7 @@ export function calcularCentralInteligencia({
     .sort((a, b) => a.percentual - b.percentual)
     .slice(0, 5);
   const assuntosDominados = assuntos
-    .filter((assunto) => assunto.total >= 5 && assunto.percentual >= 80)
+    .filter((assunto) => assunto.total >= 10 && assunto.percentual >= 80)
     .sort((a, b) => b.percentual - a.percentual)
     .slice(0, 5);
 

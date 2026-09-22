@@ -85,14 +85,14 @@ export default function DashboardGamificacaoSpotlight() {
 
     const localizarDestino = () => {
       const encontrado = document.querySelector<HTMLElement>(
-        ".dashboard-pro-header h1"
+        ".dashboard-xp-host"
       );
       setDestino(encontrado);
     };
 
     localizarDestino();
 
-    if (document.querySelector(".dashboard-pro-header h1")) {
+    if (document.querySelector(".dashboard-xp-host")) {
       return;
     }
 
@@ -115,7 +115,7 @@ export default function DashboardGamificacaoSpotlight() {
   );
 
   return createPortal(
-    <span
+    <div
       className={`dashboard-xp-inline dashboard-moldura-${molduraVisual}`}
       aria-label="Progresso de nível e moedas"
     >
@@ -168,7 +168,7 @@ export default function DashboardGamificacaoSpotlight() {
       >
         🏆 Conquistas
       </button>
-    </span>,
+    </div>,
     destino
   );
 }

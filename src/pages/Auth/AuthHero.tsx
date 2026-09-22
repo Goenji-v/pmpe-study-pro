@@ -4,7 +4,7 @@ import "./AuthHero.css";
 
 export default function AuthHero() {
   return (
-    <section className="auth-apresentacao" aria-label="Studio Pro: preparação que aprova">
+    <section className="auth-apresentacao" aria-label="Study Pro: preparação que aprova">
       <img
         className="auth-hero-fundo"
         src="/assets/auth-pmpe-background.webp"
@@ -20,7 +20,7 @@ export default function AuthHero() {
           <img
             className="auth-brand-logo auth-brand-logo-completa"
             src="/assets/studio-pro-logo.svg"
-            alt="Studio Pro"
+            alt="Study Pro"
           />
         </header>
 

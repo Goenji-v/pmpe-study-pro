@@ -238,6 +238,12 @@ export default function CronogramaIA() {
     : false;
   const ultimoAjuste = ajustes[0];
   const ajusteAtivo = ajustes.find((item) => item.ativo);
+  const missaoForaDaPrioridade = Boolean(
+    tarefaAtual &&
+    prioridadeAtiva &&
+    tarefaAtual.materia.trim().toLocaleLowerCase("pt-BR") !==
+      prioridadeAtiva.trim().toLocaleLowerCase("pt-BR")
+  );
 
   useEffect(() => {
     void carregarHistorico();
@@ -644,6 +650,14 @@ export default function CronogramaIA() {
                 )}
                 <span>{formatarTipo(tarefaAtual.tipo)}</span>
               </div>
+            )}
+
+            {missaoForaDaPrioridade && tarefaAtual && prioridadeAtiva && (
+              <p className="tatico-missao-explicacao">
+                Esta missão é de {tarefaAtual.materia}, embora a prioridade atual seja {prioridadeAtiva}.
+                Tarefas já vinculadas ao plano e revisões pendentes podem aparecer antes sem substituir
+                a prioridade definida.
+              </p>
             )}
           </div>
 

@@ -42,6 +42,11 @@ const { modelo, modeloFallback } = resolverModelosGemini(process.env);
 const apiKey =
   process.env.GEMINI_API_KEY;
 
+const versaoServidor =
+  process.env.RENDER_GIT_COMMIT?.slice(0, 8) ||
+  process.env.GITHUB_SHA?.slice(0, 8) ||
+  "local";
+
 const supabaseUrl =
   process.env.SUPABASE_URL ||
   "https://kibnmdwabpiwyprkrhvq.supabase.co";
@@ -78,6 +83,7 @@ app.get(
       modeloFallback,
       chaveCarregada:
         Boolean(apiKey),
+      versao: versaoServidor,
     });
   }
 );
@@ -495,11 +501,15 @@ function obterContextoSupabaseJob(
     process.env.SUPABASE_ANON_KEY ||
     ""
   ).trim();
+  const serviceRoleKey = String(
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  ).trim();
 
   if (
     !userId ||
     !authorization.startsWith("Bearer ") ||
-    anonKey.length < 20
+    anonKey.length < 20 ||
+    serviceRoleKey.length < 20
   ) {
     throw new Error(
       "Sessão inválida para acompanhar a geração."
@@ -511,6 +521,7 @@ function obterContextoSupabaseJob(
     userId,
     authorization,
     anonKey,
+    serviceRoleKey,
   };
 }
 
