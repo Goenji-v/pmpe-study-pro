@@ -6,7 +6,7 @@ const senha = process.env.E2E_TEST_PASSWORD;
 async function entrar(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.getByLabel("E-mail").fill(email!);
-  await page.getByLabel("Senha").fill(senha!);
+  await page.locator('input[autocomplete="current-password"]').fill(senha!);
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).not.toHaveURL(/\/login(?:$|\?)/, { timeout: 15_000 });
 }
