@@ -12,6 +12,10 @@ services:
         value: 20.20.0
       - key: GEMINI_API_KEY
         sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
       - key: GEMINI_MODEL
         value: gemini-3.1-flash-lite
       - key: GEMINI_FALLBACK_MODEL
