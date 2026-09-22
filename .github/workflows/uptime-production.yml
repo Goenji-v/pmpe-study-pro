@@ -48,6 +48,8 @@ jobs:
           exigir_header "x-content-type-options" "nosniff"
           exigir_header "x-frame-options" "DENY"
           exigir_header "referrer-policy" "strict-origin-when-cross-origin"
+          exigir_header "permissions-policy" "camera=\(\)"
+          exigir_header "strict-transport-security" "max-age="
 
       - name: Verificar API
         shell: bash
@@ -69,5 +71,5 @@ jobs:
           echo "## Uptime Production" >> "$GITHUB_STEP_SUMMARY"
           echo "- Frontend: https://pmpe-study-pro-two.vercel.app" >> "$GITHUB_STEP_SUMMARY"
           echo "- API: https://pmpe-study-pro-api.onrender.com/api/saude" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Headers de segurança: CSP, nosniff, anti-iframe e referrer policy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Headers de segurança: CSP, HSTS, Permissions Policy, nosniff, anti-iframe e referrer policy" >> "$GITHUB_STEP_SUMMARY"
           echo "- Verificação automática: a cada hora" >> "$GITHUB_STEP_SUMMARY"
