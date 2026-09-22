@@ -12,12 +12,11 @@ import {
 
 import {
   ArrowRight,
-  Database,
+  Crown,
   Eye,
   EyeOff,
   LockKeyhole,
   Mail,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
 
@@ -235,49 +234,40 @@ export default function Auth() {
 
       <section className="auth-formulario-area">
         <div className="auth-formulario-card">
-          <div className="auth-formulario-topo">
-            <span>
-              {modo === "login"
-                ? "ACESSAR CONTA"
-                : modo === "cadastro"
-                  ? "CRIAR CONTA"
-                  : "RECUPERAR ACESSO"}
-            </span>
+          <header className="auth-brand-login">
+            <Crown className="auth-brand-coroa" size={37} strokeWidth={2} aria-hidden="true" />
+            <div className="auth-brand-nome">
+              <span>Study</span> <strong>Pro</strong>
+            </div>
+            <small>ESTUDO INTELIGENTE. APROVAÇÃO REAL.</small>
+          </header>
 
-            <h2>
-              {modo === "login"
-                ? "Entrar"
-                : modo === "cadastro"
-                  ? "Cadastro"
-                  : "Recuperar senha"}
-            </h2>
-
-            <p>
-              {modo === "login"
-                ? "Use seu e-mail e senha para continuar."
-                : modo === "cadastro"
-                  ? "Crie sua conta para manter seus dados sincronizados."
-                  : "Informe o e-mail cadastrado para recuperar o acesso."}
-            </p>
-          </div>
-
-          {modo !== "recuperar" && (
-            <div className="auth-social">
+          {modo !== "recuperar" ? (
+            <div className="auth-tabs" role="tablist" aria-label="Acesso à conta">
               <button
                 type="button"
-                className="auth-google"
-                onClick={() => void entrarGoogle()}
-                disabled={enviando || enviandoGoogle}
+                role="tab"
+                aria-selected={modo === "login"}
+                className={modo === "login" ? "ativo" : ""}
+                onClick={() => trocarModo("login")}
               >
-                <span className="auth-google-icone" aria-hidden="true">G</span>
-                <span>{enviandoGoogle ? "Conectando..." : "Continuar com Google"}</span>
+                Entrar
               </button>
-
-              <div className="auth-divisor" aria-hidden="true">
-                <span />
-                <small>ou</small>
-                <span />
-              </div>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={modo === "cadastro"}
+                className={modo === "cadastro" ? "ativo" : ""}
+                onClick={() => trocarModo("cadastro")}
+              >
+                Criar conta
+              </button>
+            </div>
+          ) : (
+            <div className="auth-recuperacao-topo">
+              <span>RECUPERAR ACESSO</span>
+              <h2>Esqueceu sua senha?</h2>
+              <p>Informe o e-mail cadastrado e enviaremos as instruções de recuperação.</p>
             </div>
           )}
 
@@ -286,7 +276,7 @@ export default function Auth() {
               <label>
                 <span>Nome</span>
                 <div className="auth-input-com-icone">
-                  <UserRound size={19} aria-hidden="true" />
+                  <UserRound size={18} aria-hidden="true" />
                   <input
                     type="text"
                     value={nome}
@@ -301,13 +291,13 @@ export default function Auth() {
             <label>
               <span>E-mail</span>
               <div className="auth-input-com-icone">
-                <Mail size={19} aria-hidden="true" />
+                <Mail size={18} aria-hidden="true" />
                 <input
                   type="email"
                   value={email}
                   onChange={(evento) => setEmail(evento.target.value)}
                   autoComplete="email"
-                  placeholder="seuemail@exemplo.com"
+                  placeholder="seu@email.com"
                 />
               </div>
             </label>
@@ -316,7 +306,7 @@ export default function Auth() {
               <label>
                 <span>Senha</span>
                 <div className="auth-input-com-icone auth-input-senha">
-                  <LockKeyhole size={19} aria-hidden="true" />
+                  <LockKeyhole size={18} aria-hidden="true" />
                   <input
                     type={mostrarSenha ? "text" : "password"}
                     value={senha}
@@ -330,7 +320,7 @@ export default function Auth() {
                     aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                     title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   >
-                    {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {mostrarSenha ? <EyeOff size={19} /> : <Eye size={19} />}
                   </button>
                 </div>
               </label>
@@ -340,7 +330,7 @@ export default function Auth() {
               <label>
                 <span>Confirmar senha</span>
                 <div className="auth-input-com-icone auth-input-senha">
-                  <LockKeyhole size={19} aria-hidden="true" />
+                  <LockKeyhole size={18} aria-hidden="true" />
                   <input
                     type={mostrarConfirmarSenha ? "text" : "password"}
                     value={confirmarSenha}
@@ -354,7 +344,7 @@ export default function Auth() {
                     aria-label={mostrarConfirmarSenha ? "Ocultar confirmação da senha" : "Mostrar confirmação da senha"}
                     title={mostrarConfirmarSenha ? "Ocultar senha" : "Mostrar senha"}
                   >
-                    {mostrarConfirmarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {mostrarConfirmarSenha ? <EyeOff size={19} /> : <Eye size={19} />}
                   </button>
                 </div>
               </label>
@@ -399,55 +389,41 @@ export default function Auth() {
                       ? "Criar conta"
                       : "Enviar instruções"}
               </span>
-              {modo === "login" && !enviando && <ArrowRight size={20} aria-hidden="true" />}
+              {modo === "login" && !enviando && <ArrowRight size={21} aria-hidden="true" />}
             </button>
           </form>
 
-          {modo === "login" && (
-            <div className="auth-seguranca">
-              <div className="auth-seguranca-destaque">
-                <div className="auth-seguranca-icone">
-                  <ShieldCheck size={27} strokeWidth={2.1} />
-                </div>
-                <div>
-                  <strong>Seus dados estão protegidos</strong>
-                  <span>
-                    Acesso autenticado e boas práticas de proteção da sua conta.
-                  </span>
-                </div>
+          {modo !== "recuperar" && (
+            <div className="auth-social">
+              <div className="auth-divisor" aria-hidden="true">
+                <span />
+                <small>ou continue com</small>
+                <span />
               </div>
 
-              <div className="auth-seguranca-itens" aria-label="Recursos de segurança">
-                <span>
-                  <LockKeyhole size={18} />
-                  <small>Conexão segura<br />(SSL)</small>
-                </span>
-                <span>
-                  <Database size={18} />
-                  <small>Dados<br />protegidos</small>
-                </span>
-                <span>
-                  <ShieldCheck size={18} />
-                  <small>Privacidade<br />e LGPD</small>
-                </span>
-              </div>
+              <button
+                type="button"
+                className="auth-google"
+                onClick={() => void entrarGoogle()}
+                disabled={enviando || enviandoGoogle}
+              >
+                <span className="auth-google-icone" aria-hidden="true">G</span>
+                <span>{enviandoGoogle ? "Conectando..." : "Google"}</span>
+              </button>
             </div>
           )}
 
-          <div className="auth-links">
-            {modo === "login" ? (
-              <p>
-                Ainda não possui uma conta?{" "}
-                <button type="button" onClick={() => trocarModo("cadastro")}>
-                  Criar conta
-                </button>
-              </p>
-            ) : (
+          {modo === "recuperar" && (
+            <div className="auth-links auth-links-recuperar">
               <button type="button" onClick={() => trocarModo("login")}>
                 ← Voltar para o login
               </button>
-            )}
-          </div>
+            </div>
+          )}
+
+          <p className="auth-rodape">
+            Acesso exclusivo aos recursos do Study Pro.
+          </p>
         </div>
       </section>
     </main>
