@@ -1,0 +1,54 @@
+name: PWA Health
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "35 12 * * 5"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pwa:
+    name: Verificar manifest, service worker e offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verificar manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="$(curl --fail --silent --show-error --location --max-time 30 https://pmpe-study-pro-two.vercel.app/manifest.webmanifest)"
+          printf '%s' "$manifest" | jq -e '.name == "STUDY PRO"' >/dev/null
+          printf '%s' "$manifest" | jq -e '.start_url == "/"' >/dev/null
+          printf '%s' "$manifest" | jq -e '.display == "standalone"' >/dev/null
+          printf '%s' "$manifest" | jq -e '.icons | length >= 1' >/dev/null
+
+      - name: Verificar service worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(curl --fail --silent --show-error --head --max-time 30 https://pmpe-study-pro-two.vercel.app/service-worker.js)"
+          body="$(curl --fail --silent --show-error --max-time 30 https://pmpe-study-pro-two.vercel.app/service-worker.js)"
+          printf '%s\n' "$headers" | grep -Eiq '^cache-control:.*no-cache|^cache-control:.*no-store'
+          printf '%s' "$body" | grep -q 'studio-pro-offline-'
+          printf '%s' "$body" | grep -q '/offline.html'
+
+      - name: Verificar página offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          offline="$(curl --fail --silent --show-error --location --max-time 30 https://pmpe-study-pro-two.vercel.app/offline.html)"
+          printf '%s' "$offline" | grep -q 'lang="pt-BR"'
+          printf '%s' "$offline" | grep -q 'Você está sem conexão'
+          printf '%s' "$offline" | grep -q 'Tentar novamente'
