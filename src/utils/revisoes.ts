@@ -2,6 +2,7 @@ import type {
   EtapaRevisao,
   Revisao,
   SessaoEstudo,
+  TipoSessao,
 } from "../types";
 
 const INTERVALOS_DIAS: Record<EtapaRevisao, number> = {
@@ -134,6 +135,31 @@ export function avaliarRevisaoPorQuestoes(total?: number, acertos?: number): Non
     !Number.isInteger(total) || !Number.isInteger(acertos) || total <= 0 || acertos < 0 || acertos > total) return null;
   const percentual = acertos / total;
   return percentual >= 0.8 ? "facil" : percentual >= 0.6 ? "media" : "dificil";
+}
+
+export function sessaoExigeResultadoQuestoes(
+  tipo: TipoSessao,
+  formatoRevisao?: "teoria" | "questoes"
+) {
+  return tipo === "questoes" ||
+    tipo === "simulado" ||
+    (tipo === "revisao" && formatoRevisao === "questoes");
+}
+
+export function resolverAvaliacaoRevisao(params: {
+  formato: "teoria" | "questoes";
+  avaliacaoManual: NonNullable<Revisao["desempenho"]>;
+  total?: number;
+  acertos?: number;
+}): NonNullable<Revisao["desempenho"]> | null {
+  if (params.formato === "teoria") {
+    return params.avaliacaoManual;
+  }
+
+  return avaliarRevisaoPorQuestoes(
+    params.total,
+    params.acertos
+  );
 }
 
 export function revisaoCorrespondeASessao(revisao: Revisao, sessao: Pick<SessaoEstudo, "tipo" | "revisaoId" | "materiaId" | "moduloId" | "assuntoId" | "materia" | "assunto">) {
