@@ -315,12 +315,6 @@ export async function salvarArquivoMaterial(
         modulo: dados.modulo?.trim() || "Geral",
         moduloId: dados.moduloId,
         assuntoId: dados.assuntoId,
-        categoriaLink:
-          dados.categoriaLink ??
-          resolverCategoriaLink(
-            "link",
-            dados.nome
-          ),
       },
     })
     .select(
@@ -416,6 +410,12 @@ export async function salvarLinkMaterial(
         modulo: dados.modulo?.trim() || "Geral",
         moduloId: dados.moduloId,
         assuntoId: dados.assuntoId,
+        categoriaLink:
+          dados.categoriaLink ??
+          resolverCategoriaLink(
+            "link",
+            dados.nome
+          ),
       },
     })
     .select(
