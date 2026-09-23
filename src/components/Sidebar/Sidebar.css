@@ -15,12 +15,23 @@
 }
 
 .sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 2px 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 2px 18px;
   margin-bottom: 14px;
   border-bottom: 1px solid var(--studio-border, rgba(75, 113, 151, 0.30));
+}
+
+.sidebar-logo-oficial {
+  display: block;
+  width: 100%;
+  max-width: 190px;
+  height: 112px;
+  object-fit: cover;
+  object-position: center 53%;
+  border-radius: 14px;
+  filter: drop-shadow(0 10px 24px rgba(0, 74, 255, 0.2));
+  user-select: none;
 }
 
 .sidebar-logo-icone {
