@@ -225,6 +225,20 @@ export default function CentroMateriais() {
     }
   }
 
+  function alterarModoCadastro(
+    novoModo: ModoCadastro
+  ) {
+    setModo(novoModo);
+
+    if (
+      novoModo === "arquivo" &&
+      categoriaLink !== "personalizado"
+    ) {
+      setCategoriaLink("personalizado");
+      setNome("");
+    }
+  }
+
   function alterarMateria(valor: string) {
     setMateria(valor);
     setModulo("");
@@ -439,7 +453,7 @@ export default function CentroMateriais() {
             <button
               type="button"
               className={modo === "arquivo" ? "ativo" : ""}
-              onClick={() => setModo("arquivo")}
+              onClick={() => alterarModoCadastro("arquivo")}
             >
               📄 Arquivo
             </button>
@@ -447,7 +461,7 @@ export default function CentroMateriais() {
             <button
               type="button"
               className={modo === "link" ? "ativo" : ""}
-              onClick={() => setModo("link")}
+              onClick={() => alterarModoCadastro("link")}
             >
               🔗 Link
             </button>
