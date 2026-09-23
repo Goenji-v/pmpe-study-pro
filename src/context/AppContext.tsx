@@ -69,6 +69,7 @@ import {
 } from "../services/seguranca/backupAutomaticoService";
 import {
   registrarBackupConflitoNaNuvem,
+  sincronizarBackupsConflitoLocaisNaNuvem,
 } from "../services/seguranca/backupConflitoNuvemService";
 import {
   assinaturaConteudoSincronizacao,
@@ -1240,6 +1241,15 @@ function EstadoDaConta({
 
     const idDaConta = usuarioId;
     let ativo = true;
+
+    void sincronizarBackupsConflitoLocaisNaNuvem(
+      idDaConta
+    ).catch((erroBackup) => {
+      console.error(
+        "Falha ao preservar backups locais de conflito no Supabase:",
+        erroBackup
+      );
+    });
 
     async function iniciarNuvem() {
       const metadadosLocais =
