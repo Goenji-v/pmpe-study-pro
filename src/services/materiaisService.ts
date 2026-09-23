@@ -7,6 +7,11 @@ export type TipoMaterial =
   | "arquivo"
   | "link";
 
+export type CategoriaLinkMaterial =
+  | "aula"
+  | "questoes"
+  | "personalizado";
+
 export type MaterialEstudo = {
   id: string;
   tipo: TipoMaterial;
@@ -19,6 +24,7 @@ export type MaterialEstudo = {
   assunto: string;
   assuntoId?: string;
   observacao: string;
+  categoriaLink?: CategoriaLinkMaterial;
 
   criadoEm: string;
 
@@ -50,6 +56,7 @@ type MaterialBanco = {
     modulo?: string;
     moduloId?: string;
     assuntoId?: string;
+    categoriaLink?: CategoriaLinkMaterial;
     [chave: string]: unknown;
   } | null;
 };
@@ -308,6 +315,12 @@ export async function salvarArquivoMaterial(
         modulo: dados.modulo?.trim() || "Geral",
         moduloId: dados.moduloId,
         assuntoId: dados.assuntoId,
+        categoriaLink:
+          dados.categoriaLink ??
+          resolverCategoriaLink(
+            "link",
+            dados.nome
+          ),
       },
     })
     .select(
@@ -361,6 +374,7 @@ export async function salvarLinkMaterial(
     assuntoId?: string;
     observacao: string;
     url: string;
+    categoriaLink?: CategoriaLinkMaterial;
   }
 ): Promise<MaterialEstudo> {
   const usuario =
@@ -865,6 +879,12 @@ async function migrarMaterialLocal(
         modulo: material.modulo || "Geral",
         moduloId: material.moduloId,
         assuntoId: material.assuntoId,
+        categoriaLink:
+          material.categoriaLink ??
+          resolverCategoriaLink(
+            material.tipo,
+            material.nome
+          ),
       },
     });
 
@@ -1010,6 +1030,13 @@ function converterMaterialBanco(
   registro:
     MaterialBanco
 ): MaterialEstudo {
+  const categoriaLink =
+    resolverCategoriaLink(
+      registro.tipo,
+      registro.nome,
+      registro.dados?.categoriaLink
+    );
+
   return {
     id:
       registro.id,
@@ -1042,6 +1069,8 @@ function converterMaterialBanco(
       registro.observacao ||
       "",
 
+    categoriaLink,
+
     criadoEm:
       registro.created_at,
 
@@ -1065,6 +1094,60 @@ function converterMaterialBanco(
       registro.storage_path ||
       undefined,
   };
+}
+
+export function obterCategoriaLinkMaterial(
+  material: Pick<
+    MaterialEstudo,
+    "tipo" | "nome" | "categoriaLink"
+  >
+): CategoriaLinkMaterial {
+  return resolverCategoriaLink(
+    material.tipo,
+    material.nome,
+    material.categoriaLink
+  );
+}
+
+function resolverCategoriaLink(
+  tipo: TipoMaterial,
+  nome: string,
+  categoria?: unknown
+): CategoriaLinkMaterial {
+  if (
+    categoria === "aula" ||
+    categoria === "questoes" ||
+    categoria === "personalizado"
+  ) {
+    return categoria;
+  }
+
+  if (tipo !== "link") {
+    return "personalizado";
+  }
+
+  const nomeNormalizado =
+    nome
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+  if (
+    nomeNormalizado === "aula" ||
+    nomeNormalizado === "aulas"
+  ) {
+    return "aula";
+  }
+
+  if (
+    nomeNormalizado === "questao" ||
+    nomeNormalizado === "questoes"
+  ) {
+    return "questoes";
+  }
+
+  return "personalizado";
 }
 
 function criarCaminhoArquivo(
