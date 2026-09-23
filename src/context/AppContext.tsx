@@ -67,6 +67,13 @@ import {
 import {
   criarBackupAutomaticoLocal,
 } from "../services/seguranca/backupAutomaticoService";
+import {
+  registrarBackupConflitoNaNuvem,
+} from "../services/seguranca/backupConflitoNuvemService";
+import {
+  assinaturaConteudoSincronizacao,
+  estadosEquivalentesParaSincronizacao,
+} from "../utils/sincronizacaoConflito";
 
 import {
   listarResultadosQuestoesIA,
@@ -1186,6 +1193,37 @@ function EstadoDaConta({
     setStatusNuvem("conflito");
   }
 
+  async function tentarResolverConflitoEquivalente(
+    idDaConta: string,
+    estadoLocal?: EstadoAppNuvem
+  ) {
+    const pendente =
+      obterEstadoPendenteSincronizacao(idDaConta);
+    const local =
+      pendente?.estado ??
+      estadoLocal ??
+      montarEstadoNuvem(dadosAtuaisRef.current);
+    const nuvem =
+      await carregarEstadoDaNuvem(idDaConta);
+
+    if (
+      !nuvem ||
+      !estadosEquivalentesParaSincronizacao(
+        local,
+        nuvem
+      )
+    ) {
+      return false;
+    }
+
+    aplicarEstadoDaNuvem(nuvem);
+    confirmarSincronizacaoLocal(
+      idDaConta,
+      nuvem
+    );
+    return true;
+  }
+
   useEffect(() => {
     if (!usuarioId) {
       nuvemInicializadaRef.current = false;
@@ -1261,6 +1299,21 @@ function EstadoDaConta({
             estadoNuvem &&
             revisaoNuvem !== pendenteLocal.baseRevision
           ) {
+            if (
+              estadosEquivalentesParaSincronizacao(
+                pendenteLocal.estado,
+                estadoNuvem
+              )
+            ) {
+              aplicarEstadoDaNuvem(estadoNuvem);
+              confirmarSincronizacaoLocal(
+                idDaConta,
+                estadoNuvem
+              );
+              nuvemInicializadaRef.current = true;
+              return;
+            }
+
             marcarConflito(
               new ConflitoSincronizacaoError(
                 revisaoNuvem,
@@ -1526,6 +1579,22 @@ function EstadoDaConta({
       confirmarSincronizacaoLocal(idDaConta, salvo);
     } catch (erro) {
       if (erro instanceof ConflitoSincronizacaoError) {
+        try {
+          if (
+            await tentarResolverConflitoEquivalente(
+              idDaConta,
+              estado
+            )
+          ) {
+            return;
+          }
+        } catch (erroComparacao) {
+          console.error(
+            "Falha ao comparar conflito equivalente:",
+            erroComparacao
+          );
+        }
+
         marcarConflito(erro);
         return;
       }
@@ -1617,6 +1686,21 @@ function EstadoDaConta({
       confirmarSincronizacaoLocal(usuario.id, salvo);
     } catch (erro) {
       if (erro instanceof ConflitoSincronizacaoError) {
+        try {
+          if (
+            await tentarResolverConflitoEquivalente(
+              usuario.id
+            )
+          ) {
+            return;
+          }
+        } catch (erroComparacao) {
+          console.error(
+            "Falha ao comparar conflito equivalente:",
+            erroComparacao
+          );
+        }
+
         marcarConflito(erro);
         throw erro;
       }
@@ -1649,19 +1733,45 @@ function EstadoDaConta({
     setStatusNuvem("salvando");
 
     const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
-    const estadoLocal = montarEstadoNuvem(dadosAtuaisRef.current);
+    const pendenteLocal =
+      obterEstadoPendenteSincronizacao(usuario.id);
+    const estadoLocal =
+      pendenteLocal?.estado ??
+      montarEstadoNuvem(dadosAtuaisRef.current);
 
-    if (preferencia === "nuvem" || (estadoNuvem && houveReinicioDaConta(estadoLocal.configuracoes, estadoNuvem.configuracoes))) {
-      if (!estadoNuvem) {
-        throw new Error("Não existe estado na nuvem para restaurar.");
-      }
-
-      criarBackupAutomaticoLocal(
-        usuario.id,
-        estadoLocal,
-        "antes_resolucao_conflito"
+    if (!estadoNuvem) {
+      throw new Error(
+        "Não existe estado na nuvem para resolver este conflito."
       );
+    }
 
+    if (
+      estadosEquivalentesParaSincronizacao(
+        estadoLocal,
+        estadoNuvem
+      )
+    ) {
+      aplicarEstadoDaNuvem(estadoNuvem);
+      confirmarSincronizacaoLocal(
+        usuario.id,
+        estadoNuvem
+      );
+      return;
+    }
+
+    criarBackupAutomaticoLocal(
+      usuario.id,
+      estadoLocal,
+      "antes_resolucao_conflito"
+    );
+
+    await registrarBackupConflitoNaNuvem({
+      usuarioId: usuario.id,
+      estadoLocal,
+      estadoNuvem,
+    });
+
+    if (preferencia === "nuvem" || houveReinicioDaConta(estadoLocal.configuracoes, estadoNuvem.configuracoes)) {
       aplicarEstadoDaNuvem(estadoNuvem);
       confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
       return;
@@ -1792,12 +1902,53 @@ function EstadoDaConta({
       });
     }
 
+    let ultimaAtualizacaoAoRetomar = 0;
+
+    function atualizarAoRetomar() {
+      if (
+        document.visibilityState === "hidden" ||
+        conflitoRef.current ||
+        obterEstadoPendenteSincronizacao(usuarioId)
+      ) {
+        return;
+      }
+
+      const agora = Date.now();
+      if (
+        agora - ultimaAtualizacaoAoRetomar <
+        5000
+      ) {
+        return;
+      }
+      ultimaAtualizacaoAoRetomar = agora;
+
+      void sincronizarAgora().catch(() => {
+        // O estado visual da nuvem já registra qualquer falha.
+      });
+    }
+
+    function mudouVisibilidade() {
+      if (document.visibilityState === "visible") {
+        atualizarAoRetomar();
+      }
+    }
+
     window.addEventListener("offline", ficouOffline);
     window.addEventListener("online", voltouOnline);
+    window.addEventListener("focus", atualizarAoRetomar);
+    document.addEventListener(
+      "visibilitychange",
+      mudouVisibilidade
+    );
 
     return () => {
       window.removeEventListener("offline", ficouOffline);
       window.removeEventListener("online", voltouOnline);
+      window.removeEventListener("focus", atualizarAoRetomar);
+      document.removeEventListener(
+        "visibilitychange",
+        mudouVisibilidade
+      );
     };
     // sincronizarAgora lê os dados atuais por refs; o listener deve mudar apenas com a conta.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
@@ -2238,14 +2389,9 @@ export function useApp() {
 function assinaturaEstado(
   estado: EstadoAppNuvem
 ) {
-  const {
-    salvoEm: _salvoEm,
-    syncRevision: _syncRevision,
-    atualizadoEm: _atualizadoEm,
-    ...dados
-  } = estado;
-
-  return JSON.stringify(dados);
+  return assinaturaConteudoSincronizacao(
+    estado
+  );
 }
 
 function obterMensagemErro(
