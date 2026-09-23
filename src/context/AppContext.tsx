@@ -1896,6 +1896,7 @@ function EstadoDaConta({
 
   useEffect(() => {
     if (!usuarioId) return;
+    const idDaConta = usuarioId;
 
     function ficouOffline() {
       setStatusNuvem("offline");
@@ -1921,7 +1922,7 @@ function EstadoDaConta({
       if (
         document.visibilityState === "hidden" ||
         conflitoRef.current ||
-        obterEstadoPendenteSincronizacao(usuarioId)
+        obterEstadoPendenteSincronizacao(idDaConta)
       ) {
         return;
       }
