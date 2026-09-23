@@ -1558,6 +1558,9 @@ function EstadoDaConta({
         timerSalvarRef.current = null;
       }
     };
+    // salvarAlteracao lê as refs/estado de sincronização no momento da
+    // execução; o autosave deve reagir somente ao estado serializado e à conta.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [
     estadoAtual,
     usuarioId,
