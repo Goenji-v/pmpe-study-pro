@@ -62,6 +62,17 @@ type RegistroMaterialLocal =
 const BUCKET_MATERIAIS =
   "materiais";
 
+const MIMES_MATERIAIS_POR_EXTENSAO: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  txt: "text/plain",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+};
+
 const NOME_BANCO_LOCAL =
   "pmpe_study_pro";
 
@@ -244,8 +255,7 @@ export async function salvarArquivoMaterial(
           "3600",
 
         contentType:
-          dados.arquivo.type ||
-          "application/octet-stream",
+          obterMimeMaterial(dados.arquivo),
 
         upsert: false,
       }
@@ -775,9 +785,10 @@ async function migrarMaterialLocal(
             "3600",
 
           contentType:
-            material.mimeType ||
-            material.arquivo.type ||
-            "application/octet-stream",
+            obterMimeMaterial(
+              material.arquivo,
+              material.nomeArquivo
+            ),
 
           upsert: true,
         }
@@ -1123,6 +1134,92 @@ function validarArquivo(
       "O arquivo ultrapassa o limite de 50 MB."
     );
   }
+
+  const extensao =
+    obterExtensaoArquivo(
+      arquivo.name
+    );
+
+  if (
+    !MIMES_MATERIAIS_POR_EXTENSAO[
+      extensao
+    ]
+  ) {
+    throw new Error(
+      "Formato não permitido. Use PDF, Word, TXT, PNG, JPG ou WebP."
+    );
+  }
+
+  const mimeEsperado =
+    MIMES_MATERIAIS_POR_EXTENSAO[
+      extensao
+    ];
+
+  if (
+    arquivo.type &&
+    arquivo.type !==
+      mimeEsperado
+  ) {
+    throw new Error(
+      "O tipo do arquivo não corresponde à extensão informada."
+    );
+  }
+}
+
+function obterMimeMaterial(
+  arquivo: Blob,
+  nomeArquivo?: string
+) {
+  const nome =
+    nomeArquivo ??
+    ("name" in arquivo
+      ? String(
+          (
+            arquivo as File
+          ).name
+        )
+      : "");
+
+  const extensao =
+    obterExtensaoArquivo(
+      nome
+    );
+
+  const mimePermitido =
+    MIMES_MATERIAIS_POR_EXTENSAO[
+      extensao
+    ];
+
+  if (!mimePermitido) {
+    throw new Error(
+      "Formato não permitido. Use PDF, Word, TXT, PNG, JPG ou WebP."
+    );
+  }
+
+  return mimePermitido;
+}
+
+function obterExtensaoArquivo(
+  nome: string
+) {
+  const indice =
+    nome.lastIndexOf(".");
+
+  if (
+    indice < 0 ||
+    indice ===
+      nome.length - 1
+  ) {
+    return "";
+  }
+
+  return nome
+    .slice(indice + 1)
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9]/g,
+      ""
+    );
 }
 
 function normalizarUrl(
