@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Revisao, SessaoEstudo } from "../src/types/index.ts";
-import { avaliarRevisaoPorQuestoes, concluirRevisaoNaLista } from "../src/utils/revisoes.ts";
+import {
+  avaliarRevisaoPorQuestoes,
+  concluirRevisaoNaLista,
+  resolverAvaliacaoRevisao,
+  sessaoExigeResultadoQuestoes,
+} from "../src/utils/revisoes.ts";
 import { aplicarAlteracoesComVinculoSeguro } from "../src/utils/vinculoPlano.ts";
 
 const agora = new Date(2026, 8, 2, 12);
@@ -33,6 +38,44 @@ test("avaliação recusa dados ausentes, fracionários, negativos ou inconsisten
   for (const [total, certas] of [[10, undefined], [undefined, 1], [0, 0], [10, -1], [10, 11], [1.5, 1], [10, 1.5], [NaN, 1], [10, Infinity]]) {
     assert.equal(avaliarRevisaoPorQuestoes(total, certas), null);
   }
+});
+
+test("revisão teórica não exige resultado de questões; revisão por questões exige", () => {
+  assert.equal(sessaoExigeResultadoQuestoes("revisao", "teoria"), false);
+  assert.equal(sessaoExigeResultadoQuestoes("revisao", "questoes"), true);
+  assert.equal(sessaoExigeResultadoQuestoes("questoes"), true);
+  assert.equal(sessaoExigeResultadoQuestoes("simulado"), true);
+  assert.equal(sessaoExigeResultadoQuestoes("aula"), false);
+});
+
+test("avaliação final da revisão por questões ignora o valor manual e usa o percentual", () => {
+  assert.equal(
+    resolverAvaliacaoRevisao({
+      formato: "questoes",
+      avaliacaoManual: "media",
+      total: 10,
+      acertos: 8,
+    }),
+    "facil"
+  );
+  assert.equal(
+    resolverAvaliacaoRevisao({
+      formato: "questoes",
+      avaliacaoManual: "facil",
+      total: 10,
+      acertos: 5,
+    }),
+    "dificil"
+  );
+  assert.equal(
+    resolverAvaliacaoRevisao({
+      formato: "teoria",
+      avaliacaoManual: "dificil",
+      total: 10,
+      acertos: 10,
+    }),
+    "dificil"
+  );
 });
 
 test("concluir a sessão guarda seu vínculo e resultado e agenda a próxima etapa uma única vez", () => {
