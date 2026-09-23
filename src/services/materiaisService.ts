@@ -2,15 +2,18 @@ import { armazenamentoLocalDaConta as localStorage, permiteMigracaoLegada } from
 import {
   supabase,
 } from "../lib/supabase";
+import {
+  resolverCategoriaLinkMaterial,
+  type CategoriaLinkMaterial,
+} from "../utils/materiaisLinks";
+
+export type {
+  CategoriaLinkMaterial,
+} from "../utils/materiaisLinks";
 
 export type TipoMaterial =
   | "arquivo"
   | "link";
-
-export type CategoriaLinkMaterial =
-  | "aula"
-  | "questoes"
-  | "personalizado";
 
 export type MaterialEstudo = {
   id: string;
@@ -412,10 +415,10 @@ export async function salvarLinkMaterial(
         assuntoId: dados.assuntoId,
         categoriaLink:
           dados.categoriaLink ??
-          resolverCategoriaLink(
-            "link",
-            dados.nome
-          ),
+          resolverCategoriaLinkMaterial({
+            tipo: "link",
+            nome: dados.nome,
+          }),
       },
     })
     .select(
@@ -881,10 +884,10 @@ async function migrarMaterialLocal(
         assuntoId: material.assuntoId,
         categoriaLink:
           material.categoriaLink ??
-          resolverCategoriaLink(
-            material.tipo,
-            material.nome
-          ),
+          resolverCategoriaLinkMaterial({
+            tipo: material.tipo,
+            nome: material.nome,
+          }),
       },
     });
 
@@ -1031,11 +1034,12 @@ function converterMaterialBanco(
     MaterialBanco
 ): MaterialEstudo {
   const categoriaLink =
-    resolverCategoriaLink(
-      registro.tipo,
-      registro.nome,
-      registro.dados?.categoriaLink
-    );
+    resolverCategoriaLinkMaterial({
+      tipo: registro.tipo,
+      nome: registro.nome,
+      categoria:
+        registro.dados?.categoriaLink,
+    });
 
   return {
     id:
@@ -1102,52 +1106,11 @@ export function obterCategoriaLinkMaterial(
     "tipo" | "nome" | "categoriaLink"
   >
 ): CategoriaLinkMaterial {
-  return resolverCategoriaLink(
-    material.tipo,
-    material.nome,
-    material.categoriaLink
-  );
-}
-
-function resolverCategoriaLink(
-  tipo: TipoMaterial,
-  nome: string,
-  categoria?: unknown
-): CategoriaLinkMaterial {
-  if (
-    categoria === "aula" ||
-    categoria === "questoes" ||
-    categoria === "personalizado"
-  ) {
-    return categoria;
-  }
-
-  if (tipo !== "link") {
-    return "personalizado";
-  }
-
-  const nomeNormalizado =
-    nome
-      .trim()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
-
-  if (
-    nomeNormalizado === "aula" ||
-    nomeNormalizado === "aulas"
-  ) {
-    return "aula";
-  }
-
-  if (
-    nomeNormalizado === "questao" ||
-    nomeNormalizado === "questoes"
-  ) {
-    return "questoes";
-  }
-
-  return "personalizado";
+  return resolverCategoriaLinkMaterial({
+    tipo: material.tipo,
+    nome: material.nome,
+    categoria: material.categoriaLink,
+  });
 }
 
 function criarCaminhoArquivo(
