@@ -17,6 +17,7 @@ import {
   listarMateriais,
   salvarArquivoMaterial,
   salvarLinkMaterial,
+  type CategoriaLinkMaterial,
   type MaterialEstudo,
 } from "../../services/materiaisService";
 
@@ -36,6 +37,13 @@ export default function CentroMateriais() {
 
   const [nome, setNome] =
     useState("");
+
+  const [
+    categoriaLink,
+    setCategoriaLink,
+  ] = useState<CategoriaLinkMaterial>(
+    "personalizado"
+  );
 
   const [materia, setMateria] =
     useState("");
@@ -294,6 +302,7 @@ export default function CentroMateriais() {
                 )?.id,
               observacao,
               url,
+              categoriaLink,
             });
 
       setMateriais((anteriores) => [
@@ -352,6 +361,7 @@ export default function CentroMateriais() {
 
   function limparFormulario() {
     setNome("");
+    setCategoriaLink("personalizado");
     setMateria("");
     setModulo("");
     setAssunto("");
@@ -365,6 +375,29 @@ export default function CentroMateriais() {
 
     if (input) {
       input.value = "";
+    }
+  }
+
+  function selecionarCategoriaLink(
+    categoria: CategoriaLinkMaterial
+  ) {
+    setCategoriaLink(categoria);
+
+    if (categoria === "aula") {
+      setNome("Aula");
+      return;
+    }
+
+    if (categoria === "questoes") {
+      setNome("Questões");
+      return;
+    }
+
+    if (
+      nome.trim().toLowerCase() === "aula" ||
+      normalizar(nome) === "questoes"
+    ) {
+      setNome("");
     }
   }
 
@@ -422,13 +455,90 @@ export default function CentroMateriais() {
 
           <div className="materiais-formulario">
             <Campo label="Nome do material">
-              <input
-                value={nome}
-                onChange={(evento) =>
-                  setNome(evento.target.value)
-                }
-                placeholder="Ex.: Resumo Governo de Nassau"
-              />
+              {modo === "link" ? (
+                <>
+                  <div
+                    className="materiais-nome-opcoes"
+                    role="group"
+                    aria-label="Tipo do link"
+                  >
+                    <button
+                      type="button"
+                      className={
+                        categoriaLink === "aula"
+                          ? "ativo"
+                          : ""
+                      }
+                      onClick={() =>
+                        selecionarCategoriaLink(
+                          "aula"
+                        )
+                      }
+                    >
+                      🎬 Aula
+                    </button>
+
+                    <button
+                      type="button"
+                      className={
+                        categoriaLink === "questoes"
+                          ? "ativo"
+                          : ""
+                      }
+                      onClick={() =>
+                        selecionarCategoriaLink(
+                          "questoes"
+                        )
+                      }
+                    >
+                      📝 Questões
+                    </button>
+
+                    <button
+                      type="button"
+                      className={
+                        categoriaLink === "personalizado"
+                          ? "ativo"
+                          : ""
+                      }
+                      onClick={() =>
+                        selecionarCategoriaLink(
+                          "personalizado"
+                        )
+                      }
+                    >
+                      ✏️ Personalizado
+                    </button>
+                  </div>
+
+                  {categoriaLink ===
+                  "personalizado" ? (
+                    <input
+                      value={nome}
+                      onChange={(evento) =>
+                        setNome(
+                          evento.target.value
+                        )
+                      }
+                      placeholder="Ex.: Resumo Governo de Nassau"
+                    />
+                  ) : (
+                    <small>
+                      {categoriaLink === "aula"
+                        ? "Na Central de Estudos aparecerá o botão “Abrir aula”."
+                        : "Na Central de Estudos aparecerá o botão “Abrir questões”."}
+                    </small>
+                  )}
+                </>
+              ) : (
+                <input
+                  value={nome}
+                  onChange={(evento) =>
+                    setNome(evento.target.value)
+                  }
+                  placeholder="Ex.: Resumo Governo de Nassau"
+                />
+              )}
             </Campo>
 
             <Campo label="Matéria">
