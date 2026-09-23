@@ -151,18 +151,13 @@ export default function Sidebar() {
       )}
 
       <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
-        <div className="sidebar-logo studio-premium-brand">
-          <div className="studio-brand-shield" aria-hidden="true">
-            <img
-              src="/assets/studio-pro-mark.svg"
-              alt=""
-              draggable={false}
-            />
-          </div>
-          <div className="studio-brand-copy">
-            <strong>STUDY <span>PRO</span></strong>
-            <small>ESTUDO HOJE. CONQUISTA SEMPRE.</small>
-          </div>
+        <div className="sidebar-logo">
+          <img
+            className="sidebar-logo-oficial"
+            src="/assets/study-pro-logo-official.jpg?v=1"
+            alt="Study Pro"
+            draggable={false}
+          />
         </div>
 
         <nav className="sidebar-menu" aria-label="Navegação principal">
