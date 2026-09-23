@@ -11,7 +11,11 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import { avaliarRevisaoPorQuestoes } from "../../utils/revisoes";
+import {
+  avaliarRevisaoPorQuestoes,
+  resolverAvaliacaoRevisao,
+  sessaoExigeResultadoQuestoes,
+} from "../../utils/revisoes";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
 import { BANCAS_CONCURSO } from "../../utils/bancasConcurso";
 import "./CentralEstudos.css";
@@ -364,6 +368,10 @@ const [
 
   const formatoRevisao = estado.formatoRevisao ?? "teoria";
   const revisaoPorQuestoes = estado.tipo === "revisao" && formatoRevisao === "questoes";
+  const finalizacaoComQuestoes = sessaoExigeResultadoQuestoes(
+    estado.tipo,
+    estado.tipo === "revisao" ? formatoRevisao : undefined
+  );
   const avaliacaoAutomatica = quantidadeQuestoes.trim() && quantidadeAcertos.trim()
     ? avaliarRevisaoPorQuestoes(Number(quantidadeQuestoes), Number(quantidadeAcertos)) : null;
   const rotulosAvaliacao = { facil: "Fácil", media: "Média", dificil: "Difícil" };
@@ -717,9 +725,7 @@ const [
       number | undefined;
 
     const exigeQuestoes =
-      estado.tipo === "questoes" ||
-      estado.tipo === "simulado" ||
-      (estado.tipo === "revisao" && formatoRevisao === "questoes");
+      finalizacaoComQuestoes;
     const informouQuestoesNaRevisao =
       estado.tipo === "revisao" &&
       (quantidadeQuestoes.trim() !== "" ||
@@ -772,6 +778,26 @@ const [
         acertos;
     }
 
+    const avaliacaoFinalRevisao =
+      estado.tipo === "revisao"
+        ? resolverAvaliacaoRevisao({
+            formato: formatoRevisao,
+            avaliacaoManual: avaliacaoRevisao,
+            total: totalQuestoes,
+            acertos,
+          })
+        : null;
+
+    if (
+      estado.tipo === "revisao" &&
+      !avaliacaoFinalRevisao
+    ) {
+      window.alert(
+        "Não foi possível calcular como foi a revisão."
+      );
+      return;
+    }
+
     setSalvandoFinalizacao(true);
 
     const resultado =
@@ -803,10 +829,9 @@ const [
             : undefined,
 
         avaliacaoRevisao:
-          estado.tipo ===
-            "revisao"
-              ? avaliacaoRevisao
-              : undefined,
+          estado.tipo === "revisao"
+            ? avaliacaoFinalRevisao ?? undefined
+            : undefined,
 
         formatoRevisao:
           estado.tipo === "revisao"
@@ -1416,9 +1441,7 @@ const [
                 />
               </label>
 
-              {(estado.tipo === "questoes" ||
-                estado.tipo === "simulado" ||
-                estado.tipo === "revisao") && (
+              {finalizacaoComQuestoes && (
                 <>
                   <label>
                     Questões realizadas
@@ -1476,26 +1499,6 @@ const [
                     />
                   </label>
 
-                  <label>
-                    Banca
-
-                    <input
-                      list="bancas-concurso"
-                      value={banca}
-                      onChange={(evento) =>
-                        setBanca(
-                          evento.target.value
-                        )
-                      }
-                      placeholder="Selecione ou digite uma banca"
-                    />
-                    <datalist id="bancas-concurso">
-                      {BANCAS_CONCURSO.map((nomeBanca) => (
-                        <option key={nomeBanca} value={nomeBanca} />
-                      ))}
-                    </datalist>
-                  </label>
-
                   {estado.tipo !== "revisao" && <label>
                     Dificuldade
 
@@ -1525,10 +1528,32 @@ const [
                 </>
               )}
 
+              {(estado.tipo === "questoes" ||
+                estado.tipo === "simulado" ||
+                estado.tipo === "revisao") && (
+                <label>
+                  Banca
+
+                  <input
+                    list="bancas-concurso"
+                    value={banca}
+                    onChange={(evento) =>
+                      setBanca(
+                        evento.target.value
+                      )
+                    }
+                    placeholder="Selecione ou digite uma banca"
+                  />
+                  <datalist id="bancas-concurso">
+                    {BANCAS_CONCURSO.map((nomeBanca) => (
+                      <option key={nomeBanca} value={nomeBanca} />
+                    ))}
+                  </datalist>
+                </label>
+              )}
+
               {estado.tipo === "revisao" &&
-                (revisaoPorQuestoes ||
-                  quantidadeQuestoes.trim() !== "" ||
-                  quantidadeAcertos.trim() !== "") && (
+                revisaoPorQuestoes && (
                 <div className="finalizacao-campo-largo finalizacao-avaliacao" role="status" aria-live="polite">
                   <strong>Avaliação automática da revisão</strong>
                   <p>{avaliacaoAutomatica
@@ -1538,24 +1563,37 @@ const [
                   {estado.revisaoId && <p>Ao salvar, esta nota define automaticamente a data e o tipo da próxima revisão.</p>}
                 </div>
               )}
-              {estado.tipo === "revisao" && !avaliacaoAutomatica && (
+              {estado.tipo === "revisao" && (
                 <label>
                   Como foi a revisão?
 
                   <select
                     value={
-                      avaliacaoRevisao
+                      revisaoPorQuestoes
+                        ? avaliacaoAutomatica ?? ""
+                        : avaliacaoRevisao
                     }
-                    onChange={(evento) =>
+                    onChange={(evento) => {
+                      if (revisaoPorQuestoes) {
+                        return;
+                      }
+
                       setAvaliacaoRevisao(
                         evento.target
                           .value as
                           | "facil"
                           | "media"
                           | "dificil"
-                      )
-                    }
+                      );
+                    }}
+                    disabled={revisaoPorQuestoes}
                   >
+                    {revisaoPorQuestoes && !avaliacaoAutomatica && (
+                      <option value="">
+                        Calculado automaticamente
+                      </option>
+                    )}
+
                     <option value="facil">
                       Fácil
                     </option>
@@ -1568,6 +1606,12 @@ const [
                       Difícil
                     </option>
                   </select>
+
+                  {revisaoPorQuestoes && (
+                    <small>
+                      Preenchido automaticamente pelos acertos: 80% ou mais = Fácil; 60% a menos de 80% = Médio; abaixo de 60% = Difícil.
+                    </small>
+                  )}
                 </label>
               )}
 
