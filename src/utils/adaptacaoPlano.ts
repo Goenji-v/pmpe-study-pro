@@ -4,10 +4,28 @@ import type {
   SessaoEstudo,
 } from "../types";
 
+export type DadosReforcoAdaptado = {
+  materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
+  assunto: string;
+  assuntoId?: string;
+  questoes: number;
+  percentualAcertos?: number;
+};
+
 export type DiagnosticoMateriaSemanal = {
   materia: string;
   questoes: number;
   percentualAcertos?: number;
+  assuntoPrioritario?: string;
+  assuntoIdPrioritario?: string;
+  moduloPrioritario?: string;
+  moduloIdPrioritario?: string;
+  materiaIdPrioritaria?: string;
+  questoesAssuntoPrioritario?: number;
+  percentualAssuntoPrioritario?: number;
   minutos: number;
   sessoes: number;
   revisoesAtrasadas: number;
@@ -84,7 +102,11 @@ export function adaptarMissaoFlexivel<T extends {
 }>(
   missao: T,
   diagnostico: DiagnosticoSemanalPlano
-): T & { adaptada?: boolean; motivoAdaptacao?: string } {
+): T & {
+  adaptada?: boolean;
+  motivoAdaptacao?: string;
+  reforco?: DadosReforcoAdaptado;
+} {
   const flexivel =
     missao.tipo === "livre" ||
     normalizar(missao.materia) === "materia com maior dificuldade";
@@ -95,18 +117,35 @@ export function adaptarMissaoFlexivel<T extends {
     (item) => normalizar(item.materia) === normalizar(diagnostico.materiaPrioritaria as string)
   );
 
-  const detalhe = dados?.percentualAcertos !== undefined
-    ? `${dados.percentualAcertos}% de acertos em ${dados.questoes} questões`
-    : dados?.revisoesAtrasadas
-      ? `${dados.revisoesAtrasadas} revisão${dados.revisoesAtrasadas === 1 ? "" : "ões"} atrasada${dados.revisoesAtrasadas === 1 ? "" : "s"}`
-      : "prioridade calculada pelo desempenho recente";
+  const assuntoReforco =
+    dados?.assuntoPrioritario;
+
+  const detalhe = dados?.percentualAssuntoPrioritario !== undefined
+    ? `${dados.percentualAssuntoPrioritario}% de acertos em ${dados.questoesAssuntoPrioritario ?? 0} questões de ${assuntoReforco ?? "assunto prioritário"}`
+    : dados?.percentualAcertos !== undefined
+      ? `${dados.percentualAcertos}% de acertos em ${dados.questoes} questões`
+      : dados?.revisoesAtrasadas
+        ? `${dados.revisoesAtrasadas} revisão${dados.revisoesAtrasadas === 1 ? "" : "ões"} atrasada${dados.revisoesAtrasadas === 1 ? "" : "s"}`
+        : "prioridade calculada pelo desempenho recente";
 
   return {
     ...missao,
     materia: diagnostico.materiaPrioritaria,
-    assunto: `Reforço direcionado · ${detalhe}`,
+    assunto: assuntoReforco ?? missao.assunto,
     adaptada: true,
-    motivoAdaptacao: diagnostico.motivos[0] ?? "Pior desempenho recente.",
+    motivoAdaptacao: `Reforço automático · ${detalhe}`,
+    reforco: assuntoReforco
+      ? {
+          materia: diagnostico.materiaPrioritaria,
+          materiaId: dados?.materiaIdPrioritaria,
+          modulo: dados?.moduloPrioritario,
+          moduloId: dados?.moduloIdPrioritario,
+          assunto: assuntoReforco,
+          assuntoId: dados?.assuntoIdPrioritario,
+          questoes: dados?.questoesAssuntoPrioritario ?? 0,
+          percentualAcertos: dados?.percentualAssuntoPrioritario,
+        }
+      : undefined,
   };
 }
 
@@ -139,6 +178,10 @@ function analisarMateria(
   const percentualAcertos = totalQuestoes > 0
     ? Math.round((certas / totalQuestoes) * 100)
     : undefined;
+  const assuntoPrioritario =
+    escolherAssuntoPrioritario(
+      questoesMateria
+    );
   const minutos = sessoesMateria.reduce((total, item) => total + numero(item.minutos), 0) +
     questoesMateria.reduce((total, item) => total + numero(item.minutos), 0);
 
@@ -184,6 +227,20 @@ function analisarMateria(
     materia,
     questoes: totalQuestoes,
     percentualAcertos,
+    assuntoPrioritario:
+      assuntoPrioritario?.assunto,
+    assuntoIdPrioritario:
+      assuntoPrioritario?.assuntoId,
+    moduloPrioritario:
+      assuntoPrioritario?.modulo,
+    moduloIdPrioritario:
+      assuntoPrioritario?.moduloId,
+    materiaIdPrioritaria:
+      assuntoPrioritario?.materiaId,
+    questoesAssuntoPrioritario:
+      assuntoPrioritario?.questoes,
+    percentualAssuntoPrioritario:
+      assuntoPrioritario?.percentualAcertos,
     minutos,
     sessoes: sessoesMateria.length,
     revisoesAtrasadas,
@@ -192,6 +249,126 @@ function analisarMateria(
     confianca,
     motivos,
   };
+}
+
+function escolherAssuntoPrioritario(
+  questoes: RegistroQuestao[]
+) {
+  const grupos = new Map<
+    string,
+    {
+      materiaId?: string;
+      modulo?: string;
+      moduloId?: string;
+      assunto: string;
+      assuntoId?: string;
+      certas: number;
+      erradas: number;
+    }
+  >();
+
+  for (const registro of questoes) {
+    const assunto =
+      registro.assunto?.trim();
+
+    if (
+      !assunto ||
+      normalizar(assunto).startsWith(
+        "reforco direcionado"
+      )
+    ) {
+      continue;
+    }
+
+    const chave =
+      registro.assuntoId ||
+      normalizar(assunto);
+    const atual =
+      grupos.get(chave) ?? {
+        materiaId: registro.materiaId,
+        modulo: registro.modulo,
+        moduloId: registro.moduloId,
+        assunto,
+        assuntoId: registro.assuntoId,
+        certas: 0,
+        erradas: 0,
+      };
+
+    atual.certas += numero(
+      registro.certas
+    );
+    atual.erradas += numero(
+      registro.erradas
+    );
+
+    if (!atual.materiaId) {
+      atual.materiaId =
+        registro.materiaId;
+    }
+    if (!atual.modulo) {
+      atual.modulo =
+        registro.modulo;
+    }
+    if (!atual.moduloId) {
+      atual.moduloId =
+        registro.moduloId;
+    }
+    if (!atual.assuntoId) {
+      atual.assuntoId =
+        registro.assuntoId;
+    }
+
+    grupos.set(
+      chave,
+      atual
+    );
+  }
+
+  return Array.from(
+    grupos.values()
+  )
+    .map((grupo) => {
+      const questoes =
+        grupo.certas +
+        grupo.erradas;
+      const percentualAcertos =
+        questoes > 0
+          ? Math.round(
+              grupo.certas /
+                questoes *
+                100
+            )
+          : 100;
+      const evidencia =
+        limitar(
+          questoes / 10,
+          0,
+          1
+        );
+      const prioridade =
+        (100 -
+          percentualAcertos) *
+          0.75 +
+        evidencia * 25;
+
+      return {
+        ...grupo,
+        questoes,
+        percentualAcertos,
+        prioridade,
+      };
+    })
+    .filter(
+      (grupo) =>
+        grupo.questoes > 0
+    )
+    .sort(
+      (a, b) =>
+        b.prioridade -
+          a.prioridade ||
+        b.questoes -
+          a.questoes
+    )[0];
 }
 
 function temEvidencia(item: DiagnosticoMateriaSemanal) {
