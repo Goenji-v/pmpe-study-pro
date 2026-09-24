@@ -36,8 +36,9 @@
   height: 100%;
   max-width: none;
   object-fit: contain;
-  object-position: center center;
-  transform: none;
+  object-position: 44% 34%;
+  transform: scale(1.10);
+  transform-origin: 44% 34%;
   border-radius: 0;
   filter: none;
   user-select: none;
