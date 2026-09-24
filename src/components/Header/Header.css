@@ -31,13 +31,30 @@
   min-width: 0;
 }
 
-.header-brand-mark {
-  display: block;
-  width: 42px;
+.header-brand-mark-shell {
+  position: relative;
+  width: 48px;
   height: 46px;
-  flex: 0 0 42px;
-  object-fit: contain;
-  filter: drop-shadow(0 7px 15px rgba(15, 102, 238, .18));
+  flex: 0 0 48px;
+  overflow: hidden;
+  background: #03070d;
+  border: 1px solid rgba(96, 165, 250, .28);
+  border-radius: 8px;
+  box-shadow: 0 7px 15px rgba(15, 102, 238, .16);
+}
+
+.header-brand-mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  width: 76px;
+  height: 76px;
+  max-width: none;
+  object-fit: cover;
+  object-position: center 58%;
+  transform: translate(-50%, -50%);
+  user-select: none;
 }
 
 .header-brand-copy {
