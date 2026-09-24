@@ -40,6 +40,7 @@ import {
 import {
   adaptarMissaoFlexivel,
   calcularDiagnosticoSemanalPlano,
+  type DadosReforcoAdaptado,
 } from "../../utils/adaptacaoPlano";
 import {
   criarPlanoCalendario,
@@ -47,6 +48,12 @@ import {
   normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
+
+type MissaoPlanoExibida = MissaoPlano & {
+  adaptada?: boolean;
+  motivoAdaptacao?: string;
+  reforco?: DadosReforcoAdaptado;
+};
 
 export default function PlanoEstudos() {
   const navigate = useNavigate();
@@ -423,7 +430,7 @@ export default function PlanoEstudos() {
   }
 
   function iniciarEstudo(
-    missao: MissaoPlano
+    missao: MissaoPlanoExibida
   ) {
     if (cronometroAtivo) {
       navigate(
@@ -432,12 +439,38 @@ export default function PlanoEstudos() {
       return;
     }
 
-    const dadosSessao = criarDadosSessaoDaMissao(
+    const base = criarDadosSessaoDaMissao(
       materias,
       missao,
       semanaSelecionada,
       diaSelecionado
     );
+
+    const dadosSessao =
+      missao.adaptada &&
+      missao.reforco
+        ? {
+            ...base,
+            materia:
+              missao.reforco.materia,
+            materiaId:
+              missao.reforco.materiaId,
+            modulo:
+              missao.reforco.modulo,
+            moduloId:
+              missao.reforco.moduloId,
+            assunto:
+              missao.reforco.assunto,
+            assuntoId:
+              missao.reforco.assuntoId,
+            tipo: "aula" as const,
+            objetivo:
+              `Reforço automático · ${missao.reforco.assunto}`,
+            observacao:
+              missao.motivoAdaptacao ??
+              "Reforço automático baseado no desempenho recente.",
+          }
+        : base;
 
     sessionStorage.setItem(
       "pmpe:central-estudos:prefill",
@@ -448,10 +481,49 @@ export default function PlanoEstudos() {
       "/central-estudos",
       {
         state: {
-          origem: "plano",
+          origem: missao.adaptada
+            ? "reforco-automatico"
+            : "plano",
           prefillSessao: dadosSessao,
         },
       }
+    );
+  }
+
+  function iniciarQuestoesReforco(
+    missao: MissaoPlanoExibida
+  ) {
+    const reforco = missao.reforco;
+
+    if (
+      !missao.adaptada ||
+      !reforco?.assunto
+    ) {
+      window.alert(
+        "Não foi possível localizar o assunto real deste reforço."
+      );
+      return;
+    }
+
+    sessionStorage.setItem(
+      "pmpe:gerar-ia:modo",
+      "questoes"
+    );
+    sessionStorage.setItem(
+      "pmpe:gerar-ia:prefill",
+      JSON.stringify({
+        materia:
+          reforco.materia,
+        modulo:
+          reforco.modulo,
+        assunto:
+          reforco.assunto,
+        quantidade: 10,
+      })
+    );
+
+    navigate(
+      "/gerar-simulado-ia"
     );
   }
 
@@ -788,7 +860,12 @@ export default function PlanoEstudos() {
                     <p>{missaoExibida.assunto}</p>
 
                     {missaoExibida.adaptada && (
-                      <small className="plano-adaptada-badge">⚡ Reforço adaptado automaticamente</small>
+                      <small className="plano-adaptada-badge">
+                        ⚡ Reforço automático
+                        {missaoExibida.motivoAdaptacao
+                          ? ` · ${missaoExibida.motivoAdaptacao.replace(/^Reforço automático · /, "")}`
+                          : ""}
+                      </small>
                     )}
 
                     {loteAgrupado && (
@@ -798,33 +875,63 @@ export default function PlanoEstudos() {
                     )}
 
                     <div className="plano-missao-acoes">
-                      {urlAulaAtual && (
-                        <button
-                          type="button"
-                          className="plano-aula"
-                          onClick={() => abrirLink(urlAulaAtual)}
-                        >
-                          🎥 {loteAgrupado ? "Próxima aula" : "Aula RDC"}
-                        </button>
-                      )}
+                      {missaoExibida.adaptada ? (
+                        <>
+                          <button
+                            type="button"
+                            className="plano-aula"
+                            onClick={() =>
+                              iniciarEstudo(
+                                missaoExibida
+                              )
+                            }
+                          >
+                            📖 Revisar material
+                          </button>
 
-                      {missao.urlQuestoes && (
-                        <button
-                          type="button"
-                          className="plano-questoes"
-                          onClick={() => abrirLink(missao.urlQuestoes)}
-                        >
-                          📝 Questões
-                        </button>
-                      )}
+                          <button
+                            type="button"
+                            className="plano-questoes"
+                            onClick={() =>
+                              iniciarQuestoesReforco(
+                                missaoExibida
+                              )
+                            }
+                          >
+                            📝 Fazer 10 questões
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {urlAulaAtual && (
+                            <button
+                              type="button"
+                              className="plano-aula"
+                              onClick={() => abrirLink(urlAulaAtual)}
+                            >
+                              🎥 {loteAgrupado ? "Próxima aula" : "Aula RDC"}
+                            </button>
+                          )}
 
-                      <button
-                        type="button"
-                        className="plano-estudar"
-                        onClick={() => iniciarEstudo(missaoExibida)}
-                      >
-                        ⏱ Estudar
-                      </button>
+                          {missao.urlQuestoes && (
+                            <button
+                              type="button"
+                              className="plano-questoes"
+                              onClick={() => abrirLink(missao.urlQuestoes)}
+                            >
+                              📝 Questões
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            className="plano-estudar"
+                            onClick={() => iniciarEstudo(missaoExibida)}
+                          >
+                            ⏱ Estudar
+                          </button>
+                        </>
+                      )}
 
                       {!loteAgrupado && (
                         <button
