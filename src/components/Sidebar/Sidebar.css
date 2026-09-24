@@ -36,7 +36,7 @@
   height: 100%;
   max-width: none;
   object-fit: cover;
-  object-position: center 52%;
+  object-position: center 69%;
   border-radius: 0;
   filter: none;
   user-select: none;
@@ -335,7 +335,7 @@
 
   .sidebar-logo {
     width: calc(100% + 32px);
-    height: 170px;
+    height: 174px;
     margin: 0 -16px 14px;
     padding: 0;
   }
