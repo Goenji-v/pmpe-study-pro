@@ -2,6 +2,14 @@ import { armazenamentoLocalDaConta as localStorage, permiteMigracaoLegada } from
 import {
   supabase,
 } from "../lib/supabase";
+import {
+  resolverCategoriaLinkMaterial,
+  type CategoriaLinkMaterial,
+} from "../utils/materiaisLinks";
+
+export type {
+  CategoriaLinkMaterial,
+} from "../utils/materiaisLinks";
 
 export type TipoMaterial =
   | "arquivo"
@@ -19,6 +27,7 @@ export type MaterialEstudo = {
   assunto: string;
   assuntoId?: string;
   observacao: string;
+  categoriaLink?: CategoriaLinkMaterial;
 
   criadoEm: string;
 
@@ -50,6 +59,7 @@ type MaterialBanco = {
     modulo?: string;
     moduloId?: string;
     assuntoId?: string;
+    categoriaLink?: CategoriaLinkMaterial;
     [chave: string]: unknown;
   } | null;
 };
@@ -361,6 +371,7 @@ export async function salvarLinkMaterial(
     assuntoId?: string;
     observacao: string;
     url: string;
+    categoriaLink?: CategoriaLinkMaterial;
   }
 ): Promise<MaterialEstudo> {
   const usuario =
@@ -402,6 +413,12 @@ export async function salvarLinkMaterial(
         modulo: dados.modulo?.trim() || "Geral",
         moduloId: dados.moduloId,
         assuntoId: dados.assuntoId,
+        categoriaLink:
+          dados.categoriaLink ??
+          resolverCategoriaLinkMaterial({
+            tipo: "link",
+            nome: dados.nome,
+          }),
       },
     })
     .select(
@@ -865,6 +882,12 @@ async function migrarMaterialLocal(
         modulo: material.modulo || "Geral",
         moduloId: material.moduloId,
         assuntoId: material.assuntoId,
+        categoriaLink:
+          material.categoriaLink ??
+          resolverCategoriaLinkMaterial({
+            tipo: material.tipo,
+            nome: material.nome,
+          }),
       },
     });
 
@@ -1010,6 +1033,14 @@ function converterMaterialBanco(
   registro:
     MaterialBanco
 ): MaterialEstudo {
+  const categoriaLink =
+    resolverCategoriaLinkMaterial({
+      tipo: registro.tipo,
+      nome: registro.nome,
+      categoria:
+        registro.dados?.categoriaLink,
+    });
+
   return {
     id:
       registro.id,
@@ -1042,6 +1073,8 @@ function converterMaterialBanco(
       registro.observacao ||
       "",
 
+    categoriaLink,
+
     criadoEm:
       registro.created_at,
 
@@ -1065,6 +1098,19 @@ function converterMaterialBanco(
       registro.storage_path ||
       undefined,
   };
+}
+
+export function obterCategoriaLinkMaterial(
+  material: Pick<
+    MaterialEstudo,
+    "tipo" | "nome" | "categoriaLink"
+  >
+): CategoriaLinkMaterial {
+  return resolverCategoriaLinkMaterial({
+    tipo: material.tipo,
+    nome: material.nome,
+    categoria: material.categoriaLink,
+  });
 }
 
 function criarCaminhoArquivo(

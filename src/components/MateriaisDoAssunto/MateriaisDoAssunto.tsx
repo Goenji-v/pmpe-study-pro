@@ -8,6 +8,7 @@ import "./MateriaisDoAssunto.css";
 import {
   abrirMaterial,
   listarMateriaisPorAssunto,
+  obterCategoriaLinkMaterial,
   type MaterialEstudo,
 } from "../../services/materiaisService";
 
@@ -100,6 +101,24 @@ export default function MateriaisDoAssunto({
     return null;
   }
 
+  const materiaisRapidos =
+    materiais.filter(
+      (material) =>
+        material.tipo === "link" &&
+        obterCategoriaLinkMaterial(
+          material
+        ) !== "personalizado"
+    );
+
+  const materiaisComuns =
+    materiais.filter(
+      (material) =>
+        !materiaisRapidos.some(
+          (rapido) =>
+            rapido.id === material.id
+        )
+    );
+
   return (
     <section className="materiais-assunto-box">
       <div className="materiais-assunto-topo">
@@ -141,53 +160,94 @@ export default function MateriaisDoAssunto({
           para este assunto.
         </div>
       ) : (
-        <div className="materiais-assunto-lista">
-          {materiais.map(
-            (material) => (
-              <article
-                key={material.id}
-                className="materiais-assunto-card"
-              >
-                <div className="materiais-assunto-icone">
-                  {iconeMaterial(
-                    material
-                  )}
-                </div>
+        <>
+          {materiaisRapidos.length > 0 && (
+            <div className="materiais-assunto-acoes-rapidas">
+              {materiaisRapidos.map(
+                (material) => {
+                  const categoria =
+                    obterCategoriaLinkMaterial(
+                      material
+                    );
 
-                <div className="materiais-assunto-info">
-                  <strong>
-                    {material.nome}
-                  </strong>
-
-                  <span>
-                    {material.tipo ===
-                    "arquivo"
-                      ? material.nomeArquivo ||
-                        "Arquivo"
-                      : material.url}
-                  </span>
-
-                  {material.observacao && (
-                    <p>
-                      {
-                        material.observacao
+                  return (
+                    <button
+                      key={material.id}
+                      type="button"
+                      className={`materiais-assunto-atalho materiais-assunto-atalho-${categoria}`}
+                      onClick={() =>
+                        abrir(material)
                       }
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    abrir(material)
-                  }
-                >
-                  Abrir
-                </button>
-              </article>
-            )
+                      title={
+                        material.observacao ||
+                        material.nome
+                      }
+                    >
+                      <span aria-hidden="true">
+                        {categoria === "aula"
+                          ? "🎬"
+                          : "📝"}
+                      </span>
+                      {categoria === "aula"
+                        ? "Abrir aula"
+                        : "Abrir questões"}
+                    </button>
+                  );
+                }
+              )}
+            </div>
           )}
-        </div>
+
+          {materiaisComuns.length > 0 && (
+            <div className="materiais-assunto-lista">
+              {materiaisComuns.map(
+                (material) => (
+                  <article
+                    key={material.id}
+                    className="materiais-assunto-card"
+                  >
+                    <div className="materiais-assunto-icone">
+                      {iconeMaterial(
+                        material
+                      )}
+                    </div>
+
+                    <div className="materiais-assunto-info">
+                      <strong>
+                        {material.nome}
+                      </strong>
+
+                      <span>
+                        {material.tipo ===
+                        "arquivo"
+                          ? material.nomeArquivo ||
+                            "Arquivo"
+                          : material.url}
+                      </span>
+
+                      {material.observacao && (
+                        <p>
+                          {
+                            material.observacao
+                          }
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        abrir(material)
+                      }
+                    >
+                      Abrir
+                    </button>
+                  </article>
+                )
+              )}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

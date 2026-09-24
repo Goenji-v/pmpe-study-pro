@@ -143,6 +143,45 @@
   margin-top: 8px;
 }
 
+.materiais-nome-opcoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.materiais-nome-opcoes button {
+  min-height: 42px;
+  padding: 9px 8px;
+  color: #cbd5e1;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.materiais-nome-opcoes button:hover {
+  color: #ffffff;
+  border-color: #6366f1;
+}
+
+.materiais-nome-opcoes button.ativo {
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.9),
+    rgba(79, 70, 229, 0.9)
+  );
+  border-color: #8b5cf6;
+  box-shadow: 0 8px 20px rgba(76, 29, 149, 0.22);
+}
+
+.materiais-nome-opcoes + input,
+.materiais-nome-opcoes + small {
+  margin-top: 8px;
+}
+
 .materiais-campo textarea {
   min-height: 83px;
   resize: vertical;
@@ -371,6 +410,13 @@
 
 @media (max-width: 850px) {
   .materiais-filtros {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+@media (max-width: 520px) {
+  .materiais-nome-opcoes {
     grid-template-columns: 1fr;
   }
 }
