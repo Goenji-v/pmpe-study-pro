@@ -4,6 +4,17 @@ import type {
   SessaoEstudo,
 } from "../types";
 
+export type DadosReforcoAdaptado = {
+  materia: string;
+  materiaId?: string;
+  modulo?: string;
+  moduloId?: string;
+  assunto: string;
+  assuntoId?: string;
+  questoes: number;
+  percentualAcertos?: number;
+};
+
 export type DiagnosticoMateriaSemanal = {
   materia: string;
   questoes: number;
@@ -94,16 +105,7 @@ export function adaptarMissaoFlexivel<T extends {
 ): T & {
   adaptada?: boolean;
   motivoAdaptacao?: string;
-  reforco?: {
-    materia: string;
-    materiaId?: string;
-    modulo?: string;
-    moduloId?: string;
-    assunto: string;
-    assuntoId?: string;
-    questoes: number;
-    percentualAcertos?: number;
-  };
+  reforco?: DadosReforcoAdaptado;
 } {
   const flexivel =
     missao.tipo === "livre" ||
