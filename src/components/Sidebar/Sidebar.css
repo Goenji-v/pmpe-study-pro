@@ -32,11 +32,13 @@
 
 .sidebar-logo-oficial {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 108%;
+  height: 108%;
   max-width: none;
   object-fit: cover;
-  object-position: center 69%;
+  object-position: center 72%;
+  transform: translate(-4%, -4%);
+  transform-origin: center;
   border-radius: 0;
   filter: none;
   user-select: none;
