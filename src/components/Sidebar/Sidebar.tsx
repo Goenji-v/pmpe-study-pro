@@ -188,8 +188,8 @@ export default function Sidebar() {
 
           <GrupoMenu
             id="estudos"
-            titulo="Estudos"
-            icone={BookOpen}
+            titulo="Estudo de foco"
+            icone={RotateCcw}
             ativo={rotaPertenceAoGrupo(location.pathname, "estudos")}
             aberto={grupoAberto === "estudos"}
             onToggle={alternarGrupo}
