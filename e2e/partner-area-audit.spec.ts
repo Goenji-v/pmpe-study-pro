@@ -49,12 +49,12 @@ test.describe("auditoria final da Area do Parceiro", () => {
     await expect(page.getByRole("link", { name: "Simulados", exact: true })).toBeVisible();
 
     await abrirRota(page, "/parceiro/cursos", ".pc-pagina");
-    await expect(page.getByRole("heading", { name: "Rota do Concurseiro" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Cursos" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rota do Concurseiro", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cursos", exact: true })).toBeVisible();
     await expect(page.locator(".pc-erro")).toHaveCount(0);
 
     await abrirRota(page, "/parceiro/simulados", ".parceiro-simulados");
-    await expect(page.getByRole("heading", { name: "Simulados do curso" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Simulados do curso", exact: true })).toBeVisible();
     await expect(page.locator(".psim-aviso.erro")).toHaveCount(0);
 
     await page.goto("/parceiro/mentoria", { waitUntil: "domcontentloaded" });
@@ -97,7 +97,7 @@ test.describe("auditoria final da Area do Parceiro", () => {
     if (papel === "proprietario") {
       await pagina.getByRole("button", { name: "Financeiro" }).click();
       await expect(pagina.getByText("FINANCEIRO DA PARCERIA", { exact: true })).toBeVisible();
-      await expect(pagina.getByRole("heading", { name: "Cobranças da plataforma" })).toBeVisible();
+      await expect(pagina.getByRole("heading", { name: "Cobranças da plataforma", exact: true })).toBeVisible();
       await expect(pagina.locator(".parceiro-financeiro-aviso.erro")).toHaveCount(0);
       await semOverflowHorizontal(page, "/parceiro#financeiro");
     } else {
@@ -105,13 +105,13 @@ test.describe("auditoria final da Area do Parceiro", () => {
     }
 
     await abrirRota(page, "/parceiro/cursos", ".pc-pagina");
-    await expect(page.getByRole("heading", { name: "Cursos" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Novo curso" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Criar rascunho" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cursos", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Novo curso", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Criar rascunho", exact: true })).toBeVisible();
     await expect(page.getByText(/Visão consolidada das turmas liberadas\./)).toBeVisible();
 
     await abrirRota(page, "/parceiro/simulados", ".parceiro-simulados");
-    await expect(page.getByRole("button", { name: "+ Novo simulado" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "+ Novo simulado", exact: true })).toBeVisible();
     await expect(page.getByText(/acompanhe somente os resultados consolidados/i)).toBeVisible();
   });
 
