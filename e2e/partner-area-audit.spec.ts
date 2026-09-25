@@ -46,7 +46,7 @@ test.describe("auditoria final da Area do Parceiro", () => {
     await expect(page.locator(".parceiro-erro")).toHaveCount(0);
     await expect(page.locator(".prof-dashboard-erro")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Gerenciar meu curso", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Simulados" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Simulados", exact: true })).toBeVisible();
 
     await abrirRota(page, "/parceiro/cursos", ".pc-pagina");
     await expect(page.getByRole("heading", { name: "Rota do Concurseiro" })).toBeVisible();
@@ -87,7 +87,7 @@ test.describe("auditoria final da Area do Parceiro", () => {
     expect(papel).not.toBe("desconhecido");
 
     await expect(pagina.getByRole("link", { name: "Gerenciar meu curso", exact: true })).toBeVisible();
-    await expect(pagina.getByRole("link", { name: "Simulados" })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: "Simulados", exact: true })).toBeVisible();
     await expect(page.getByText("Somente números consolidados são exibidos ao parceiro.")).toBeVisible();
     await expect(page.getByText(/Nenhum dado individual de aluno é exibido nesta área\./)).toBeVisible();
 
