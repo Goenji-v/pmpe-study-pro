@@ -7,6 +7,7 @@ import express, {
 } from "express";
 import http from "node:http";
 import { GoogleGenAI } from "@google/genai";
+import { capturarErroServidor } from "./sentry.ts";
 import {
   montarPromptAnaliseEdital,
 } from "./editalInteligente.ts";
@@ -114,6 +115,11 @@ app.use((req, res) => {
 
   requisicao.on("error", (erro) => {
     console.error("Falha no proxy seguro da API:", erro);
+    capturarErroServidor(erro, {
+      area: "proxy-seguro",
+      metodo: req.method,
+      rota: req.path,
+    });
     if (!res.headersSent) {
       res.status(502).json({
         sucesso: false,
@@ -261,6 +267,7 @@ async function analisarEdital(req: Request, res: Response) {
     });
   } catch (erro) {
     console.error("Erro ao analisar edital:", erro);
+    capturarErroServidor(erro, { area: "analisar-edital" });
     res.status(500).json({
       sucesso: false,
       erro:
@@ -424,6 +431,11 @@ async function autenticarEControlarUso(
     next();
   } catch (erro) {
     console.error("Falha na autenticação da API:", erro);
+    capturarErroServidor(erro, {
+      area: "autenticacao-api",
+      metodo: req.method,
+      rota: req.path,
+    });
     res.status(503).json({
       sucesso: false,
       erro: "Não foi possível validar sua sessão agora.",
