@@ -5,11 +5,12 @@ import type {
   TipoSessao,
 } from "../types";
 
-const INTERVALOS_DIAS: Record<EtapaRevisao, number> = {
-  1: 0,
-  2: 1,
+export const INTERVALOS_REVISAO_DIAS: Record<EtapaRevisao, number> = {
+  1: 1,
+  2: 5,
   3: 7,
-  4: 15,
+  4: 14,
+  5: 30,
 };
 
 export function adicionarDias(data: Date, quantidadeDias: number) {
@@ -61,7 +62,7 @@ export function criarPrimeiraRevisao(params: {
   limiteDiario?: number;
 }): Revisao {
   const agora = new Date();
-  const dataIdeal = adicionarDias(agora, INTERVALOS_DIAS[1]);
+  const dataIdeal = adicionarDias(agora, INTERVALOS_REVISAO_DIAS[1]);
   const dataPrevista = encontrarDataDisponivelParaRevisao({
     dataBase: dataIdeal,
     revisoes: params.revisoesExistentes ?? [],
@@ -91,7 +92,7 @@ export function criarProximaRevisao(
   id: string = crypto.randomUUID()
 ): Revisao | null {
   const repetir = revisaoAtual.desempenho === "dificil" || revisaoAtual.desempenho === "media";
-  if (!repetir && revisaoAtual.etapa >= 4) return null;
+  if (!repetir && revisaoAtual.etapa >= 5) return null;
   const proximaEtapa = repetir ? revisaoAtual.etapa : (revisaoAtual.etapa + 1) as EtapaRevisao;
 
   const jaExiste = revisoesExistentes.some(
@@ -105,7 +106,7 @@ export function criarProximaRevisao(
   if (jaExiste) return null;
 
   const intervalo = revisaoAtual.desempenho === "dificil" ? 1
-    : revisaoAtual.desempenho === "media" ? 3 : INTERVALOS_DIAS[proximaEtapa];
+    : revisaoAtual.desempenho === "media" ? 3 : INTERVALOS_REVISAO_DIAS[proximaEtapa];
   const dataIdeal = adicionarDias(agora, intervalo);
   const dataPrevista = encontrarDataDisponivelParaRevisao({
     dataBase: dataIdeal,
