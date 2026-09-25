@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/react";
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim();
+const sentryTunnel = import.meta.env.PROD ? "/api/sentry-tunnel" : undefined;
 let iniciado = false;
 
 export function iniciarSentryFrontend() {
@@ -8,6 +9,7 @@ export function iniciarSentryFrontend() {
 
   Sentry.init({
     dsn: sentryDsn,
+    tunnel: sentryTunnel,
     environment: import.meta.env.MODE,
     sendDefaultPii: false,
     tracesSampleRate: 0,
