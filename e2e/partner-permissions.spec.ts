@@ -1,9 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const email = process.env.E2E_TEST_EMAIL;
 const senha = process.env.E2E_TEST_PASSWORD;
 
-async function entrarComoContaTeste(page: import("@playwright/test").Page) {
+async function entrarComoContaTeste(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.getByLabel("E-mail").fill(email!);
   await page.locator('input[autocomplete="current-password"]').fill(senha!);
@@ -24,10 +24,9 @@ test.describe("permissoes da Area do Parceiro", () => {
     }
 
     await expect(page.getByRole("button", { name: "Visão geral" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Alunos e turmas" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Cronograma da turma" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Conteúdos do curso" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Gerenciar meu curso" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Simulados" })).toBeVisible();
+    await expect(page.getByText("Somente números consolidados são exibidos ao parceiro.")).toBeVisible();
 
     const classes = (await pagina.getAttribute("class")) ?? "";
     const papel = classes.includes("papel-proprietario")
@@ -39,6 +38,9 @@ test.describe("permissoes da Area do Parceiro", () => {
           : "desconhecido";
 
     expect(papel, `Papel nao identificado pelas classes: ${classes}`).not.toBe("desconhecido");
+
+    await expect(page.getByRole("button", { name: "Alunos e turmas" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Abrir acompanhamento" })).toHaveCount(0);
 
     if (papel === "proprietario") {
       await expect(page.getByRole("button", { name: /Convites/ })).toBeVisible();
@@ -60,18 +62,9 @@ test.describe("permissoes da Area do Parceiro", () => {
     await expect(page.getByRole("button", { name: "Financeiro" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Histórico" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "+ Nova turma" })).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Alunos e turmas" }).click();
-    await expect(
-      page.getByText("Alterações de acesso e movimentações ficam com proprietário ou gestor.")
-    ).toBeVisible();
-    await expect(page.getByText("Permissão", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Suspender" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Remover" })).toHaveCount(0);
-    await expect(page.locator('select[aria-label^="Mover "]')).toHaveCount(0);
   });
 
-  test("o parceiro consegue abrir o acompanhamento pedagogico de um aluno", async ({ page }) => {
+  test("o parceiro permanece restrito a dados consolidados das turmas", async ({ page }) => {
     await entrarComoContaTeste(page);
     await page.goto("/parceiro", { waitUntil: "domcontentloaded" });
 
@@ -80,17 +73,13 @@ test.describe("permissoes da Area do Parceiro", () => {
       test.skip(true, "A conta E2E atual nao possui papel de parceiro.");
     }
 
-    await page.getByRole("button", { name: "Alunos e turmas" }).click();
-    const abrir = page.getByRole("link", { name: "Abrir acompanhamento" }).first();
-    if (!(await abrir.isVisible().catch(() => false))) {
-      test.skip(true, "A parceria da conta E2E nao possui aluno ativo para o teste.");
-    }
+    await expect(page.getByText(/Nenhum dado individual de aluno é exibido nesta área\./)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Alunos e turmas" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Abrir acompanhamento" })).toHaveCount(0);
 
-    await abrir.click();
-    await expect(page).toHaveURL(/\/parceiro\/mentoria\/aluno\//, { timeout: 15_000 });
-    await expect(page.getByText("ACOMPANHAMENTO DO MENTOR")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Intervenções e orientações" })).toBeVisible();
-    await expect(page.getByLabel("Tipo de ação")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Registrar acompanhamento" })).toBeVisible();
+    await page.goto("/parceiro/mentoria/aluno/e2e-usuario-inexistente", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/parceiro\/?$/, { timeout: 15_000 });
+    await expect(page.locator(".parceiro-pagina")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(".mentoria-aluno-pagina")).toHaveCount(0);
   });
 });
