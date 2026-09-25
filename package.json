@@ -20,7 +20,7 @@
     "e2e:auth": "playwright test e2e/authenticated-critical.spec.ts e2e/mobile-navigation.spec.ts e2e/mobile-secondary.spec.ts e2e/mobile-complete-audit.spec.ts",
     "e2e:mobile-secondary": "playwright test e2e/mobile-secondary.spec.ts --project=mobile-chrome",
     "preview": "vite preview --host 0.0.0.0",
-    "build:app": "tsc -b && vite build"
+    "build:app": "tsc -b && vite build && node scripts/upload-sentry-sourcemaps.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

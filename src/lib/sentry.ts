@@ -1,3 +1,5 @@
+declare const __SENTRY_RELEASE__: string;
+
 import * as Sentry from "@sentry/react";
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim();
@@ -11,6 +13,7 @@ export function iniciarSentryFrontend() {
     dsn: sentryDsn,
     tunnel: sentryTunnel,
     environment: import.meta.env.MODE,
+    release: __SENTRY_RELEASE__ !== "local" ? __SENTRY_RELEASE__ : undefined,
     sendDefaultPii: false,
     tracesSampleRate: 0,
     ignoreErrors: [
