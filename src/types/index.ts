@@ -16,7 +16,8 @@ export type EtapaRevisao =
   | 1
   | 2
   | 3
-  | 4;
+  | 4
+  | 5;
 
 export type MaterialAssunto = {
   id: string;
