@@ -1,4 +1,4 @@
-import { readdir, readFile, rm } from "node:fs/promises";
+// Upload de source maps executado apenas durante o build de deploy.\nimport { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 const DIST_DIR = path.resolve("dist");
