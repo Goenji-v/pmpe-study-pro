@@ -24,7 +24,7 @@ test.describe("permissoes da Area do Parceiro", () => {
     }
 
     await expect(page.getByRole("button", { name: "Visão geral" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Gerenciar meu curso" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Gerenciar meu curso", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Simulados" })).toBeVisible();
     await expect(page.getByText("Somente números consolidados são exibidos ao parceiro.")).toBeVisible();
 
