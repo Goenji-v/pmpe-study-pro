@@ -59,6 +59,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/sentry-tunnel",
+      "destination": "https://pmpe-study-pro-api.onrender.com/api/sentry-tunnel"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
