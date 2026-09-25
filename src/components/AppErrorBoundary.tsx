@@ -1,4 +1,5 @@
 import React from "react";
+import { capturarErroFrontend } from "../lib/sentry";
 
 type Props = {
   children: React.ReactNode;
@@ -19,6 +20,10 @@ export class AppErrorBoundary extends React.Component<Props, State> {
     console.error("Erro fatal capturado na interface do Study Pro.", {
       erro,
       componentStack: info.componentStack,
+    });
+    capturarErroFrontend(erro, {
+      area: "react-error-boundary",
+      componentStack: info.componentStack || undefined,
     });
   }
 
