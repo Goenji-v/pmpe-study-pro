@@ -8,20 +8,27 @@ import "./MateriaisDoAssunto.css";
 import {
   abrirMaterial,
   listarMateriaisPorAssunto,
-  obterCategoriaLinkMaterial,
   type MaterialEstudo,
 } from "../../services/materiaisService";
+import { separarMateriaisPorUso } from "../../utils/materiaisLinks";
+
+type AtalhosMateriais = {
+  aula?: string;
+  questoes?: string;
+};
 
 type Props = {
   materia: string;
   modulo?: string;
   assunto: string;
+  onAtalhosCarregados?: (atalhos: AtalhosMateriais) => void;
 };
 
 export default function MateriaisDoAssunto({
   materia,
   modulo,
   assunto,
+  onAtalhosCarregados,
 }: Props) {
   const [
     materiais,
@@ -36,7 +43,8 @@ export default function MateriaisDoAssunto({
   const [erro, setErro] =
     useState("");
 
-  // carregar usa somente os três campos abaixo; a função local é recriada por render.
+  // carregar usa somente os três campos abaixo; o callback apenas devolve
+  // os atalhos encontrados para a Central de Estudos.
   /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     carregar();
@@ -50,6 +58,7 @@ export default function MateriaisDoAssunto({
     ) {
       setMateriais([]);
       setErro("");
+      onAtalhosCarregados?.({});
       return;
     }
 
@@ -65,7 +74,18 @@ export default function MateriaisDoAssunto({
         );
 
       setMateriais(lista);
+
+      const separados =
+        separarMateriaisPorUso(lista);
+
+      onAtalhosCarregados?.({
+        aula:
+          separados.aula?.url,
+        questoes:
+          separados.questoes?.url,
+      });
     } catch (erroCarregamento) {
+      onAtalhosCarregados?.({});
       setErro(
         erroCarregamento instanceof Error
           ? erroCarregamento.message
@@ -101,23 +121,24 @@ export default function MateriaisDoAssunto({
     return null;
   }
 
-  const materiaisRapidos =
-    materiais.filter(
-      (material) =>
-        material.tipo === "link" &&
-        obterCategoriaLinkMaterial(
-          material
-        ) !== "personalizado"
-    );
+  const {
+    vinculados: materiaisComuns,
+  } = separarMateriaisPorUso(
+    materiais
+  );
 
-  const materiaisComuns =
-    materiais.filter(
-      (material) =>
-        !materiaisRapidos.some(
-          (rapido) =>
-            rapido.id === material.id
-        )
-    );
+  /*
+   * Aula e Questões são atalhos operacionais da sessão e aparecem na barra
+   * principal da Central de Estudos. Esta caixa fica reservada a PDF, imagem,
+   * documento e links personalizados.
+   */
+  if (
+    !carregando &&
+    !erro &&
+    materiaisComuns.length === 0
+  ) {
+    return null;
+  }
 
   return (
     <section className="materiais-assunto-box">
@@ -154,100 +175,59 @@ export default function MateriaisDoAssunto({
         <div className="materiais-assunto-vazio">
           Carregando materiais...
         </div>
-      ) : materiais.length === 0 ? (
+      ) : materiaisComuns.length === 0 ? (
         <div className="materiais-assunto-vazio">
-          Nenhum material foi cadastrado
-          para este assunto.
+          Nenhum PDF, imagem, documento ou link extra
+          foi vinculado a este assunto.
         </div>
       ) : (
-        <>
-          {materiaisRapidos.length > 0 && (
-            <div className="materiais-assunto-acoes-rapidas">
-              {materiaisRapidos.map(
-                (material) => {
-                  const categoria =
-                    obterCategoriaLinkMaterial(
-                      material
-                    );
+        <div className="materiais-assunto-lista">
+          {materiaisComuns.map(
+            (material) => (
+              <article
+                key={material.id}
+                className="materiais-assunto-card"
+              >
+                <div className="materiais-assunto-icone">
+                  {iconeMaterial(
+                    material
+                  )}
+                </div>
 
-                  return (
-                    <button
-                      key={material.id}
-                      type="button"
-                      className={`materiais-assunto-atalho materiais-assunto-atalho-${categoria}`}
-                      onClick={() =>
-                        abrir(material)
+                <div className="materiais-assunto-info">
+                  <strong>
+                    {material.nome}
+                  </strong>
+
+                  <span>
+                    {material.tipo ===
+                    "arquivo"
+                      ? material.nomeArquivo ||
+                        "Arquivo"
+                      : material.url}
+                  </span>
+
+                  {material.observacao && (
+                    <p>
+                      {
+                        material.observacao
                       }
-                      title={
-                        material.observacao ||
-                        material.nome
-                      }
-                    >
-                      <span aria-hidden="true">
-                        {categoria === "aula"
-                          ? "🎬"
-                          : "📝"}
-                      </span>
-                      {categoria === "aula"
-                        ? "Abrir aula"
-                        : "Abrir questões"}
-                    </button>
-                  );
-                }
-              )}
-            </div>
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    abrir(material)
+                  }
+                >
+                  Abrir
+                </button>
+              </article>
+            )
           )}
-
-          {materiaisComuns.length > 0 && (
-            <div className="materiais-assunto-lista">
-              {materiaisComuns.map(
-                (material) => (
-                  <article
-                    key={material.id}
-                    className="materiais-assunto-card"
-                  >
-                    <div className="materiais-assunto-icone">
-                      {iconeMaterial(
-                        material
-                      )}
-                    </div>
-
-                    <div className="materiais-assunto-info">
-                      <strong>
-                        {material.nome}
-                      </strong>
-
-                      <span>
-                        {material.tipo ===
-                        "arquivo"
-                          ? material.nomeArquivo ||
-                            "Arquivo"
-                          : material.url}
-                      </span>
-
-                      {material.observacao && (
-                        <p>
-                          {
-                            material.observacao
-                          }
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        abrir(material)
-                      }
-                    >
-                      Abrir
-                    </button>
-                  </article>
-                )
-              )}
-            </div>
-          )}
-        </>
+        </div>
       )}
     </section>
   );
