@@ -32,6 +32,7 @@ type RevisaoIA = {
 type DesempenhoRevisao = "facil" | "media" | "dificil";
 
 const CHAVE_REVISOES_IA_LEGADA = "pmpe_revisoes_ia";
+const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
 
 function chaveRevisoesIA(userId: string) {
   return `pmpe:${userId}:revisoes-ia`;
@@ -224,6 +225,34 @@ export default function Revisoes() {
     navigate("/central-estudos");
   }
 
+  function abrirQuestoesIA(revisao: Revisao) {
+    const dados = obterDadosCanonicos(revisao);
+    const plano = planejarRevisaoPendente(revisao);
+    const quantidade = Math.max(5, plano.quantidadeQuestoes || 10);
+
+    sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
+    sessionStorage.setItem(
+      "pmpe:gerar-ia:prefill",
+      JSON.stringify({
+        materia: dados.materia,
+        modulo: dados.modulo,
+        assunto: dados.assunto,
+        quantidade,
+      })
+    );
+    sessionStorage.setItem(
+      CHAVE_ORIGEM_REVISAO_QUESTOES,
+      JSON.stringify({
+        ...dados,
+        revisaoId: revisao.id,
+        etapa: revisao.etapa,
+        criadoEm: new Date().toISOString(),
+      })
+    );
+
+    navigate("/gerar-simulado-ia");
+  }
+
   function concluirRevisao(revisao: Revisao, desempenho: DesempenhoRevisao) {
     const agora = new Date();
     const proximaId = crypto.randomUUID();
@@ -295,6 +324,7 @@ export default function Revisoes() {
 
   const propsGrupo = {
     abrirRevisao,
+    abrirQuestoesIA,
     concluirRevisao,
     reagendarRevisao: reagendar,
     excluirRevisao,
@@ -386,6 +416,7 @@ type GrupoRevisoesProps = {
   titulo: string;
   revisoes: Revisao[];
   abrirRevisao: (revisao: Revisao) => void;
+  abrirQuestoesIA: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
   excluirRevisao: (revisao: Revisao) => void;
@@ -395,6 +426,7 @@ function GrupoRevisoes({
   titulo,
   revisoes,
   abrirRevisao,
+  abrirQuestoesIA,
   concluirRevisao,
   reagendarRevisao,
   excluirRevisao,
@@ -468,6 +500,14 @@ function GrupoRevisoes({
                     onClick={() => abrirRevisao(revisao)}
                   >
                     🔁 Revisar
+                  </button>
+                  <button
+                    type="button"
+                    className="revisao-questoes-ia"
+                    onClick={() => abrirQuestoesIA(revisao)}
+                    title={`Abrir Questões IA com ${revisao.materia} → ${revisao.assunto} já preenchidos`}
+                  >
+                    ✨ Questões IA
                   </button>
                   <button
                     type="button"
