@@ -13,6 +13,15 @@ if (sentryDsn) {
     sendDefaultPii: false,
     tracesSampleRate: 0,
   });
+
+  const testeEventId = Sentry.captureException(new Error("TESTE_SENTRY_API"));
+  void Sentry.flush(5_000).then((enviado) => {
+    console.info("[sentry] teste controlado", {
+      nome: "TESTE_SENTRY_API",
+      eventId: testeEventId,
+      enviado,
+    });
+  });
 }
 
 export function capturarErroServidor(
