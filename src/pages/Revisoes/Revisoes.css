@@ -233,6 +233,16 @@
   background: #6d28d9;
 }
 
+.revisao-questoes-ia {
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  border-color: rgba(196, 181, 253, 0.35) !important;
+}
+
+.revisao-questoes-ia:hover {
+  background: linear-gradient(135deg, #6d28d9, #7e22ce);
+  border-color: rgba(216, 180, 254, 0.7) !important;
+}
+
 .revisao-concluir-toggle {
   background: #15803d;
 }
