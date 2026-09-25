@@ -110,6 +110,22 @@ export default function CentralEstudos() {
   const [mensagem, setMensagem] =
     useState("");
 
+  const [
+    atalhosMateriais,
+    setAtalhosMateriais,
+  ] = useState<{
+    aula?: string;
+    questoes?: string;
+  }>({});
+
+  useEffect(() => {
+    setAtalhosMateriais({});
+  }, [
+    estado.materia,
+    estado.modulo,
+    estado.assunto,
+  ]);
+
 const [
   modalFinalizacaoAberto,
   setModalFinalizacaoAberto,
@@ -368,6 +384,8 @@ const [
 
   const formatoRevisao = estado.formatoRevisao ?? "teoria";
   const revisaoPorQuestoes = estado.tipo === "revisao" && formatoRevisao === "questoes";
+  const urlAulaPrincipal = atalhosMateriais.aula ?? estado.urlAula;
+  const urlQuestoesPrincipal = atalhosMateriais.questoes ?? estado.urlQuestoes;
   const finalizacaoComQuestoes = sessaoExigeResultadoQuestoes(
     estado.tipo,
     estado.tipo === "revisao" ? formatoRevisao : undefined
@@ -1272,44 +1290,42 @@ const [
             materia={estado.materia}
             modulo={estado.modulo}
             assunto={estado.assunto}
+            onAtalhosCarregados={setAtalhosMateriais}
           />
 
-          {(estado.urlAula ||
-            estado.urlQuestoes) && (
-            <div className="central-estudos-links">
-              {estado.urlAula && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.open(
-                      estado.urlAula,
-                      "_blank",
-                      "noopener,noreferrer"
-                    )
-                  }
-                >
-                  🎥 Abrir aula
-                </button>
-              )}
-
-              {estado.urlQuestoes && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.open(
-                      estado.urlQuestoes,
-                      "_blank",
-                      "noopener,noreferrer"
-                    )
-                  }
-                >
-                  📝 Abrir questões
-                </button>
-              )}
-            </div>
-          )}
-
           <div className="central-estudos-acoes">
+            {urlAulaPrincipal && (
+              <button
+                type="button"
+                className="central-botao-aula"
+                onClick={() =>
+                  window.open(
+                    urlAulaPrincipal,
+                    "_blank",
+                    "noopener,noreferrer"
+                  )
+                }
+              >
+                🎥 Aula
+              </button>
+            )}
+
+            {urlQuestoesPrincipal && (
+              <button
+                type="button"
+                className="central-botao-questoes"
+                onClick={() =>
+                  window.open(
+                    urlQuestoesPrincipal,
+                    "_blank",
+                    "noopener,noreferrer"
+                  )
+                }
+              >
+                📝 Questões
+              </button>
+            )}
+
             {!estado.ativo && (
               <button
                 type="button"
@@ -1630,7 +1646,7 @@ const [
                   <span>
                     <strong>Concluir este assunto</strong>
                     <small>
-                      Marque apenas quando terminar o conteúdo. A revisão 1–7–15
+                      Marque apenas quando terminar o conteúdo. A revisão 1–5–7–14–30
                       será criada uma única vez.
                     </small>
                   </span>

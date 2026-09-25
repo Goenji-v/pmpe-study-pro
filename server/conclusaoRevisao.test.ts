@@ -4,6 +4,9 @@ import type { Revisao, SessaoEstudo } from "../src/types/index.ts";
 import {
   avaliarRevisaoPorQuestoes,
   concluirRevisaoNaLista,
+  criarPrimeiraRevisao,
+  criarProximaRevisao,
+  INTERVALOS_REVISAO_DIAS,
   resolverAvaliacaoRevisao,
   sessaoExigeResultadoQuestoes,
 } from "../src/utils/revisoes.ts";
@@ -97,16 +100,66 @@ test("concluir a sessão guarda seu vínculo e resultado e agenda a próxima eta
   assert.deepEqual(concluirRevisaoNaLista({ ...parametros, revisoes: lista }), resultado);
 });
 
-test("dificuldade repete a etapa até a última; fácil encerra o ciclo na etapa 4", () => {
+test("dificuldade repete a etapa até a última; fácil encerra o ciclo na etapa 5", () => {
   for (const [desempenho, dia] of [["media", 5], ["dificil", 3]] as const) {
-    const resultado = concluirRevisaoNaLista({ ...parametros, desempenho, revisoes: [{ ...revisao, etapa: 4 }] });
+    const resultado = concluirRevisaoNaLista({ ...parametros, desempenho, revisoes: [{ ...revisao, etapa: 5 }] });
     assert.equal(resultado.length, 2);
-    assert.equal(resultado[0].etapa, 4);
+    assert.equal(resultado[0].etapa, 5);
     assert.equal(new Date(resultado[0].dataPrevista).getDate(), dia);
   }
-  const resultado = concluirRevisaoNaLista({ ...parametros, revisoes: [{ ...revisao, etapa: 4 }] });
+  const resultado = concluirRevisaoNaLista({ ...parametros, revisoes: [{ ...revisao, etapa: 5 }] });
   assert.equal(resultado.length, 1);
   assert.equal(resultado[0].concluida, true);
+});
+
+test("ciclo normal usa 1, 5, 7, 14 e 30 dias", () => {
+  assert.deepEqual(INTERVALOS_REVISAO_DIAS, {
+    1: 1,
+    2: 5,
+    3: 7,
+    4: 14,
+    5: 30,
+  });
+
+  const primeira = criarPrimeiraRevisao({
+    materiaId: "portugues",
+    moduloId: "geral",
+    assuntoId: "fonemas",
+    materia: "Português",
+    modulo: "Geral",
+    assunto: "Fonemas",
+  });
+
+  const diasPrimeira =
+    Math.round(
+      (new Date(primeira.dataPrevista).getTime() -
+        new Date(primeira.dataCriacao).getTime()) /
+        86_400_000
+    );
+  assert.equal(diasPrimeira, 1);
+
+  const base: Revisao = {
+    ...revisao,
+    etapa: 4,
+    desempenho: "facil",
+  };
+  const quinta = criarProximaRevisao(
+    base,
+    [base],
+    0,
+    agora,
+    "quinta"
+  );
+
+  assert.equal(quinta?.etapa, 5);
+  assert.equal(
+    new Date(quinta!.dataPrevista).getDate(),
+    2
+  );
+  assert.equal(
+    new Date(quinta!.dataPrevista).getMonth(),
+    9
+  );
 });
 
 test("agenda respeita a capacidade e preserva outra revisão pendente sem duplicar", () => {

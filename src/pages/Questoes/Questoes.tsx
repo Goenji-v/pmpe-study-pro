@@ -22,6 +22,7 @@ export default function Questoes() {
   const {
     materias,
     questoes,
+    revisoes,
     setQuestoes,
     setRevisoes,
   } = useApp();
@@ -130,9 +131,9 @@ export default function Questoes() {
       materiaSelecionada?.id &&
       assuntoSelecionado?.id
     ) {
-      setRevisoes((revisoesAnteriores) =>
+      const resultadoRevisao =
         aplicarRevisaoAdaptativa({
-          revisoes: revisoesAnteriores,
+          revisoes,
           materiaId: materiaSelecionada.id,
           moduloId: moduloSelecionado?.id,
           assuntoId: assuntoSelecionado.id,
@@ -141,7 +142,10 @@ export default function Questoes() {
           assunto,
           certas,
           erradas,
-        }).revisoes
+        });
+
+      setRevisoes(
+        resultadoRevisao.revisoes
       );
 
       if (diagnostico) {
@@ -152,9 +156,15 @@ export default function Questoes() {
               ? "para amanhã"
               : `para daqui a ${diagnostico.diasParaRevisao} dias`;
 
-        mensagemSalvamento = `${rotuloPrioridadeRevisaoAdaptativa(
-          diagnostico.prioridade
-        )} de ${assunto} criada ${quando} (${diagnostico.percentual}% de acerto).`;
+        mensagemSalvamento =
+          resultadoRevisao.acao === "atualizada"
+            ? `Resultado registrado. A revisão pendente de ${assunto} foi atualizada ${quando} (${diagnostico.percentual}% de acerto), mas continua aberta. Para concluí-la, use Revisões → Revisar.`
+            : `${rotuloPrioridadeRevisaoAdaptativa(
+                diagnostico.prioridade
+              )} de ${assunto} criada ${quando} (${diagnostico.percentual}% de acerto).`;
+      } else if (resultadoRevisao.acao === "registrada") {
+        mensagemSalvamento =
+          `Resultado registrado em ${assunto}. A revisão pendente continua aberta; para concluí-la, use Revisões → Revisar e finalize a sessão como Teoria ou Questões.`;
       }
     } else if (diagnostico) {
       mensagemSalvamento =

@@ -32,7 +32,6 @@ type RevisaoIA = {
 type DesempenhoRevisao = "facil" | "media" | "dificil";
 
 const CHAVE_REVISOES_IA_LEGADA = "pmpe_revisoes_ia";
-const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
 
 function chaveRevisoesIA(userId: string) {
   return `pmpe:${userId}:revisoes-ia`;
@@ -202,8 +201,13 @@ export default function Revisoes() {
     };
   }
 
-  function abrirEstudo(revisao: Revisao) {
+  function abrirRevisao(revisao: Revisao) {
     const dados = obterDadosCanonicos(revisao);
+    const plano = planejarRevisaoPendente(revisao);
+    const formatoRecomendado =
+      plano.modo === "teoria_questoes"
+        ? "teoria"
+        : "questoes";
 
     sessionStorage.setItem(
       "pmpe:central-estudos:prefill",
@@ -211,39 +215,13 @@ export default function Revisoes() {
         ...dados,
         revisaoId: revisao.id,
         tipo: "revisao",
-        formatoRevisao: "teoria",
+        formatoRevisao: formatoRecomendado,
         objetivo: `Revisar ${dados.assunto}`,
-        observacao: `Revisão etapa ${revisao.etapa}`,
+        observacao: `Revisão etapa ${revisao.etapa} · ${plano.titulo}`,
       })
     );
 
     navigate("/central-estudos");
-  }
-
-  function abrirQuestoes(revisao: Revisao) {
-    const dados = obterDadosCanonicos(revisao);
-
-    sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
-    sessionStorage.setItem(
-      "pmpe:gerar-ia:prefill",
-      JSON.stringify({
-        materia: dados.materia,
-        modulo: dados.modulo,
-        assunto: dados.assunto,
-        quantidade: 10,
-      })
-    );
-    sessionStorage.setItem(
-      CHAVE_ORIGEM_REVISAO_QUESTOES,
-      JSON.stringify({
-        ...dados,
-        revisaoId: revisao.id,
-        etapa: revisao.etapa,
-        criadoEm: new Date().toISOString(),
-      })
-    );
-
-    navigate("/gerar-simulado-ia");
   }
 
   function concluirRevisao(revisao: Revisao, desempenho: DesempenhoRevisao) {
@@ -255,7 +233,7 @@ export default function Revisoes() {
     }));
 
     showToast(
-      (desempenho !== "facil" || revisao.etapa < 4)
+      (desempenho !== "facil" || revisao.etapa < 5)
         ? "Revisão concluída. Próxima revisão agendada conforme seu desempenho."
         : "Ciclo de revisões finalizado.",
       "success"
@@ -316,8 +294,7 @@ export default function Revisoes() {
   }
 
   const propsGrupo = {
-    abrirEstudo,
-    abrirQuestoes,
+    abrirRevisao,
     concluirRevisao,
     reagendarRevisao: reagendar,
     excluirRevisao,
@@ -327,7 +304,7 @@ export default function Revisoes() {
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
       <p className="revisoes-subtitle">
-        O Study Pro usa seu desempenho para indicar como revisar: abaixo de 60% reforça o conteúdo antes das questões; a partir de 60% prioriza questões; com bom domínio, mantém o ciclo normal.
+        O Study Pro usa seu desempenho para indicar como revisar. Clique em Revisar para abrir a Central de Estudos já vinculada a esta pendência; escolha Teoria ou Questões e, ao finalizar a sessão, a revisão é concluída e a próxima é agendada automaticamente.
       </p>
 
       <div className="revisoes-toolbar">
@@ -408,8 +385,7 @@ function ResumoCard({ titulo, valor, classe }: ResumoCardProps) {
 type GrupoRevisoesProps = {
   titulo: string;
   revisoes: Revisao[];
-  abrirEstudo: (revisao: Revisao) => void;
-  abrirQuestoes: (revisao: Revisao) => void;
+  abrirRevisao: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
   excluirRevisao: (revisao: Revisao) => void;
@@ -418,8 +394,7 @@ type GrupoRevisoesProps = {
 function GrupoRevisoes({
   titulo,
   revisoes,
-  abrirEstudo,
-  abrirQuestoes,
+  abrirRevisao,
   concluirRevisao,
   reagendarRevisao,
   excluirRevisao,
@@ -446,7 +421,6 @@ function GrupoRevisoes({
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
           const plano = planejarRevisaoPendente(revisao);
-          const mostrarEstudo = plano.modo === "teoria_questoes";
           const quando =
             diferenca < 0
               ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
@@ -488,21 +462,12 @@ function GrupoRevisoes({
 
               <div className="revisao-lateral">
                 <div className="revisao-acoes-compactas">
-                  {mostrarEstudo && (
-                    <button
-                      type="button"
-                      className="revisao-iniciar"
-                      onClick={() => abrirEstudo(revisao)}
-                    >
-                      📚 Rever conteúdo
-                    </button>
-                  )}
                   <button
                     type="button"
-                    className="revisao-questoes"
-                    onClick={() => abrirQuestoes(revisao)}
+                    className="revisao-iniciar"
+                    onClick={() => abrirRevisao(revisao)}
                   >
-                    ❓ Fazer {plano.quantidadeQuestoes} questões
+                    🔁 Revisar
                   </button>
                   <button
                     type="button"
