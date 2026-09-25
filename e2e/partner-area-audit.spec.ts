@@ -35,7 +35,7 @@ test.describe("auditoria final da Area do Parceiro", () => {
   test.setTimeout(120_000);
   test.skip(!email || !senha, "Configure a conta E2E dedicada.");
 
-  test("rotas operacionais carregam sem erro e cabem na tela", async ({ page }) => {
+  test("rotas atuais e redirecionamentos legados carregam sem erro", async ({ page }) => {
     const errosRuntime: string[] = [];
     page.on("pageerror", (erro) => errosRuntime.push(erro.message));
 
@@ -44,29 +44,33 @@ test.describe("auditoria final da Area do Parceiro", () => {
     await abrirRota(page, "/parceiro", ".parceiro-pagina");
     await expect(page.getByText("ÁREA DO PARCEIRO", { exact: true })).toBeVisible();
     await expect(page.locator(".parceiro-erro")).toHaveCount(0);
-    await expect(page.locator('.sidebar a[href="/parceiro/relatorios"]')).toHaveCount(1);
-
-    await abrirRota(page, "/parceiro/mentoria", ".mentoria-pagina");
-    await expect(page.getByRole("heading", { name: "Trilha de estudos da turma" })).toBeVisible();
-    await expect(page.locator(".mentoria-alerta.erro")).toHaveCount(0);
+    await expect(page.locator(".prof-dashboard-erro")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Gerenciar meu curso" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Simulados" })).toBeVisible();
 
     await abrirRota(page, "/parceiro/cursos", ".pc-pagina");
-    await expect(page.getByRole("heading", { name: "Links do curso" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rota do Concurseiro" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cursos" })).toBeVisible();
     await expect(page.locator(".pc-erro")).toHaveCount(0);
 
     await abrirRota(page, "/parceiro/simulados", ".parceiro-simulados");
-    await expect(page.getByRole("heading", { name: "Simulados do Professor" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Simulados do curso" })).toBeVisible();
     await expect(page.locator(".psim-aviso.erro")).toHaveCount(0);
 
-    await abrirRota(page, "/parceiro/relatorios", ".parceiro-relatorios");
-    await expect(page.getByRole("heading", { name: "Relatórios e Alertas" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeVisible();
-    await expect(page.locator(".prel-erro")).toHaveCount(0);
+    await page.goto("/parceiro/mentoria", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/parceiro\/cursos\/?$/, { timeout: 15_000 });
+    await expect(page.locator(".pc-pagina")).toBeVisible({ timeout: 15_000 });
+    await semOverflowHorizontal(page, "/parceiro/mentoria → /parceiro/cursos");
+
+    await page.goto("/parceiro/relatorios", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/parceiro\/?$/, { timeout: 15_000 });
+    await expect(page.locator(".parceiro-pagina")).toBeVisible({ timeout: 15_000 });
+    await semOverflowHorizontal(page, "/parceiro/relatorios → /parceiro");
 
     expect(errosRuntime, `Erros de runtime encontrados: ${errosRuntime.join(" | ")}`).toEqual([]);
   });
 
-  test("permissoes, financeiro e operacao pedagogica respeitam o papel atual", async ({ page }) => {
+  test("permissoes e operacao respeitam o modelo consolidado atual", async ({ page }) => {
     await entrar(page);
     await abrirRota(page, "/parceiro", ".parceiro-pagina");
 
@@ -82,10 +86,13 @@ test.describe("auditoria final da Area do Parceiro", () => {
 
     expect(papel).not.toBe("desconhecido");
 
-    await expect(pagina.getByRole("link", { name: "Cronograma da turma" })).toBeVisible();
-    await expect(pagina.getByRole("link", { name: "Conteúdos do curso" })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: "Gerenciar meu curso" })).toBeVisible();
     await expect(pagina.getByRole("link", { name: "Simulados" })).toBeVisible();
-    await expect(pagina.getByRole("link", { name: "Relatórios e alertas" })).toBeVisible();
+    await expect(page.getByText("Somente números consolidados são exibidos ao parceiro.")).toBeVisible();
+    await expect(page.getByText(/Nenhum dado individual de aluno é exibido nesta área\./)).toBeVisible();
+
+    await expect(pagina.getByRole("button", { name: "Alunos e turmas" })).toHaveCount(0);
+    await expect(pagina.getByRole("link", { name: "Abrir acompanhamento" })).toHaveCount(0);
 
     if (papel === "proprietario") {
       await pagina.getByRole("button", { name: "Financeiro" }).click();
@@ -97,39 +104,27 @@ test.describe("auditoria final da Area do Parceiro", () => {
       await expect(pagina.getByRole("button", { name: "Financeiro" })).toHaveCount(0);
     }
 
-    await abrirRota(page, "/parceiro/mentoria", ".mentoria-pagina");
-    await expect(page.getByLabel("Turma")).toBeVisible();
-    await expect(page.getByLabel("Nome da trilha")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Salvar alterações|Criar trilha/ })).toBeVisible();
-
     await abrirRota(page, "/parceiro/cursos", ".pc-pagina");
     await expect(page.getByRole("heading", { name: "Cursos" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Novo curso" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Criar rascunho" })).toBeVisible();
+    await expect(page.getByText(/Visão consolidada das turmas liberadas\./)).toBeVisible();
 
     await abrirRota(page, "/parceiro/simulados", ".parceiro-simulados");
     await expect(page.getByRole("button", { name: "+ Novo simulado" })).toBeVisible();
+    await expect(page.getByText(/acompanhe somente os resultados consolidados/i)).toBeVisible();
   });
 
-  test("painel individual do aluno abre completo e sem vazamento visual", async ({ page }) => {
+  test("rotas individuais antigas nao reabrem dados de aluno", async ({ page }) => {
     await entrar(page);
-    await abrirRota(page, "/parceiro", ".parceiro-pagina");
-    await page.getByRole("button", { name: "Alunos e turmas" }).click();
 
-    const abrir = page.getByRole("link", { name: "Abrir acompanhamento" }).first();
-    if (!(await abrir.isVisible().catch(() => false))) {
-      test.skip(true, "A parceria da conta E2E não possui aluno ativo.");
-    }
+    await page.goto("/parceiro/mentoria/aluno/e2e-usuario-inexistente", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/parceiro\/?$/, { timeout: 15_000 });
+    await expect(page.locator(".parceiro-pagina")).toBeVisible({ timeout: 15_000 });
 
-    await abrir.click();
-    await expect(page).toHaveURL(/\/parceiro\/mentoria\/aluno\//, { timeout: 15_000 });
-    await expect(page.locator(".mentoria-aluno-pagina")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("PAINEL INDIVIDUAL DA MENTORIA", { exact: true })).toBeVisible();
-    await expect(page.getByText("ACOMPANHAMENTO DO MENTOR", { exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Intervenções e orientações" })).toBeVisible();
-    await expect(page.getByLabel("Tipo de ação")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Registrar acompanhamento" })).toBeVisible();
-    await expect(page.locator(".mentoria-aluno-alerta.erro")).toHaveCount(0);
-    await semOverflowHorizontal(page, "/parceiro/mentoria/aluno/:id");
+    await expect(page.locator(".mentoria-aluno-pagina")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Abrir acompanhamento" })).toHaveCount(0);
+    await expect(page.getByText(/Nenhum dado individual de aluno é exibido nesta área\./)).toBeVisible();
+    await semOverflowHorizontal(page, "/parceiro/mentoria/aluno/:id → /parceiro");
   });
 });
