@@ -8,6 +8,7 @@ import express, {
 import http from "node:http";
 import { GoogleGenAI } from "@google/genai";
 import { capturarErroServidor } from "./sentry.ts";
+import { encaminharEnvelopeSentry } from "./sentryTunnel.ts";
 import {
   montarPromptAnaliseEdital,
 } from "./editalInteligente.ts";
@@ -52,6 +53,12 @@ const acessos = new Map<string, number[]>();
 const app = express();
 
 app.disable("x-powered-by");
+
+app.post(
+  "/api/sentry-tunnel",
+  express.raw({ type: "*/*", limit: "512kb" }),
+  encaminharEnvelopeSentry
+);
 
 app.use(
   cors({
