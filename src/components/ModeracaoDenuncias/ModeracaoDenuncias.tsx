@@ -45,7 +45,7 @@ export default function ModeracaoDenuncias() {
 
   async function moderar(item: DenunciaQuestaoAdmin, acao: "restaurar" | "excluir") {
     const texto = acao === "excluir"
-      ? "Excluir definitivamente esta questão do catálogo? A denúncia continuará registrada para auditoria."
+      ? "Anular esta questão? Ela sairá dos cadernos e não contará nas notas, inclusive nas tentativas anteriores."
       : "Restaurar esta questão e marcá-la como denúncia improcedente?";
     if (!window.confirm(texto)) return;
 
@@ -53,7 +53,7 @@ export default function ModeracaoDenuncias() {
       setProcessando(item.id);
       await moderarDenunciaQuestao(item.id, acao);
       setDenuncias((atuais) => atuais.filter((d) => d.id !== item.id));
-      showToast(acao === "excluir" ? "Questão excluída do catálogo." : "Questão restaurada.", "success");
+      showToast(acao === "excluir" ? "Questão anulada e notas recalculadas." : "Questão restaurada.", "success");
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Não foi possível moderar a denúncia.", "warning");
     } finally {
@@ -154,7 +154,7 @@ function CartaoDenuncia({
       <div className="moderacao-denuncias-acoes">
         <button type="button" onClick={onRestaurar} disabled={bloqueado}>✓ Improcedente / restaurar</button>
         <button type="button" className="corrigir" onClick={onCorrigir} disabled={bloqueado || !item.questaoId}>✎ Corrigir e republicar</button>
-        <button type="button" className="excluir" onClick={onExcluir} disabled={bloqueado || !item.questaoId}>Excluir questão</button>
+        <button type="button" className="excluir" onClick={onExcluir} disabled={bloqueado || !item.questaoId}>Anular questão</button>
       </div>
     </article>
   );
