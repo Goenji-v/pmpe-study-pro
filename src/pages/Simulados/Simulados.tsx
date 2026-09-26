@@ -15,6 +15,10 @@ import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 
 import type { Simulado } from "../../types/index";
+import {
+  calcularAproveitamentoSimulado,
+  resumirSimulado,
+} from "../../utils/metricasConsolidadas";
 
 const CHAVE_RASCUNHO =
   "pmpe_rascunho_simulado";
@@ -98,10 +102,7 @@ export default function Simulados() {
 
     const totalQuestoes = simulados.reduce(
       (total, simulado) =>
-        total +
-        simulado.certas +
-        simulado.erradas +
-        simulado.anuladas,
+        total + resumirSimulado(simulado).validas,
       0
     );
 
@@ -145,16 +146,7 @@ export default function Simulados() {
   function calcularAproveitamento(
     simulado: Simulado
   ) {
-    const total =
-      simulado.certas +
-      simulado.erradas +
-      simulado.anuladas;
-
-    if (total === 0) return 0;
-
-    return Math.round(
-      (simulado.certas / total) * 100
-    );
+    return calcularAproveitamentoSimulado(simulado);
   }
 
   function salvarSimulado() {
@@ -404,7 +396,7 @@ export default function Simulados() {
         />
 
         <ResumoCard
-          titulo="Questões resolvidas"
+          titulo="Questões válidas"
           valor={metricas.totalQuestoes}
         />
 
@@ -683,9 +675,7 @@ export default function Simulados() {
             {simulados.map(
               (simulado: Simulado) => {
                 const total =
-                  simulado.certas +
-                  simulado.erradas +
-                  simulado.anuladas;
+                  resumirSimulado(simulado).validas;
 
                 const percentual =
                   calcularAproveitamento(
@@ -723,7 +713,7 @@ export default function Simulados() {
 
                       <div className="simulado-dados">
                         <span>
-                          Total: {total}
+                          Válidas: {total}
                         </span>
 
                         <span className="simulado-bom">
