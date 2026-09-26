@@ -72,12 +72,14 @@ test("métricas globais usam aproveitamento ponderado e removem espelho de simul
     ] as any,
   });
 
-  assert.equal(metricas.questoes, 22);
+  assert.equal(metricas.questoes, 20);
   assert.equal(metricas.certas, 14);
   assert.equal(metricas.erradas, 5);
   assert.equal(metricas.emBranco, 1);
   assert.equal(metricas.anuladas, 2);
   assert.equal(metricas.aproveitamento, 70);
+  // As duas anuladas continuam registradas, mas não entram no total válido.
+  assert.equal(metricas.questoes, metricas.certas + metricas.erradas + metricas.emBranco);
   assert.equal(metricas.minutos, 50);
   assert.equal(metricas.revisoesConcluidas, 1);
   assert.equal(metricas.simulados, 1);

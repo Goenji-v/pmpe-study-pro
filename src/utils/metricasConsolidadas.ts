@@ -97,7 +97,7 @@ export function calcularMetricasConsolidadas(
     erradas += resumo.erradas;
     emBranco += resumo.emBranco;
     anuladas += resumo.anuladas;
-    questoes += resumo.total;
+    questoes += resumo.validas;
   });
 
   const minutosSessoes = sessoesPeriodo.reduce(
