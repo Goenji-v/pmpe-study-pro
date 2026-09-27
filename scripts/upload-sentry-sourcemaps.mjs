@@ -11,6 +11,7 @@ const RELEASE =
   "";
 const AUTH_TOKEN = process.env.SENTRY_AUTH_TOKEN?.trim() || "";
 const ORG_OVERRIDE = process.env.SENTRY_ORG?.trim() || "";
+const SENTRY_DSN = process.env.VITE_SENTRY_DSN?.trim() || "";
 const VERCEL_ENV = process.env.VERCEL_ENV?.trim() || "";
 
 async function listarArquivos(diretorio) {
@@ -58,58 +59,52 @@ async function limparSourceMapsDoDeploy() {
   );
 }
 
-async function requisicaoJson(url, init = {}) {
-  const resposta = await fetch(url, {
-    ...init,
-    headers: {
-      authorization: `Bearer ${AUTH_TOKEN}`,
-      accept: "application/json",
-      ...(init.headers || {}),
-    },
-  });
-
-  if (!resposta.ok) {
-    const corpo = await resposta.text();
-    throw new Error(
-      `Sentry respondeu ${resposta.status} em ${url}: ${corpo.slice(0, 500)}`
-    );
-  }
-
-  return resposta.json();
-}
-
-async function descobrirOrganizacao() {
+function resolverOrganizacao() {
   if (ORG_OVERRIDE) {
     return {
-      slug: ORG_OVERRIDE,
-      regionUrl: process.env.SENTRY_REGION_URL?.trim() || "https://sentry.io",
+      idOrSlug: ORG_OVERRIDE,
+      regionUrl:
+        process.env.SENTRY_REGION_URL?.trim() || "https://sentry.io",
     };
   }
 
-  const organizacoes = await requisicaoJson(
-    "https://sentry.io/api/0/organizations/"
-  );
-
-  if (!Array.isArray(organizacoes) || organizacoes.length === 0) {
-    throw new Error("O token do Sentry não possui organização acessível.");
-  }
-
-  if (organizacoes.length > 1) {
+  if (!SENTRY_DSN) {
     throw new Error(
-      "O token acessa mais de uma organização. Defina SENTRY_ORG no Vercel."
+      "VITE_SENTRY_DSN ausente: não foi possível identificar a organização."
     );
   }
 
-  const organizacao = organizacoes[0];
+  let dsn;
+  try {
+    dsn = new URL(SENTRY_DSN);
+  } catch {
+    throw new Error(
+      "VITE_SENTRY_DSN inválido: não foi possível identificar a organização."
+    );
+  }
+
+  const org = dsn.hostname.match(/^o(\d+)\./i)?.[1];
+  if (!org) {
+    throw new Error(
+      "Não foi possível extrair o ID da organização a partir do VITE_SENTRY_DSN."
+    );
+  }
+
+  const region = dsn.hostname.match(
+    /\.ingest\.([a-z0-9-]+)\.sentry\.io$/i
+  )?.[1];
+
   return {
-    slug: organizacao.slug,
-    regionUrl: organizacao.links?.regionUrl || "https://sentry.io",
+    idOrSlug: org,
+    regionUrl:
+      process.env.SENTRY_REGION_URL?.trim() ||
+      (region ? `https://${region}.sentry.io` : "https://sentry.io"),
   };
 }
 
-async function criarRelease(baseUrl, orgSlug) {
+async function criarRelease(baseUrl, orgIdOrSlug) {
   const resposta = await fetch(
-    `${baseUrl}/api/0/organizations/${encodeURIComponent(orgSlug)}/releases/`,
+    `${baseUrl}/api/0/organizations/${encodeURIComponent(orgIdOrSlug)}/releases/`,
     {
       method: "POST",
       headers: {
@@ -135,7 +130,7 @@ async function criarRelease(baseUrl, orgSlug) {
   );
 }
 
-async function enviarArquivo(baseUrl, orgSlug, arquivo) {
+async function enviarArquivo(baseUrl, orgIdOrSlug, arquivo) {
   const relativo = path.relative(DIST_DIR, arquivo).split(path.sep).join("/");
   const conteudo = await readFile(arquivo);
   const form = new FormData();
@@ -152,7 +147,7 @@ async function enviarArquivo(baseUrl, orgSlug, arquivo) {
   );
 
   const url =
-    `${baseUrl}/api/0/projects/${encodeURIComponent(orgSlug)}/` +
+    `${baseUrl}/api/0/projects/${encodeURIComponent(orgIdOrSlug)}/` +
     `${encodeURIComponent(PROJECT)}/releases/${encodeURIComponent(RELEASE)}/files/`;
 
   const resposta = await fetch(url, {
@@ -195,7 +190,7 @@ async function main() {
     return;
   }
 
-  const organizacao = await descobrirOrganizacao();
+  const organizacao = resolverOrganizacao();
   const baseUrl = String(organizacao.regionUrl || "https://sentry.io").replace(
     /\/$/,
     ""
@@ -210,9 +205,9 @@ async function main() {
     throw new Error("Nenhum artefato JavaScript encontrado em dist.");
   }
 
-  await criarRelease(baseUrl, organizacao.slug);
+  await criarRelease(baseUrl, organizacao.idOrSlug);
   await executarEmLotes(artefatos, 6, (arquivo) =>
-    enviarArquivo(baseUrl, organizacao.slug, arquivo)
+    enviarArquivo(baseUrl, organizacao.idOrSlug, arquivo)
   );
 
   await limparSourceMapsDoDeploy();
