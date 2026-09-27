@@ -10,6 +10,14 @@ const migration = readFileSync(
   "utf8"
 ).toLowerCase();
 
+const denyMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260927235000_billing_events_explicit_deny.sql",
+    import.meta.url
+  ),
+  "utf8"
+).toLowerCase();
+
 const recursos = readFileSync(
   new URL("../src/config/recursos.ts", import.meta.url),
   "utf8"
@@ -33,4 +41,8 @@ test("eventos de webhook não ficam expostos ao cliente", () => {
     /revoke all privileges on table public\.eventos_pagamento from anon, authenticated/
   );
   assert.match(migration, /unique \(provedor, provedor_evento_id\)/);
+  assert.match(denyMigration, /create policy eventos_pagamento_bloqueio_cliente/);
+  assert.match(denyMigration, /to anon, authenticated/);
+  assert.match(denyMigration, /using \(false\)/);
+  assert.match(denyMigration, /with check \(false\)/);
 });
