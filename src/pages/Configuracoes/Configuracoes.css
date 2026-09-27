@@ -222,6 +222,46 @@
   background: #334155;
 }
 
+
+.configuracoes-legal-card p {
+  margin: -6px 0 16px;
+  color: #94a3b8;
+  line-height: 1.55;
+}
+
+.configuracoes-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.configuracoes-legal-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 9px 13px;
+  color: #cfe6ff;
+  background: rgba(37, 99, 235, .12);
+  border: 1px solid rgba(96, 165, 250, .28);
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.configuracoes-legal-links a:hover,
+.configuracoes-legal-links a:focus-visible {
+  color: #fff;
+  background: rgba(37, 99, 235, .2);
+  border-color: rgba(96, 165, 250, .5);
+  outline: none;
+}
+
+.configuracoes-legal-card > small {
+  color: #71839a;
+  line-height: 1.5;
+}
+
 @media (max-width: 900px) {
   .configuracoes-grid {
     grid-template-columns: 1fr;
