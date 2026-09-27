@@ -110,7 +110,10 @@ export default function PoliticaPrivacidade() {
               <li><strong>Vercel:</strong> hospedagem e entrega do frontend;</li>
               <li><strong>Render:</strong> hospedagem de serviços de backend;</li>
               <li><strong>Sentry:</strong> monitoramento de erros e diagnóstico técnico;</li>
-              <li><strong>Google:</strong> apenas quando o usuário escolhe entrar com Google.</li>
+              <li>
+                <strong>Google:</strong> autenticação quando o usuário escolhe entrar com Google e
+                processamento de recursos de inteligência artificial quando esses recursos são acionados.
+              </li>
             </ul>
             <p>
               Esses fornecedores possuem suas próprias práticas de segurança e privacidade e podem
@@ -120,7 +123,18 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2>7. Compartilhamento</h2>
+            <h2>7. Recursos de inteligência artificial</h2>
+            <p>
+              Quando o usuário solicita geração ou análise por inteligência artificial, o conteúdo
+              necessário ao pedido — por exemplo matéria, assunto, banca, dificuldade, material ou
+              contexto escolhido para a tarefa — pode ser enviado ao provedor de IA para produzir a
+              resposta. O Study Pro procura limitar esse envio ao que é necessário para executar a
+              funcionalidade solicitada.
+            </p>
+          </section>
+
+          <section>
+            <h2>8. Compartilhamento</h2>
             <p>
               O Study Pro não vende dados pessoais. Informações podem ser compartilhadas com
               fornecedores necessários à operação, com autoridades quando houver obrigação legal ou
@@ -129,7 +143,7 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2>8. Retenção e exclusão</h2>
+            <h2>9. Retenção e exclusão</h2>
             <p>
               Os dados são mantidos pelo período necessário à prestação do serviço, segurança,
               prevenção de fraude, continuidade do histórico e cumprimento de obrigações aplicáveis.
@@ -139,7 +153,7 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2>9. Direitos do titular</h2>
+            <h2>10. Direitos do titular</h2>
             <p>Nos termos da LGPD, o titular pode solicitar, conforme aplicável:</p>
             <ul>
               <li>confirmação da existência de tratamento e acesso aos dados;</li>
@@ -152,7 +166,7 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2>10. Segurança</h2>
+            <h2>11. Segurança</h2>
             <p>
               O Study Pro utiliza autenticação, criptografia em trânsito, controles de acesso,
               políticas de segurança em nível de banco de dados, monitoramento de erros, limitação
@@ -162,7 +176,7 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2>11. Crianças e adolescentes</h2>
+            <h2>12. Crianças e adolescentes</h2>
             <p>
               O serviço é voltado a estudos e preparação para provas. Caso o usuário seja menor de
               idade, o uso deve observar a legislação aplicável e, quando necessário, ocorrer com
@@ -171,7 +185,7 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2>12. Alterações e contato</h2>
+            <h2>13. Alterações e contato</h2>
             <p>
               Esta Política pode ser atualizada quando houver mudança relevante no serviço ou no
               tratamento de dados. A versão vigente ficará disponível nesta página. Dúvidas e
