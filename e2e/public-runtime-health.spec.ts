@@ -29,9 +29,17 @@ function instalarAuditoria(page: Page, falhas: FalhaRuntime[]) {
     const url = request.url();
     if (url.startsWith("data:") || url.startsWith("blob:")) return;
 
+    const erro = request.failure()?.errorText ?? "falha desconhecida";
+    if (
+      url.endsWith("/api/sentry-tunnel") &&
+      erro === "net::ERR_ABORTED"
+    ) {
+      return;
+    }
+
     falhas.push({
       tipo: "request",
-      detalhe: `${request.method()} ${url} — ${request.failure()?.errorText ?? "falha desconhecida"}`,
+      detalhe: `${request.method()} ${url} — ${erro}`,
     });
   });
 
