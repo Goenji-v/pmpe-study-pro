@@ -13,6 +13,12 @@ const AUTH_TOKEN = process.env.SENTRY_AUTH_TOKEN?.trim() || "";
 const ORG_OVERRIDE = process.env.SENTRY_ORG?.trim() || "";
 const SENTRY_DSN = process.env.VITE_SENTRY_DSN?.trim() || "";
 const VERCEL_ENV = process.env.VERCEL_ENV?.trim() || "";
+const VALIDAR_SOURCE_MAPS_UMA_VEZ = true;
+const MARCADOR_VALIDACAO =
+  "Erro fatal capturado na interface do Study Pro.";
+const URL_PRODUCAO =
+  process.env.SENTRY_PUBLIC_URL?.trim() ||
+  "https://pmpe-study-pro-two.vercel.app";
 
 async function listarArquivos(diretorio) {
   const entradas = await readdir(diretorio, { withFileTypes: true });
@@ -173,6 +179,189 @@ async function executarEmLotes(itens, tamanho, callback) {
   }
 }
 
+
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function localizarFrameDeValidacao(artefatos) {
+  for (const arquivo of artefatos.filter((item) => item.endsWith(".js"))) {
+    const conteudo = await readFile(arquivo, "utf8");
+    const indice = conteudo.indexOf(MARCADOR_VALIDACAO);
+    if (indice < 0) continue;
+
+    const antes = conteudo.slice(0, indice);
+    const quebras = antes.match(/\n/g)?.length || 0;
+    const ultimaQuebra = antes.lastIndexOf("\n");
+    const linha = quebras + 1;
+    const coluna = indice - ultimaQuebra;
+
+    return {
+      arquivo,
+      relativo: path.relative(DIST_DIR, arquivo).split(path.sep).join("/"),
+      linha,
+      coluna,
+    };
+  }
+
+  throw new Error(
+    "Não foi possível localizar o marcador de validação no JavaScript gerado."
+  );
+}
+
+async function enviarEventoSinteticoDeValidacao(frame) {
+  const Sentry = await import("@sentry/node");
+
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    release: RELEASE,
+    environment: "source-map-validation",
+    sendDefaultPii: false,
+    tracesSampleRate: 0,
+    defaultIntegrations: false,
+  });
+
+  const absPath = `${URL_PRODUCAO.replace(/\/$/, "")}/${frame.relativo}`;
+  const eventId = Sentry.captureEvent({
+    platform: "javascript",
+    level: "error",
+    release: RELEASE,
+    environment: "source-map-validation",
+    fingerprint: ["study-pro-source-map-validation-one-shot"],
+    tags: {
+      source_map_validation: "one-shot",
+    },
+    exception: {
+      values: [
+        {
+          type: "SentrySourceMapValidation",
+          value: "TESTE_SENTRY_SOURCEMAP_E2E_20260927",
+          mechanism: {
+            type: "generic",
+            handled: true,
+          },
+          stacktrace: {
+            frames: [
+              {
+                filename: `/${frame.relativo}`,
+                abs_path: absPath,
+                lineno: frame.linha,
+                colno: frame.coluna,
+                function: "AppErrorBoundary.componentDidCatch",
+                in_app: true,
+              },
+            ],
+          },
+        },
+      ],
+    },
+  });
+
+  const enviado = await Sentry.flush(10000);
+  if (!enviado) {
+    throw new Error("O Sentry não confirmou o envio do evento sintético.");
+  }
+
+  return eventId;
+}
+
+async function resolverEventoNoSentry(baseUrl, orgIdOrSlug, eventId) {
+  const url =
+    `${baseUrl}/api/0/organizations/${encodeURIComponent(orgIdOrSlug)}/` +
+    `eventids/${encodeURIComponent(eventId)}/`;
+
+  for (let tentativa = 1; tentativa <= 30; tentativa += 1) {
+    const resposta = await fetch(url, {
+      headers: {
+        authorization: `Bearer ${AUTH_TOKEN}`,
+        accept: "application/json",
+      },
+    });
+
+    if (resposta.ok) {
+      return resposta.json();
+    }
+
+    if (resposta.status !== 404) {
+      const corpo = await resposta.text();
+      throw new Error(
+        `Falha ao consultar evento de validação no Sentry (${resposta.status}): ${corpo.slice(0, 500)}`
+      );
+    }
+
+    await esperar(1000);
+  }
+
+  throw new Error(
+    "O evento de validação não ficou disponível no Sentry dentro do tempo esperado."
+  );
+}
+
+function validarEventoSimbolicado(resolvido) {
+  const evento = resolvido?.event;
+  const erros = Array.isArray(evento?.errors) ? evento.errors : [];
+  const erroSourceMap = erros.find((erro) =>
+    /source.?map|sourcemap/i.test(
+      `${erro?.type || ""} ${erro?.message || ""}`
+    )
+  );
+
+  if (erroSourceMap) {
+    throw new Error(
+      `O Sentry registrou erro de Source Map: ${erroSourceMap.type || ""} ${erroSourceMap.message || ""}`
+    );
+  }
+
+  const entradaExcecao = evento?.entries?.find(
+    (entrada) => entrada?.type === "exception"
+  );
+  const valores = entradaExcecao?.data?.values || [];
+  const valor = valores.find(
+    (item) => item?.type === "SentrySourceMapValidation"
+  );
+  const frames = valor?.stacktrace?.frames || [];
+  const frame = frames.at(-1);
+
+  const origem = [
+    frame?.filename,
+    frame?.absPath,
+    frame?.module,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (!/AppErrorBoundary\.tsx/i.test(origem)) {
+    throw new Error(
+      `O evento chegou, mas o frame não foi simbolicado para AppErrorBoundary.tsx. Frame recebido: ${origem || "vazio"}`
+    );
+  }
+
+  return {
+    arquivo: frame.filename || frame.absPath || "AppErrorBoundary.tsx",
+    linha: frame.lineNo || null,
+    eventoId: evento.eventID || evento.id || null,
+  };
+}
+
+async function validarSourceMapsFimAFim(
+  baseUrl,
+  orgIdOrSlug,
+  artefatos
+) {
+  const frame = await localizarFrameDeValidacao(artefatos);
+  const eventId = await enviarEventoSinteticoDeValidacao(frame);
+  const resolvido = await resolverEventoNoSentry(
+    baseUrl,
+    orgIdOrSlug,
+    eventId
+  );
+  const resultado = validarEventoSimbolicado(resolvido);
+
+  console.info(
+    `[sentry] Validação E2E OK: evento=${resultado.eventoId || eventId} origem=${resultado.arquivo}${resultado.linha ? `:${resultado.linha}` : ""}`
+  );
+}
+
 async function main() {
   if (VERCEL_ENV && VERCEL_ENV !== "production") {
     console.info(
@@ -209,6 +398,14 @@ async function main() {
   await executarEmLotes(artefatos, 6, (arquivo) =>
     enviarArquivo(baseUrl, organizacao.idOrSlug, arquivo)
   );
+
+  if (VALIDAR_SOURCE_MAPS_UMA_VEZ) {
+    await validarSourceMapsFimAFim(
+      baseUrl,
+      organizacao.idOrSlug,
+      artefatos
+    );
+  }
 
   await limparSourceMapsDoDeploy();
 
