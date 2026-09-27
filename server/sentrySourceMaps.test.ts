@@ -16,11 +16,21 @@ test("build gera source maps e remove os mapas do deploy público", async () => 
     /node scripts\/upload-sentry-sourcemaps\.mjs/
   );
   assert.match(upload, /SENTRY_AUTH_TOKEN/);
+  assert.match(upload, /VITE_SENTRY_DSN/);
+  assert.match(upload, /resolverOrganizacao/);
+  assert.match(upload, /dsn\.hostname\.match/);
+  assert.doesNotMatch(
+    upload,
+    /https:\/\/sentry\.io\/api\/0\/organizations\/$/
+  );
   assert.match(upload, /study-pro-web/);
   assert.match(upload, /limparSourceMapsDoDeploy/);
   assert.match(upload, /sourceMappingURL/);
   assert.match(upload, /VERCEL_ENV !== "production"/);
-  assert.match(upload, /projects\/\$\{encodeURIComponent\(orgSlug\)\}/);
+  assert.match(
+    upload,
+    /projects\/\$\{encodeURIComponent\(orgIdOrSlug\)\}/
+  );
 });
 
 test("frontend usa a mesma release sem voltar o Sentry para o bundle inicial", async () => {
