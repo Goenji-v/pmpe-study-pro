@@ -49,11 +49,13 @@ test.describe("segurança do formulário de autenticação", () => {
 
     await expect(page.getByLabel("Nome")).toHaveAttribute("autocomplete", "name");
     await expect(page.getByLabel("E-mail")).toHaveAttribute("autocomplete", "email");
-    await expect(page.locator('input[placeholder="Sua senha"]')).toHaveAttribute("autocomplete", "new-password");
-    await expect(page.locator('input[placeholder="Repita a senha"]')).toHaveAttribute(
-      "autocomplete",
-      "new-password"
-    );
+    const senha = page.locator('input[placeholder="Sua senha"]');
+    const confirmarSenha = page.locator('input[placeholder="Repita a senha"]');
+
+    await expect(senha).toHaveAttribute("autocomplete", "new-password");
+    await expect(senha).toHaveAttribute("minlength", "8");
+    await expect(confirmarSenha).toHaveAttribute("autocomplete", "new-password");
+    await expect(confirmarSenha).toHaveAttribute("minlength", "8");
   });
 
   test("recuperação não exibe campo de senha", async ({ page }) => {
