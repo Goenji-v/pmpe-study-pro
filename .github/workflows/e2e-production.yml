@@ -36,6 +36,12 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Smoke obrigatório
         run: npm run e2e:smoke
+
+      - name: Documentos legais públicos
+        run: >-
+          npx playwright test e2e/legal-public.spec.ts
+          --project=desktop-chrome
+          --project=mobile-chrome
       - name: Verificar conta E2E dedicada
         id: conta
         shell: bash

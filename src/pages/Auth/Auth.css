@@ -467,6 +467,38 @@
   cursor: pointer;
 }
 
+.auth-legal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 11px;
+  color: #617890;
+  font-size: 11px;
+}
+
+.auth-legal-links a {
+  color: #8099b4;
+  text-decoration: none;
+}
+
+.auth-legal-links a:hover,
+.auth-legal-links a:focus-visible {
+  color: #b8d9ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.auth-legal-aviso {
+  display: block;
+  max-width: 390px;
+  margin: 9px auto 0;
+  color: #6f859e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 @media (max-width: 1180px) {
   .auth-pagina {
     grid-template-columns: minmax(500px, 1fr) minmax(455px, .88fr);
