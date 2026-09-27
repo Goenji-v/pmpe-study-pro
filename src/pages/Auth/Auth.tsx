@@ -35,6 +35,7 @@ type Modo =
   | "recuperar";
 
 const EMAIL_LEMBRADO_CHAVE = "pmpe-study-pro-email";
+const ORIGEM_AUTH_PRODUCAO = "https://pmpe-study-pro-two.vercel.app";
 
 export default function Auth() {
   const {
@@ -132,7 +133,9 @@ export default function Auth() {
           nome,
           email,
           senha,
-          convite ? `${window.location.origin}/convite/${encodeURIComponent(convite)}` : undefined
+          convite
+            ? `${ORIGEM_AUTH_PRODUCAO}/convite/${encodeURIComponent(convite)}`
+            : ORIGEM_AUTH_PRODUCAO
         );
 
         if (resultado.precisaConfirmarEmail) {
@@ -170,13 +173,12 @@ export default function Auth() {
     try {
       setEnviandoGoogle(true);
 
-      const origemOAuthEstavel = "https://pmpe-study-pro-two.vercel.app";
       const destino =
         origem === "/"
-          ? origemOAuthEstavel
+          ? ORIGEM_AUTH_PRODUCAO
           : origem.startsWith("/")
-            ? `${origemOAuthEstavel}${origem}`
-            : origemOAuthEstavel;
+            ? `${ORIGEM_AUTH_PRODUCAO}${origem}`
+            : ORIGEM_AUTH_PRODUCAO;
 
       await entrarComGoogle(destino);
     } catch (erroGoogle) {
