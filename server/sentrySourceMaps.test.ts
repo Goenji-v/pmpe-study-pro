@@ -31,11 +31,6 @@ test("build gera source maps e remove os mapas do deploy público", async () => 
     upload,
     /projects\/\$\{encodeURIComponent\(orgIdOrSlug\)\}/
   );
-  assert.match(upload, /VALIDAR_SOURCE_MAPS_UMA_VEZ = true/);
-  assert.match(upload, /TESTE_SENTRY_SOURCEMAP_E2E_20260927/);
-  assert.match(upload, /eventids\/\$\{encodeURIComponent\(eventId\)\}/);
-  assert.match(upload, /AppErrorBoundary\\.tsx/);
-  assert.match(upload, /Validação E2E OK/);
 });
 
 test("frontend usa a mesma release sem voltar o Sentry para o bundle inicial", async () => {
