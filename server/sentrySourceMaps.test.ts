@@ -15,7 +15,7 @@ test("build gera source maps e remove os mapas do deploy público", async () => 
     pacote,
     /node scripts\/upload-sentry-sourcemaps\.mjs/
   );
-  assert.match(upload, /SENTRY_AUTH_TOKEN/);
+  assert.match(upload, /SENTRY_AUTH_TOKEN/);\n  assert.match(upload, /VITE_SENTRY_DSN/);\n  assert.match(upload, /resolverOrganizacao/);\n  assert.match(upload, /\\^o\\\\d/);\n  assert.doesNotMatch(upload, /api\\/0\\/organizations\\/\\\"\\)/);
   assert.match(upload, /study-pro-web/);
   assert.match(upload, /limparSourceMapsDoDeploy/);
   assert.match(upload, /sourceMappingURL/);
