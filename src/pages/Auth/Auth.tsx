@@ -24,6 +24,11 @@ import {
 import "./Auth.css";
 import { PARCERIAS_VISIVEIS } from "../../config/recursos";
 import AuthHero from "./AuthHero";
+import {
+  limparTentativasLogin,
+  obterSegundosBloqueioLogin,
+  registrarFalhaLogin,
+} from "../../utils/loginAttemptGuard";
 
 import {
   useAuth,
@@ -110,7 +115,26 @@ export default function Auth() {
 
       if (modo === "login") {
         validarEmailSenha();
-        await entrar(email, senha);
+
+        const segundosBloqueio = obterSegundosBloqueioLogin(window.localStorage);
+        if (segundosBloqueio > 0) {
+          throw new Error(
+            `Muitas tentativas seguidas. Aguarde ${segundosBloqueio}s e tente novamente.`
+          );
+        }
+
+        try {
+          await entrar(email, senha);
+          limparTentativasLogin(window.localStorage);
+        } catch (erroLogin) {
+          const bloqueioCriado = registrarFalhaLogin(window.localStorage);
+          if (bloqueioCriado > 0) {
+            throw new Error(
+              `Muitas tentativas seguidas. Aguarde ${bloqueioCriado}s e tente novamente.`
+            );
+          }
+          throw erroLogin;
+        }
 
         try {
           if (lembrar) {
@@ -212,8 +236,8 @@ export default function Auth() {
       throw new Error("Digite seu nome.");
     }
 
-    if (senha.length < 6) {
-      throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+    if (senha.length < 8) {
+      throw new Error("A senha precisa ter pelo menos 8 caracteres.");
     }
 
     if (senha !== confirmarSenha) {
@@ -333,6 +357,7 @@ export default function Auth() {
                     value={senha}
                     onChange={(evento) => setSenha(evento.target.value)}
                     autoComplete={modo === "cadastro" ? "new-password" : "current-password"}
+                    minLength={modo === "cadastro" ? 8 : undefined}
                     placeholder="Sua senha"
                   />
                   <button
@@ -360,6 +385,7 @@ export default function Auth() {
                     value={confirmarSenha}
                     onChange={(evento) => setConfirmarSenha(evento.target.value)}
                     autoComplete="new-password"
+                    minLength={8}
                     placeholder="Repita a senha"
                   />
                   <button
