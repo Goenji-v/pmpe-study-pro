@@ -48,6 +48,8 @@ type AuthContextValue = {
   sair: () => Promise<void>;
 };
 
+const ORIGEM_AUTH_PRODUCAO = "https://pmpe-study-pro-two.vercel.app";
+
 const AuthContext =
   createContext<
     AuthContextValue | undefined
@@ -169,7 +171,9 @@ export function AuthProvider({
           senha,
 
         options: {
-          emailRedirectTo: redirectTo,
+          emailRedirectTo:
+            redirectTo ??
+            ORIGEM_AUTH_PRODUCAO,
           data: {
             nome:
               nome.trim(),
@@ -203,7 +207,7 @@ export function AuthProvider({
           options: {
             redirectTo:
               redirectTo ??
-              `${window.location.origin}/`,
+              ORIGEM_AUTH_PRODUCAO,
           },
         });
 
@@ -220,7 +224,7 @@ export function AuthProvider({
     email: string
   ) {
     const redirectTo =
-      `${window.location.origin}/login`;
+      `${ORIGEM_AUTH_PRODUCAO}/login`;
 
     const {
       error,
