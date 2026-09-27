@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import QuestaoComunidade from "../../components/QuestaoComunidade/QuestaoComunidade";
 import ExplicacaoQuestao from "../../components/ExplicacaoQuestao/ExplicacaoQuestao";
 import { listarCadernosSimuladosIA, type CadernoSimuladoIA } from "../../services/cadernosSimuladosIAService";
@@ -14,6 +15,7 @@ const LETRAS = ["A", "B", "C", "D", "E"] as const;
 
 export default function RevisaoCadernoIA() {
   const { cadernoId } = useParams();
+  const navigate = useNavigate();
   const [caderno, setCaderno] = useState<CadernoSimuladoIA | null>(null);
   const [tentativas, setTentativas] = useState<TentativaRevisaoIA[]>([]);
   const [tentativaId, setTentativaId] = useState("");
@@ -55,7 +57,57 @@ export default function RevisaoCadernoIA() {
   const diagnostico = useMemo(() => tentativa && completa
     ? calcularDiagnosticoQuestoesIA(tentativa.questoes!, tentativa.respostas!) : [], [tentativa, completa]);
   const pontos = diagnostico.filter((d) => d.erradas > 0 || d.emBranco > 0);
+  const pontoPrincipal = pontos[0];
   const visiveis = itens.filter((item) => filtro === "todos" || item.status === filtro);
+
+  function focarErros() {
+    setFiltro("erro");
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("revisao-caderno-questoes")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function gerarQuestoesSemelhantes() {
+    if (!pontoPrincipal) return;
+
+    sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
+    sessionStorage.setItem(
+      "pmpe:gerar-ia:prefill",
+      JSON.stringify({
+        materia: pontoPrincipal.materia,
+        modulo: pontoPrincipal.modulo,
+        assunto: pontoPrincipal.assunto,
+        quantidade: 10,
+        banca: pontoPrincipal.banca,
+      })
+    );
+
+    navigate("/gerar-simulado-ia");
+  }
+
+  function revisarMaterialDoPontoFraco() {
+    if (!pontoPrincipal) return;
+
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify({
+        materia: pontoPrincipal.materia,
+        materiaId: pontoPrincipal.materiaId,
+        modulo: pontoPrincipal.modulo,
+        moduloId: pontoPrincipal.moduloId,
+        assunto: pontoPrincipal.assunto,
+        assuntoId: pontoPrincipal.assuntoId,
+        tipo: "aula",
+        objetivo: `Reforçar ${pontoPrincipal.assunto}`,
+        observacao:
+          "Reforço aberto a partir da correção de um caderno de Questões IA.",
+      })
+    );
+
+    navigate("/central-estudos");
+  }
 
   return (
     <section className="revisao-caderno">
@@ -119,6 +171,29 @@ export default function RevisaoCadernoIA() {
               </details>}
             </>}
           </section>
+          {pontoPrincipal && (
+            <section className="revisao-caderno-proximos-passos" aria-label="Próximos passos recomendados">
+              <div>
+                <span>PRÓXIMO PASSO</span>
+                <h2>Transforme os erros em revisão</h2>
+                <p>
+                  O foco agora é <strong>{pontoPrincipal.assunto}</strong>, seu ponto de menor
+                  aproveitamento nesta tentativa. A agenda adaptativa continua sendo atualizada
+                  automaticamente pelos resultados válidos.
+                </p>
+              </div>
+              <div className="revisao-caderno-acoes">
+                {tentativa.erradas > 0 && (
+                  <button type="button" onClick={focarErros}>🔎 Entender meus erros</button>
+                )}
+                <button type="button" onClick={revisarMaterialDoPontoFraco}>📚 Revisar material</button>
+                <button type="button" className="primario" onClick={gerarQuestoesSemelhantes}>
+                  ✨ Gerar 10 semelhantes
+                </button>
+                <button type="button" onClick={() => navigate("/revisoes")}>🔁 Ver agenda de revisões</button>
+              </div>
+            </section>
+          )}
           <nav className="revisao-caderno-filtros" aria-label="Filtrar correção">
             {([
               ["todos", "Todas", tentativa.total], ["erro", "Erros", tentativa.erradas],
@@ -129,7 +204,7 @@ export default function RevisaoCadernoIA() {
           </nav>
           <p className="revisao-caderno-contagem" role="status">{visiveis.length} questão(ões) neste filtro</p>
           {visiveis.length === 0 && <p>Nenhuma questão neste filtro.</p>}
-          <div className="revisao-caderno-questoes">
+          <div id="revisao-caderno-questoes" className="revisao-caderno-questoes">
             {visiveis.map(({ questao: q, numero, resposta, status }) => (
               <details className={`revisao-caderno-questao revisao-caderno-${status}`} key={`${tentativa.id}:${filtro}:${q.id}`} open={filtro !== "todos" || status === "erro"}>
                 <summary><strong>Questão {numero}</strong><span>{q.assunto}</span><b>{ROTULOS[status]}</b></summary>
