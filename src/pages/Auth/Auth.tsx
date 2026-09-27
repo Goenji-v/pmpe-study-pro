@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import {
+  Link,
   Navigate,
   useLocation,
   useNavigate,
@@ -486,6 +487,18 @@ export default function Auth() {
               <button type="button" onClick={() => trocarModo("login")}>
                 ← Voltar para o login
               </button>
+            )}
+
+            <nav className="auth-legal-links" aria-label="Documentos legais">
+              <Link to="/termos">Termos de Uso</Link>
+              <span aria-hidden="true">•</span>
+              <Link to="/privacidade">Política de Privacidade</Link>
+            </nav>
+
+            {modo === "cadastro" && (
+              <small className="auth-legal-aviso">
+                Ao criar sua conta, você declara ter lido os documentos aplicáveis ao uso do Study Pro.
+              </small>
             )}
           </div>
         </div>
