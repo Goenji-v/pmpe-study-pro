@@ -62,6 +62,8 @@ const EstatisticasSessoes = lazy(() => import("./pages/EstatisticasSessoes/Estat
 const CentralDesempenho = lazy(() => import("./pages/CentralDesempenho/CentralDesempenho"));
 const Calendario = lazy(() => import("./pages/Calendario/Calendario"));
 const Auth = lazy(() => import("./pages/Auth/Auth"));
+const TermosUso = lazy(() => import("./pages/Legal/TermosUso"));
+const PoliticaPrivacidade = lazy(() => import("./pages/Legal/PoliticaPrivacidade"));
 const Demo = lazy(() => import("./pages/Demo/Demo"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Ranking = lazy(() => import("./pages/Ranking/Ranking"));
@@ -235,6 +237,8 @@ function App() {
           <Suspense fallback={<CarregandoRota />}>
             <Routes>
               <Route path="/login" element={<Auth />} />
+              <Route path="/termos" element={<TermosUso />} />
+              <Route path="/privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/convite/:codigo" element={PARCERIAS_VISIVEIS ? <Convite /> : <Navigate to="/login" replace />} />
               <Route path="/*" element={<LayoutProtegido />} />
