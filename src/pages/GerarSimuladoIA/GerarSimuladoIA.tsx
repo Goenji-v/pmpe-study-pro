@@ -171,10 +171,12 @@ export default function GerarSimuladoIA() {
         modulo?: string;
         assunto?: string;
         quantidade?: number;
+        banca?: string;
       };
 
       setOrigem("assunto");
       if (prefill.materia) setMateriaSelecionada(prefill.materia);
+      if (prefill.banca?.trim()) setBanca(prefill.banca.trim());
       if (
         typeof prefill.quantidade === "number" &&
         QUANTIDADES_DISPONIVEIS.includes(prefill.quantidade)

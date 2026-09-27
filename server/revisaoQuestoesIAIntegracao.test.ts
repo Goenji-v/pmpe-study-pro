@@ -12,6 +12,16 @@ const fonteRevisoes = readFileSync(
   "utf8"
 );
 
+const fonteGerador = readFileSync(
+  new URL("../src/pages/GerarSimuladoIA/GerarSimuladoIA.tsx", import.meta.url),
+  "utf8"
+);
+
+const fonteCorrecao = readFileSync(
+  new URL("../src/pages/RevisaoCadernoIA/RevisaoCadernoIA.tsx", import.meta.url),
+  "utf8"
+);
+
 test("job persistente submete o lote a revisão semântica independente", () => {
   assert.match(fonteProcessador, /montarPromptRevisaoQuestoesIA/);
   assert.match(fonteProcessador, /validarLoteRevisado/);
@@ -38,4 +48,25 @@ test("revisão abre Questões IA já preenchidas e vinculadas à pendência", ()
   assert.match(fonteRevisoes, /CHAVE_ORIGEM_REVISAO_QUESTOES/);
   assert.match(fonteRevisoes, /revisaoId: revisao\.id/);
   assert.match(fonteRevisoes, /navigate\("\/gerar-simulado-ia"\)/);
+});
+
+
+test("gerador consome matéria, assunto, quantidade e banca vindos do reforço", () => {
+  assert.match(fonteGerador, /pmpe:gerar-ia:prefill/);
+  assert.match(fonteGerador, /setMateriaSelecionada\(prefill\.materia\)/);
+  assert.match(fonteGerador, /QUANTIDADES_DISPONIVEIS\.includes\(prefill\.quantidade\)/);
+  assert.match(fonteGerador, /setBanca\(prefill\.banca\.trim\(\)\)/);
+});
+
+test("correção oferece próximos passos sem criar revisão duplicada", () => {
+  assert.match(fonteCorrecao, /Entender meus erros/);
+  assert.match(fonteCorrecao, /Revisar material/);
+  assert.match(fonteCorrecao, /Gerar 10 semelhantes/);
+  assert.match(fonteCorrecao, /Ver agenda de revisões/);
+  assert.match(fonteCorrecao, /"pmpe:gerar-ia:prefill"/);
+  assert.match(fonteCorrecao, /quantidade: 10/);
+  assert.match(fonteCorrecao, /navigate\("\/gerar-simulado-ia"\)/);
+  assert.match(fonteCorrecao, /"pmpe:central-estudos:prefill"/);
+  assert.match(fonteCorrecao, /navigate\("\/central-estudos"\)/);
+  assert.doesNotMatch(fonteCorrecao, /setRevisoes/);
 });
