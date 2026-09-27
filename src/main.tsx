@@ -18,6 +18,7 @@ import "./styles/responsive-critical-fixes.css";
 import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./components/Sidebar/SidebarPremiumVisual.css";
 import "./pages/Dashboard/DashboardHeroPremium.css";
+import "./styles/premium-polish-final.css";
 
 iniciarSentryFrontend();
 

@@ -1,4 +1,5 @@
 import "./Header.css";
+import { Bell } from "lucide-react";
 
 import {
   useApp,
@@ -47,7 +48,7 @@ export default function Header() {
           aria-label="Notificações"
           onClick={abrirNotificacoes}
         >
-          🔔
+          <Bell size={18} strokeWidth={1.9} aria-hidden="true" />
         </button>
         <UserProfileMenu />
       </div>
