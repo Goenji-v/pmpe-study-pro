@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import "./Configuracoes.css";
 
@@ -342,6 +343,20 @@ export default function Configuracoes() {
             <span>Edital</span>
             <strong>{formulario.editalAtivo?.confirmadoEm ? "Configurado" : "Não configurado"}</strong>
           </div>
+        </div>
+
+        <div className="configuracoes-card configuracoes-legal-card">
+          <h2>Privacidade e documentos</h2>
+          <p>
+            Consulte as regras de uso do Study Pro e como os dados da sua conta e dos seus estudos são tratados.
+          </p>
+          <div className="configuracoes-legal-links">
+            <Link to="/termos">Termos de Uso</Link>
+            <Link to="/privacidade">Política de Privacidade</Link>
+          </div>
+          <small>
+            Informações comerciais e canal exclusivo de atendimento serão publicados antes da abertura de cobranças ao público.
+          </small>
         </div>
       </div>
 
