@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -70,6 +70,7 @@ export default function AnaliseSimuladoStudyPro({
   const [correcaoAberta, setCorrecaoAberta] = useState(false);
   const [evolucaoAberta, setEvolucaoAberta] = useState(false);
   const [mensagem, setMensagem] = useState("");
+  const revisaoAutomaticaRef = useRef("");
 
   useEffect(() => {
     let ativo = true;
@@ -163,6 +164,40 @@ export default function AnaliseSimuladoStudyPro({
     nome,
     origem,
     simuladoId,
+    tentativaId,
+  ]);
+
+  const assinaturaPlanoRevisao = useMemo(
+    () =>
+      analise.planoRevisao
+        .map(
+          (item) =>
+            `${item.chave}:${item.prioridadeIndice}:${item.quantidadeQuestoes}`
+        )
+        .join("|"),
+    [analise.planoRevisao]
+  );
+
+  useEffect(() => {
+    if (!historicoCarregado || analise.planoRevisao.length === 0) return;
+
+    const chaveExecucao = `${tentativaId}:${assinaturaPlanoRevisao}`;
+    if (revisaoAutomaticaRef.current === chaveExecucao) return;
+    revisaoAutomaticaRef.current = chaveExecucao;
+
+    setRevisoes((anteriores) =>
+      adicionarErrosSimuladoARevisao({
+        revisoes: anteriores,
+        materias,
+        analise,
+      }).revisoes
+    );
+  }, [
+    analise,
+    assinaturaPlanoRevisao,
+    historicoCarregado,
+    materias,
+    setRevisoes,
     tentativaId,
   ]);
 
