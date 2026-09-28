@@ -903,3 +903,48 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.analise-status .analise-retomar {
+  width: fit-content;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 0 9px;
+  color: #dceeff;
+  background: rgba(38, 112, 182, .16);
+  border: 1px solid rgba(91, 164, 231, .4);
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.analise-status .analise-retomar:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.simulado-pdf-alertas {
+  max-width: 1500px;
+  display: grid;
+  gap: 6px;
+  margin: 0 auto 14px;
+  padding: 13px 15px;
+  color: #d7e6f5;
+  background: rgba(126, 89, 24, .16);
+  border: 1px solid rgba(224, 168, 66, .28);
+  border-radius: 12px;
+}
+
+.simulado-pdf-alertas strong {
+  color: #f5cf7a;
+  font-size: 12px;
+}
+
+.simulado-pdf-alertas span {
+  color: #aebfd0;
+  font-size: 11px;
+  line-height: 1.45;
+}
