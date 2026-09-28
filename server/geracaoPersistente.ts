@@ -211,6 +211,7 @@ export async function atualizarJobGeracaoIA(
       | "descricao"
       | "execucao_id"
       | "lease_ate"
+      | "payload"
     >
   >,
   execucaoIdAtual?: string
@@ -235,6 +236,27 @@ export async function atualizarJobGeracaoIA(
 
   const itens = (await resposta.json()) as JobGeracaoIA[];
   return itens[0] ?? null;
+}
+
+export async function excluirJobGeracaoIA(
+  contexto: ContextoSupabaseJob,
+  id: string
+) {
+  const resposta = await fetch(
+    `${contexto.supabaseUrl}/rest/v1/geracoes_ia_jobs?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(contexto.userId)}`,
+    {
+      method: "DELETE",
+      headers: cabecalhos(contexto, {
+        Prefer: "return=minimal",
+      }),
+    }
+  );
+
+  if (!resposta.ok) {
+    throw new Error(
+      await mensagemSupabase(resposta, "Não foi possível excluir a geração.")
+    );
+  }
 }
 
 function cabecalhos(
