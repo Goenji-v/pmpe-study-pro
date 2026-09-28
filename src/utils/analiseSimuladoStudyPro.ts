@@ -91,7 +91,8 @@ export type ClassificacaoDominio =
   | "Teoria + questões"
   | "Revisão curta + questões"
   | "Questões + revisão espaçada"
-  | "Assunto consolidado — manter revisão";
+  | "Assunto consolidado — manter revisão"
+  | "Ainda não estudado — manter cronograma";
 
 export type NivelPrioridadeRevisao = "alta" | "media" | "baixa";
 
@@ -706,10 +707,10 @@ function calcularDificuldade(
     geral = "Difícil";
   } else if (pDificil >= 25 && pMedia >= 35) {
     geral = "Média para difícil";
-  } else if (pFacil >= 55 && pDificil < 20) {
-    geral = "Fácil para média";
   } else if (pFacil >= 70) {
     geral = "Fácil";
+  } else if (pFacil >= 55 && pDificil < 20) {
+    geral = "Fácil para média";
   }
 
   return {
@@ -779,7 +780,7 @@ function classificarDominio(
   acertosPorChute: number,
   avaliadas: number
 ): ClassificacaoDominio {
-  if (avaliadas === 0) return "Teoria + questões";
+  if (avaliadas === 0) return "Ainda não estudado — manter cronograma";
   if (percentual < 50) return "Teoria + questões";
   if (percentual < 70) return "Revisão curta + questões";
   if (percentual < 80 || acertosPorChute > 0) {
@@ -810,6 +811,17 @@ function calcularIndicePrioridade(params: {
   if (params.acertosPorChute > 0) indice += 20;
   if (params.reincidencias > 0) indice += Math.min(20, 10 + params.reincidencias * 3);
   if (params.materiaComMuitosErros) indice += 5;
+
+  if (params.acertosPorChute > 0 || params.reincidencias > 0) {
+    indice = Math.max(indice, 65);
+  }
+
+  if (
+    params.materiaComMuitosErros &&
+    params.erros + params.naoRespondidas >= 2
+  ) {
+    indice = Math.max(indice, 65);
+  }
 
   return Math.max(0, Math.min(100, indice));
 }
