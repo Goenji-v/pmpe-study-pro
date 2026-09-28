@@ -27,7 +27,7 @@ export default function Header() {
           >
             <img
               className="header-brand-mark"
-              src="/assets/study-pro-logo-official.jpg?v=1"
+              src="/assets/study-pro-logo-original-v2.jpg"
               alt=""
               draggable={false}
             />

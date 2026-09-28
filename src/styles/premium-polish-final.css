@@ -140,6 +140,9 @@ html:not([data-study-base-theme="claro"]) .page {
 }
 
 .sidebar-logo {
+  flex: 0 0 auto;
+  min-height: 142px;
+  grid-template-rows: minmax(0, 1fr);
   height: 142px !important;
   width: calc(100% + 26px) !important;
   margin: -14px -13px 12px !important;
@@ -156,9 +159,10 @@ html:not([data-study-base-theme="claro"]) .page {
 .sidebar-logo-oficial {
   width: 100% !important;
   height: 100% !important;
-  object-fit: contain !important;
-  object-position: center !important;
-  filter: drop-shadow(0 8px 22px rgba(28, 111, 205, .12));
+  min-height: 0;
+  object-fit: cover !important;
+  object-position: center 50% !important;
+  filter: none;
 }
 
 .sidebar-secao-label {
@@ -401,9 +405,10 @@ html:not([data-study-base-theme="claro"]) .page-interna :is(
 
   .sidebar-logo {
     width: calc(100% + 24px) !important;
-    height: 116px !important;
-    margin: -54px -12px 11px !important;
-    padding-top: 8px !important;
+    height: 174px !important;
+    min-height: 174px;
+    margin: 0 -12px 11px !important;
+    padding-top: 0 !important;
   }
 
   .sidebar-mobile-toggle {

@@ -12,7 +12,7 @@ export default function PoliticaPrivacidade() {
             Voltar
           </Link>
           <div className="legal-brand">
-            <img src="/assets/study-pro-logo-official.jpg?v=1" alt="Study Pro" />
+            <img src="/assets/study-pro-logo-original-v2.jpg" alt="Study Pro" />
             <div>
               <span>PRIVACIDADE E DADOS</span>
               <h1>Política de Privacidade</h1>
