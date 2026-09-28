@@ -180,6 +180,19 @@ export default function SimuladoPdf() {
   const iniciar = useCallback(
     async (proximo: RascunhoSimuladoPdf) => {
       const agora = new Date().toISOString();
+      const processoAnterior = carregarProcessoSimuladoPdf();
+
+      if (
+        processoAnterior?.id &&
+        processoAnterior.id !== proximo.id
+      ) {
+        await Promise.allSettled([
+          excluirProcessoSimuladoPdf(processoAnterior.id),
+          excluirAnaliseSimuladoPdf(
+            requestIdDoProcesso(processoAnterior.id)
+          ),
+        ]);
+      }
 
       setRascunho(proximo);
       setCaderno(proximo.caderno);
@@ -788,19 +801,12 @@ export default function SimuladoPdf() {
   }
 
   function encerrarEVoltar() {
-    const id = rascunho?.id;
-
     limparRascunhoSimuladoPdf();
 
-    if (id) {
-      void Promise.allSettled([
-        excluirProcessoSimuladoPdf(id),
-        excluirAnaliseSimuladoPdf(
-          requestIdDoProcesso(id)
-        ),
-      ]);
-    }
-
+    // Mantém o último resultado finalizado salvo no aparelho.
+    // Ele só é descartado quando um novo simulado começa ou quando
+    // o usuário escolhe excluir o processo explicitamente.
+    persistirEstadoAtual();
     navigate("/plano");
   }
 
@@ -996,6 +1002,72 @@ export default function SimuladoPdf() {
             <Play size={18} />
             Começar simulado
           </button>
+        </section>
+      </main>
+    );
+  }
+
+  if (
+    finalizado &&
+    analise &&
+    questoesResultado.length === 0
+  ) {
+    return (
+      <main className="simulado-pdf-workspace resultado">
+        <div className="simulado-pdf-resultado-topo">
+          <button
+            type="button"
+            onClick={encerrarEVoltar}
+          >
+            <ChevronLeft size={18} />
+            Voltar ao plano
+          </button>
+
+          <div>
+            <span>RESULTADO PROTEGIDO</span>
+            <strong>
+              {formatarTempo(segundos)}
+            </strong>
+          </div>
+        </div>
+
+        <section className="simulado-pdf-retomar">
+          <span>RECUPERAÇÃO DO RESULTADO</span>
+          <h1>As respostas foram salvas</h1>
+          <p>
+            O diagnóstico não recebeu as questões processadas.
+            Seu simulado continua salvo neste aparelho e pode ser
+            reconstruído sem apagar suas marcações.
+          </p>
+
+          <div className="simulado-pdf-retomar-resumo">
+            <div>
+              <small>Respostas</small>
+              <strong>
+                {respostasPreenchidas}/{totalQuestoes}
+              </strong>
+            </div>
+            <div>
+              <small>Análise</small>
+              <strong>{progressoAnalise}%</strong>
+            </div>
+          </div>
+
+          <div className="simulado-pdf-retomar-acoes">
+            <button
+              type="button"
+              className="continuar"
+              disabled={reiniciandoAnalise}
+              onClick={() =>
+                void tentarNovamenteAnalise()
+              }
+            >
+              <RefreshCcw size={18} />
+              {reiniciandoAnalise
+                ? "Recuperando…"
+                : "Recuperar resultado"}
+            </button>
+          </div>
         </section>
       </main>
     );
