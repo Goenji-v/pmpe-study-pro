@@ -388,8 +388,6 @@ function PaginaPdfAnotavel({
         viewport,
         transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
       }).promise;
-
-      redesenharAnotacoes(canvasAnotacaoRef.current, tracos, tamanhoRef.current);
     }
 
     void renderizar();
@@ -397,7 +395,7 @@ function PaginaPdfAnotavel({
     return () => {
       cancelado = true;
     };
-  }, [larguraDisponivel, numero, pdf, tracos, zoom]);
+  }, [larguraDisponivel, numero, pdf, zoom]);
 
   useEffect(() => {
     redesenharAnotacoes(canvasAnotacaoRef.current, tracos, tamanhoRef.current);
