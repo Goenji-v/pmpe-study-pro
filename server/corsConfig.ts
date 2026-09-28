@@ -1,10 +1,15 @@
 import type { CorsOptions } from "cors";
 
-const origensPermitidas =
-  (process.env.FRONTEND_URL || "")
-    .split(",")
-    .map((origem) => origem.trim())
-    .filter(Boolean);
+const origensPermitidas = new Set(
+  [
+    "https://pmpe-study-pro-two.vercel.app",
+    "https://pmpe-study-pro-git-preview-simulado-pdf-f-84a165-pmpe-study-pro.vercel.app",
+    ...(process.env.FRONTEND_URL || "")
+      .split(",")
+      .map((origem) => origem.trim())
+      .filter(Boolean),
+  ]
+);
 
 export const corsOptions: CorsOptions = {
   origin(origem, callback) {
@@ -18,7 +23,7 @@ export const corsOptions: CorsOptions = {
 
     if (
       origemLocal ||
-      origensPermitidas.includes(origem)
+      origensPermitidas.has(origem)
     ) {
       callback(null, true);
       return;

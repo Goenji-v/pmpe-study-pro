@@ -10,6 +10,10 @@ test("CORS mantém allowlist explícita do frontend", async () => {
   const codigo = await codigoProxySeguro();
 
   assert.match(codigo, /https:\/\/pmpe-study-pro-two\.vercel\.app/);
+  assert.match(
+    codigo,
+    /https:\/\/pmpe-study-pro-git-preview-simulado-pdf-f-84a165-pmpe-study-pro\.vercel\.app/
+  );
   assert.match(codigo, /origensPermitidas\.has\(origem\)/);
   assert.match(codigo, /credentials:\s*false/);
   assert.doesNotMatch(
