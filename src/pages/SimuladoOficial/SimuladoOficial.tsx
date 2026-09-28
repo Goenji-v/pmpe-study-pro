@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
+import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
+import MarcacaoQuestaoSimulado from "../../components/AnaliseSimuladoStudyPro/MarcacaoQuestaoSimulado";
+import type {
+  MarcacaoQuestaoSimulado as TipoMarcacaoQuestaoSimulado,
+  QuestaoAnaliseSimulado,
+} from "../../utils/analiseSimuladoStudyPro";
 import {
   iniciarTentativaOficial,
   listarQuestoesSimuladoOficial,
@@ -21,6 +27,7 @@ const RASCUNHO_PREFIXO = "study-pro:simulado-oficial:";
 type RascunhoOficial = {
   respostas: Record<string, string>;
   eliminadas: Record<string, string[]>;
+  marcacoes?: Record<string, TipoMarcacaoQuestaoSimulado>;
 };
 
 type SimuladoAplicacao = SimuladoOficialTipo & {
@@ -43,10 +50,14 @@ export default function SimuladoOficial() {
   const [questoes, setQuestoes] = useState<QuestaoOficial[]>([]);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [eliminadas, setEliminadas] = useState<Record<string, string[]>>({});
+  const [marcacoes, setMarcacoes] = useState<
+    Record<string, TipoMarcacaoQuestaoSimulado>
+  >({});
   const [indice, setIndice] = useState(0);
   const [tentativa, setTentativa] = useState<TentativaOficial | null>(null);
   const [restante, setRestante] = useState(0);
   const [resultado, setResultado] = useState<ResultadoAplicacao | null>(null);
+  const [finalizadaEm, setFinalizadaEm] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [iniciando, setIniciando] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
@@ -61,6 +72,7 @@ export default function SimuladoOficial() {
     try {
       const retorno = await finalizarTentativaComPolitica(tentativa.id, respostas);
       localStorage.removeItem(chaveRascunho(tentativa.id));
+      setFinalizadaEm(new Date().toISOString());
       setResultado(retorno as ResultadoAplicacao);
       if (document.fullscreenElement && document.exitFullscreen) {
         try { await document.exitFullscreen(); } catch { /* navegador pode bloquear a saída programática */ }
@@ -117,6 +129,7 @@ export default function SimuladoOficial() {
       if (rascunho) {
         setRespostas(rascunho.respostas);
         setEliminadas(rascunho.eliminadas);
+        setMarcacoes(rascunho.marcacoes ?? {});
       }
       encerrandoRef.current = false;
       setTentativa(tentativaAtual);
@@ -135,12 +148,12 @@ export default function SimuladoOficial() {
     try {
       localStorage.setItem(
         chaveRascunho(tentativa.id),
-        JSON.stringify({ respostas, eliminadas } satisfies RascunhoOficial)
+        JSON.stringify({ respostas, eliminadas, marcacoes } satisfies RascunhoOficial)
       );
     } catch {
       // O resultado continua seguro no servidor; o localStorage é apenas apoio para retomada.
     }
-  }, [eliminadas, respostas, resultado, tentativa]);
+  }, [eliminadas, marcacoes, respostas, resultado, tentativa]);
 
   useEffect(() => {
     if (!tentativa || !simulado || resultado) return;
@@ -221,6 +234,21 @@ export default function SimuladoOficial() {
     setRespostas((atual) => ({ ...atual, [String(questao.numero)]: alternativaId }));
   }
 
+  function marcarQuestao(
+    questaoId: string,
+    marcacao: TipoMarcacaoQuestaoSimulado
+  ) {
+    setMarcacoes((anteriores) => {
+      const proximas = { ...anteriores };
+      if (marcacao === "normal") {
+        delete proximas[questaoId];
+      } else {
+        proximas[questaoId] = marcacao;
+      }
+      return proximas;
+    });
+  }
+
   if (carregando) {
     return <section className="simulado-oficial"><div className="oficial-carregando">Preparando prova...</div></section>;
   }
@@ -258,6 +286,10 @@ export default function SimuladoOficial() {
         tentativa={tentativa}
         onVoltar={() => navigate("/simulados")}
         materias={materias}
+        questoes={questoes}
+        respostas={respostas}
+        marcacoes={marcacoes}
+        dataAnalise={finalizadaEm ?? tentativa?.iniciada_em ?? new Date().toISOString()}
       />
     );
   }
@@ -317,6 +349,11 @@ export default function SimuladoOficial() {
 
           <div className="enunciado-oficial">{questao.enunciado}</div>
 
+          <MarcacaoQuestaoSimulado
+            valor={marcacoes[questao.id] ?? "normal"}
+            onChange={(valor) => marcarQuestao(questao.id, valor)}
+          />
+
           <div className="alternativas-oficial">
             {questao.alternativas.map((alternativa) => {
               const eliminada = eliminadasAtual.includes(alternativa.id);
@@ -358,14 +395,71 @@ export default function SimuladoOficial() {
   );
 }
 
-function ResultadoOficial({ resultado, simulado, tentativa, onVoltar, materias }: {
+function ResultadoOficial({
+  resultado,
+  simulado,
+  tentativa,
+  onVoltar,
+  materias,
+  questoes,
+  respostas,
+  marcacoes,
+  dataAnalise,
+}: {
   resultado: ResultadoSimuladoOficial;
   simulado: SimuladoAplicacao;
   tentativa: TentativaOficial | null;
   onVoltar: () => void;
   materias: string[];
+  questoes: QuestaoOficial[];
+  respostas: Record<string, string>;
+  marcacoes: Record<string, TipoMarcacaoQuestaoSimulado>;
+  dataAnalise: string;
 }) {
   const erros = resultado.questoes.filter((questao) => questao.correta === false);
+  const questoesAnalise = useMemo<QuestaoAnaliseSimulado[]>(
+    () =>
+      questoes.map((questao) => {
+        const correcao = resultado.questoes.find(
+          (item) => item.numero === questao.numero
+        );
+
+        return {
+          id: questao.id,
+          numero: questao.numero,
+          materia: questao.materia,
+          materiaId: questao.materiaId,
+          modulo: questao.modulo,
+          moduloId: questao.moduloId,
+          assunto: questao.assunto,
+          assuntoId: questao.assuntoId,
+          subassunto: questao.subassunto,
+          dificuldade:
+            questao.dificuldade === "facil"
+              ? "Fácil"
+              : questao.dificuldade === "dificil"
+                ? "Difícil"
+                : "Média",
+          enunciado: questao.enunciado,
+          alternativas: questao.alternativas,
+          gabarito: correcao?.respostaCorreta || questao.respostaCorretaId,
+          explicacao: questao.explicacao,
+          anulada: correcao?.anulada === true,
+        };
+      }),
+    [questoes, resultado.questoes]
+  );
+
+  const respostasPorId = useMemo(
+    () =>
+      Object.fromEntries(
+        questoes.map((questao) => [
+          questao.id,
+          respostas[String(questao.numero)],
+        ])
+      ),
+    [questoes, respostas]
+  );
 
   return (
     <section className="resultado-oficial">
@@ -416,6 +510,19 @@ function ResultadoOficial({ resultado, simulado, tentativa, onVoltar, materias }
         ))}
       </section>
 
+      {tentativa && (
+        <AnaliseSimuladoStudyPro
+          origem="oficial"
+          tentativaId={tentativa.id}
+          simuladoId={simulado.id}
+          nome={simulado.nome}
+          data={dataAnalise}
+          questoes={questoesAnalise}
+          respostas={respostasPorId}
+          marcacoes={marcacoes}
+        />
+      )}
+
       <button type="button" onClick={onVoltar}>Voltar para Simulados</button>
     </section>
   );
@@ -446,6 +553,10 @@ function carregarRascunho(tentativaId: string): RascunhoOficial | null {
     return {
       respostas: valor.respostas && typeof valor.respostas === "object" ? valor.respostas as Record<string, string> : {},
       eliminadas: valor.eliminadas && typeof valor.eliminadas === "object" ? valor.eliminadas as Record<string, string[]> : {},
+      marcacoes:
+        valor.marcacoes && typeof valor.marcacoes === "object"
+          ? valor.marcacoes as Record<string, TipoMarcacaoQuestaoSimulado>
+          : {},
     };
   } catch { return null; }
 }
