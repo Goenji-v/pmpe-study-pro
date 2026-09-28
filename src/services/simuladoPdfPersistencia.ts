@@ -143,6 +143,19 @@ export async function carregarArquivosSimuladoPdf(processoId: string) {
   };
 }
 
+export async function salvarAnotacoesSimuladoPdf(
+  processoId: string,
+  anotacoes: unknown
+) {
+  await gravar(chave(processoId, "anotacoes"), anotacoes);
+}
+
+export async function carregarAnotacoesSimuladoPdf<T = unknown>(
+  processoId: string
+) {
+  return ler<T>(chave(processoId, "anotacoes"));
+}
+
 export async function salvarAnalisePersistida(
   processoId: string,
   analise: AnaliseSimuladoPdf
@@ -166,6 +179,7 @@ export async function excluirProcessoSimuladoPdf(processoId?: string) {
     remover(chave(id, "caderno")),
     remover(chave(id, "comentado")),
     remover(chave(id, "analise")),
+    remover(chave(id, "anotacoes")),
   ]);
 }
 
@@ -178,7 +192,10 @@ function arquivoPersistido(arquivo: File): ArquivoPersistido {
   };
 }
 
-function chave(processoId: string, tipo: "caderno" | "comentado" | "analise") {
+function chave(
+  processoId: string,
+  tipo: "caderno" | "comentado" | "analise" | "anotacoes"
+) {
   return processoId + ":" + tipo;
 }
 
