@@ -18,14 +18,14 @@ import {
 
 type Ferramenta = "mover" | "lapis" | "marca-texto" | "borracha";
 type Ponto = { x: number; y: number };
-type Traco = {
+export type TracoPdf = {
   id: string;
   ferramenta: "lapis" | "marca-texto";
   cor: string;
   espessura: number;
   pontos: Ponto[];
 };
-type AnotacoesPorPagina = Record<number, Traco[]>;
+export type AnotacoesPdf = Record<number, TracoPdf[]>;
 
 type PdfJsPage = {
   getViewport: (args: { scale: number }) => { width: number; height: number };
@@ -57,7 +57,7 @@ const PDFJS_URL =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER_URL =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-const TRACOS_VAZIOS: Traco[] = [];
+const TRACOS_VAZIOS: TracoPdf[] = [];
 
 const CORES = [
   "#ef4444",
@@ -71,9 +71,13 @@ const CORES = [
 function PdfAnotavel({
   arquivo,
   pausado,
+  anotacoesIniciais,
+  onAnotacoesChange,
 }: {
   arquivo: File;
   pausado: boolean;
+  anotacoesIniciais?: AnotacoesPdf;
+  onAnotacoesChange?: (anotacoes: AnotacoesPdf) => void;
 }) {
   const areaRef = useRef<HTMLDivElement | null>(null);
   const [pdf, setPdf] = useState<PdfJsDocument | null>(null);
@@ -83,8 +87,10 @@ function PdfAnotavel({
   const [ferramenta, setFerramenta] = useState<Ferramenta>("mover");
   const [cor, setCor] = useState(CORES[0]);
   const [espessura, setEspessura] = useState(3);
-  const [anotacoes, setAnotacoes] = useState<AnotacoesPorPagina>({});
-  const [historico, setHistorico] = useState<AnotacoesPorPagina[]>([]);
+  const [anotacoes, setAnotacoes] = useState<AnotacoesPdf>(() =>
+    anotacoesIniciais ? structuredClone(anotacoesIniciais) : {}
+  );
+  const [historico, setHistorico] = useState<AnotacoesPdf[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -145,11 +151,21 @@ function PdfAnotavel({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!onAnotacoesChange) return;
+
+    const timeout = window.setTimeout(() => {
+      onAnotacoesChange(structuredClone(anotacoes));
+    }, 450);
+
+    return () => window.clearTimeout(timeout);
+  }, [anotacoes, onAnotacoesChange]);
+
   function salvarSnapshot() {
     setHistorico((itens) => [...itens.slice(-29), structuredClone(anotacoes)]);
   }
 
-  function atualizarPagina(numero: number, tracos: Traco[]) {
+  function atualizarPagina(numero: number, tracos: TracoPdf[]) {
     setAnotacoes((atuais) => ({
       ...atuais,
       [numero]: tracos,
@@ -337,13 +353,13 @@ function PaginaPdfAnotavel({
   cor: string;
   espessura: number;
   pausado: boolean;
-  tracos: Traco[];
+  tracos: TracoPdf[];
   aoSalvarSnapshot: () => void;
-  aoAlterar: (tracos: Traco[]) => void;
+  aoAlterar: (tracos: TracoPdf[]) => void;
 }) {
   const canvasPdfRef = useRef<HTMLCanvasElement | null>(null);
   const canvasAnotacaoRef = useRef<HTMLCanvasElement | null>(null);
-  const desenhoRef = useRef<Traco | null>(null);
+  const desenhoRef = useRef<TracoPdf | null>(null);
   const tamanhoRef = useRef({ width: 1, height: 1 });
 
   useEffect(() => {
@@ -493,14 +509,16 @@ function PaginaPdfAnotavel({
 
 const PdfAnotavelMemorizado = memo(PdfAnotavel, (anterior, proximo) =>
   anterior.arquivo === proximo.arquivo &&
-  anterior.pausado === proximo.pausado
+  anterior.pausado === proximo.pausado &&
+  anterior.anotacoesIniciais === proximo.anotacoesIniciais &&
+  anterior.onAnotacoesChange === proximo.onAnotacoesChange
 );
 
 export default PdfAnotavelMemorizado;
 
 function redesenharAnotacoes(
   canvas: HTMLCanvasElement | null,
-  tracos: Traco[],
+  tracos: TracoPdf[],
   tamanho: { width: number; height: number }
 ) {
   if (!canvas) return;
