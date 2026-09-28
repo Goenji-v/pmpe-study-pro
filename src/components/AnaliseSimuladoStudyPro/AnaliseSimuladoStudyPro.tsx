@@ -18,6 +18,7 @@ import { useApp } from "../../context/AppContext";
 import {
   listarAnalisesSimulados,
   salvarAnaliseSimulado,
+  salvarAnaliseSimuladoLocal,
   type OrigemAnaliseSimulado,
 } from "../../services/analisesSimuladosService";
 import {
@@ -76,6 +77,7 @@ export default function AnaliseSimuladoStudyPro({
   const [correcaoAberta, setCorrecaoAberta] = useState(false);
   const [evolucaoAberta, setEvolucaoAberta] = useState(false);
   const [mensagem, setMensagem] = useState("");
+  const [avisoPersistencia, setAvisoPersistencia] = useState("");
   const revisaoAutomaticaRef = useRef("");
 
   useEffect(() => {
@@ -149,21 +151,53 @@ export default function AnaliseSimuladoStudyPro({
   );
 
   useEffect(() => {
+    if (!persistir) return;
+
+    // O backup local acontece imediatamente, sem esperar rede nem histórico.
+    // Assim, sair da tela logo após finalizar não perde o diagnóstico.
+    salvarAnaliseSimuladoLocal({
+      origem,
+      tentativaId,
+      simuladoId,
+      nome,
+      analise,
+    });
+  }, [
+    analise,
+    nome,
+    origem,
+    persistir,
+    simuladoId,
+    tentativaId,
+  ]);
+
+  useEffect(() => {
     if (!historicoCarregado || !persistir) return;
 
-    const timeout = window.setTimeout(() => {
-      void salvarAnaliseSimulado({
-        origem,
-        tentativaId,
-        simuladoId,
-        nome,
-        analise,
-      }).catch(() => {
-        // A análise continua disponível na tela mesmo se a sincronização falhar.
-      });
-    }, 250);
+    let ativo = true;
 
-    return () => window.clearTimeout(timeout);
+    setAvisoPersistencia("");
+
+    void salvarAnaliseSimulado({
+      origem,
+      tentativaId,
+      simuladoId,
+      nome,
+      analise,
+    })
+      .then(() => {
+        if (ativo) setAvisoPersistencia("");
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setAvisoPersistencia(
+          "Resultado protegido neste aparelho. A sincronização online será tentada novamente ao abrir o diagnóstico."
+        );
+      });
+
+    return () => {
+      ativo = false;
+    };
   }, [
     analise,
     historicoCarregado,
@@ -287,6 +321,24 @@ export default function AnaliseSimuladoStudyPro({
 
       {mensagem && (
         <div className="analise-simulado-study__mensagem">{mensagem}</div>
+      )}
+
+      {avisoPersistencia && (
+        <div className="analise-simulado-study__mensagem">
+          {avisoPersistencia}
+        </div>
+      )}
+
+      {questoes.length === 0 && (
+        <div className="analise-simulado-study__mensagem">
+          O resultado foi preservado, mas nenhuma questão chegou ao diagnóstico. Reabra o simulado para recuperar os dados antes de iniciar outro.
+        </div>
+      )}
+
+      {questoes.length > 0 && analise.resumo.totalValidas === 0 && (
+        <div className="analise-simulado-study__mensagem">
+          Suas respostas foram preservadas, mas ainda não existe gabarito confiável suficiente para calcular o diagnóstico. Nenhuma questão será usada para reduzir seu desempenho até a correção ficar válida.
+        </div>
       )}
 
       <div className="analise-simulado-study__cards">
