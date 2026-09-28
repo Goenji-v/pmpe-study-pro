@@ -63,7 +63,6 @@ type ItemGabarito = {
 const jobsAgendados = new Set<string>();
 const LEASE_MS = 10 * 60 * 1000;
 const TAMANHO_BLOCO = 10;
-const CONCORRENCIA = 2;
 const MAX_BASE64 = 17_000_000;
 
 export function ehJobSimuladoPdf(job: JobGeracaoIA) {
@@ -120,20 +119,29 @@ async function processar(
       dependencias.modeloFallback,
     ])
   );
+  let ultimoProgresso = Math.max(1, Math.round(Number(job.progresso) || 1));
 
   const atualizar = async (
     etapa: "gerando" | "revisando" | "corrigindo" | "salvando",
     progresso: number,
-    descricao: string
+    descricao: string,
+    resultadoParcial?: ResultadoSimuladoPdfProcessado
   ) => {
+    const progressoNormalizado = Math.max(
+      ultimoProgresso,
+      Math.max(0, Math.min(99, Math.round(progresso)))
+    );
+    ultimoProgresso = progressoNormalizado;
+
     await atualizarJobGeracaoIA(
       contexto,
       job.id,
       {
         status: "processando",
         etapa,
-        progresso: Math.max(0, Math.min(99, Math.round(progresso))),
+        progresso: progressoNormalizado,
         descricao,
+        ...(resultadoParcial ? { resultado: resultadoParcial } : {}),
         lease_ate: new Date(Date.now() + LEASE_MS).toISOString(),
       },
       execucaoId
@@ -181,45 +189,81 @@ async function processar(
     }
 
     const intervalos = criarIntervalos(payload.totalInformado);
-    const resultados = new Array<QuestaoSimuladoPdfProcessada[]>(
-      intervalos.length
+    const resultadoAnterior = obterResultadoParcial(
+      job.resultado,
+      payload.totalInformado
     );
-    let concluidos = 0;
-
-    await mapearComConcorrencia(
-      intervalos,
-      CONCORRENCIA,
-      async (intervalo, indice) => {
-        const inicio = intervalo.inicio;
-        const fim = intervalo.fim;
-
-        const questoes = await analisarBloco(
-          dependencias.ai,
-          modelos,
-          payload,
-          intervalo,
-          gabaritoComentado
-        );
-
-        resultados[indice] = questoes;
-        concluidos += 1;
-
-        const progresso = 15 + Math.round((concluidos / intervalos.length) * 75);
-        await atualizar(
-          concluidos === intervalos.length ? "revisando" : "gerando",
-          progresso,
-          `Questões ${inicio}–${fim} processadas · ${concluidos}/${intervalos.length} blocos.`
-        );
-      }
+    const porNumero = new Map<number, QuestaoSimuladoPdfProcessada>(
+      (resultadoAnterior?.questoes ?? []).map(
+        (questao) => [questao.numero, questao] as const
+      )
     );
 
-    const porNumero = new Map<number, QuestaoSimuladoPdfProcessada>();
-    for (const lote of resultados) {
-      for (const questao of lote ?? []) {
-        if (!porNumero.has(questao.numero)) {
-          porNumero.set(questao.numero, questao);
+    for (const alerta of resultadoAnterior?.alertas ?? []) {
+      alertas.push(alerta);
+    }
+
+    const intervaloCompleto = (intervalo: { inicio: number; fim: number }) =>
+      Array.from(
+        { length: intervalo.fim - intervalo.inicio + 1 },
+        (_, indice) => intervalo.inicio + indice
+      ).every((numero) => porNumero.has(numero));
+
+    const intervalosPendentes = intervalos.filter(
+      (intervalo) => !intervaloCompleto(intervalo)
+    );
+    let concluidos = intervalos.length - intervalosPendentes.length;
+
+    if (concluidos > 0) {
+      await atualizar(
+        "gerando",
+        15 + Math.round((concluidos / intervalos.length) * 75),
+        `Retomando do bloco ${concluidos + 1}/${intervalos.length}; ${concluidos} bloco(s) já estavam salvos.`,
+        {
+          totalQuestoes: payload.totalInformado,
+          questoes: Array.from(porNumero.values()).sort(
+            (a, b) => a.numero - b.numero
+          ),
+          alertas: Array.from(new Set(alertas)).slice(0, 30),
         }
+      );
+    }
+
+    // Processamento sequencial: evita duas requisições pesadas concorrentes
+    // para o mesmo PDF e permite persistir cada bloco antes do próximo.
+    for (const intervalo of intervalosPendentes) {
+      const inicio = intervalo.inicio;
+      const fim = intervalo.fim;
+
+      const questoesDoBloco = await analisarBloco(
+        dependencias.ai,
+        modelos,
+        payload,
+        intervalo,
+        gabaritoComentado
+      );
+
+      for (const questao of questoesDoBloco) {
+        porNumero.set(questao.numero, questao);
       }
+
+      concluidos += 1;
+
+      const parcial: ResultadoSimuladoPdfProcessado = {
+        totalQuestoes: payload.totalInformado,
+        questoes: Array.from(porNumero.values()).sort(
+          (a, b) => a.numero - b.numero
+        ),
+        alertas: Array.from(new Set(alertas)).slice(0, 30),
+      };
+      const progresso = 15 + Math.round((concluidos / intervalos.length) * 75);
+
+      await atualizar(
+        concluidos === intervalos.length ? "revisando" : "gerando",
+        progresso,
+        `Questões ${inicio}–${fim} processadas · ${concluidos}/${intervalos.length} blocos · progresso salvo.`,
+        parcial
+      );
     }
 
     const faltantes = Array.from(
@@ -329,7 +373,7 @@ async function processar(
       {
         status: "erro",
         etapa: "erro",
-        progresso: Math.max(1, Number(job.progresso) || 1),
+        progresso: ultimoProgresso,
         erro: mensagem.slice(0, 1200),
         descricao: "A análise precisa ser retomada.",
         concluida_em: new Date().toISOString(),
@@ -661,6 +705,47 @@ async function gerarJsonComPdfs(
   return parsearJsonDaIA(resposta.text, rotulo);
 }
 
+function obterResultadoParcial(
+  valor: unknown,
+  totalQuestoes: number
+): ResultadoSimuladoPdfProcessado | null {
+  if (!valor || typeof valor !== "object") return null;
+
+  const raiz = valor as {
+    questoes?: unknown;
+    alertas?: unknown;
+  };
+
+  if (!Array.isArray(raiz.questoes)) return null;
+
+  const questoes = raiz.questoes.filter(
+    (item): item is QuestaoSimuladoPdfProcessada =>
+      Boolean(
+        item &&
+          typeof item === "object" &&
+          Number.isInteger(
+            Number((item as { numero?: unknown }).numero)
+          ) &&
+          Number((item as { numero?: unknown }).numero) >= 1 &&
+          Number((item as { numero?: unknown }).numero) <= totalQuestoes
+      )
+  );
+
+  if (questoes.length === 0) return null;
+
+  const alertas = Array.isArray(raiz.alertas)
+    ? raiz.alertas
+        .filter((item): item is string => typeof item === "string")
+        .slice(0, 30)
+    : [];
+
+  return {
+    totalQuestoes,
+    questoes,
+    alertas,
+  };
+}
+
 function criarIntervalos(total: number) {
   const intervalos: Array<{ inicio: number; fim: number }> = [];
 
@@ -672,31 +757,6 @@ function criarIntervalos(total: number) {
   }
 
   return intervalos;
-}
-
-async function mapearComConcorrencia<T>(
-  itens: Array<{ inicio: number; fim: number }>,
-  limite: number,
-  executar: (
-    item: { inicio: number; fim: number },
-    indice: number
-  ) => Promise<T>
-) {
-  let proximo = 0;
-  const trabalhadores = Array.from(
-    { length: Math.max(1, Math.min(limite, itens.length)) },
-    async () => {
-      while (true) {
-        const indice = proximo;
-        proximo += 1;
-
-        if (indice >= itens.length) return;
-        await executar(itens[indice], indice);
-      }
-    }
-  );
-
-  await Promise.all(trabalhadores);
 }
 
 function validarPayload(valor: Record<string, unknown>): PayloadSimuladoPdf {

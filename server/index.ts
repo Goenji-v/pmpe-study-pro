@@ -368,13 +368,15 @@ app.post(
           (await atualizarJobGeracaoIA(contexto, job.id, {
             status: "fila",
             etapa: "fila",
-            progresso: 0,
-            resultado: null,
+            progresso: Math.max(1, Math.round(Number(job.progresso) || 1)),
+            // Mantém o resultado parcial: blocos já concluídos não são
+            // descartados quando a IA falha temporariamente.
+            resultado: job.resultado,
             erro: null,
             concluida_em: null,
             execucao_id: null,
             lease_ate: null,
-            descricao: "Análise recolocada na fila.",
+            descricao: "Análise recolocada na fila a partir do último bloco salvo.",
             payload: {
               tipo: "simulado_pdf",
               totalInformado,
