@@ -101,6 +101,8 @@ export type EditalAtivo = {
 export type ConfiguracoesEditalExtras = {
   diasEstudo?: DiaSemanaId[];
   materiasPorDia?: number;
+  diaRedacaoSemanal?: DiaSemanaId;
+  diaSimuladoSemanal?: DiaSemanaId;
   editalOnboardingVisto?: boolean;
   editalAtivo?: EditalAtivo;
 };
