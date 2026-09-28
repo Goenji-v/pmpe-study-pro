@@ -10,6 +10,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +29,16 @@ import {
   obterRascunhoSimuladoPdf,
   type RascunhoSimuladoPdf,
 } from "../../services/simuladoPdfDraft";
+import {
+  carregarAnalisePersistida,
+  carregarArquivosSimuladoPdf,
+  carregarProcessoSimuladoPdf,
+  excluirProcessoSimuladoPdf,
+  salvarAnalisePersistida,
+  salvarArquivosSimuladoPdf,
+  salvarProcessoSimuladoPdf,
+  type ProcessoSimuladoPdfPersistido,
+} from "../../services/simuladoPdfPersistencia";
 import PdfAnotavel from "./PdfAnotavel";
 import "./SimuladoPdf.css";
 
@@ -36,6 +47,7 @@ const LETRAS = ["A", "B", "C", "D", "E"];
 export default function SimuladoPdf() {
   const navigate = useNavigate();
   const recebido = obterRascunhoSimuladoPdf();
+  const execucaoAnaliseRef = useRef(0);
 
   const [rascunho, setRascunho] = useState<RascunhoSimuladoPdf | null>(recebido);
   const [nome, setNome] = useState(recebido?.nome ?? "Simulado de domingo");
@@ -53,58 +65,145 @@ export default function SimuladoPdf() {
   const [estadoAnalise, setEstadoAnalise] = useState<
     "parado" | "analisando" | "concluida" | "erro"
   >("parado");
+  const [progressoAnalise, setProgressoAnalise] = useState(0);
   const [erroAnalise, setErroAnalise] = useState("");
   const [finalizarQuandoPronto, setFinalizarQuandoPronto] = useState(false);
   const [finalizado, setFinalizado] = useState(false);
   const [abaMobile, setAbaMobile] = useState<"pdf" | "respostas">("pdf");
+  const [criadoEm, setCriadoEm] = useState(() => new Date().toISOString());
+  const [processoRecuperavel, setProcessoRecuperavel] =
+    useState<ProcessoSimuladoPdfPersistido | null>(null);
+  const [checandoRecuperacao, setChecandoRecuperacao] = useState(!recebido);
+  const [restaurando, setRestaurando] = useState(false);
 
   const totalQuestoes = rascunho?.totalQuestoes ?? (Number(totalTexto) || 0);
 
-  const iniciar = useCallback((proximo: RascunhoSimuladoPdf) => {
-    setRascunho(proximo);
-    setCaderno(proximo.caderno);
-    setComentado(proximo.comentado ?? null);
-    setNome(proximo.nome);
-    setTotalTexto(String(proximo.totalQuestoes));
-    setIniciado(true);
-    setPausado(false);
-    setSegundos(0);
-    setRespostas({});
-    setQuestaoAtual(1);
-    setFinalizado(false);
-    setFinalizarQuandoPronto(false);
-    setAnalise(null);
-    setErroAnalise("");
-    setEstadoAnalise("analisando");
+  const executarAnalise = useCallback(
+    async (
+      proximo: RascunhoSimuladoPdf,
+      progressoInicial = 4
+    ) => {
+      const execucao = ++execucaoAnaliseRef.current;
+      setEstadoAnalise("analisando");
+      setErroAnalise("");
+      setProgressoAnalise((atual) =>
+        Math.max(atual, Math.max(4, Math.min(92, progressoInicial)))
+      );
 
-    void analisarSimuladoPdf({
-      prova: proximo.caderno,
-      comentado: proximo.comentado,
-      totalInformado: proximo.totalQuestoes,
-    })
-      .then((resultado) => {
+      const intervalo = window.setInterval(() => {
+        setProgressoAnalise((atual) => {
+          if (atual >= 94) return atual;
+          const incremento = atual < 45 ? 3 : atual < 75 ? 2 : 1;
+          return Math.min(94, atual + incremento);
+        });
+      }, 1400);
+
+      try {
+        const resultado = await analisarSimuladoPdf({
+          prova: proximo.caderno,
+          comentado: proximo.comentado,
+          totalInformado: proximo.totalQuestoes,
+        });
+
+        if (execucaoAnaliseRef.current !== execucao) return;
+
         setAnalise(resultado);
         setEstadoAnalise("concluida");
-      })
-      .catch((erro) => {
+        setProgressoAnalise(100);
+
+        await salvarAnalisePersistida(proximo.id, resultado).catch(() => {
+          // A tela continua utilizável mesmo se o armazenamento local falhar.
+        });
+      } catch (erro) {
+        if (execucaoAnaliseRef.current !== execucao) return;
+
         setEstadoAnalise("erro");
         setErroAnalise(
           erro instanceof Error
             ? erro.message
             : "A análise da IA não pôde ser concluída."
         );
+      } finally {
+        window.clearInterval(intervalo);
+      }
+    },
+    []
+  );
+
+  const iniciar = useCallback(
+    (proximo: RascunhoSimuladoPdf) => {
+      const agora = new Date().toISOString();
+
+      setRascunho(proximo);
+      setCaderno(proximo.caderno);
+      setComentado(proximo.comentado ?? null);
+      setNome(proximo.nome);
+      setTotalTexto(String(proximo.totalQuestoes));
+      setCriadoEm(agora);
+      setIniciado(true);
+      setPausado(false);
+      setSegundos(0);
+      setRespostas({});
+      setQuestaoAtual(1);
+      setFinalizado(false);
+      setFinalizarQuandoPronto(false);
+      setAnalise(null);
+      setErroAnalise("");
+      setProgressoAnalise(4);
+      setEstadoAnalise("analisando");
+
+      void salvarArquivosSimuladoPdf({
+        processoId: proximo.id,
+        caderno: proximo.caderno,
+        comentado: proximo.comentado,
       });
-  }, []);
+
+      salvarProcessoSimuladoPdf({
+        id: proximo.id,
+        nome: proximo.nome,
+        totalQuestoes: proximo.totalQuestoes,
+        semana: proximo.semana,
+        dia: proximo.dia,
+        respostas: {},
+        questaoAtual: 1,
+        segundos: 0,
+        pausado: false,
+        finalizado: false,
+        finalizarQuandoPronto: false,
+        estadoAnalise: "analisando",
+        progressoAnalise: 4,
+        criadoEm: agora,
+      });
+
+      void executarAnalise(proximo, 4);
+    },
+    [executarAnalise]
+  );
 
   useEffect(() => {
-    if (rascunho && !iniciado && estadoAnalise === "parado") {
+    if (recebido) {
+      setChecandoRecuperacao(false);
+      return;
+    }
+
+    const processo = carregarProcessoSimuladoPdf();
+    setProcessoRecuperavel(processo);
+    setChecandoRecuperacao(false);
+  }, [recebido]);
+
+  useEffect(() => {
+    if (rascunho && !iniciado && estadoAnalise === "parado" && !processoRecuperavel) {
       iniciar(rascunho);
     }
-  }, [estadoAnalise, iniciado, iniciar, rascunho]);
+  }, [estadoAnalise, iniciado, iniciar, processoRecuperavel, rascunho]);
 
   useEffect(() => {
     if (!iniciado || pausado || finalizado) return;
-    const id = window.setInterval(() => setSegundos((valor) => valor + 1), 1000);
+
+    const id = window.setInterval(() => {
+      setSegundos((valor) => valor + 1);
+    }, 1000);
+
     return () => window.clearInterval(id);
   }, [finalizado, iniciado, pausado]);
 
@@ -115,6 +214,72 @@ export default function SimuladoPdf() {
       setFinalizarQuandoPronto(false);
     }
   }, [analise, estadoAnalise, finalizarQuandoPronto]);
+
+  const persistirEstadoAtual = useCallback(
+    (segundosAtuais = segundos) => {
+      if (!iniciado || !rascunho) return;
+
+      salvarProcessoSimuladoPdf({
+        id: rascunho.id,
+        nome,
+        totalQuestoes: rascunho.totalQuestoes,
+        semana: rascunho.semana,
+        dia: rascunho.dia,
+        respostas,
+        questaoAtual,
+        segundos: segundosAtuais,
+        pausado,
+        finalizado,
+        finalizarQuandoPronto,
+        estadoAnalise:
+          estadoAnalise === "concluida" || estadoAnalise === "erro"
+            ? estadoAnalise
+            : "analisando",
+        progressoAnalise,
+        erroAnalise: erroAnalise || undefined,
+        criadoEm,
+      });
+    },
+    [
+      criadoEm,
+      erroAnalise,
+      estadoAnalise,
+      finalizado,
+      finalizarQuandoPronto,
+      iniciado,
+      nome,
+      pausado,
+      progressoAnalise,
+      questaoAtual,
+      rascunho,
+      respostas,
+      segundos,
+    ]
+  );
+
+  useEffect(() => {
+    persistirEstadoAtual();
+  }, [
+    estadoAnalise,
+    finalizado,
+    finalizarQuandoPronto,
+    pausado,
+    progressoAnalise,
+    questaoAtual,
+    respostas,
+    persistirEstadoAtual,
+  ]);
+
+  useEffect(() => {
+    if (segundos === 0 || segundos % 5 !== 0) return;
+    persistirEstadoAtual(segundos);
+  }, [persistirEstadoAtual, segundos]);
+
+  useEffect(() => {
+    const antesDeSair = () => persistirEstadoAtual();
+    window.addEventListener("beforeunload", antesDeSair);
+    return () => window.removeEventListener("beforeunload", antesDeSair);
+  }, [persistirEstadoAtual]);
 
   const respostasPreenchidas = Object.values(respostas).filter(Boolean).length;
 
@@ -149,10 +314,12 @@ export default function SimuladoPdf() {
 
   function iniciarDoFormulario() {
     const total = Number(totalTexto);
+
     if (!caderno) {
       window.alert("Selecione o PDF do caderno de questões.");
       return;
     }
+
     if (!Number.isInteger(total) || total < 1 || total > 200) {
       window.alert("Informe uma quantidade entre 1 e 200 questões.");
       return;
@@ -167,9 +334,97 @@ export default function SimuladoPdf() {
     });
   }
 
+  async function continuarProcessoAnterior() {
+    const processo = processoRecuperavel;
+    if (!processo) return;
+
+    setRestaurando(true);
+
+    try {
+      const arquivos = await carregarArquivosSimuladoPdf(processo.id);
+
+      if (!arquivos?.caderno) {
+        await excluirProcessoSimuladoPdf(processo.id);
+        setProcessoRecuperavel(null);
+        window.alert(
+          "O processo foi encontrado, mas o PDF não estava mais salvo neste aparelho. Inicie o simulado novamente."
+        );
+        return;
+      }
+
+      const proximo: RascunhoSimuladoPdf = {
+        id: processo.id,
+        nome: processo.nome,
+        totalQuestoes: processo.totalQuestoes,
+        caderno: arquivos.caderno,
+        comentado: arquivos.comentado,
+        semana: processo.semana,
+        dia: processo.dia,
+      };
+
+      const analiseSalva = await carregarAnalisePersistida(processo.id);
+      const atualizadoEm = Date.parse(processo.atualizadoEm);
+      const tempoFora =
+        !processo.pausado &&
+        !processo.finalizado &&
+        Number.isFinite(atualizadoEm)
+          ? Math.max(0, Math.floor((Date.now() - atualizadoEm) / 1000))
+          : 0;
+
+      setRascunho(proximo);
+      setCaderno(proximo.caderno);
+      setComentado(proximo.comentado ?? null);
+      setNome(processo.nome);
+      setTotalTexto(String(processo.totalQuestoes));
+      setCriadoEm(processo.criadoEm);
+      setRespostas(processo.respostas);
+      setQuestaoAtual(
+        Math.max(1, Math.min(processo.totalQuestoes, processo.questaoAtual))
+      );
+      setSegundos(processo.segundos + tempoFora);
+      setPausado(processo.pausado);
+      setFinalizado(processo.finalizado);
+      setFinalizarQuandoPronto(processo.finalizarQuandoPronto);
+      setProgressoAnalise(processo.progressoAnalise);
+      setErroAnalise(processo.erroAnalise ?? "");
+      setIniciado(true);
+      setProcessoRecuperavel(null);
+
+      if (analiseSalva) {
+        setAnalise(analiseSalva);
+        setEstadoAnalise("concluida");
+        setProgressoAnalise(100);
+      } else if (processo.estadoAnalise === "erro") {
+        setEstadoAnalise("erro");
+      } else {
+        setEstadoAnalise("analisando");
+        void executarAnalise(proximo, processo.progressoAnalise);
+      }
+    } finally {
+      setRestaurando(false);
+    }
+  }
+
+  async function excluirProcessoAnterior() {
+    const processo = processoRecuperavel;
+    if (!processo) return;
+
+    setRestaurando(true);
+    try {
+      await excluirProcessoSimuladoPdf(processo.id);
+      setProcessoRecuperavel(null);
+    } finally {
+      setRestaurando(false);
+    }
+  }
+
   function responder(numero: number, letra: string) {
     if (finalizado || pausado) return;
-    setRespostas((atuais) => ({ ...atuais, [String(numero)]: letra }));
+
+    setRespostas((atuais) => ({
+      ...atuais,
+      [String(numero)]: letra,
+    }));
     setQuestaoAtual(Math.min(totalQuestoes, numero + 1));
   }
 
@@ -193,18 +448,84 @@ export default function SimuladoPdf() {
 
   function cancelar() {
     const confirmar = window.confirm(
-      "Cancelar este simulado? As respostas e anotações desta prévia serão descartadas."
+      "Cancelar este simulado? As respostas e o processo salvo neste aparelho serão descartados."
     );
     if (!confirmar) return;
 
+    execucaoAnaliseRef.current += 1;
     limparRascunhoSimuladoPdf();
+    void excluirProcessoSimuladoPdf(rascunho?.id);
+
     setRascunho(null);
     setIniciado(false);
     setFinalizado(false);
     setAnalise(null);
     setEstadoAnalise("parado");
+    setProgressoAnalise(0);
     setRespostas({});
     setSegundos(0);
+  }
+
+  if (checandoRecuperacao) {
+    return (
+      <main className="simulado-pdf-workspace setup">
+        <div className="simulado-pdf-recuperando">Verificando simulado em andamento…</div>
+      </main>
+    );
+  }
+
+  if (processoRecuperavel) {
+    return (
+      <main className="simulado-pdf-workspace setup">
+        <section className="simulado-pdf-retomar">
+          <span>SIMULADO EM ANDAMENTO</span>
+          <h1>Encontramos um processo salvo</h1>
+          <p>
+            Este simulado não foi encerrado. Você pode continuar de onde parou
+            ou excluir o processo e começar outro.
+          </p>
+
+          <div className="simulado-pdf-retomar-resumo">
+            <div>
+              <small>Simulado</small>
+              <strong>{processoRecuperavel.nome}</strong>
+            </div>
+            <div>
+              <small>Respostas</small>
+              <strong>
+                {Object.values(processoRecuperavel.respostas).filter(Boolean).length}/
+                {processoRecuperavel.totalQuestoes}
+              </strong>
+            </div>
+            <div>
+              <small>Análise</small>
+              <strong>{processoRecuperavel.progressoAnalise}%</strong>
+            </div>
+          </div>
+
+          <div className="simulado-pdf-retomar-acoes">
+            <button
+              type="button"
+              className="continuar"
+              disabled={restaurando}
+              onClick={() => void continuarProcessoAnterior()}
+            >
+              <Play size={18} />
+              {restaurando ? "Recuperando…" : "Continuar processo"}
+            </button>
+            <button
+              type="button"
+              className="excluir"
+              disabled={restaurando}
+              onClick={() => void excluirProcessoAnterior()}
+            >
+              <X size={18} />
+              Excluir processo
+            </button>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   if (!iniciado || !caderno) {
@@ -294,7 +615,7 @@ export default function SimuladoPdf() {
           tentativaId={rascunho?.id ?? "preview-pdf"}
           simuladoId={rascunho?.id}
           nome={nome}
-          data={new Date().toISOString()}
+          data={criadoEm}
           questoes={questoesResultado}
           respostas={respostasResultado}
           marcacoes={{} as Record<string, MarcacaoQuestaoSimulado>}
@@ -322,14 +643,21 @@ export default function SimuladoPdf() {
         <div className={"analise-status " + estadoAnalise}>
           <span />
           <div>
-            <strong>{rotuloAnalise(estadoAnalise)}</strong>
+            <strong>
+              {estadoAnalise === "analisando"
+                ? "Processando questões · " + progressoAnalise + "%"
+                : rotuloAnalise(estadoAnalise)}
+            </strong>
+            <div className="analise-progresso" aria-hidden="true">
+              <i style={{ width: String(progressoAnalise) + "%" }} />
+            </div>
             <small>
               {estadoAnalise === "concluida"
                 ? String(analise?.questoes.length ?? totalQuestoes) +
-                  " questões processadas"
+                  " questões processadas · análise mantida neste aparelho"
                 : estadoAnalise === "erro"
                   ? erroAnalise
-                  : "Você pode continuar respondendo normalmente."}
+                  : "Você pode responder normalmente enquanto a análise continua."}
             </small>
           </div>
         </div>
@@ -482,8 +810,7 @@ export default function SimuladoPdf() {
 function rotuloAnalise(
   estado: "parado" | "analisando" | "concluida" | "erro"
 ) {
-  if (estado === "analisando") return "IA analisando o PDF em segundo plano";
-  if (estado === "concluida") return "Análise pronta";
+  if (estado === "concluida") return "Análise pronta · 100%";
   if (estado === "erro") return "Análise precisa ser refeita";
   return "Preparando análise";
 }
