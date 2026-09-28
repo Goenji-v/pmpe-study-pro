@@ -474,6 +474,10 @@ export default function SimuladoPdf() {
           : [rascunho.missaoId as string, ...anteriores]
       );
     }
+
+    window.dispatchEvent(
+      new Event("pmpe-simulado-pdf-finalizado")
+    );
   }, [
     analise,
     comentado,
