@@ -188,83 +188,36 @@ async function processar(
       }
     }
 
-    const intervalos = criarIntervalos(payload.totalInformado);
-    const resultadoAnterior = obterResultadoParcial(
-      job.resultado,
-      payload.totalInformado
-    );
-    const porNumero = new Map<number, QuestaoSimuladoPdfProcessada>(
-      (resultadoAnterior?.questoes ?? []).map(
-        (questao) => [questao.numero, questao] as const
-      )
-    );
-
-    for (const alerta of resultadoAnterior?.alertas ?? []) {
-      alertas.push(alerta);
-    }
-
-    const intervaloCompleto = (intervalo: { inicio: number; fim: number }) =>
-      Array.from(
-        { length: intervalo.fim - intervalo.inicio + 1 },
-        (_, indice) => intervalo.inicio + indice
-      ).every((numero) => porNumero.has(numero));
-
-    const intervalosPendentes = intervalos.filter(
-      (intervalo) => !intervaloCompleto(intervalo)
-    );
-    let concluidos = intervalos.length - intervalosPendentes.length;
-
-    if (concluidos > 0) {
-      await atualizar(
-        "gerando",
-        15 + Math.round((concluidos / intervalos.length) * 75),
-        `Retomando do bloco ${concluidos + 1}/${intervalos.length}; ${concluidos} bloco(s) já estavam salvos.`,
-        {
-          totalQuestoes: payload.totalInformado,
-          questoes: Array.from(porNumero.values()).sort(
-            (a, b) => a.numero - b.numero
-          ),
-          alertas: Array.from(new Set(alertas)).slice(0, 30),
-        }
-      );
-    }
-
-    // Processamento sequencial: evita duas requisições pesadas concorrentes
-    // para o mesmo PDF e permite persistir cada bloco antes do próximo.
-    for (const intervalo of intervalosPendentes) {
-      const inicio = intervalo.inicio;
-      const fim = intervalo.fim;
-
-      const questoesDoBloco = await analisarBloco(
-        dependencias.ai,
-        modelos,
-        payload,
-        intervalo,
-        gabaritoComentado
-      );
-
-      for (const questao of questoesDoBloco) {
-        porNumero.set(questao.numero, questao);
-      }
-
-      concluidos += 1;
-
-      const parcial: ResultadoSimuladoPdfProcessado = {
-        totalQuestoes: payload.totalInformado,
-        questoes: Array.from(porNumero.values()).sort(
-          (a, b) => a.numero - b.numero
+    const execucaoBlocos = await executarBlocosSimuladoPdfPersistentes({
+      totalQuestoes: payload.totalInformado,
+      resultadoAnterior: job.resultado,
+      alertasIniciais: alertas,
+      analisar: (intervalo) =>
+        analisarBloco(
+          dependencias.ai,
+          modelos,
+          payload,
+          intervalo,
+          gabaritoComentado
         ),
-        alertas: Array.from(new Set(alertas)).slice(0, 30),
-      };
-      const progresso = 15 + Math.round((concluidos / intervalos.length) * 75);
-
-      await atualizar(
-        concluidos === intervalos.length ? "revisando" : "gerando",
+      salvar: async ({
+        concluidos,
+        totalBlocos,
         progresso,
-        `Questões ${inicio}–${fim} processadas · ${concluidos}/${intervalos.length} blocos · progresso salvo.`,
-        parcial
-      );
-    }
+        descricao,
+        resultado,
+      }) => {
+        await atualizar(
+          concluidos === totalBlocos ? "revisando" : "gerando",
+          progresso,
+          descricao,
+          resultado
+        );
+      },
+    });
+
+    const porNumero = execucaoBlocos.porNumero;
+    alertas.splice(0, alertas.length, ...execucaoBlocos.alertas);
 
     const faltantes = Array.from(
       { length: payload.totalInformado },
@@ -703,6 +656,96 @@ async function gerarJsonComPdfs(
   }
 
   return parsearJsonDaIA(resposta.text, rotulo);
+}
+
+export async function executarBlocosSimuladoPdfPersistentes(args: {
+  totalQuestoes: number;
+  resultadoAnterior?: unknown;
+  alertasIniciais?: string[];
+  analisar: (intervalo: {
+    inicio: number;
+    fim: number;
+  }) => Promise<QuestaoSimuladoPdfProcessada[]>;
+  salvar: (estado: {
+    concluidos: number;
+    totalBlocos: number;
+    progresso: number;
+    descricao: string;
+    resultado: ResultadoSimuladoPdfProcessado;
+  }) => Promise<void>;
+}) {
+  const intervalos = criarIntervalos(args.totalQuestoes);
+  const resultadoAnterior = obterResultadoParcial(
+    args.resultadoAnterior,
+    args.totalQuestoes
+  );
+  const porNumero = new Map<number, QuestaoSimuladoPdfProcessada>(
+    (resultadoAnterior?.questoes ?? []).map(
+      (questao) => [questao.numero, questao] as const
+    )
+  );
+  const alertas = [
+    ...(args.alertasIniciais ?? []),
+    ...(resultadoAnterior?.alertas ?? []),
+  ];
+
+  const intervaloCompleto = (intervalo: { inicio: number; fim: number }) =>
+    Array.from(
+      { length: intervalo.fim - intervalo.inicio + 1 },
+      (_, indice) => intervalo.inicio + indice
+    ).every((numero) => porNumero.has(numero));
+
+  const intervalosPendentes = intervalos.filter(
+    (intervalo) => !intervaloCompleto(intervalo)
+  );
+  let concluidos = intervalos.length - intervalosPendentes.length;
+
+  const resultadoAtual = (): ResultadoSimuladoPdfProcessado => ({
+    totalQuestoes: args.totalQuestoes,
+    questoes: Array.from(porNumero.values()).sort(
+      (a, b) => a.numero - b.numero
+    ),
+    alertas: Array.from(new Set(alertas)).slice(0, 30),
+  });
+
+  if (concluidos > 0) {
+    await args.salvar({
+      concluidos,
+      totalBlocos: intervalos.length,
+      progresso: 15 + Math.round((concluidos / intervalos.length) * 75),
+      descricao:
+        `Retomando do bloco ${concluidos + 1}/${intervalos.length}; ${concluidos} bloco(s) já estavam salvos.`,
+      resultado: resultadoAtual(),
+    });
+  }
+
+  for (const intervalo of intervalosPendentes) {
+    const questoesDoBloco = await args.analisar(intervalo);
+
+    for (const questao of questoesDoBloco) {
+      porNumero.set(questao.numero, questao);
+    }
+
+    concluidos += 1;
+    const progresso =
+      15 + Math.round((concluidos / intervalos.length) * 75);
+
+    await args.salvar({
+      concluidos,
+      totalBlocos: intervalos.length,
+      progresso,
+      descricao:
+        `Questões ${intervalo.inicio}–${intervalo.fim} processadas · ${concluidos}/${intervalos.length} blocos · progresso salvo.`,
+      resultado: resultadoAtual(),
+    });
+  }
+
+  return {
+    porNumero,
+    alertas: Array.from(new Set(alertas)).slice(0, 30),
+    concluidos,
+    totalBlocos: intervalos.length,
+  };
 }
 
 function obterResultadoParcial(
