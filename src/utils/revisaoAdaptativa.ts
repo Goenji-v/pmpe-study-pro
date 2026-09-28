@@ -78,15 +78,27 @@ export function orientarRevisaoPorResultado(
 
   const percentual = Math.round((certas / total) * 100);
 
-  if (percentual < 60) {
+  if (percentual < 50) {
     return {
       percentual,
       total,
       modo: "teoria_questoes",
-      quantidadeQuestoes: 10,
-      titulo: "Reforçar o conteúdo",
+      quantidadeQuestoes: 12,
+      titulo: "Teoria + questões",
       descricao:
-        "Revise a aula, resumo ou material deste assunto antes de resolver 10 novas questões.",
+        "Revise a teoria deste assunto e depois resolva de 10 a 15 novas questões do mesmo conteúdo.",
+    };
+  }
+
+  if (percentual < 70) {
+    return {
+      percentual,
+      total,
+      modo: "questoes",
+      quantidadeQuestoes: 8,
+      titulo: "Revisão curta + questões",
+      descricao:
+        "Faça uma revisão curta dos pontos errados e depois resolva de 5 a 10 novas questões.",
     };
   }
 
@@ -95,10 +107,10 @@ export function orientarRevisaoPorResultado(
       percentual,
       total,
       modo: "questoes",
-      quantidadeQuestoes: 10,
-      titulo: "Fixar por questões",
+      quantidadeQuestoes: 5,
+      titulo: "Questões + revisão espaçada",
       descricao:
-        "Seu desempenho já permite seguir por questões. Resolva 10 novas para confirmar a evolução.",
+        "Confirme o domínio com novas questões e mantenha o assunto no ciclo de revisão espaçada.",
     };
   }
 
@@ -106,10 +118,10 @@ export function orientarRevisaoPorResultado(
     percentual,
     total,
     modo: "ciclo_normal",
-    quantidadeQuestoes: 10,
-    titulo: "Manter o ciclo normal",
+    quantidadeQuestoes: 5,
+    titulo: "Assunto consolidado — manter revisão",
     descricao:
-      "Bom domínio do assunto. Continue a revisão no ciclo normal, priorizando questões.",
+      "Bom domínio do assunto. Continue avançando no edital e mantenha a revisão espaçada por questões.",
   };
 }
 
