@@ -40,6 +40,8 @@ export default function Configuracoes() {
         : ["seg", "ter", "qua", "qui", "sex", "sab"],
     materiasPorDia: ritmoInicial,
     missoesPorDia: ritmoInicial,
+    diaRedacaoSemanal: configInicial.diaRedacaoSemanal ?? "dom",
+    diaSimuladoSemanal: configInicial.diaSimuladoSemanal ?? "dom",
   });
 
   function atualizarCampo<K extends keyof ConfiguracoesFormulario>(
@@ -125,6 +127,8 @@ export default function Configuracoes() {
       missoesPorDia: 1,
       materiasPorDia: 1,
       diasEstudo: ["seg", "ter", "qua", "qui", "sex", "sab"],
+      diaRedacaoSemanal: "dom",
+      diaSimuladoSemanal: "dom",
       tema: "escuro",
       temaBasico: "azul",
       editalOnboardingVisto: formulario.editalOnboardingVisto,
@@ -232,6 +236,47 @@ export default function Configuracoes() {
           </div>
         </div>
 
+        <div className="configuracoes-card configuracoes-agenda-semanal">
+          <h2>Redação e simulado semanal</h2>
+          <p className="configuracoes-ajuda">
+            O padrão do Study Pro é Redação + Simulado no domingo. Se preferir, você pode mudar cada atividade para outro dia.
+          </p>
+
+          <div className="configuracoes-form-group">
+            <label htmlFor="diaRedacaoSemanal">Dia da redação</label>
+            <select
+              id="diaRedacaoSemanal"
+              value={formulario.diaRedacaoSemanal ?? "dom"}
+              onChange={(evento) =>
+                atualizarCampo("diaRedacaoSemanal", evento.target.value as DiaSemanaId)
+              }
+            >
+              {DIAS_SEMANA.map((dia) => (
+                <option key={dia.id} value={dia.id}>{dia.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="configuracoes-form-group">
+            <label htmlFor="diaSimuladoSemanal">Dia do simulado</label>
+            <select
+              id="diaSimuladoSemanal"
+              value={formulario.diaSimuladoSemanal ?? "dom"}
+              onChange={(evento) =>
+                atualizarCampo("diaSimuladoSemanal", evento.target.value as DiaSemanaId)
+              }
+            >
+              {DIAS_SEMANA.map((dia) => (
+                <option key={dia.id} value={dia.id}>{dia.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <small className="configuracoes-agenda-aviso">
+            Mudar o dia não altera o restante do cronograma: apenas reposiciona essas duas atividades semanais.
+          </small>
+        </div>
+
         <div className="configuracoes-card">
           <h2>Metas diárias</h2>
 
@@ -323,6 +368,14 @@ export default function Configuracoes() {
           </div>
           <div className="configuracoes-resumo-item">
             <span>Matérias por dia</span><strong>{formulario.materiasPorDia ?? 1}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Redação semanal</span>
+            <strong>{DIAS_SEMANA.find((dia) => dia.id === (formulario.diaRedacaoSemanal ?? "dom"))?.nome ?? "Domingo"}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Simulado semanal</span>
+            <strong>{DIAS_SEMANA.find((dia) => dia.id === (formulario.diaSimuladoSemanal ?? "dom"))?.nome ?? "Domingo"}</strong>
           </div>
           <div className="configuracoes-resumo-item">
             <span>Tema básico</span><strong>{nomeTemaBasico(temaBasico)}</strong>
