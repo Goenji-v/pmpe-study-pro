@@ -264,9 +264,9 @@ function validarPdf(
   }
 }
 
-function objeto(valor: unknown): Record<string, any> {
+function objeto(valor: unknown): Record<string, unknown> {
   return valor && typeof valor === "object" && !Array.isArray(valor)
-    ? (valor as Record<string, any>)
+    ? (valor as Record<string, unknown>)
     : {};
 }
 
