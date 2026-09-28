@@ -407,7 +407,8 @@ async function autenticarEControlarUso(
       req.method === "GET" &&
       (
         req.path.startsWith("/geracoes") ||
-        req.path.startsWith("/gerar/status/")
+        req.path.startsWith("/gerar/status/") ||
+        req.path.startsWith("/simulados-pdf/jobs")
       );
 
     if (consultaLeve) {
