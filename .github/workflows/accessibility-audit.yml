@@ -46,7 +46,7 @@ jobs:
 
       - name: Preservar diagnóstico em falha
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: accessibility-audit-${{ github.run_number }}
           path: |
