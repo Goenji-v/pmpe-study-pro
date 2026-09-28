@@ -474,6 +474,10 @@ export default function SimuladoPdf() {
           : [rascunho.missaoId as string, ...anteriores]
       );
     }
+
+    window.dispatchEvent(
+      new Event("pmpe-simulado-pdf-finalizado")
+    );
   }, [
     analise,
     comentado,
@@ -674,9 +678,13 @@ export default function SimuladoPdf() {
         setProgressoAnalise(100);
         setDescricaoAnalise("Análise pronta.");
       } else {
+        // Ao recuperar uma página atualizada/fechada, sempre permita ao
+        // backend retomar um job que possa ter caído enquanto a aba estava
+        // fora. Se ele ainda estiver processando ou já tiver concluído,
+        // a mesma chamada apenas devolve o estado atual.
         await iniciarOuRetomarJob(
           proximo,
-          processo.estadoAnalise === "erro"
+          true
         );
       }
     } catch (erro) {
@@ -825,11 +833,11 @@ export default function SimuladoPdf() {
       <main className="simulado-pdf-workspace setup">
         <section className="simulado-pdf-retomar">
           <span>SIMULADO EM ANDAMENTO</span>
-          <h1>Encontramos um processo salvo</h1>
+          <h1>Continuar de onde você parou?</h1>
           <p>
-            Este simulado não foi encerrado.
-            Você pode continuar de onde parou ou
-            excluir o processo e começar outro.
+            Encontramos este simulado salvo depois de uma atualização,
+            fechamento da página ou saída do fluxo. Suas respostas e o
+            progresso da análise foram preservados.
           </p>
 
           <div className="simulado-pdf-retomar-resumo">
@@ -878,7 +886,7 @@ export default function SimuladoPdf() {
                 ? "Recuperando…"
                 : processoRecuperavel.finalizado
                   ? "Ver resultado"
-                  : "Continuar processo"}
+                  : "Continuar de onde parou"}
             </button>
 
             <button

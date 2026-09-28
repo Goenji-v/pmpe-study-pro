@@ -262,7 +262,7 @@
   display: grid;
   grid-template-columns:
     repeat(
-      3,
+      4,
       minmax(0, 1fr)
     );
   gap: 14px;
@@ -348,5 +348,185 @@
 
   .simulados-central-acao {
     min-height: auto;
+  }
+}
+
+.simulados-pdf-historico-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.simulados-pdf-historico-topo h2 {
+  margin-bottom: 6px;
+}
+
+.simulados-pdf-historico-topo p {
+  margin: 0;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.simulados-pdf-historico-topo > button,
+.simulado-pdf-ver-diagnostico {
+  min-height: 40px;
+  padding: 0 14px;
+  color: #eff8ff;
+  background: #1d6fc7;
+  border: 1px solid #4b9bea;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.simulados-pdf-lista {
+  display: grid;
+  gap: 12px;
+}
+
+.simulado-pdf-historico-item {
+  padding: 16px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 14px;
+}
+
+.simulado-pdf-historico-item-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.simulado-pdf-historico-item-topo > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.simulado-pdf-historico-item-topo > div > strong {
+  overflow: hidden;
+  color: #f8fafc;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simulado-pdf-historico-item-topo span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.simulado-pdf-historico-metricas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 13px 0;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.simulado-pdf-ver-diagnostico {
+  background: #163a5c;
+  border-color: #315d83;
+}
+
+.simulado-pdf-diagnostico-salvo {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #334155;
+}
+
+.simulado-pdf-diagnostico-recomendacao {
+  padding: 14px;
+  background: #111c2d;
+  border: 1px solid #2a425e;
+  border-radius: 11px;
+}
+
+.simulado-pdf-diagnostico-recomendacao strong {
+  color: #8fc7ff;
+}
+
+.simulado-pdf-diagnostico-recomendacao p {
+  margin: 7px 0 0;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+.simulado-pdf-diagnostico-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.simulado-pdf-diagnostico-grid > div {
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+  background: #111827;
+  border: 1px solid #2d3f56;
+  border-radius: 11px;
+}
+
+.simulado-pdf-diagnostico-grid > div > strong {
+  margin-bottom: 2px;
+  color: #e2e8f0;
+}
+
+.simulado-pdf-diagnostico-grid span {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  color: #aebfd0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.simulado-pdf-diagnostico-grid b {
+  flex: 0 0 auto;
+  color: #f8fafc;
+}
+
+.simulado-pdf-diagnostico-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.simulado-pdf-diagnostico-rodape strong {
+  color: #e2e8f0;
+}
+
+@media (max-width: 1200px) and (min-width: 951px) {
+  .simulados-central-acoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .simulados-pdf-historico-topo,
+  .simulado-pdf-historico-item-topo {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .simulados-pdf-historico-topo > button,
+  .simulado-pdf-ver-diagnostico {
+    width: 100%;
+  }
+
+  .simulado-pdf-diagnostico-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .simulado-pdf-diagnostico-grid span {
+    gap: 8px;
   }
 }

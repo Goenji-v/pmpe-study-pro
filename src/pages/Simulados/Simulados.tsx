@@ -19,6 +19,10 @@ import {
   calcularAproveitamentoSimulado,
   resumirSimulado,
 } from "../../utils/metricasConsolidadas";
+import {
+  listarAnalisesSimulados,
+  type AnaliseSimuladoSalva,
+} from "../../services/analisesSimuladosService";
 
 const CHAVE_RASCUNHO =
   "pmpe_rascunho_simulado";
@@ -69,6 +73,64 @@ export default function Simulados() {
   ] = useState(
     rascunhoInicial.observacao
   );
+
+  const [analisesPdf, setAnalisesPdf] =
+    useState<AnaliseSimuladoSalva[]>([]);
+  const [
+    carregandoAnalisesPdf,
+    setCarregandoAnalisesPdf,
+  ] = useState(true);
+  const [
+    diagnosticoPdfAberto,
+    setDiagnosticoPdfAberto,
+  ] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+
+    const carregarAnalisesPdf = async () => {
+      try {
+        const itens = await listarAnalisesSimulados(100);
+        if (!ativo) return;
+
+        setAnalisesPdf(
+          itens
+            .filter((item) => item.origem === "pdf")
+            .sort(
+              (a, b) =>
+                Date.parse(b.atualizadoEm) -
+                Date.parse(a.atualizadoEm)
+            )
+        );
+      } catch {
+        if (ativo) setAnalisesPdf([]);
+      } finally {
+        if (ativo) setCarregandoAnalisesPdf(false);
+      }
+    };
+
+    void carregarAnalisesPdf();
+
+    const atualizarAoVoltar = () => {
+      setCarregandoAnalisesPdf(true);
+      void carregarAnalisesPdf();
+    };
+
+    window.addEventListener("focus", atualizarAoVoltar);
+    window.addEventListener(
+      "pmpe-simulado-pdf-finalizado",
+      atualizarAoVoltar
+    );
+
+    return () => {
+      ativo = false;
+      window.removeEventListener("focus", atualizarAoVoltar);
+      window.removeEventListener(
+        "pmpe-simulado-pdf-finalizado",
+        atualizarAoVoltar
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const rascunho: RascunhoSimulado = {
@@ -387,6 +449,31 @@ export default function Simulados() {
             </small>
           </div>
         </button>
+
+        <button
+          type="button"
+          className="simulados-central-acao"
+          onClick={() =>
+            navigate(
+              "/simulado-pdf"
+            )
+          }
+        >
+          <span className="simulados-central-icone">
+            📄
+          </span>
+
+          <div>
+            <strong>
+              Resolver simulado em PDF
+            </strong>
+
+            <small>
+              Abra uma prova em PDF, marque as respostas e deixe o
+              Study Pro salvar e analisar o progresso em blocos.
+            </small>
+          </div>
+        </button>
       </div>
 
       <div className="simulados-resumo">
@@ -661,6 +748,161 @@ export default function Simulados() {
             </p>
           )}
         </div>
+      </div>
+
+      <div className="simulados-card simulados-pdf-historico">
+        <div className="simulados-pdf-historico-topo">
+          <div>
+            <h2>Resultados dos simulados PDF</h2>
+            <p>
+              Diagnósticos protegidos neste aparelho e sincronizados
+              com a sua conta quando a conexão está disponível.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/simulado-pdf")}
+          >
+            Novo simulado PDF
+          </button>
+        </div>
+
+        {carregandoAnalisesPdf ? (
+          <p className="simulado-vazio-texto">
+            Carregando resultados PDF…
+          </p>
+        ) : analisesPdf.length === 0 ? (
+          <p className="simulado-vazio-texto">
+            Nenhum diagnóstico de simulado PDF salvo ainda.
+          </p>
+        ) : (
+          <div className="simulados-pdf-lista">
+            {analisesPdf.map((registro) => {
+              const resumo = registro.analise.resumo;
+              const aberto =
+                diagnosticoPdfAberto === registro.tentativaId;
+
+              return (
+                <article
+                  key={registro.id}
+                  className="simulado-pdf-historico-item"
+                >
+                  <div className="simulado-pdf-historico-item-topo">
+                    <div>
+                      <strong>{registro.nome}</strong>
+                      <span>
+                        {formatarData(registro.atualizadoEm)}
+                      </span>
+                    </div>
+
+                    <strong
+                      className={classeDesempenho(
+                        resumo.aproveitamentoGeral
+                      )}
+                    >
+                      {resumo.aproveitamentoGeral}%
+                    </strong>
+                  </div>
+
+                  <div className="simulado-pdf-historico-metricas">
+                    <span>
+                      Questões: {resumo.totalQuestoes}
+                    </span>
+                    <span className="simulado-bom">
+                      Acertos: {resumo.totalAcertos}
+                    </span>
+                    <span className="simulado-critico">
+                      Erros: {resumo.totalErros}
+                    </span>
+                    <span>
+                      Em branco: {resumo.totalNaoRespondidas}
+                    </span>
+                    <span>
+                      Revisões: {registro.analise.planoRevisao.length}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="simulado-pdf-ver-diagnostico"
+                    onClick={() =>
+                      setDiagnosticoPdfAberto(
+                        aberto ? null : registro.tentativaId
+                      )
+                    }
+                  >
+                    {aberto
+                      ? "Fechar diagnóstico"
+                      : "Ver diagnóstico"}
+                  </button>
+
+                  {aberto && (
+                    <div className="simulado-pdf-diagnostico-salvo">
+                      <div className="simulado-pdf-diagnostico-recomendacao">
+                        <strong>Recomendação</strong>
+                        <p>{registro.analise.recomendacaoFinal}</p>
+                      </div>
+
+                      <div className="simulado-pdf-diagnostico-grid">
+                        <div>
+                          <strong>Desempenho por matéria</strong>
+                          {registro.analise.materias
+                            .slice(0, 8)
+                            .map((materia) => (
+                              <span key={materia.materia}>
+                                {materia.materia}
+                                <b>{materia.aproveitamento}%</b>
+                              </span>
+                            ))}
+                        </div>
+
+                        <div>
+                          <strong>Prioridades de revisão</strong>
+                          {registro.analise.planoRevisao.length === 0 ? (
+                            <span>
+                              Nenhuma prioridade crítica registrada.
+                            </span>
+                          ) : (
+                            registro.analise.planoRevisao
+                              .slice(0, 8)
+                              .map((item) => (
+                                <span key={item.chave}>
+                                  {item.materia} · {item.assuntoEspecifico}
+                                  <b>
+                                    {item.prioridade === "alta"
+                                      ? "Alta"
+                                      : item.prioridade === "media"
+                                        ? "Média"
+                                        : "Baixa"}
+                                  </b>
+                                </span>
+                              ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="simulado-pdf-diagnostico-rodape">
+                        <span>
+                          Caderno de erros:{" "}
+                          <strong>
+                            {registro.analise.cadernoErros.length}
+                          </strong>
+                        </span>
+                        <span>
+                          Dificuldade geral:{" "}
+                          <strong>
+                            {registro.analise.dificuldade.geral}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="simulados-card">
