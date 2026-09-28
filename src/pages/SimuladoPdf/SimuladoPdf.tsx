@@ -3,6 +3,7 @@ import {
   ChevronRight,
   Pause,
   Play,
+  RefreshCcw,
   Square,
   X,
 } from "lucide-react";
@@ -10,19 +11,23 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
 
 import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
+import { useApp } from "../../context/AppContext";
+import type { Simulado } from "../../types";
 import type {
   MarcacaoQuestaoSimulado,
   QuestaoAnaliseSimulado,
 } from "../../utils/analiseSimuladoStudyPro";
 import {
-  analisarSimuladoPdf,
+  consultarAnaliseSimuladoPdf,
+  excluirAnaliseSimuladoPdf,
+  iniciarAnaliseSimuladoPdf,
   type AnaliseSimuladoPdf,
+  type JobAnaliseSimuladoPdf,
 } from "../../services/simuladoPdfAnaliseService";
 import {
   limparRascunhoSimuladoPdf,
@@ -31,107 +36,148 @@ import {
 } from "../../services/simuladoPdfDraft";
 import {
   carregarAnalisePersistida,
+  carregarAnotacoesSimuladoPdf,
   carregarArquivosSimuladoPdf,
   carregarProcessoSimuladoPdf,
   excluirProcessoSimuladoPdf,
   salvarAnalisePersistida,
+  salvarAnotacoesSimuladoPdf,
   salvarArquivosSimuladoPdf,
   salvarProcessoSimuladoPdf,
   type ProcessoSimuladoPdfPersistido,
 } from "../../services/simuladoPdfPersistencia";
-import PdfAnotavel from "./PdfAnotavel";
+import PdfAnotavel, {
+  type AnotacoesPdf,
+} from "./PdfAnotavel";
 import "./SimuladoPdf.css";
 
 const LETRAS = ["A", "B", "C", "D", "E"];
+const INTERVALO_POLLING_MS = 2_500;
 
 export default function SimuladoPdf() {
   const navigate = useNavigate();
   const recebido = obterRascunhoSimuladoPdf();
-  const execucaoAnaliseRef = useRef(0);
+  const { setSimulados, setMissoesConcluidas } = useApp();
 
-  const [rascunho, setRascunho] = useState<RascunhoSimuladoPdf | null>(recebido);
-  const [nome, setNome] = useState(recebido?.nome ?? "Simulado de domingo");
+  const [rascunho, setRascunho] =
+    useState<RascunhoSimuladoPdf | null>(recebido);
+  const [nome, setNome] =
+    useState(recebido?.nome ?? "Simulado de domingo");
   const [totalTexto, setTotalTexto] = useState(
     recebido?.totalQuestoes ? String(recebido.totalQuestoes) : "60"
   );
-  const [caderno, setCaderno] = useState<File | null>(recebido?.caderno ?? null);
-  const [comentado, setComentado] = useState<File | null>(recebido?.comentado ?? null);
+  const [caderno, setCaderno] =
+    useState<File | null>(recebido?.caderno ?? null);
+  const [comentado, setComentado] =
+    useState<File | null>(recebido?.comentado ?? null);
   const [iniciado, setIniciado] = useState(false);
   const [pausado, setPausado] = useState(false);
   const [segundos, setSegundos] = useState(0);
-  const [respostas, setRespostas] = useState<Record<string, string>>({});
+  const [respostas, setRespostas] =
+    useState<Record<string, string>>({});
   const [questaoAtual, setQuestaoAtual] = useState(1);
-  const [analise, setAnalise] = useState<AnaliseSimuladoPdf | null>(null);
+  const [analise, setAnalise] =
+    useState<AnaliseSimuladoPdf | null>(null);
   const [estadoAnalise, setEstadoAnalise] = useState<
     "parado" | "analisando" | "concluida" | "erro"
   >("parado");
   const [progressoAnalise, setProgressoAnalise] = useState(0);
+  const [descricaoAnalise, setDescricaoAnalise] = useState(
+    "Preparando análise."
+  );
   const [erroAnalise, setErroAnalise] = useState("");
-  const [finalizarQuandoPronto, setFinalizarQuandoPronto] = useState(false);
+  const [finalizarQuandoPronto, setFinalizarQuandoPronto] =
+    useState(false);
   const [finalizado, setFinalizado] = useState(false);
-  const [abaMobile, setAbaMobile] = useState<"pdf" | "respostas">("pdf");
-  const [criadoEm, setCriadoEm] = useState(() => new Date().toISOString());
+  const [abaMobile, setAbaMobile] =
+    useState<"pdf" | "respostas">("pdf");
+  const [criadoEm, setCriadoEm] =
+    useState(() => new Date().toISOString());
+  const [anotacoesIniciais, setAnotacoesIniciais] =
+    useState<AnotacoesPdf | undefined>(undefined);
   const [processoRecuperavel, setProcessoRecuperavel] =
     useState<ProcessoSimuladoPdfPersistido | null>(null);
-  const [checandoRecuperacao, setChecandoRecuperacao] = useState(!recebido);
+  const [checandoRecuperacao, setChecandoRecuperacao] =
+    useState(!recebido);
   const [restaurando, setRestaurando] = useState(false);
+  const [reiniciandoAnalise, setReiniciandoAnalise] =
+    useState(false);
 
-  const totalQuestoes = rascunho?.totalQuestoes ?? (Number(totalTexto) || 0);
+  const totalQuestoes =
+    rascunho?.totalQuestoes ?? (Number(totalTexto) || 0);
 
-  const executarAnalise = useCallback(
+  const requestIdAtual = rascunho
+    ? requestIdDoProcesso(rascunho.id)
+    : "";
+
+  const aplicarJob = useCallback(
     async (
-      proximo: RascunhoSimuladoPdf,
-      progressoInicial = 4
+      job: JobAnaliseSimuladoPdf,
+      processoId?: string
     ) => {
-      const execucao = ++execucaoAnaliseRef.current;
-      setEstadoAnalise("analisando");
-      setErroAnalise("");
-      setProgressoAnalise((atual) =>
-        Math.max(atual, Math.max(4, Math.min(92, progressoInicial)))
-      );
+      setProgressoAnalise(job.progresso);
+      setDescricaoAnalise(job.descricao || "Processando questões.");
 
-      const intervalo = window.setInterval(() => {
-        setProgressoAnalise((atual) => {
-          if (atual >= 94) return atual;
-          const incremento = atual < 45 ? 3 : atual < 75 ? 2 : 1;
-          return Math.min(94, atual + incremento);
-        });
-      }, 1400);
-
-      try {
-        const resultado = await analisarSimuladoPdf({
-          prova: proximo.caderno,
-          comentado: proximo.comentado,
-          totalInformado: proximo.totalQuestoes,
-        });
-
-        if (execucaoAnaliseRef.current !== execucao) return;
-
-        setAnalise(resultado);
-        setEstadoAnalise("concluida");
-        setProgressoAnalise(100);
-
-        await salvarAnalisePersistida(proximo.id, resultado).catch(() => {
-          // A tela continua utilizável mesmo se o armazenamento local falhar.
-        });
-      } catch (erro) {
-        if (execucaoAnaliseRef.current !== execucao) return;
-
+      if (job.status === "erro") {
         setEstadoAnalise("erro");
         setErroAnalise(
-          erro instanceof Error
-            ? erro.message
-            : "A análise da IA não pôde ser concluída."
+          job.erro || "A análise precisa ser retomada."
         );
-      } finally {
-        window.clearInterval(intervalo);
+        return;
       }
+
+      if (job.status === "concluida" && job.resultado) {
+        setAnalise(job.resultado);
+        setEstadoAnalise("concluida");
+        setProgressoAnalise(100);
+        setDescricaoAnalise("Análise pronta.");
+
+        if (processoId) {
+          await salvarAnalisePersistida(
+            processoId,
+            job.resultado
+          ).catch(() => {
+            // A análise continua disponível na tela.
+          });
+        }
+        return;
+      }
+
+      setEstadoAnalise("analisando");
+      setErroAnalise("");
     },
     []
   );
 
+  const iniciarOuRetomarJob = useCallback(
+    async (
+      proximo: RascunhoSimuladoPdf,
+      retomar = false
+    ) => {
+      setEstadoAnalise("analisando");
+      setErroAnalise("");
+      setDescricaoAnalise(
+        retomar
+          ? "Retomando a análise do simulado."
+          : "Enviando o PDF para análise."
+      );
+
+      const job = await iniciarAnaliseSimuladoPdf({
+        requestId: requestIdDoProcesso(proximo.id),
+        prova: proximo.caderno,
+        comentado: proximo.comentado,
+        totalInformado: proximo.totalQuestoes,
+        titulo: proximo.nome,
+        retomar,
+      });
+
+      await aplicarJob(job, proximo.id);
+    },
+    [aplicarJob]
+  );
+
   const iniciar = useCallback(
-    (proximo: RascunhoSimuladoPdf) => {
+    async (proximo: RascunhoSimuladoPdf) => {
       const agora = new Date().toISOString();
 
       setRascunho(proximo);
@@ -149,10 +195,12 @@ export default function SimuladoPdf() {
       setFinalizarQuandoPronto(false);
       setAnalise(null);
       setErroAnalise("");
-      setProgressoAnalise(4);
+      setDescricaoAnalise("Preparando o PDF.");
+      setProgressoAnalise(0);
       setEstadoAnalise("analisando");
+      setAnotacoesIniciais({});
 
-      void salvarArquivosSimuladoPdf({
+      await salvarArquivosSimuladoPdf({
         processoId: proximo.id,
         caderno: proximo.caderno,
         comentado: proximo.comentado,
@@ -164,6 +212,7 @@ export default function SimuladoPdf() {
         totalQuestoes: proximo.totalQuestoes,
         semana: proximo.semana,
         dia: proximo.dia,
+        missaoId: proximo.missaoId,
         respostas: {},
         questaoAtual: 1,
         segundos: 0,
@@ -171,13 +220,22 @@ export default function SimuladoPdf() {
         finalizado: false,
         finalizarQuandoPronto: false,
         estadoAnalise: "analisando",
-        progressoAnalise: 4,
+        progressoAnalise: 0,
         criadoEm: agora,
       });
 
-      void executarAnalise(proximo, 4);
+      try {
+        await iniciarOuRetomarJob(proximo, false);
+      } catch (erro) {
+        setEstadoAnalise("erro");
+        setErroAnalise(
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível iniciar a análise."
+        );
+      }
     },
-    [executarAnalise]
+    [iniciarOuRetomarJob]
   );
 
   useEffect(() => {
@@ -192,10 +250,71 @@ export default function SimuladoPdf() {
   }, [recebido]);
 
   useEffect(() => {
-    if (rascunho && !iniciado && estadoAnalise === "parado" && !processoRecuperavel) {
-      iniciar(rascunho);
+    if (
+      rascunho &&
+      !iniciado &&
+      estadoAnalise === "parado" &&
+      !processoRecuperavel
+    ) {
+      void iniciar(rascunho);
     }
-  }, [estadoAnalise, iniciado, iniciar, processoRecuperavel, rascunho]);
+  }, [
+    estadoAnalise,
+    iniciado,
+    iniciar,
+    processoRecuperavel,
+    rascunho,
+  ]);
+
+  useEffect(() => {
+    if (
+      !iniciado ||
+      !requestIdAtual ||
+      estadoAnalise !== "analisando"
+    ) {
+      return;
+    }
+
+    let ativo = true;
+
+    const consultar = async () => {
+      try {
+        const job =
+          await consultarAnaliseSimuladoPdf(requestIdAtual);
+
+        if (!ativo) return;
+        await aplicarJob(job, rascunho?.id);
+      } catch (erro) {
+        if (!ativo) return;
+
+        setDescricaoAnalise(
+          "A análise continua salva. Tentando reconectar ao servidor."
+        );
+
+        if (erro instanceof Error && erro.message) {
+          setErroAnalise(erro.message);
+        }
+      }
+    };
+
+    const id = window.setInterval(
+      () => void consultar(),
+      INTERVALO_POLLING_MS
+    );
+
+    void consultar();
+
+    return () => {
+      ativo = false;
+      window.clearInterval(id);
+    };
+  }, [
+    aplicarJob,
+    estadoAnalise,
+    iniciado,
+    rascunho?.id,
+    requestIdAtual,
+  ]);
 
   useEffect(() => {
     if (!iniciado || pausado || finalizado) return;
@@ -208,12 +327,20 @@ export default function SimuladoPdf() {
   }, [finalizado, iniciado, pausado]);
 
   useEffect(() => {
-    if (finalizarQuandoPronto && estadoAnalise === "concluida" && analise) {
+    if (
+      finalizarQuandoPronto &&
+      estadoAnalise === "concluida" &&
+      analise
+    ) {
       setPausado(true);
       setFinalizado(true);
       setFinalizarQuandoPronto(false);
     }
-  }, [analise, estadoAnalise, finalizarQuandoPronto]);
+  }, [
+    analise,
+    estadoAnalise,
+    finalizarQuandoPronto,
+  ]);
 
   const persistirEstadoAtual = useCallback(
     (segundosAtuais = segundos) => {
@@ -225,6 +352,7 @@ export default function SimuladoPdf() {
         totalQuestoes: rascunho.totalQuestoes,
         semana: rascunho.semana,
         dia: rascunho.dia,
+        missaoId: rascunho.missaoId,
         respostas,
         questaoAtual,
         segundos: segundosAtuais,
@@ -232,7 +360,8 @@ export default function SimuladoPdf() {
         finalizado,
         finalizarQuandoPronto,
         estadoAnalise:
-          estadoAnalise === "concluida" || estadoAnalise === "erro"
+          estadoAnalise === "concluida" ||
+          estadoAnalise === "erro"
             ? estadoAnalise
             : "analisando",
         progressoAnalise,
@@ -277,18 +406,85 @@ export default function SimuladoPdf() {
 
   useEffect(() => {
     const antesDeSair = () => persistirEstadoAtual();
+
     window.addEventListener("beforeunload", antesDeSair);
-    return () => window.removeEventListener("beforeunload", antesDeSair);
+    return () =>
+      window.removeEventListener("beforeunload", antesDeSair);
   }, [persistirEstadoAtual]);
 
-  const respostasPreenchidas = Object.values(respostas).filter(Boolean).length;
+  useEffect(() => {
+    if (!finalizado || !analise || !rascunho) return;
 
-  const questoesResultado = useMemo<QuestaoAnaliseSimulado[]>(
+    const questoesValidas = analise.questoes.filter(
+      (item) =>
+        item.status === "valida" &&
+        Boolean(item.gabarito) &&
+        item.confianca >= 50
+    );
+    const certas = questoesValidas.filter(
+      (item) =>
+        respostas[String(item.numero)] === item.gabarito
+    ).length;
+    const erradas = Math.max(
+      0,
+      questoesValidas.length - certas
+    );
+    const anuladas = Math.max(
+      0,
+      analise.totalQuestoes - questoesValidas.length
+    );
+
+    const registro: Simulado = {
+      id: "pdf-" + rascunho.id,
+      nome,
+      banca: comentado ? "PDF comentado" : "Gabarito IA",
+      certas,
+      erradas,
+      anuladas,
+      minutos: Math.max(1, Math.ceil(segundos / 60)),
+      observacao:
+        "Simulado realizado pelo leitor de PDF do Study Pro.",
+      data: criadoEm,
+    };
+
+    setSimulados((anteriores) =>
+      anteriores.some((item) => item.id === registro.id)
+        ? anteriores
+        : [registro, ...anteriores]
+    );
+
+    if (rascunho.missaoId) {
+      setMissoesConcluidas((anteriores) =>
+        anteriores.includes(rascunho.missaoId as string)
+          ? anteriores
+          : [rascunho.missaoId as string, ...anteriores]
+      );
+    }
+  }, [
+    analise,
+    comentado,
+    criadoEm,
+    finalizado,
+    nome,
+    rascunho,
+    respostas,
+    segundos,
+    setMissoesConcluidas,
+    setSimulados,
+  ]);
+
+  const respostasPreenchidas =
+    Object.values(respostas).filter(Boolean).length;
+
+  const questoesResultado = useMemo<
+    QuestaoAnaliseSimulado[]
+  >(
     () =>
       (analise?.questoes ?? []).map((item) => ({
         id: "pdf-" + item.numero,
         numero: item.numero,
         materia: item.materia,
+        modulo: item.modulo,
         assunto: item.assunto,
         subassunto: item.subassunto,
         dificuldade: item.dificuldade,
@@ -296,7 +492,12 @@ export default function SimuladoPdf() {
         alternativas: item.alternativas,
         gabarito: item.gabarito,
         explicacao: item.comentario,
-        anulada: !item.gabarito || item.confianca < 35,
+        norma: item.norma,
+        dispositivo: item.dispositivo,
+        anulada:
+          item.status !== "valida" ||
+          !item.gabarito ||
+          item.confianca < 50,
       })),
     [analise]
   );
@@ -304,30 +505,60 @@ export default function SimuladoPdf() {
   const respostasResultado = useMemo(
     () =>
       Object.fromEntries(
-        Array.from({ length: totalQuestoes }, (_, indice) => {
-          const numero = indice + 1;
-          return ["pdf-" + numero, respostas[String(numero)]];
-        })
+        Array.from(
+          { length: totalQuestoes },
+          (_, indice) => {
+            const numero = indice + 1;
+            return [
+              "pdf-" + numero,
+              respostas[String(numero)],
+            ];
+          }
+        )
       ),
     [respostas, totalQuestoes]
+  );
+
+  const persistirAnotacoes = useCallback(
+    (valor: AnotacoesPdf) => {
+      if (!rascunho?.id) return;
+
+      void salvarAnotacoesSimuladoPdf(
+        rascunho.id,
+        valor
+      ).catch(() => {
+        // Anotações continuam disponíveis na sessão atual.
+      });
+    },
+    [rascunho?.id]
   );
 
   function iniciarDoFormulario() {
     const total = Number(totalTexto);
 
     if (!caderno) {
-      window.alert("Selecione o PDF do caderno de questões.");
+      window.alert(
+        "Selecione o PDF do caderno de questões."
+      );
       return;
     }
 
-    if (!Number.isInteger(total) || total < 1 || total > 200) {
-      window.alert("Informe uma quantidade entre 1 e 200 questões.");
+    if (
+      !Number.isInteger(total) ||
+      total < 1 ||
+      total > 200
+    ) {
+      window.alert(
+        "Informe uma quantidade entre 1 e 200 questões."
+      );
       return;
     }
 
-    iniciar({
+    void iniciar({
       id: crypto.randomUUID(),
-      nome: nome.trim() || "Simulado de domingo",
+      nome:
+        nome.trim() ||
+        "Simulado de domingo",
       totalQuestoes: total,
       caderno,
       comentado,
@@ -341,7 +572,14 @@ export default function SimuladoPdf() {
     setRestaurando(true);
 
     try {
-      const arquivos = await carregarArquivosSimuladoPdf(processo.id);
+      const [arquivos, analiseSalva, anotacoesSalvas] =
+        await Promise.all([
+          carregarArquivosSimuladoPdf(processo.id),
+          carregarAnalisePersistida(processo.id),
+          carregarAnotacoesSimuladoPdf<AnotacoesPdf>(
+            processo.id
+          ),
+        ]);
 
       if (!arquivos?.caderno) {
         await excluirProcessoSimuladoPdf(processo.id);
@@ -360,33 +598,59 @@ export default function SimuladoPdf() {
         comentado: arquivos.comentado,
         semana: processo.semana,
         dia: processo.dia,
+        missaoId: processo.missaoId,
       };
 
-      const analiseSalva = await carregarAnalisePersistida(processo.id);
-      const atualizadoEm = Date.parse(processo.atualizadoEm);
+      const atualizadoEm = Date.parse(
+        processo.atualizadoEm
+      );
       const tempoFora =
         !processo.pausado &&
         !processo.finalizado &&
         Number.isFinite(atualizadoEm)
-          ? Math.max(0, Math.floor((Date.now() - atualizadoEm) / 1000))
+          ? Math.max(
+              0,
+              Math.floor(
+                (Date.now() - atualizadoEm) / 1000
+              )
+            )
           : 0;
 
       setRascunho(proximo);
       setCaderno(proximo.caderno);
       setComentado(proximo.comentado ?? null);
       setNome(processo.nome);
-      setTotalTexto(String(processo.totalQuestoes));
+      setTotalTexto(
+        String(processo.totalQuestoes)
+      );
       setCriadoEm(processo.criadoEm);
       setRespostas(processo.respostas);
       setQuestaoAtual(
-        Math.max(1, Math.min(processo.totalQuestoes, processo.questaoAtual))
+        Math.max(
+          1,
+          Math.min(
+            processo.totalQuestoes,
+            processo.questaoAtual
+          )
+        )
       );
-      setSegundos(processo.segundos + tempoFora);
+      setSegundos(
+        processo.segundos + tempoFora
+      );
       setPausado(processo.pausado);
       setFinalizado(processo.finalizado);
-      setFinalizarQuandoPronto(processo.finalizarQuandoPronto);
-      setProgressoAnalise(processo.progressoAnalise);
-      setErroAnalise(processo.erroAnalise ?? "");
+      setFinalizarQuandoPronto(
+        processo.finalizarQuandoPronto
+      );
+      setProgressoAnalise(
+        processo.progressoAnalise
+      );
+      setErroAnalise(
+        processo.erroAnalise ?? ""
+      );
+      setAnotacoesIniciais(
+        anotacoesSalvas ?? {}
+      );
       setIniciado(true);
       setProcessoRecuperavel(null);
 
@@ -394,12 +658,20 @@ export default function SimuladoPdf() {
         setAnalise(analiseSalva);
         setEstadoAnalise("concluida");
         setProgressoAnalise(100);
-      } else if (processo.estadoAnalise === "erro") {
-        setEstadoAnalise("erro");
+        setDescricaoAnalise("Análise pronta.");
       } else {
-        setEstadoAnalise("analisando");
-        void executarAnalise(proximo, processo.progressoAnalise);
+        await iniciarOuRetomarJob(
+          proximo,
+          processo.estadoAnalise === "erro"
+        );
       }
+    } catch (erro) {
+      setEstadoAnalise("erro");
+      setErroAnalise(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível recuperar o simulado."
+      );
     } finally {
       setRestaurando(false);
     }
@@ -410,26 +682,64 @@ export default function SimuladoPdf() {
     if (!processo) return;
 
     setRestaurando(true);
+
     try {
-      await excluirProcessoSimuladoPdf(processo.id);
+      await Promise.allSettled([
+        excluirProcessoSimuladoPdf(
+          processo.id
+        ),
+        excluirAnaliseSimuladoPdf(
+          requestIdDoProcesso(processo.id)
+        ),
+      ]);
       setProcessoRecuperavel(null);
     } finally {
       setRestaurando(false);
     }
   }
 
-  function responder(numero: number, letra: string) {
+  async function tentarNovamenteAnalise() {
+    if (!rascunho) return;
+
+    setReiniciandoAnalise(true);
+
+    try {
+      await iniciarOuRetomarJob(
+        rascunho,
+        true
+      );
+    } catch (erro) {
+      setEstadoAnalise("erro");
+      setErroAnalise(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível retomar a análise."
+      );
+    } finally {
+      setReiniciandoAnalise(false);
+    }
+  }
+
+  function responder(
+    numero: number,
+    letra: string
+  ) {
     if (finalizado || pausado) return;
 
     setRespostas((atuais) => ({
       ...atuais,
       [String(numero)]: letra,
     }));
-    setQuestaoAtual(Math.min(totalQuestoes, numero + 1));
+    setQuestaoAtual(
+      Math.min(totalQuestoes, numero + 1)
+    );
   }
 
   function finalizar() {
-    if (estadoAnalise === "concluida" && analise) {
+    if (
+      estadoAnalise === "concluida" &&
+      analise
+    ) {
       setPausado(true);
       setFinalizado(true);
       return;
@@ -437,7 +747,7 @@ export default function SimuladoPdf() {
 
     if (estadoAnalise === "erro") {
       window.alert(
-        "A análise da IA falhou. Recarregue a análise antes de finalizar para não corrigir com gabarito incompleto."
+        "A análise ainda precisa ser retomada antes da correção. Suas respostas continuam salvas."
       );
       return;
     }
@@ -448,13 +758,22 @@ export default function SimuladoPdf() {
 
   function cancelar() {
     const confirmar = window.confirm(
-      "Cancelar este simulado? As respostas e o processo salvo neste aparelho serão descartados."
+      "Cancelar este simulado? As respostas, anotações e o processo em andamento serão descartados."
     );
     if (!confirmar) return;
 
-    execucaoAnaliseRef.current += 1;
+    const id = rascunho?.id;
+
     limparRascunhoSimuladoPdf();
-    void excluirProcessoSimuladoPdf(rascunho?.id);
+
+    if (id) {
+      void Promise.allSettled([
+        excluirProcessoSimuladoPdf(id),
+        excluirAnaliseSimuladoPdf(
+          requestIdDoProcesso(id)
+        ),
+      ]);
+    }
 
     setRascunho(null);
     setIniciado(false);
@@ -464,12 +783,32 @@ export default function SimuladoPdf() {
     setProgressoAnalise(0);
     setRespostas({});
     setSegundos(0);
+    setAnotacoesIniciais(undefined);
+  }
+
+  function encerrarEVoltar() {
+    const id = rascunho?.id;
+
+    limparRascunhoSimuladoPdf();
+
+    if (id) {
+      void Promise.allSettled([
+        excluirProcessoSimuladoPdf(id),
+        excluirAnaliseSimuladoPdf(
+          requestIdDoProcesso(id)
+        ),
+      ]);
+    }
+
+    navigate("/plano");
   }
 
   if (checandoRecuperacao) {
     return (
       <main className="simulado-pdf-workspace setup">
-        <div className="simulado-pdf-recuperando">Verificando simulado em andamento…</div>
+        <div className="simulado-pdf-recuperando">
+          Verificando simulado em andamento…
+        </div>
       </main>
     );
   }
@@ -481,25 +820,40 @@ export default function SimuladoPdf() {
           <span>SIMULADO EM ANDAMENTO</span>
           <h1>Encontramos um processo salvo</h1>
           <p>
-            Este simulado não foi encerrado. Você pode continuar de onde parou
-            ou excluir o processo e começar outro.
+            Este simulado não foi encerrado.
+            Você pode continuar de onde parou ou
+            excluir o processo e começar outro.
           </p>
 
           <div className="simulado-pdf-retomar-resumo">
             <div>
               <small>Simulado</small>
-              <strong>{processoRecuperavel.nome}</strong>
+              <strong>
+                {processoRecuperavel.nome}
+              </strong>
             </div>
             <div>
               <small>Respostas</small>
               <strong>
-                {Object.values(processoRecuperavel.respostas).filter(Boolean).length}/
-                {processoRecuperavel.totalQuestoes}
+                {
+                  Object.values(
+                    processoRecuperavel.respostas
+                  ).filter(Boolean).length
+                }
+                /{
+                  processoRecuperavel.totalQuestoes
+                }
               </strong>
             </div>
             <div>
               <small>Análise</small>
-              <strong>{processoRecuperavel.progressoAnalise}%</strong>
+              <strong>
+                {
+                  processoRecuperavel
+                    .progressoAnalise
+                }
+                %
+              </strong>
             </div>
           </div>
 
@@ -508,16 +862,25 @@ export default function SimuladoPdf() {
               type="button"
               className="continuar"
               disabled={restaurando}
-              onClick={() => void continuarProcessoAnterior()}
+              onClick={() =>
+                void continuarProcessoAnterior()
+              }
             >
               <Play size={18} />
-              {restaurando ? "Recuperando…" : "Continuar processo"}
+              {restaurando
+                ? "Recuperando…"
+                : processoRecuperavel.finalizado
+                  ? "Ver resultado"
+                  : "Continuar processo"}
             </button>
+
             <button
               type="button"
               className="excluir"
               disabled={restaurando}
-              onClick={() => void excluirProcessoAnterior()}
+              onClick={() =>
+                void excluirProcessoAnterior()
+              }
             >
               <X size={18} />
               Excluir processo
@@ -532,17 +895,27 @@ export default function SimuladoPdf() {
     return (
       <main className="simulado-pdf-workspace setup">
         <section className="simulado-pdf-setup">
-          <button type="button" className="voltar" onClick={() => navigate(-1)}>
+          <button
+            type="button"
+            className="voltar"
+            onClick={() => navigate(-1)}
+          >
             <ChevronLeft size={18} />
             Voltar
           </button>
 
           <div>
-            <span>PRÉVIA · SIMULADO DE DOMINGO</span>
-            <h1>PDF + folha de respostas</h1>
+            <span>
+              PRÉVIA · SIMULADO DE DOMINGO
+            </span>
+            <h1>
+              PDF + folha de respostas
+            </h1>
             <p>
-              Informe a quantidade para começar imediatamente. A IA analisa o
-              PDF em segundo plano enquanto você resolve a prova.
+              Informe a quantidade para começar
+              imediatamente. A IA analisa o PDF
+              em segundo plano enquanto você resolve
+              a prova.
             </p>
           </div>
 
@@ -550,44 +923,75 @@ export default function SimuladoPdf() {
             <span>Nome do simulado</span>
             <input
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) =>
+                setNome(e.target.value)
+              }
               placeholder="Simulado de domingo"
             />
           </label>
 
           <label>
-            <span>Quantidade de questões</span>
+            <span>
+              Quantidade de questões
+            </span>
             <input
               type="number"
               min={1}
               max={200}
               value={totalTexto}
-              onChange={(e) => setTotalTexto(e.target.value)}
+              onChange={(e) =>
+                setTotalTexto(e.target.value)
+              }
             />
-            <small>Esse número libera a folha de respostas sem esperar a IA.</small>
+            <small>
+              Esse número libera a folha de
+              respostas sem esperar a IA.
+            </small>
           </label>
 
           <label className="arquivo">
-            <span>Caderno de questões · obrigatório</span>
+            <span>
+              Caderno de questões · obrigatório
+            </span>
             <input
               type="file"
               accept="application/pdf,.pdf"
-              onChange={(e) => setCaderno(e.target.files?.[0] ?? null)}
+              onChange={(e) =>
+                setCaderno(
+                  e.target.files?.[0] ?? null
+                )
+              }
             />
-            <strong>{caderno?.name ?? "Selecionar PDF"}</strong>
+            <strong>
+              {caderno?.name ??
+                "Selecionar PDF"}
+            </strong>
           </label>
 
           <label className="arquivo">
-            <span>PDF comentado/gabarito · opcional</span>
+            <span>
+              PDF comentado/gabarito · opcional
+            </span>
             <input
               type="file"
               accept="application/pdf,.pdf"
-              onChange={(e) => setComentado(e.target.files?.[0] ?? null)}
+              onChange={(e) =>
+                setComentado(
+                  e.target.files?.[0] ?? null
+                )
+              }
             />
-            <strong>{comentado?.name ?? "Adicionar segundo PDF"}</strong>
+            <strong>
+              {comentado?.name ??
+                "Adicionar segundo PDF"}
+            </strong>
           </label>
 
-          <button type="button" className="comecar" onClick={iniciarDoFormulario}>
+          <button
+            type="button"
+            className="comecar"
+            onClick={iniciarDoFormulario}
+          >
             <Play size={18} />
             Começar simulado
           </button>
@@ -600,28 +1004,51 @@ export default function SimuladoPdf() {
     return (
       <main className="simulado-pdf-workspace resultado">
         <div className="simulado-pdf-resultado-topo">
-          <button type="button" onClick={cancelar}>
+          <button
+            type="button"
+            onClick={encerrarEVoltar}
+          >
             <ChevronLeft size={18} />
-            Voltar
+            Voltar ao plano
           </button>
+
           <div>
             <span>SIMULADO FINALIZADO</span>
-            <strong>{formatarTempo(segundos)}</strong>
+            <strong>
+              {formatarTempo(segundos)}
+            </strong>
           </div>
         </div>
 
+        {analise.alertas.length > 0 && (
+          <div className="simulado-pdf-alertas">
+            <strong>
+              Conferência da análise
+            </strong>
+            {analise.alertas.map(
+              (alerta, indice) => (
+                <span key={indice}>
+                  {alerta}
+                </span>
+              )
+            )}
+          </div>
+        )}
+
         <AnaliseSimuladoStudyPro
-          origem="ia"
-          tentativaId={rascunho?.id ?? "preview-pdf"}
-          simuladoId={rascunho?.id}
+          origem="pdf"
+          tentativaId={rascunho.id}
+          simuladoId={rascunho.id}
           nome={nome}
           data={criadoEm}
           questoes={questoesResultado}
           respostas={respostasResultado}
-          marcacoes={{} as Record<string, MarcacaoQuestaoSimulado>}
-          persistir={false}
-          agendarAutomaticamente={false}
-          somenteLeitura
+          marcacoes={
+            {} as Record<
+              string,
+              MarcacaoQuestaoSimulado
+            >
+          }
         />
       </main>
     );
@@ -631,48 +1058,121 @@ export default function SimuladoPdf() {
     <main className="simulado-pdf-workspace prova">
       <header className="simulado-pdf-topbar">
         <div className="identidade">
-          <button type="button" onClick={cancelar} aria-label="Cancelar simulado">
+          <button
+            type="button"
+            onClick={cancelar}
+            aria-label="Cancelar simulado"
+          >
             <X size={18} />
           </button>
           <div>
-            <span>SIMULADO EM ANDAMENTO</span>
+            <span>
+              SIMULADO EM ANDAMENTO
+            </span>
             <strong>{nome}</strong>
           </div>
         </div>
 
-        <div className={"analise-status " + estadoAnalise}>
+        <div
+          className={
+            "analise-status " +
+            estadoAnalise
+          }
+        >
           <span />
           <div>
             <strong>
-              {estadoAnalise === "analisando"
-                ? "Processando questões · " + progressoAnalise + "%"
-                : rotuloAnalise(estadoAnalise)}
+              {estadoAnalise ===
+              "analisando"
+                ? "Processando questões · " +
+                  progressoAnalise +
+                  "%"
+                : rotuloAnalise(
+                    estadoAnalise
+                  )}
             </strong>
-            <div className="analise-progresso" aria-hidden="true">
-              <i style={{ width: String(progressoAnalise) + "%" }} />
+
+            <div
+              className="analise-progresso"
+              aria-hidden="true"
+            >
+              <i
+                style={{
+                  width:
+                    String(
+                      progressoAnalise
+                    ) + "%",
+                }}
+              />
             </div>
+
             <small>
-              {estadoAnalise === "concluida"
-                ? String(analise?.questoes.length ?? totalQuestoes) +
-                  " questões processadas · análise mantida neste aparelho"
-                : estadoAnalise === "erro"
+              {estadoAnalise ===
+              "concluida"
+                ? String(
+                    analise?.questoes
+                      .length ??
+                      totalQuestoes
+                  ) +
+                  " questões processadas · análise pronta para a correção"
+                : estadoAnalise ===
+                    "erro"
                   ? erroAnalise
-                  : "Você pode responder normalmente enquanto a análise continua."}
+                  : descricaoAnalise}
             </small>
+
+            {estadoAnalise === "erro" && (
+              <button
+                type="button"
+                className="analise-retomar"
+                disabled={
+                  reiniciandoAnalise
+                }
+                onClick={() =>
+                  void tentarNovamenteAnalise()
+                }
+              >
+                <RefreshCcw size={14} />
+                {reiniciandoAnalise
+                  ? "Retomando…"
+                  : "Tentar novamente"}
+              </button>
+            )}
           </div>
         </div>
 
         <div className="cronometro">
-          <strong>{formatarTempo(segundos)}</strong>
+          <strong>
+            {formatarTempo(segundos)}
+          </strong>
           <button
             type="button"
-            onClick={() => setPausado((valor) => !valor)}
-            className={pausado ? "retomar" : ""}
+            onClick={() =>
+              setPausado(
+                (valor) => !valor
+              )
+            }
+            className={
+              pausado ? "retomar" : ""
+            }
           >
-            {pausado ? <Play size={16} /> : <Pause size={16} />}
-            <span>{pausado ? "Retomar" : "Pausar"}</span>
+            {pausado ? (
+              <Play size={16} />
+            ) : (
+              <Pause size={16} />
+            )}
+            <span>
+              {pausado
+                ? "Retomar"
+                : "Pausar"}
+            </span>
           </button>
-          <button type="button" className="finalizar" onClick={finalizar}>
+
+          <button
+            type="button"
+            className="finalizar"
+            onClick={finalizar}
+          >
             <Square size={15} />
             <span>Finalizar</span>
           </button>
@@ -682,24 +1182,40 @@ export default function SimuladoPdf() {
       {finalizarQuandoPronto && (
         <div className="aguardando-final">
           <span className="spinner" />
-          Você terminou. A IA está fechando o gabarito antes da correção.
+          Você terminou. A IA está
+          fechando o gabarito antes da
+          correção.
         </div>
       )}
 
       <div className="simulado-pdf-mobile-tabs">
         <button
           type="button"
-          className={abaMobile === "pdf" ? "ativo" : ""}
-          onClick={() => setAbaMobile("pdf")}
+          className={
+            abaMobile === "pdf"
+              ? "ativo"
+              : ""
+          }
+          onClick={() =>
+            setAbaMobile("pdf")
+          }
         >
           PDF
         </button>
+
         <button
           type="button"
-          className={abaMobile === "respostas" ? "ativo" : ""}
-          onClick={() => setAbaMobile("respostas")}
+          className={
+            abaMobile === "respostas"
+              ? "ativo"
+              : ""
+          }
+          onClick={() =>
+            setAbaMobile("respostas")
+          }
         >
-          Respostas · {respostasPreenchidas}/{totalQuestoes}
+          Respostas · {respostasPreenchidas}/
+          {totalQuestoes}
         </button>
       </div>
 
@@ -707,59 +1223,112 @@ export default function SimuladoPdf() {
         <section
           className={
             "simulado-pdf-painel-pdf " +
-            (abaMobile !== "pdf" ? "mobile-oculto" : "")
+            (abaMobile !== "pdf"
+              ? "mobile-oculto"
+              : "")
           }
         >
-          <PdfAnotavel arquivo={caderno} pausado={pausado} />
+          <PdfAnotavel
+            arquivo={caderno}
+            pausado={pausado}
+            anotacoesIniciais={
+              anotacoesIniciais
+            }
+            onAnotacoesChange={
+              persistirAnotacoes
+            }
+          />
         </section>
 
         <aside
           className={
             "simulado-pdf-gabarito " +
-            (abaMobile !== "respostas" ? "mobile-oculto" : "")
+            (abaMobile !== "respostas"
+              ? "mobile-oculto"
+              : "")
           }
         >
           <div className="gabarito-cabecalho">
             <div>
-              <span>FOLHA DE RESPOSTAS</span>
+              <span>
+                FOLHA DE RESPOSTAS
+              </span>
               <strong>
-                {respostasPreenchidas}/{totalQuestoes}
+                {respostasPreenchidas}/
+                {totalQuestoes}
               </strong>
             </div>
-            <small>A correção só aparece depois que você finalizar.</small>
+
+            <small>
+              A correção só aparece
+              depois que você finalizar.
+            </small>
           </div>
 
           <div className="gabarito-lista">
-            {Array.from({ length: totalQuestoes }, (_, indice) => {
-              const numero = indice + 1;
-              const marcada = respostas[String(numero)];
+            {Array.from(
+              { length: totalQuestoes },
+              (_, indice) => {
+                const numero =
+                  indice + 1;
+                const marcada =
+                  respostas[
+                    String(numero)
+                  ];
 
-              return (
-                <div
-                  key={numero}
-                  className={questaoAtual === numero ? "atual" : ""}
-                  onClick={() => setQuestaoAtual(numero)}
-                >
-                  <strong>{numero}</strong>
-                  <div>
-                    {LETRAS.map((letra) => (
-                      <button
-                        key={letra}
-                        type="button"
-                        disabled={pausado}
-                        className={marcada === letra ? "marcada" : ""}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          responder(numero, letra);
-                        }}
-                      >
-                        {letra}
-                      </button>
-                    ))}
+                return (
+                  <div
+                    key={numero}
+                    className={
+                      questaoAtual ===
+                      numero
+                        ? "atual"
+                        : ""
+                    }
+                    onClick={() =>
+                      setQuestaoAtual(
+                        numero
+                      )
+                    }
+                  >
+                    <strong>
+                      {numero}
+                    </strong>
+
+                    <div>
+                      {LETRAS.map(
+                        (letra) => (
+                          <button
+                            key={letra}
+                            type="button"
+                            disabled={
+                              pausado
+                            }
+                            className={
+                              marcada ===
+                              letra
+                                ? "marcada"
+                                : ""
+                            }
+                            onClick={(
+                              e
+                            ) => {
+                              e.stopPropagation();
+                              responder(
+                                numero,
+                                letra
+                              );
+                            }}
+                          >
+                            {letra}
+                          </button>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
           </div>
         </aside>
       </div>
@@ -768,13 +1337,22 @@ export default function SimuladoPdf() {
         <div className="simulado-pdf-resposta-rapida">
           <button
             type="button"
-            onClick={() => setQuestaoAtual(Math.max(1, questaoAtual - 1))}
+            onClick={() =>
+              setQuestaoAtual(
+                Math.max(
+                  1,
+                  questaoAtual - 1
+                )
+              )
+            }
             aria-label="Questão anterior"
           >
             <ChevronLeft size={18} />
           </button>
 
-          <strong>Q{questaoAtual}</strong>
+          <strong>
+            Q{questaoAtual}
+          </strong>
 
           <div>
             {LETRAS.map((letra) => (
@@ -783,9 +1361,20 @@ export default function SimuladoPdf() {
                 type="button"
                 disabled={pausado}
                 className={
-                  respostas[String(questaoAtual)] === letra ? "marcada" : ""
+                  respostas[
+                    String(
+                      questaoAtual
+                    )
+                  ] === letra
+                    ? "marcada"
+                    : ""
                 }
-                onClick={() => responder(questaoAtual, letra)}
+                onClick={() =>
+                  responder(
+                    questaoAtual,
+                    letra
+                  )
+                }
               >
                 {letra}
               </button>
@@ -795,7 +1384,12 @@ export default function SimuladoPdf() {
           <button
             type="button"
             onClick={() =>
-              setQuestaoAtual(Math.min(totalQuestoes, questaoAtual + 1))
+              setQuestaoAtual(
+                Math.min(
+                  totalQuestoes,
+                  questaoAtual + 1
+                )
+              )
             }
             aria-label="Próxima questão"
           >
@@ -807,20 +1401,49 @@ export default function SimuladoPdf() {
   );
 }
 
-function rotuloAnalise(
-  estado: "parado" | "analisando" | "concluida" | "erro"
+function requestIdDoProcesso(
+  processoId: string
 ) {
-  if (estado === "concluida") return "Análise pronta · 100%";
-  if (estado === "erro") return "Análise precisa ser refeita";
+  return "simulado-pdf-" + processoId;
+}
+
+function rotuloAnalise(
+  estado:
+    | "parado"
+    | "analisando"
+    | "concluida"
+    | "erro"
+) {
+  if (estado === "concluida") {
+    return "Análise pronta · 100%";
+  }
+
+  if (estado === "erro") {
+    return "Análise precisa ser retomada";
+  }
+
   return "Preparando análise";
 }
 
-function formatarTempo(totalSegundos: number) {
-  const horas = Math.floor(totalSegundos / 3600);
-  const minutos = Math.floor((totalSegundos % 3600) / 60);
-  const segundos = totalSegundos % 60;
+function formatarTempo(
+  totalSegundos: number
+) {
+  const horas = Math.floor(
+    totalSegundos / 3600
+  );
+  const minutos = Math.floor(
+    (totalSegundos % 3600) / 60
+  );
+  const segundos =
+    totalSegundos % 60;
 
-  return [horas, minutos, segundos]
-    .map((valor) => String(valor).padStart(2, "0"))
+  return [
+    horas,
+    minutos,
+    segundos,
+  ]
+    .map((valor) =>
+      String(valor).padStart(2, "0")
+    )
     .join(":");
 }
