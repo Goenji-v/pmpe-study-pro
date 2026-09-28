@@ -23,6 +23,7 @@ import {
   atualizarJobGeracaoIA,
   buscarJobGeracaoIAPorRequestId,
   criarOuBuscarJobGeracaoIA,
+  excluirJobGeracaoIA,
   listarJobsGeracaoIAPorPrefixo,
   type ContextoSupabaseJob,
   type JobGeracaoIA,
@@ -30,6 +31,11 @@ import {
 import {
   agendarJobGeracaoIA,
 } from "./processarGeracaoPersistente.ts";
+import {
+  agendarJobAnaliseSimuladoPdf,
+  ehJobSimuladoPdf,
+  type ResultadoSimuladoPdfProcessado,
+} from "./processarSimuladoPdfPersistente.ts";
 
 const app = express();
 
@@ -147,19 +153,15 @@ app.get(
         prefixo
       );
 
-      jobs.forEach((job) => {
-        if (job.status === "fila" || job.status === "processando") {
-          agendarJobGeracaoIA(job, contexto, {
-            ai,
-            modelo,
-            modeloFallback,
-          });
-        }
+      const jobsVisiveis = jobs.filter((job) => !ehJobSimuladoPdf(job));
+
+      jobsVisiveis.forEach((job) => {
+        agendarJobPersistente(job, contexto);
       });
 
       res.json({
         sucesso: true,
-        jobs: jobs.map(serializarJobGeracaoIA),
+        jobs: jobsVisiveis.map(serializarJobGeracaoIA),
       });
     } catch (erro) {
       console.error("[geracao-ia-job] erro ao listar", erro);
@@ -202,13 +204,7 @@ app.get(
         return;
       }
 
-      if (job.status === "fila" || job.status === "processando") {
-        agendarJobGeracaoIA(job, contexto, {
-          ai,
-          modelo,
-          modeloFallback,
-        });
-      }
+      agendarJobPersistente(job, contexto);
 
       res
         .status(job.status === "concluida" ? 200 : 202)
@@ -300,13 +296,7 @@ app.post(
           )) ?? job;
       }
 
-      if (job.status === "fila" || job.status === "processando") {
-        agendarJobGeracaoIA(job, contexto, {
-          ai,
-          modelo,
-          modeloFallback,
-        });
-      }
+      agendarJobPersistente(job, contexto);
 
       res
         .status(job.status === "concluida" ? 200 : 202)
@@ -322,6 +312,182 @@ app.post(
           erro instanceof Error
             ? erro.message
             : "Não foi possível iniciar a geração.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/simulados-pdf/jobs",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.body?.requestId || "").trim();
+      const totalInformado = Math.round(Number(req.body?.totalInformado) || 0);
+
+      if (
+        !idGeracaoValido(requestId) ||
+        !requestId.startsWith("simulado-pdf-")
+      ) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Identificador do simulado inválido.",
+        });
+        return;
+      }
+
+      if (totalInformado < 1 || totalInformado > 200) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Informe uma quantidade entre 1 e 200 questões.",
+        });
+        return;
+      }
+
+      const prova = validarArquivoJobSimuladoPdf(req.body?.prova, "caderno");
+      const comentado = req.body?.comentado
+        ? validarArquivoJobSimuladoPdf(req.body.comentado, "comentado")
+        : null;
+
+      let job = await criarOuBuscarJobGeracaoIA(contexto, {
+        requestId,
+        titulo: String(req.body?.titulo || "Análise de simulado PDF").slice(0, 180),
+        descricao: comentado
+          ? "Analisando prova e PDF comentado."
+          : "Analisando e resolvendo o caderno da prova.",
+        payload: {
+          tipo: "simulado_pdf",
+          totalInformado,
+          prova,
+          comentado,
+        },
+      });
+
+      if (job.status === "erro" && req.body?.retomar === true) {
+        job =
+          (await atualizarJobGeracaoIA(contexto, job.id, {
+            status: "fila",
+            etapa: "fila",
+            progresso: 0,
+            resultado: null,
+            erro: null,
+            concluida_em: null,
+            execucao_id: null,
+            lease_ate: null,
+            descricao: "Análise recolocada na fila.",
+            payload: {
+              tipo: "simulado_pdf",
+              totalInformado,
+              prova,
+              comentado,
+            },
+          })) ?? job;
+      }
+
+      agendarJobPersistente(job, contexto);
+
+      res
+        .status(job.status === "concluida" ? 200 : 202)
+        .json({
+          sucesso: true,
+          job: serializarJobSimuladoPdf(job),
+        });
+    } catch (erro) {
+      console.error("[simulado-pdf-job] erro ao criar", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível iniciar a análise do simulado.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/simulados-pdf/jobs/:id",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.params.id || "").trim();
+
+      if (
+        !idGeracaoValido(requestId) ||
+        !requestId.startsWith("simulado-pdf-")
+      ) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Identificador do simulado inválido.",
+        });
+        return;
+      }
+
+      const job = await buscarJobGeracaoIAPorRequestId(contexto, requestId);
+
+      if (!job || !ehJobSimuladoPdf(job)) {
+        res.status(404).json({
+          sucesso: false,
+          erro: "Análise do simulado não encontrada.",
+        });
+        return;
+      }
+
+      agendarJobPersistente(job, contexto);
+
+      res
+        .status(job.status === "concluida" ? 200 : 202)
+        .json({
+          sucesso: true,
+          job: serializarJobSimuladoPdf(job),
+        });
+    } catch (erro) {
+      console.error("[simulado-pdf-job] erro ao consultar", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível consultar a análise do simulado.",
+      });
+    }
+  }
+);
+
+app.delete(
+  "/api/simulados-pdf/jobs/:id",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.params.id || "").trim();
+
+      if (
+        !idGeracaoValido(requestId) ||
+        !requestId.startsWith("simulado-pdf-")
+      ) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Identificador do simulado inválido.",
+        });
+        return;
+      }
+
+      const job = await buscarJobGeracaoIAPorRequestId(contexto, requestId);
+      if (job) {
+        await excluirJobGeracaoIA(contexto, job.id);
+      }
+
+      res.json({
+        sucesso: true,
+      });
+    } catch (erro) {
+      console.error("[simulado-pdf-job] erro ao excluir", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível excluir a análise do simulado.",
       });
     }
   }
@@ -480,6 +646,89 @@ app.post(
     }
   }
 );
+
+function agendarJobPersistente(
+  job: JobGeracaoIA,
+  contexto: ContextoSupabaseJob
+) {
+  if (job.status !== "fila" && job.status !== "processando") {
+    return;
+  }
+
+  if (ehJobSimuladoPdf(job)) {
+    agendarJobAnaliseSimuladoPdf(job, contexto, {
+      ai,
+      modelo,
+      modeloFallback,
+    });
+    return;
+  }
+
+  agendarJobGeracaoIA(job, contexto, {
+    ai,
+    modelo,
+    modeloFallback,
+  });
+}
+
+function serializarJobSimuladoPdf(job: JobGeracaoIA) {
+  return {
+    id: job.id,
+    requestId: job.request_id,
+    status: job.status,
+    etapa: job.etapa,
+    progresso: job.progresso,
+    titulo: job.titulo,
+    descricao: job.descricao,
+    erro: job.erro,
+    totalQuestoes: Math.max(
+      0,
+      Number(job.payload?.totalInformado) ||
+        Number(
+          (job.resultado as ResultadoSimuladoPdfProcessado | null)
+            ?.totalQuestoes
+        ) ||
+        0
+    ),
+    resultado:
+      job.status === "concluida"
+        ? (job.resultado as ResultadoSimuladoPdfProcessado | null)
+        : null,
+    criadaEm: job.criada_em,
+    iniciadaEm: job.iniciada_em,
+    atualizadaEm: job.atualizada_em,
+    concluidaEm: job.concluida_em,
+  };
+}
+
+function validarArquivoJobSimuladoPdf(
+  valor: unknown,
+  rotulo: string
+) {
+  const item =
+    valor && typeof valor === "object" && !Array.isArray(valor)
+      ? (valor as Record<string, unknown>)
+      : {};
+  const nome =
+    typeof item.nome === "string" && item.nome.trim()
+      ? item.nome.trim().slice(0, 220)
+      : `${rotulo}.pdf`;
+  const base64 =
+    typeof item.base64 === "string" ? item.base64.trim() : "";
+
+  if (!base64) {
+    throw new Error(`O PDF ${rotulo} não foi enviado.`);
+  }
+
+  if (base64.length > 17_000_000) {
+    throw new Error(`O PDF ${rotulo} ultrapassa o limite de 12 MB.`);
+  }
+
+  return {
+    nome,
+    base64,
+  };
+}
 
 function obterContextoSupabaseJob(
   req: Request
