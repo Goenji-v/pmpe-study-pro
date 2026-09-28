@@ -53,6 +53,7 @@ import "./SimuladoPdf.css";
 
 const LETRAS = ["A", "B", "C", "D", "E"];
 const INTERVALO_POLLING_MS = 2_500;
+// A sala fica fora do menu lateral e só é aberta pelo fluxo semanal do plano.
 
 export default function SimuladoPdf() {
   const navigate = useNavigate();
