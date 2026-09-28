@@ -28,6 +28,7 @@ type ContextoFallbackGemini = {
     esperaMs: number;
     rotulo: string;
   }) => void;
+  trocarEmLimite?: boolean;
   aoTrocarModelo?: (dados: {
     modeloAnterior: string;
     modeloSeguinte: string;
@@ -80,7 +81,11 @@ export async function executarComFallbackGemini<T>(
       const status = obterStatusErro(erro);
       const podeTrocar = Boolean(modeloSeguinte) &&
         status !== null &&
-        (STATUS_TEMPORARIOS.has(status) || modeloGeminiIndisponivel(erro));
+        (
+          STATUS_TEMPORARIOS.has(status) ||
+          modeloGeminiIndisponivel(erro) ||
+          (status === 429 && contexto.trocarEmLimite === true)
+        );
 
       if (!podeTrocar || status === null) throw erro;
 
