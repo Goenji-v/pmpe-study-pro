@@ -32,29 +32,37 @@ export async function analisarSimuladoPdf(params: {
     params.comentado ? arquivoParaBase64(params.comentado) : Promise.resolve(null),
   ]);
 
-  const resposta = await fetchApiAutenticada(
-    criarUrlApi("/api/simulado-pdf/analisar"),
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prova: {
-          nome: params.prova.name,
-          base64: provaBase64,
+  let resposta: Response;
+
+  try {
+    resposta = await fetchApiAutenticada(
+      criarUrlApi("/api/simulado-pdf/analisar"),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        comentado:
-          params.comentado && comentadoBase64
-            ? {
-                nome: params.comentado.name,
-                base64: comentadoBase64,
-              }
-            : null,
-        totalInformado: params.totalInformado,
-      }),
-    }
-  );
+        body: JSON.stringify({
+          prova: {
+            nome: params.prova.name,
+            base64: provaBase64,
+          },
+          comentado:
+            params.comentado && comentadoBase64
+              ? {
+                  nome: params.comentado.name,
+                  base64: comentadoBase64,
+                }
+              : null,
+          totalInformado: params.totalInformado,
+        }),
+      }
+    );
+  } catch {
+    return criarAnaliseDeDemonstracao(params.totalInformado, [
+      "Modo de prévia: o leitor continua funcionando mesmo sem conexão com a análise automática. A correção real será conectada ao backend depois da aprovação desta experiência.",
+    ]);
+  }
 
   const dados = (await resposta.json()) as {
     sucesso?: boolean;
