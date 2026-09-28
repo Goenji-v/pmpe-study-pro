@@ -17,6 +17,7 @@ export type EntradaSimuladoPdf = {
 export type QuestaoSimuladoPdfAnalisada = {
   numero: number;
   materia: string;
+  modulo?: string;
   assunto: string;
   subassunto?: string;
   dificuldade: "Fácil" | "Média" | "Difícil";
@@ -24,8 +25,11 @@ export type QuestaoSimuladoPdfAnalisada = {
   alternativas: Array<{ id: string; texto: string }>;
   gabarito: string;
   comentario: string;
+  norma?: string;
+  dispositivo?: string;
   fonteGabarito: "comentado" | "ia";
   confianca: number;
+  status: "valida" | "revisar" | "anulada";
 };
 
 export type AnaliseSimuladoPdf = {
@@ -202,6 +206,7 @@ function montarPrompt(params: {
     "Para cada questão identifique:",
     "- número;",
     "- matéria;",
+    "- módulo quando possível;",
     "- assunto;",
     "- subassunto quando possível;",
     "- dificuldade Fácil, Média ou Difícil;",
@@ -209,8 +214,10 @@ function montarPrompt(params: {
     "- alternativas existentes;",
     "- gabarito;",
     "- comentário objetivo explicando a correta;",
+    "- norma e dispositivo quando forem relevantes;",
     "- fonteGabarito: comentado ou ia;",
-    "- confianca de 0 a 100.",
+    "- confianca de 0 a 100;",
+    "- status: valida, revisar ou anulada.",
     "",
     "Retorne SOMENTE JSON válido, sem markdown:",
     "{",
@@ -218,6 +225,7 @@ function montarPrompt(params: {
     "    {",
     '      "numero": 1,',
     '      "materia": "Português",',
+    '      "modulo": "Gramática",',
     '      "assunto": "Crase",',
     '      "subassunto": "Crase obrigatória",',
     '      "dificuldade": "Média",',
@@ -225,8 +233,11 @@ function montarPrompt(params: {
     '      "alternativas": [{"id":"A","texto":"..."},{"id":"B","texto":"..."}],',
     '      "gabarito": "B",',
     '      "comentario": "...",',
+    '      "norma": "",',
+    '      "dispositivo": "",',
     `      "fonteGabarito": "${temComentado ? "comentado" : "ia"}",`,
-    '      "confianca": 95',
+    '      "confianca": 95,',
+    '      "status": "valida"',
     "    }",
     "  ],",
     '  "alertas": []',
@@ -296,9 +307,22 @@ function normalizarResposta(params: {
         ? "comentado"
         : "ia";
 
+    const confianca = Math.max(
+      0,
+      Math.min(100, Math.round(Number(q.confianca) || 0))
+    );
+    const gabarito = normalizarGabarito(q.gabarito);
+    const status =
+      q.status === "anulada"
+        ? "anulada"
+        : q.status === "revisar" || !gabarito || confianca < 50
+          ? "revisar"
+          : "valida";
+
     porNumero.set(numero, {
       numero,
       materia: textoSeguro(q.materia, "Não classificada"),
+      modulo: textoSeguro(q.modulo) || undefined,
       assunto: textoSeguro(q.assunto, "Não classificado"),
       subassunto: textoSeguro(q.subassunto) || undefined,
       dificuldade,
@@ -307,16 +331,16 @@ function normalizarResposta(params: {
         "Questão não extraída com segurança do PDF."
       ),
       alternativas,
-      gabarito: normalizarGabarito(q.gabarito),
+      gabarito,
       comentario: textoSeguro(
         q.comentario,
         "A questão precisa de revisão manual antes de usar a correção automática."
       ),
+      norma: textoSeguro(q.norma) || undefined,
+      dispositivo: textoSeguro(q.dispositivo) || undefined,
       fonteGabarito,
-      confianca: Math.max(
-        0,
-        Math.min(100, Math.round(Number(q.confianca) || 0))
-      ),
+      confianca,
+      status,
     });
   }
 
@@ -373,6 +397,7 @@ function criarQuestaoIncompleta(
       "A IA não conseguiu extrair esta questão com segurança; ela não será usada para reduzir a nota até revisão manual.",
     fonteGabarito: temComentado ? "comentado" : "ia",
     confianca: 0,
+    status: "revisar",
   };
 }
 
