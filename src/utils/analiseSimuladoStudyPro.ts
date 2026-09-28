@@ -484,13 +484,20 @@ function calcularAssuntos(
           ? Math.round((item.acertos / item.avaliadas) * 100)
           : 0;
 
-      const reincidencias = historico.filter((anterior) =>
-        anterior.assuntos.some(
-          (assunto) =>
-            assunto.chave === item.chave &&
-            assunto.erros + assunto.naoRespondidas + assunto.acertosPorChute > 0
-        )
-      ).length;
+      const falhaAtual =
+        item.erros + item.naoRespondidas + item.acertosPorChute > 0;
+      const reincidencias = falhaAtual
+        ? historico.filter((anterior) =>
+            anterior.assuntos.some(
+              (assunto) =>
+                assunto.chave === item.chave &&
+                assunto.erros +
+                  assunto.naoRespondidas +
+                  assunto.acertosPorChute >
+                  0
+            )
+          ).length
+        : 0;
 
       const dominio = classificarDominio(
         percentual,
