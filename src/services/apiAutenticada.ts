@@ -85,9 +85,17 @@ export async function fetchApiAutenticada(
 function ehRotaGeracaoQuestoes(url: string) {
   try {
     const caminho = new URL(url, window.location.origin).pathname;
-    return caminho === "/api/gerar" || caminho.startsWith("/api/geracoes");
+    return (
+      caminho === "/api/gerar" ||
+      caminho.startsWith("/api/geracoes") ||
+      caminho.startsWith("/api/simulados-pdf/jobs")
+    );
   } catch {
-    return url.includes("/api/gerar") || url.includes("/api/geracoes");
+    return (
+      url.includes("/api/gerar") ||
+      url.includes("/api/geracoes") ||
+      url.includes("/api/simulados-pdf/jobs")
+    );
   }
 }
 
