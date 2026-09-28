@@ -282,3 +282,14 @@
     height: 46px;
   }
 }
+
+.configuracoes-agenda-semanal {
+  border-color: rgba(69, 139, 213, .32) !important;
+}
+
+.configuracoes-agenda-aviso {
+  display: block;
+  margin-top: 4px;
+  color: #758ba3;
+  line-height: 1.5;
+}
