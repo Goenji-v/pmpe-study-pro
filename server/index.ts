@@ -35,6 +35,7 @@ import {
   buscarJobSimuladoPdf,
   cancelarJobSimuladoPdf,
   criarOuBuscarJobSimuladoPdf,
+  reiniciarJobSimuladoPdf,
   type JobSimuladoPdf,
 } from "./simuladoPdfJobs.ts";
 
@@ -1010,9 +1011,18 @@ app.post(
         comentadoNome,
       });
 
-      if (job.status === "erro" && req.body?.retomar === true) {
-        // Uma nova requestId é preferível para nova tentativa. Mantemos a
-        // falha anterior auditável e devolvemos seu estado.
+      if (
+        (job.status === "erro" || job.status === "cancelada") &&
+        req.body?.retomar === true
+      ) {
+        job = await reiniciarJobSimuladoPdf(contexto, job, {
+          nome,
+          totalQuestoes,
+          cadernoPath,
+          cadernoNome,
+          comentadoPath,
+          comentadoNome,
+        });
       }
 
       if (job.status === "fila" || job.status === "processando") {
@@ -1132,10 +1142,25 @@ function serializarJobSimuladoPdf(job: JobSimuladoPdf) {
   return {
     id: job.id,
     requestId: job.request_id,
-    status: job.status,
-    etapa: job.etapa,
+    status: job.status === "cancelada" ? "erro" : job.status,
+    etapa:
+      job.etapa === "cancelada"
+        ? "erro"
+        : job.etapa,
     progresso: job.progresso,
-    nome: job.nome,
+    titulo: job.nome,
+    descricao:
+      job.status === "concluida"
+        ? "Análise pronta."
+        : job.status === "erro" || job.status === "cancelada"
+          ? "A análise precisa de atenção."
+          : job.etapa === "baixando"
+            ? "Preparando os PDFs para a IA."
+            : job.etapa === "validando"
+              ? "Conferindo gabarito e diagnóstico."
+              : job.status === "fila"
+                ? "Análise na fila."
+                : "Processando questões em segundo plano.",
     totalQuestoes: job.total_questoes,
     erro: job.erro,
     resultado: job.status === "concluida" ? job.resultado : null,
