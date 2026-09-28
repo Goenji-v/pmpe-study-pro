@@ -164,6 +164,7 @@ export default function PlanoEstudos() {
       comentado: comentadoPdf,
       semana: semanaSelecionada,
       dia: diaSelecionado,
+      missaoId: missaoSimuladoDomingo?.id,
     });
 
     navigate("/simulado-pdf");
