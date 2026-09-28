@@ -113,7 +113,13 @@ async function processar(
   if (!assumido) return;
 
   const payload = validarPayload(job.payload);
-  const modelos = [dependencias.modelo, dependencias.modeloFallback];
+  const modelos = Array.from(
+    new Set([
+      dependencias.modelo,
+      "gemini-3.5-flash-lite",
+      dependencias.modeloFallback,
+    ])
+  );
 
   const atualizar = async (
     etapa: "gerando" | "revisando" | "corrigindo" | "salvando",
@@ -614,7 +620,37 @@ async function gerarJsonComPdfs(
     {
       rotulo,
       modelos,
-      tentativasPorModelo: [2, 2],
+      tentativasPorModelo: [3, 2, 2],
+      atrasosMs: [4_000, 10_000, 20_000],
+      trocarEmLimite: true,
+      aoTentarNovamente: ({
+        modelo,
+        tentativaAtual,
+        proximaTentativa,
+        status,
+        esperaMs,
+      }) => {
+        console.warn("[simulado-pdf-job] nova tentativa do Gemini", {
+          rotulo,
+          modelo,
+          tentativaAtual,
+          proximaTentativa,
+          status,
+          esperaMs,
+        });
+      },
+      aoTrocarModelo: ({
+        modeloAnterior,
+        modeloSeguinte,
+        status,
+      }) => {
+        console.warn("[simulado-pdf-job] trocando modelo do Gemini", {
+          rotulo,
+          modeloAnterior,
+          modeloSeguinte,
+          status,
+        });
+      },
     }
   );
 
