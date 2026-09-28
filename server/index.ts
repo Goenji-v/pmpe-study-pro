@@ -30,7 +30,13 @@ import {
 import {
   agendarJobGeracaoIA,
 } from "./processarGeracaoPersistente.ts";
-import { analisarSimuladoPdfComIA } from "./simuladoPdfAnalise.ts";
+import {
+  agendarJobSimuladoPdf,
+  buscarJobSimuladoPdf,
+  cancelarJobSimuladoPdf,
+  criarOuBuscarJobSimuladoPdf,
+  type JobSimuladoPdf,
+} from "./simuladoPdfJobs.ts";
 
 const app = express();
 
@@ -961,79 +967,184 @@ Regras:
 );
 
 app.post(
-  "/api/simulado-pdf/analisar",
+  "/api/simulado-pdf/jobs",
   async (req, res) => {
-    const inicio = Date.now();
-
     try {
-      const prova = req.body?.prova;
-      const comentado = req.body?.comentado;
-      const totalInformado = Number(req.body?.totalInformado);
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.body?.requestId || "").trim();
+      const nome = String(req.body?.nome || "Simulado em PDF").trim();
+      const totalQuestoes = Number(req.body?.totalQuestoes);
+      const cadernoPath = String(req.body?.cadernoPath || "").trim();
+      const cadernoNome = String(req.body?.cadernoNome || "simulado.pdf").trim();
+      const comentadoPath = String(req.body?.comentadoPath || "").trim() || null;
+      const comentadoNome = String(req.body?.comentadoNome || "").trim() || null;
 
-      if (
-        !prova ||
-        typeof prova.nome !== "string" ||
-        typeof prova.base64 !== "string" ||
-        !Number.isInteger(totalInformado) ||
-        totalInformado < 1 ||
-        totalInformado > 200
-      ) {
+      if (!idGeracaoValido(requestId)) {
         res.status(400).json({
           sucesso: false,
-          erro: "Informe o PDF da prova e uma quantidade entre 1 e 200 questões.",
+          erro: "Identificador do simulado inválido.",
         });
         return;
       }
 
-      const analise = await analisarSimuladoPdfComIA({
-        ai,
-        modelo,
-        modeloFallback,
-        entrada: {
-          prova: {
-            nome: prova.nome,
-            base64: prova.base64,
-          },
-          comentado:
-            comentado &&
-            typeof comentado.nome === "string" &&
-            typeof comentado.base64 === "string"
-              ? {
-                  nome: comentado.nome,
-                  base64: comentado.base64,
-                }
-              : null,
-          totalInformado,
-        },
+      if (
+        !Number.isInteger(totalQuestoes) ||
+        totalQuestoes < 1 ||
+        totalQuestoes > 200 ||
+        !cadernoPath
+      ) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Informe o PDF e uma quantidade entre 1 e 200 questões.",
+        });
+        return;
+      }
+
+      let job = await criarOuBuscarJobSimuladoPdf(contexto, {
+        requestId,
+        nome,
+        totalQuestoes,
+        cadernoPath,
+        cadernoNome,
+        comentadoPath,
+        comentadoNome,
       });
 
-      console.info("[simulado-pdf] análise concluída", {
-        userId: req.header("x-study-user-id") || "desconhecido",
-        total: analise.totalQuestoes,
-        duracaoMs: Date.now() - inicio,
-        comentado: Boolean(comentado),
-      });
+      if (job.status === "erro" && req.body?.retomar === true) {
+        // Uma nova requestId é preferível para nova tentativa. Mantemos a
+        // falha anterior auditável e devolvemos seu estado.
+      }
 
-      res.json({
-        sucesso: true,
-        analise,
-      });
+      if (job.status === "fila" || job.status === "processando") {
+        agendarJobSimuladoPdf(job, contexto, {
+          ai,
+          modelo,
+          modeloFallback,
+        });
+      }
+
+      res
+        .status(job.status === "concluida" ? 200 : 202)
+        .json({
+          sucesso: true,
+          job: serializarJobSimuladoPdf(job),
+        });
     } catch (erro) {
-      console.error("[simulado-pdf] análise falhou", {
-        duracaoMs: Date.now() - inicio,
-        erro: erro instanceof Error ? erro.message : String(erro),
-      });
-
+      console.error("[simulado-pdf-job] erro ao criar", erro);
       res.status(500).json({
         sucesso: false,
         erro:
           erro instanceof Error
             ? erro.message
-            : "Não foi possível analisar o simulado em PDF.",
+            : "Não foi possível iniciar a análise do simulado.",
       });
     }
   }
 );
+
+app.get(
+  "/api/simulado-pdf/jobs/:id",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.params.id || "").trim();
+
+      if (!idGeracaoValido(requestId)) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Identificador do simulado inválido.",
+        });
+        return;
+      }
+
+      const job = await buscarJobSimuladoPdf(contexto, requestId);
+
+      if (!job) {
+        res.status(404).json({
+          sucesso: false,
+          erro: "Análise do simulado não encontrada.",
+        });
+        return;
+      }
+
+      if (job.status === "fila" || job.status === "processando") {
+        agendarJobSimuladoPdf(job, contexto, {
+          ai,
+          modelo,
+          modeloFallback,
+        });
+      }
+
+      res
+        .status(job.status === "concluida" ? 200 : 202)
+        .json({
+          sucesso: true,
+          job: serializarJobSimuladoPdf(job),
+        });
+    } catch (erro) {
+      console.error("[simulado-pdf-job] erro ao consultar", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível consultar a análise do simulado.",
+      });
+    }
+  }
+);
+
+app.delete(
+  "/api/simulado-pdf/jobs/:id",
+  async (req, res) => {
+    try {
+      const contexto = obterContextoSupabaseJob(req);
+      const requestId = String(req.params.id || "").trim();
+
+      if (!idGeracaoValido(requestId)) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Identificador do simulado inválido.",
+        });
+        return;
+      }
+
+      const job = await cancelarJobSimuladoPdf(contexto, requestId);
+
+      res.json({
+        sucesso: true,
+        job: job ? serializarJobSimuladoPdf(job) : null,
+      });
+    } catch (erro) {
+      console.error("[simulado-pdf-job] erro ao cancelar", erro);
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível cancelar a análise.",
+      });
+    }
+  }
+);
+
+function serializarJobSimuladoPdf(job: JobSimuladoPdf) {
+  return {
+    id: job.id,
+    requestId: job.request_id,
+    status: job.status,
+    etapa: job.etapa,
+    progresso: job.progresso,
+    nome: job.nome,
+    totalQuestoes: job.total_questoes,
+    erro: job.erro,
+    resultado: job.status === "concluida" ? job.resultado : null,
+    criadaEm: job.criada_em,
+    iniciadaEm: job.iniciada_em,
+    atualizadaEm: job.atualizada_em,
+    concluidaEm: job.concluida_em,
+  };
+}
 
 app.post(
   "/api/analisar-prova",
