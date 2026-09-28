@@ -45,6 +45,7 @@ import {
   normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
+import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -84,7 +85,7 @@ export default function PlanoEstudos() {
   function marcarMissaoDomingoConcluida(tipo: "redacao" | "simulado") {
     const domingoAtual = planoCalendario
       .find((semana) => semana.numero === semanaSelecionada)
-      ?.dias.find((itemDia) => itemDia.numero === 7);
+      ?.dias.find((itemDia) => itemDia.numero === diaSelecionado);
     const missao = domingoAtual?.missoes.find((item) => item.tipo === tipo);
 
     if (!missao) return;
@@ -104,11 +105,11 @@ export default function PlanoEstudos() {
     const nota = notaRedacao.trim() ? Number(notaRedacao) : undefined;
     const domingoAtual = planoCalendario
       .find((semana) => semana.numero === semanaSelecionada)
-      ?.dias.find((itemDia) => itemDia.numero === 7);
+      ?.dias.find((itemDia) => itemDia.numero === diaSelecionado);
     const missaoRedacao = domingoAtual?.missoes.find((item) => item.tipo === "redacao");
 
     if (missaoRedacao && concluidas.includes(missaoRedacao.id)) {
-      setMensagemDomingo("A redação deste domingo já foi salva.");
+      setMensagemDomingo("A redação desta semana já foi salva.");
       return;
     }
 
@@ -132,14 +133,14 @@ export default function PlanoEstudos() {
       minutos: Math.round(minutosTexto),
       notaRedacao: nota,
       semana: semanaSelecionada,
-      dia: 7,
+      dia: diaSelecionado,
     }, ...anteriores]);
 
     marcarMissaoDomingoConcluida("redacao");
     setTemaRedacao("");
     setMinutosRedacao("");
     setNotaRedacao("");
-    setMensagemDomingo("Redação salva. O simulado pode ser feito e salvo depois.");
+    setMensagemDomingo("Redação salva. Você pode seguir normalmente com o restante do cronograma.");
   }
 
   function iniciarSimuladoPdfDomingo() {
@@ -162,7 +163,7 @@ export default function PlanoEstudos() {
       caderno: cadernoPdf,
       comentado: comentadoPdf,
       semana: semanaSelecionada,
-      dia: 7,
+      dia: diaSelecionado,
     });
 
     navigate("/simulado-pdf");
@@ -177,8 +178,23 @@ export default function PlanoEstudos() {
   );
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(missoesPorDia, configuracoes.planoPadraoAtivo !== false),
-    [missoesPorDia, configuracoes.planoPadraoAtivo]
+    () =>
+      aplicarDiasAtividadesSemanais(
+        criarPlanoCalendario(
+          missoesPorDia,
+          configuracoes.planoPadraoAtivo !== false
+        ),
+        {
+          diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
+          diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
+        }
+      ),
+    [
+      missoesPorDia,
+      configuracoes.planoPadraoAtivo,
+      configuracoes.diaRedacaoSemanal,
+      configuracoes.diaSimuladoSemanal,
+    ]
   );
 
   const semanaInicial = getSemanaAtual(
@@ -215,12 +231,12 @@ export default function PlanoEstudos() {
       diaSelecionado
   );
 
-  const missaoRedacaoDomingo = diaSelecionado === 7
-    ? dia?.missoes.find((missao) => missao.tipo === "redacao")
-    : undefined;
-  const missaoSimuladoDomingo = diaSelecionado === 7
-    ? dia?.missoes.find((missao) => missao.tipo === "simulado")
-    : undefined;
+  const missaoRedacaoDomingo = dia?.missoes.find(
+    (missao) => missao.tipo === "redacao"
+  );
+  const missaoSimuladoDomingo = dia?.missoes.find(
+    (missao) => missao.tipo === "simulado"
+  );
   const redacaoDomingoConcluida = Boolean(
     missaoRedacaoDomingo && concluidas.includes(missaoRedacaoDomingo.id)
   );
@@ -671,11 +687,24 @@ export default function PlanoEstudos() {
             </span>
           </div>
 
-          {diaSelecionado === 7 && (
+          {(missaoRedacaoDomingo || missaoSimuladoDomingo) && (
             <div className="plano-rotina-dia plano-rotina-domingo">
-              <header><div><small>Domingo estratégico</small><h3>Redação + Simulado</h3></div><span>Prioridade semanal</span></header>
+              <header>
+                <div>
+                  <small>{NOMES_DIAS_PLANO[diaSelecionado] ?? "Dia"} estratégico</small>
+                  <h3>
+                    {missaoRedacaoDomingo && missaoSimuladoDomingo
+                      ? "Redação + Simulado"
+                      : missaoRedacaoDomingo
+                        ? "Redação"
+                        : "Simulado"}
+                  </h3>
+                </div>
+                <span>Prioridade semanal</span>
+              </header>
               <div className="plano-rotina-blocos">
-                <article className={redacaoDomingoConcluida ? "plano-domingo-concluido" : ""}>
+                {missaoRedacaoDomingo && (
+                  <article className={redacaoDomingoConcluida ? "plano-domingo-concluido" : ""}>
                   <div className="plano-domingo-cabecalho-missao">
                     <strong>✍️ Missão 1 — Redação</strong>
                     {redacaoDomingoConcluida && <span>✓ Concluída</span>}
@@ -689,8 +718,10 @@ export default function PlanoEstudos() {
                       {redacaoDomingoConcluida ? "Redação salva" : "Salvar redação"}
                     </button>
                   </div>
-                </article>
-                <article className={simuladoDomingoConcluido ? "plano-domingo-concluido" : ""}>
+                  </article>
+                )}
+                {missaoSimuladoDomingo && (
+                  <article className={simuladoDomingoConcluido ? "plano-domingo-concluido" : ""}>
                   <div className="plano-domingo-cabecalho-missao">
                     <strong>🎯 Missão 2 — Simulado</strong>
                     {simuladoDomingoConcluido && <span>✓ Concluído</span>}
@@ -752,7 +783,8 @@ export default function PlanoEstudos() {
                       {simuladoDomingoConcluido ? "Simulado concluído" : "Analisar e começar simulado"}
                     </button>
                   </div>
-                </article>
+                  </article>
+                )}
               </div>
               <div className="plano-domingo-rodape">
                 {mensagemDomingo && <span>{mensagemDomingo}</span>}
