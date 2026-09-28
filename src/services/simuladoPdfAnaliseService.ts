@@ -1,10 +1,13 @@
 import { criarUrlApi } from "../config/api";
 import { fetchApiAutenticada } from "./apiAutenticada";
+import {
+  enviarPdfSimulado,
+  removerPdfSimulado,
+} from "./simuladoService";
 
 export type QuestaoSimuladoPdfAnalisada = {
   numero: number;
   materia: string;
-  modulo?: string;
   assunto: string;
   subassunto?: string;
   dificuldade: "Fácil" | "Média" | "Difícil";
@@ -12,11 +15,8 @@ export type QuestaoSimuladoPdfAnalisada = {
   alternativas: Array<{ id: string; texto: string }>;
   gabarito: string;
   comentario: string;
-  norma?: string;
-  dispositivo?: string;
   fonteGabarito: "comentado" | "ia";
   confianca: number;
-  status: "valida" | "revisar" | "anulada";
 };
 
 export type AnaliseSimuladoPdf = {
@@ -25,195 +25,203 @@ export type AnaliseSimuladoPdf = {
   alertas: string[];
 };
 
-export type JobAnaliseSimuladoPdf = {
-  id: string;
+export type EstadoRemotoSimuladoPdf = {
   requestId: string;
-  status: "fila" | "processando" | "concluida" | "erro";
-  etapa:
-    | "fila"
-    | "gerando"
-    | "revisando"
-    | "corrigindo"
-    | "salvando"
-    | "concluida"
-    | "erro";
-  progresso: number;
-  titulo: string;
-  descricao: string;
-  erro: string | null;
-  totalQuestoes: number;
-  resultado: AnaliseSimuladoPdf | null;
-  criadaEm: string;
-  iniciadaEm: string | null;
-  atualizadaEm: string;
-  concluidaEm: string | null;
+  cadernoStoragePath: string;
+  comentadoStoragePath?: string | null;
 };
 
-type RespostaJob =
-  | {
-      sucesso: true;
-      job: JobAnaliseSimuladoPdf;
-    }
-  | {
-      sucesso: false;
-      erro: string;
-    };
-
-export async function iniciarAnaliseSimuladoPdf(params: {
+type JobApi = {
   requestId: string;
+  status: "fila" | "processando" | "concluida" | "erro" | "cancelada";
+  etapa: string;
+  progresso: number;
+  erro?: string | null;
+  resultado?: AnaliseSimuladoPdf | null;
+};
+
+type RespostaJob = {
+  sucesso?: boolean;
+  job?: JobApi | null;
+  erro?: string;
+};
+
+export async function analisarSimuladoPdf(params: {
+  processoId: string;
+  nome: string;
   prova: File;
   comentado?: File | null;
   totalInformado: number;
-  titulo?: string;
-  retomar?: boolean;
-}): Promise<JobAnaliseSimuladoPdf> {
-  validarArquivoPdf(params.prova, "caderno");
-  if (params.comentado) validarArquivoPdf(params.comentado, "comentado");
+  remoto?: EstadoRemotoSimuladoPdf | null;
+  onProgresso?: (
+    progresso: number,
+    descricao: string,
+    remoto: EstadoRemotoSimuladoPdf
+  ) => void;
+}): Promise<{
+  analise: AnaliseSimuladoPdf;
+  remoto: EstadoRemotoSimuladoPdf;
+}> {
+  let remoto = params.remoto ?? null;
 
-  const [provaBase64, comentadoBase64] = await Promise.all([
-    arquivoParaBase64(params.prova),
-    params.comentado
-      ? arquivoParaBase64(params.comentado)
-      : Promise.resolve(null),
+  if (!remoto) {
+    params.onProgresso?.(2, "Enviando o caderno para análise segura.", {
+      requestId: criarRequestId(params.processoId),
+      cadernoStoragePath: "",
+      comentadoStoragePath: null,
+    });
+
+    const [cadernoEnviado, comentadoEnviado] = await Promise.all([
+      enviarPdfSimulado(params.prova, params.processoId, "caderno"),
+      params.comentado
+        ? enviarPdfSimulado(params.comentado, params.processoId, "comentado")
+        : Promise.resolve(null),
+    ]);
+
+    remoto = {
+      requestId: criarRequestId(params.processoId),
+      cadernoStoragePath: cadernoEnviado.storagePath,
+      comentadoStoragePath: comentadoEnviado?.storagePath ?? null,
+    };
+
+    params.onProgresso?.(6, "PDF enviado. Preparando a leitura das questões.", remoto);
+
+    await criarJob({
+      requestId: remoto.requestId,
+      nome: params.nome,
+      totalQuestoes: params.totalInformado,
+      cadernoPath: remoto.cadernoStoragePath,
+      cadernoNome: params.prova.name,
+      comentadoPath: remoto.comentadoStoragePath,
+      comentadoNome: params.comentado?.name ?? null,
+    });
+  }
+
+  return acompanharJob(remoto, params.onProgresso);
+}
+
+export async function retomarAnaliseSimuladoPdf(params: {
+  remoto: EstadoRemotoSimuladoPdf;
+  onProgresso?: (
+    progresso: number,
+    descricao: string,
+    remoto: EstadoRemotoSimuladoPdf
+  ) => void;
+}) {
+  return acompanharJob(params.remoto, params.onProgresso);
+}
+
+export async function cancelarAnaliseSimuladoPdf(
+  remoto?: EstadoRemotoSimuladoPdf | null
+) {
+  if (!remoto) return;
+
+  await fetchApiAutenticada(
+    criarUrlApi("/api/simulado-pdf/jobs/" + encodeURIComponent(remoto.requestId)),
+    { method: "DELETE" }
+  ).catch(() => null);
+
+  await Promise.all([
+    removerPdfSimulado(remoto.cadernoStoragePath),
+    removerPdfSimulado(remoto.comentadoStoragePath ?? undefined),
   ]);
+}
 
+async function criarJob(params: {
+  requestId: string;
+  nome: string;
+  totalQuestoes: number;
+  cadernoPath: string;
+  cadernoNome: string;
+  comentadoPath?: string | null;
+  comentadoNome?: string | null;
+}) {
   const resposta = await fetchApiAutenticada(
-    criarUrlApi("/api/simulados-pdf/jobs"),
+    criarUrlApi("/api/simulado-pdf/jobs"),
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        requestId: params.requestId,
-        titulo: params.titulo || "Análise de simulado PDF",
-        totalInformado: params.totalInformado,
-        retomar: params.retomar === true,
-        prova: {
-          nome: params.prova.name,
-          base64: provaBase64,
-        },
-        comentado:
-          params.comentado && comentadoBase64
-            ? {
-                nome: params.comentado.name,
-                base64: comentadoBase64,
-              }
-            : null,
-      }),
+      body: JSON.stringify(params),
     }
   );
 
-  return lerJob(resposta);
+  const dados = (await resposta.json()) as RespostaJob;
+
+  if (!resposta.ok || !dados.sucesso || !dados.job) {
+    throw new Error(
+      dados.erro || "Não foi possível iniciar a análise persistente do PDF."
+    );
+  }
+
+  return dados.job;
 }
 
-export async function consultarAnaliseSimuladoPdf(
-  requestId: string
-): Promise<JobAnaliseSimuladoPdf> {
-  const resposta = await fetchApiAutenticada(
-    criarUrlApi(
-      "/api/simulados-pdf/jobs/" + encodeURIComponent(requestId)
-    )
-  );
+async function acompanharJob(
+  remoto: EstadoRemotoSimuladoPdf,
+  onProgresso?: (
+    progresso: number,
+    descricao: string,
+    remoto: EstadoRemotoSimuladoPdf
+  ) => void
+): Promise<{
+  analise: AnaliseSimuladoPdf;
+  remoto: EstadoRemotoSimuladoPdf;
+}> {
+  for (;;) {
+    const resposta = await fetchApiAutenticada(
+      criarUrlApi(
+        "/api/simulado-pdf/jobs/" + encodeURIComponent(remoto.requestId)
+      )
+    );
 
-  return lerJob(resposta);
-}
+    const dados = (await resposta.json()) as RespostaJob;
 
-export async function excluirAnaliseSimuladoPdf(requestId: string) {
-  const resposta = await fetchApiAutenticada(
-    criarUrlApi(
-      "/api/simulados-pdf/jobs/" + encodeURIComponent(requestId)
-    ),
-    {
-      method: "DELETE",
+    if (!dados.sucesso || !dados.job) {
+      throw new Error(
+        dados.erro || "Não foi possível consultar a análise do PDF."
+      );
     }
-  );
 
-  if (!resposta.ok) {
-    let mensagem = "Não foi possível excluir a análise em andamento.";
-    try {
-      const dados = (await resposta.json()) as { erro?: string };
-      if (dados.erro) mensagem = dados.erro;
-    } catch {
-      // Mantém a mensagem amigável.
+    const job = dados.job;
+    onProgresso?.(
+      Math.max(0, Math.min(100, Math.round(job.progresso || 0))),
+      descricaoEtapa(job),
+      remoto
+    );
+
+    if (job.status === "concluida" && job.resultado) {
+      return {
+        analise: job.resultado,
+        remoto,
+      };
     }
-    throw new Error(mensagem);
+
+    if (job.status === "erro") {
+      throw new Error(job.erro || "A análise do PDF falhou.");
+    }
+
+    if (job.status === "cancelada") {
+      throw new Error("A análise do PDF foi cancelada.");
+    }
+
+    await esperar(1200);
   }
 }
 
-async function lerJob(resposta: Response) {
-  let dados: RespostaJob;
-
-  try {
-    dados = (await resposta.json()) as RespostaJob;
-  } catch {
-    throw new Error(
-      "O servidor retornou uma resposta inválida para a análise do simulado."
-    );
-  }
-
-  if (!resposta.ok && resposta.status !== 202) {
-    throw new Error(
-      "erro" in dados
-        ? dados.erro
-        : "Não foi possível consultar a análise do simulado."
-    );
-  }
-
-  if (!dados.sucesso || !dados.job) {
-    throw new Error(
-      "erro" in dados
-        ? dados.erro
-        : "A análise do simulado não retornou um estado válido."
-    );
-  }
-
-  return {
-    ...dados.job,
-    progresso: Math.max(
-      0,
-      Math.min(100, Math.round(Number(dados.job.progresso) || 0))
-    ),
-  };
+function descricaoEtapa(job: JobApi) {
+  if (job.status === "fila") return "Análise na fila.";
+  if (job.etapa === "baixando") return "Preparando os PDFs para a IA.";
+  if (job.etapa === "validando") return "Conferindo gabarito e diagnóstico.";
+  if (job.etapa === "concluida") return "Análise pronta.";
+  return "Processando questões em segundo plano.";
 }
 
-function validarArquivoPdf(arquivo: File, rotulo: string) {
-  const ehPdf =
-    arquivo.type === "application/pdf" ||
-    arquivo.name.toLowerCase().endsWith(".pdf");
-
-  if (!ehPdf) {
-    throw new Error(`O arquivo de ${rotulo} precisa estar em PDF.`);
-  }
-
-  if (arquivo.size > 12 * 1024 * 1024) {
-    throw new Error(`O PDF de ${rotulo} ultrapassa o limite de 12 MB.`);
-  }
+function criarRequestId(processoId: string) {
+  return "simulado-pdf:" + processoId.replace(/[^a-zA-Z0-9_-]/g, "");
 }
 
-function arquivoParaBase64(arquivo: File) {
-  return new Promise<string>((resolve, reject) => {
-    const leitor = new FileReader();
-
-    leitor.onerror = () =>
-      reject(new Error(`Não foi possível ler ${arquivo.name}.`));
-
-    leitor.onload = () => {
-      const resultado = String(leitor.result || "");
-      const separador = resultado.indexOf(",");
-
-      if (separador < 0) {
-        reject(
-          new Error(
-            `O arquivo ${arquivo.name} não pôde ser preparado para análise.`
-          )
-        );
-        return;
-      }
-
-      resolve(resultado.slice(separador + 1));
-    };
-
-    leitor.readAsDataURL(arquivo);
-  });
+function esperar(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
