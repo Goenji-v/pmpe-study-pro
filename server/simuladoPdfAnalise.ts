@@ -39,13 +39,81 @@ export async function analisarSimuladoPdfComIA(params: {
   modelo: string;
   modeloFallback: string;
   entrada: EntradaSimuladoPdf;
+  aoProgresso?: (progresso: number, descricao: string) => Promise<void> | void;
 }): Promise<AnaliseSimuladoPdf> {
-  const { ai, modelo, modeloFallback, entrada } = params;
+  const { ai, modelo, modeloFallback, entrada, aoProgresso } = params;
 
   validarPdf(entrada.prova, "caderno");
   if (entrada.comentado) validarPdf(entrada.comentado, "comentado");
 
   const total = Math.max(1, Math.min(200, Math.round(entrada.totalInformado)));
+  const blocos = criarBlocos(total, 10);
+  const porNumero = new Map<number, QuestaoSimuladoPdfAnalisada>();
+  const alertas: string[] = [];
+
+  await aoProgresso?.(24, "A IA começou a ler e classificar as questões.");
+
+  for (let indice = 0; indice < blocos.length; indice += 1) {
+    const bloco = blocos[indice];
+    const resultado = await analisarBloco({
+      ai,
+      modelo,
+      modeloFallback,
+      entrada,
+      total,
+      inicio: bloco.inicio,
+      fim: bloco.fim,
+    });
+
+    resultado.questoes.forEach((questao) => {
+      porNumero.set(questao.numero, questao);
+    });
+    alertas.push(...resultado.alertas);
+
+    const progresso = Math.min(
+      90,
+      24 + Math.round(((indice + 1) / blocos.length) * 66)
+    );
+    await aoProgresso?.(
+      progresso,
+      `Questões ${bloco.inicio} a ${bloco.fim} analisadas.`
+    );
+  }
+
+  const questoes: QuestaoSimuladoPdfAnalisada[] = [];
+
+  for (let numero = 1; numero <= total; numero += 1) {
+    const encontrada = porNumero.get(numero);
+
+    if (encontrada) {
+      questoes.push(encontrada);
+      continue;
+    }
+
+    questoes.push(criarQuestaoIncompleta(numero, Boolean(entrada.comentado)));
+    alertas.push(`Questão ${numero}: extração incompleta.`);
+  }
+
+  await aoProgresso?.(94, "Conferindo consistência do gabarito e do diagnóstico.");
+
+  return {
+    totalQuestoes: total,
+    questoes,
+    alertas: Array.from(new Set(alertas)).slice(0, 80),
+  };
+}
+
+async function analisarBloco(params: {
+  ai: GoogleGenAI;
+  modelo: string;
+  modeloFallback: string;
+  entrada: EntradaSimuladoPdf;
+  total: number;
+  inicio: number;
+  fim: number;
+}) {
+  const { ai, modelo, modeloFallback, entrada, total, inicio, fim } = params;
+
   const parts: Array<
     | { inlineData: { mimeType: string; data: string } }
     | { text: string }
@@ -68,7 +136,12 @@ export async function analisarSimuladoPdfComIA(params: {
   }
 
   parts.push({
-    text: montarPrompt(total, Boolean(entrada.comentado)),
+    text: montarPrompt({
+      total,
+      inicio,
+      fim,
+      temComentado: Boolean(entrada.comentado),
+    }),
   });
 
   const resposta = await executarComFallbackGemini(
@@ -79,36 +152,52 @@ export async function analisarSimuladoPdfComIA(params: {
         config: {
           ...parametrosExtracaoGemini(modeloAtual),
           responseMimeType: "application/json",
-          maxOutputTokens: 32768,
+          maxOutputTokens: 24576,
         },
       }),
     {
-      rotulo: "análise do simulado em PDF",
+      rotulo: `análise das questões ${inicio} a ${fim} do simulado em PDF`,
       modelos: [modelo, modeloFallback],
       tentativasPorModelo: [2, 1],
     }
   );
 
   if (!resposta.text) {
-    throw new Error("A IA não retornou a análise do simulado.");
+    throw new Error(
+      `A IA não retornou a análise das questões ${inicio} a ${fim}.`
+    );
   }
 
-  return normalizarResposta(resposta.text, total, Boolean(entrada.comentado));
+  return normalizarResposta({
+    texto: resposta.text,
+    totalEsperado: total,
+    inicio,
+    fim,
+    temComentado: Boolean(entrada.comentado),
+  });
 }
 
-function montarPrompt(total: number, temComentado: boolean) {
+function montarPrompt(params: {
+  total: number;
+  inicio: number;
+  fim: number;
+  temComentado: boolean;
+}) {
+  const { total, inicio, fim, temComentado } = params;
+  const quantidade = fim - inicio + 1;
+
   return [
     "Você é o analisador de simulados do Study Pro.",
     "",
-    "Analise o PDF da prova questão por questão.",
+    `Analise SOMENTE as questões de número ${inicio} a ${fim} do PDF da prova.`,
+    `O aluno informou que o simulado inteiro possui ${total} questões.`,
+    `Retorne exatamente ${quantidade} itens quando essas questões existirem no documento.`,
     temComentado
       ? "Há também um PDF comentado/gabarito. Cruze os dois documentos por número da questão e use o comentado como fonte principal do gabarito quando houver correspondência clara."
       : "Não há PDF comentado. Resolva cada questão e gere um gabarito de referência da IA. Seja conservador na confiança quando houver ambiguidade.",
     "",
-    `O aluno informou que o simulado possui ${total} questões.`,
-    "Sua saída deve conter exatamente essas questões quando elas existirem no PDF.",
-    "Não invente questão que não esteja no documento.",
-    "Se uma questão estiver ilegível ou ausente, ainda retorne o número esperado com enunciado curto indicando a limitação, gabarito vazio e confiança baixa.",
+    "Não invente questão ausente. Se estiver ilegível, retorne o número esperado com gabarito vazio e confiança baixa.",
+    "Preserve as alternativas reais do PDF. Não troque a ordem das letras.",
     "",
     "Para cada questão identifique:",
     "- número;",
@@ -117,18 +206,14 @@ function montarPrompt(total: number, temComentado: boolean) {
     "- subassunto quando possível;",
     "- dificuldade Fácil, Média ou Difícil;",
     "- enunciado;",
-    "- alternativas existentes, preservando as letras reais (A, B, C, D, E etc.);",
+    "- alternativas existentes;",
     "- gabarito;",
-    "- comentário objetivo explicando a resposta;",
+    "- comentário objetivo explicando a correta;",
     "- fonteGabarito: comentado ou ia;",
     "- confianca de 0 a 100.",
     "",
-    "Classifique a dificuldade considerando quantidade de etapas, detalhe exigido, pegadinhas, proximidade das alternativas e nível de concurso.",
-    "O comentário deve ser curto e didático. Não use markdown.",
-    "",
-    "Retorne SOMENTE JSON válido:",
+    "Retorne SOMENTE JSON válido, sem markdown:",
     "{",
-    '  "totalQuestoes": 60,',
     '  "questoes": [',
     "    {",
     '      "numero": 1,',
@@ -149,11 +234,14 @@ function montarPrompt(total: number, temComentado: boolean) {
   ].join("\n");
 }
 
-function normalizarResposta(
-  texto: string,
-  totalEsperado: number,
-  temComentado: boolean
-): AnaliseSimuladoPdf {
+function normalizarResposta(params: {
+  texto: string;
+  totalEsperado: number;
+  inicio: number;
+  fim: number;
+  temComentado: boolean;
+}) {
+  const { texto, totalEsperado, inicio, fim, temComentado } = params;
   const limpo = texto
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
@@ -161,10 +249,13 @@ function normalizarResposta(
     .trim();
 
   let bruto: unknown;
+
   try {
     bruto = JSON.parse(limpo);
   } catch {
-    throw new Error("A IA retornou a análise do simulado em formato inválido.");
+    throw new Error(
+      `A IA retornou as questões ${inicio} a ${fim} em formato inválido.`
+    );
   }
 
   const raiz = objeto(bruto);
@@ -174,7 +265,13 @@ function normalizarResposta(
   for (const item of questoesBrutas) {
     const q = objeto(item);
     const numero = Math.round(Number(q.numero));
-    if (!Number.isInteger(numero) || numero < 1 || numero > totalEsperado) {
+
+    if (
+      !Number.isInteger(numero) ||
+      numero < inicio ||
+      numero > fim ||
+      numero > totalEsperado
+    ) {
       continue;
     }
 
@@ -182,8 +279,10 @@ function normalizarResposta(
       ? q.alternativas.flatMap((alternativa) => {
           const a = objeto(alternativa);
           const id = textoSeguro(a.id).toUpperCase().slice(0, 3);
-          const texto = textoSeguro(a.texto);
-          return id && texto ? [{ id, texto }] : [];
+          const textoAlternativa = textoSeguro(a.texto);
+          return id && textoAlternativa
+            ? [{ id, texto: textoAlternativa }]
+            : [];
         })
       : [];
 
@@ -208,56 +307,85 @@ function normalizarResposta(
         "Questão não extraída com segurança do PDF."
       ),
       alternativas,
-      gabarito: textoSeguro(q.gabarito).toUpperCase().slice(0, 3),
+      gabarito: normalizarGabarito(q.gabarito),
       comentario: textoSeguro(
         q.comentario,
         "A questão precisa de revisão manual antes de usar a correção automática."
       ),
       fonteGabarito,
-      confianca: Math.max(0, Math.min(100, Math.round(Number(q.confianca) || 0))),
+      confianca: Math.max(
+        0,
+        Math.min(100, Math.round(Number(q.confianca) || 0))
+      ),
     });
   }
 
   const questoes: QuestaoSimuladoPdfAnalisada[] = [];
   const alertas = Array.isArray(raiz.alertas)
-    ? raiz.alertas.map((item) => textoSeguro(item)).filter(Boolean).slice(0, 20)
+    ? raiz.alertas
+        .map((item) => textoSeguro(item))
+        .filter(Boolean)
+        .slice(0, 20)
     : [];
 
-  for (let numero = 1; numero <= totalEsperado; numero += 1) {
+  for (let numero = inicio; numero <= fim; numero += 1) {
     const encontrada = porNumero.get(numero);
     if (encontrada) {
       questoes.push(encontrada);
-      continue;
+    } else {
+      questoes.push(criarQuestaoIncompleta(numero, temComentado));
+      alertas.push(`Questão ${numero}: extração incompleta.`);
     }
-
-    questoes.push({
-      numero,
-      materia: "Não classificada",
-      assunto: "Revisão manual",
-      dificuldade: "Média",
-      enunciado: "Questão não extraída com segurança do PDF.",
-      alternativas: [],
-      gabarito: "",
-      comentario:
-        "A IA não conseguiu extrair esta questão com segurança; não use esta questão para reduzir a nota até revisão manual.",
-      fonteGabarito: temComentado ? "comentado" : "ia",
-      confianca: 0,
-    });
-    alertas.push(`Questão ${numero}: extração incompleta.`);
   }
 
   return {
-    totalQuestoes: totalEsperado,
     questoes,
-    alertas: Array.from(new Set(alertas)),
+    alertas,
   };
+}
+
+function criarBlocos(total: number, tamanho: number) {
+  const blocos: Array<{ inicio: number; fim: number }> = [];
+
+  for (let inicio = 1; inicio <= total; inicio += tamanho) {
+    blocos.push({
+      inicio,
+      fim: Math.min(total, inicio + tamanho - 1),
+    });
+  }
+
+  return blocos;
+}
+
+function criarQuestaoIncompleta(
+  numero: number,
+  temComentado: boolean
+): QuestaoSimuladoPdfAnalisada {
+  return {
+    numero,
+    materia: "Não classificada",
+    assunto: "Revisão manual",
+    dificuldade: "Média",
+    enunciado: "Questão não extraída com segurança do PDF.",
+    alternativas: [],
+    gabarito: "",
+    comentario:
+      "A IA não conseguiu extrair esta questão com segurança; ela não será usada para reduzir a nota até revisão manual.",
+    fonteGabarito: temComentado ? "comentado" : "ia",
+    confianca: 0,
+  };
+}
+
+function normalizarGabarito(valor: unknown) {
+  const resposta = textoSeguro(valor).toUpperCase().trim();
+  return /^[A-Z]{1,3}$/.test(resposta) ? resposta : "";
 }
 
 function validarPdf(
   arquivo: { nome: string; base64: string },
   rotulo: string
 ) {
-  if (!arquivo.base64 || arquivo.base64.length > 28_000_000) {
+  if (!arquivo.base64 || arquivo.base64.length > 70_000_000) {
     throw new Error(
       `O PDF ${rotulo} está vazio ou é grande demais para a análise em segundo plano.`
     );
