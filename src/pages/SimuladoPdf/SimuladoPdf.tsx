@@ -300,6 +300,7 @@ export default function SimuladoPdf() {
           marcacoes={{} as Record<string, MarcacaoQuestaoSimulado>}
           persistir={false}
           agendarAutomaticamente={false}
+          somenteLeitura
         />
       </main>
     );
