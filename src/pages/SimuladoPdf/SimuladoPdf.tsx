@@ -58,7 +58,7 @@ export default function SimuladoPdf() {
   const [finalizado, setFinalizado] = useState(false);
   const [abaMobile, setAbaMobile] = useState<"pdf" | "respostas">("pdf");
 
-  const totalQuestoes = rascunho?.totalQuestoes ?? Number(totalTexto) || 0;
+  const totalQuestoes = rascunho?.totalQuestoes ?? (Number(totalTexto) || 0);
 
   const iniciar = useCallback((proximo: RascunhoSimuladoPdf) => {
     setRascunho(proximo);
