@@ -9,6 +9,7 @@ import {
   Undo2,
 } from "lucide-react";
 import {
+  memo,
   useEffect,
   useRef,
   useState,
@@ -56,6 +57,8 @@ const PDFJS_URL =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER_URL =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const TRACOS_VAZIOS: Traco[] = [];
+
 const CORES = [
   "#ef4444",
   "#f59e0b",
@@ -65,7 +68,7 @@ const CORES = [
   "#f8fafc",
 ];
 
-export default function PdfAnotavel({
+function PdfAnotavel({
   arquivo,
   pausado,
 }: {
@@ -298,7 +301,7 @@ export default function PdfAnotavel({
                   cor={cor}
                   espessura={espessura}
                   pausado={pausado}
-                  tracos={anotacoes[numero] ?? []}
+                  tracos={anotacoes[numero] ?? TRACOS_VAZIOS}
                   aoSalvarSnapshot={salvarSnapshot}
                   aoAlterar={(tracos) => atualizarPagina(numero, tracos)}
                 />
@@ -487,6 +490,13 @@ function PaginaPdfAnotavel({
     </section>
   );
 }
+
+const PdfAnotavelMemorizado = memo(PdfAnotavel, (anterior, proximo) =>
+  anterior.arquivo === proximo.arquivo &&
+  anterior.pausado === proximo.pausado
+);
+
+export default PdfAnotavelMemorizado;
 
 function redesenharAnotacoes(
   canvas: HTMLCanvasElement | null,
