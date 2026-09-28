@@ -275,10 +275,10 @@ export default function AnaliseSimuladoStudyPro({
       <div className="analise-simulado-study__cards">
         <article>
           <Target size={20} aria-hidden="true" />
-          <span>Aproveitamento estudado</span>
+          <span>Resultado geral</span>
           <strong>{analise.resumo.aproveitamentoGeral}%</strong>
           <small>
-            {analise.resumo.totalAcertos} acertos · {analise.resumo.totalErros} erros
+            Conteúdo estudado · {analise.resumo.totalAcertos} acertos · {analise.resumo.totalErros} erros
           </small>
         </article>
         <article>
