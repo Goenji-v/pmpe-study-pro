@@ -340,7 +340,7 @@ export default function AnaliseSimuladoStudyPro({
                 <th>Questões</th>
                 <th>Acertos</th>
                 <th>Erros</th>
-                <th>Em branco</th>
+                <th>Não respondidas</th>
                 <th>Aproveitamento</th>
               </tr>
             </thead>
@@ -389,6 +389,19 @@ export default function AnaliseSimuladoStudyPro({
               {analise.resumo.piorMateria
                 ? `${analise.resumo.piorMateria.materia} · ${analise.resumo.piorMateria.aproveitamento}%`
                 : "—"}
+            </strong>
+          </div>
+          <div className="analise-simulado-study__derrubaram">
+            <span>Matérias que mais derrubaram a nota</span>
+            <strong>
+              {analise.resumo.materiasMaisDerrubaram.length > 0
+                ? analise.resumo.materiasMaisDerrubaram
+                    .map(
+                      (item) =>
+                        `${item.materia} (${item.erros + item.naoRespondidas})`
+                    )
+                    .join(" · ")
+                : "Nenhuma matéria teve erro ou questão não respondida."}
             </strong>
           </div>
         </div>
