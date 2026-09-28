@@ -51,6 +51,7 @@ export default function AnaliseSimuladoStudyPro({
   marcacoes,
   persistir = true,
   agendarAutomaticamente = true,
+  somenteLeitura = false,
 }: {
   origem: OrigemAnaliseSimulado;
   tentativaId: string;
@@ -62,6 +63,7 @@ export default function AnaliseSimuladoStudyPro({
   marcacoes: Record<string, MarcacaoQuestaoSimulado | undefined>;
   persistir?: boolean;
   agendarAutomaticamente?: boolean;
+  somenteLeitura?: boolean;
 }) {
   const navigate = useNavigate();
   const { materias, revisoes, setRevisoes } = useApp();
@@ -212,6 +214,11 @@ export default function AnaliseSimuladoStudyPro({
   ]);
 
   function adicionarARevisao() {
+    if (somenteLeitura) {
+      setMensagem("Prévia de teste: nenhuma revisão da sua conta foi alterada.");
+      return;
+    }
+
     const resultado = adicionarErrosSimuladoARevisao({
       revisoes,
       materias,
