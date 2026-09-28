@@ -22,11 +22,11 @@ test("recuperação do simulado PDF retoma mesmo com estado local desatualizado"
   );
   assert.match(
     codigo,
-    /processoRecuperavel\.progressoAnalise/
+    /processoRecuperavel\s*\.progressoAnalise/
   );
   assert.match(
     codigo,
-    /processoRecuperavel\.respostas/
+    /processoRecuperavel\s*\.respostas/
   );
 });
 
