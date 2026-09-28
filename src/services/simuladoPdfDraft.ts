@@ -6,6 +6,7 @@ export type RascunhoSimuladoPdf = {
   comentado?: File | null;
   semana?: number;
   dia?: number;
+  missaoId?: string;
 };
 
 let atual: RascunhoSimuladoPdf | null = null;
