@@ -161,6 +161,63 @@ export async function cancelarJobSimuladoPdf(
   return itens[0] ?? null;
 }
 
+export async function reiniciarJobSimuladoPdf(
+  contexto: ContextoSupabaseJob,
+  job: JobSimuladoPdf,
+  entrada: {
+    nome: string;
+    totalQuestoes: number;
+    cadernoPath: string;
+    cadernoNome: string;
+    comentadoPath?: string | null;
+    comentadoNome?: string | null;
+  }
+) {
+  if (job.status !== "erro" && job.status !== "cancelada") {
+    return job;
+  }
+
+  const resposta = await fetch(
+    `${contexto.supabaseUrl}/rest/v1/simulado_pdf_jobs?id=eq.${encodeURIComponent(job.id)}&user_id=eq.${encodeURIComponent(contexto.userId)}`,
+    {
+      method: "PATCH",
+      headers: cabecalhos(contexto, {
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify({
+        status: "fila",
+        etapa: "fila",
+        progresso: 0,
+        nome: entrada.nome.slice(0, 180),
+        total_questoes: Math.max(
+          1,
+          Math.min(200, Math.round(entrada.totalQuestoes))
+        ),
+        caderno_path: entrada.cadernoPath,
+        caderno_nome: entrada.cadernoNome,
+        comentado_path: entrada.comentadoPath || null,
+        comentado_nome: entrada.comentadoNome || null,
+        resultado: null,
+        erro: null,
+        iniciada_em: null,
+        concluida_em: null,
+        execucao_id: null,
+        lease_ate: null,
+        atualizada_em: new Date().toISOString(),
+      }),
+    }
+  );
+
+  if (!resposta.ok) {
+    throw new Error(
+      await mensagemSupabase(resposta, "Não foi possível retomar a análise.")
+    );
+  }
+
+  const itens = (await resposta.json()) as JobSimuladoPdf[];
+  return itens[0] ?? job;
+}
+
 export function agendarJobSimuladoPdf(
   job: JobSimuladoPdf,
   contexto: ContextoSupabaseJob,
