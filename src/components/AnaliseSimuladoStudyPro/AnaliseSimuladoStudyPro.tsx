@@ -1,0 +1,753 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  BookOpenCheck,
+  Brain,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardList,
+  RefreshCcw,
+  Sparkles,
+  Target,
+} from "lucide-react";
+
+import { useApp } from "../../context/AppContext";
+import {
+  listarAnalisesSimulados,
+  salvarAnaliseSimulado,
+  type OrigemAnaliseSimulado,
+} from "../../services/analisesSimuladosService";
+import {
+  analisarSimuladoStudyPro,
+  resumirAnaliseParaHistorico,
+  rotuloMotivoErro,
+  type HistoricoAnaliseSimulado,
+  type MarcacaoQuestaoSimulado,
+  type MotivoErroSimulado,
+  type QuestaoAnaliseSimulado,
+} from "../../utils/analiseSimuladoStudyPro";
+import { adicionarErrosSimuladoARevisao } from "../../utils/revisaoSimuladoStudyPro";
+import "./AnaliseSimuladoStudyPro.css";
+
+const MOTIVOS: Array<{ id: MotivoErroSimulado; texto: string }> = [
+  { id: "nao_sabia", texto: "Não sabia" },
+  { id: "confundi_regra", texto: "Confundi a regra" },
+  { id: "interpretei_errado", texto: "Interpretei errado" },
+  { id: "falta_atencao", texto: "Falta de atenção" },
+  { id: "chutei", texto: "Chutei" },
+];
+
+export default function AnaliseSimuladoStudyPro({
+  origem,
+  tentativaId,
+  simuladoId,
+  nome,
+  data,
+  questoes,
+  respostas,
+  marcacoes,
+}: {
+  origem: OrigemAnaliseSimulado;
+  tentativaId: string;
+  simuladoId?: string;
+  nome: string;
+  data: string;
+  questoes: QuestaoAnaliseSimulado[];
+  respostas: Record<string, string | undefined>;
+  marcacoes: Record<string, MarcacaoQuestaoSimulado | undefined>;
+}) {
+  const navigate = useNavigate();
+  const { materias, revisoes, setRevisoes } = useApp();
+  const [historico, setHistorico] = useState<HistoricoAnaliseSimulado[]>([]);
+  const [motivosErro, setMotivosErro] = useState<
+    Record<string, MotivoErroSimulado | undefined>
+  >({});
+  const [historicoCarregado, setHistoricoCarregado] = useState(false);
+  const [cadernoAberto, setCadernoAberto] = useState(false);
+  const [correcaoAberta, setCorrecaoAberta] = useState(false);
+  const [evolucaoAberta, setEvolucaoAberta] = useState(false);
+  const [mensagem, setMensagem] = useState("");
+
+  useEffect(() => {
+    let ativo = true;
+
+    listarAnalisesSimulados(100)
+      .then((itens) => {
+        if (!ativo) return;
+
+        const atual = itens.find(
+          (item) =>
+            item.origem === origem &&
+            item.tentativaId === tentativaId
+        );
+
+        if (atual) {
+          const motivos = Object.fromEntries(
+            atual.analise.correcao.flatMap((item) =>
+              item.motivoErro ? [[item.id, item.motivoErro]] : []
+            )
+          ) as Record<string, MotivoErroSimulado>;
+          setMotivosErro(motivos);
+        }
+
+        setHistorico(
+          itens
+            .filter(
+              (item) =>
+                !(
+                  item.origem === origem &&
+                  item.tentativaId === tentativaId
+                )
+            )
+            .map((item) => resumirAnaliseParaHistorico(item.analise))
+        );
+      })
+      .catch(() => {
+        if (ativo) setHistorico([]);
+      })
+      .finally(() => {
+        if (ativo) setHistoricoCarregado(true);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [origem, tentativaId]);
+
+  const analise = useMemo(
+    () =>
+      analisarSimuladoStudyPro({
+        tentativaId,
+        nome,
+        data,
+        questoes,
+        respostas,
+        marcacoes,
+        motivosErro,
+        historico,
+      }),
+    [
+      data,
+      historico,
+      marcacoes,
+      motivosErro,
+      nome,
+      questoes,
+      respostas,
+      tentativaId,
+    ]
+  );
+
+  useEffect(() => {
+    if (!historicoCarregado) return;
+
+    const timeout = window.setTimeout(() => {
+      void salvarAnaliseSimulado({
+        origem,
+        tentativaId,
+        simuladoId,
+        nome,
+        analise,
+      }).catch(() => {
+        // A análise continua disponível na tela mesmo se a sincronização falhar.
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    analise,
+    historicoCarregado,
+    nome,
+    origem,
+    simuladoId,
+    tentativaId,
+  ]);
+
+  function adicionarARevisao() {
+    const resultado = adicionarErrosSimuladoARevisao({
+      revisoes,
+      materias,
+      analise,
+    });
+
+    setRevisoes(resultado.revisoes);
+
+    const total = resultado.criadas + resultado.atualizadas;
+    if (total > 0) {
+      setMensagem(
+        `${resultado.criadas} revisão(ões) criada(s) e ${resultado.atualizadas} atualizada(s). O primeiro retorno fica para 1 dia e o ciclo segue 1, 5, 7, 14 e 30 dias.`
+      );
+      return;
+    }
+
+    if (resultado.semReferencia > 0) {
+      setMensagem(
+        "Os erros foram analisados, mas alguns assuntos ainda não foram ligados ao conteúdo do edital."
+      );
+      return;
+    }
+
+    setMensagem("Esses assuntos já estão na sua fila de revisões.");
+  }
+
+  function marcarMotivo(
+    questaoId: string,
+    motivo: MotivoErroSimulado
+  ) {
+    setMotivosErro((anteriores) => ({
+      ...anteriores,
+      [questaoId]:
+        anteriores[questaoId] === motivo ? undefined : motivo,
+    }));
+  }
+
+  const prioridades = analise.assuntos.filter(
+    (item) => item.prioridade !== "baixa"
+  );
+  const acertosPorChute = analise.correcao.filter(
+    (item) => item.status === "acerto_chute"
+  );
+
+  return (
+    <section className="analise-simulado-study">
+      <header className="analise-simulado-study__cabecalho">
+        <div>
+          <span>ANÁLISE STUDY PRO</span>
+          <h2>Diagnóstico inteligente do simulado</h2>
+          <p>
+            O resultado vira um ciclo de diagnóstico → revisão → questões → nova medição,
+            sem interromper o seu cronograma normal.
+          </p>
+        </div>
+        <div className="analise-simulado-study__dificuldade">
+          <small>Dificuldade geral</small>
+          <strong>{analise.dificuldade.geral}</strong>
+          <span>
+            {analise.dificuldade.facil.percentual}% fáceis ·{" "}
+            {analise.dificuldade.media.percentual}% médias ·{" "}
+            {analise.dificuldade.dificil.percentual}% difíceis
+          </span>
+        </div>
+      </header>
+
+      {mensagem && (
+        <div className="analise-simulado-study__mensagem">{mensagem}</div>
+      )}
+
+      <div className="analise-simulado-study__cards">
+        <article>
+          <Target size={20} aria-hidden="true" />
+          <span>Aproveitamento estudado</span>
+          <strong>{analise.resumo.aproveitamentoGeral}%</strong>
+          <small>
+            {analise.resumo.totalAcertos} acertos · {analise.resumo.totalErros} erros
+          </small>
+        </article>
+        <article>
+          <BarChart3 size={20} aria-hidden="true" />
+          <span>Desempenho por matéria</span>
+          <strong>{analise.materias.length}</strong>
+          <small>
+            {analise.resumo.piorMateria
+              ? `Mais fraca: ${analise.resumo.piorMateria.materia}`
+              : "Sem matéria avaliada"}
+          </small>
+        </article>
+        <article>
+          <AlertTriangle size={20} aria-hidden="true" />
+          <span>Assuntos com mais erros</span>
+          <strong>{prioridades.length}</strong>
+          <small>
+            {prioridades[0]
+              ? `Prioridade: ${prioridades[0].assuntoEspecifico}`
+              : "Nenhuma prioridade alta/média"}
+          </small>
+        </article>
+        <article>
+          <Brain size={20} aria-hidden="true" />
+          <span>Acertos por chute</span>
+          <strong>{analise.resumo.totalAcertosPorChute}</strong>
+          <small>Entram na revisão mesmo tendo pontuado.</small>
+        </article>
+        <article>
+          <BookOpenCheck size={20} aria-hidden="true" />
+          <span>Ainda não estudado</span>
+          <strong>{analise.resumo.totalNaoEstudadas}</strong>
+          <small>Permanece no cronograma normal.</small>
+        </article>
+        <article>
+          <Sparkles size={20} aria-hidden="true" />
+          <span>Prioridades de revisão</span>
+          <strong>{analise.planoRevisao.length}</strong>
+          <small>Ciclo 1 · 5 · 7 · 14 · 30 dias.</small>
+        </article>
+      </div>
+
+      <section className="analise-simulado-study__painel">
+        <div className="analise-simulado-study__titulo">
+          <div>
+            <span>RESUMO GERAL</span>
+            <h3>Desempenho por matéria</h3>
+          </div>
+          <small>
+            “Ainda não estudado” não reduz o domínio do conteúdo já estudado.
+          </small>
+        </div>
+
+        <div className="analise-simulado-study__tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Matéria</th>
+                <th>Questões</th>
+                <th>Acertos</th>
+                <th>Erros</th>
+                <th>Em branco</th>
+                <th>Aproveitamento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analise.materias.map((item) => (
+                <tr key={item.materia}>
+                  <td>
+                    <strong>{item.materia}</strong>
+                    {item.naoEstudadas > 0 && (
+                      <small>{item.naoEstudadas} ainda não estudada(s)</small>
+                    )}
+                  </td>
+                  <td>{item.total}</td>
+                  <td>{item.acertos}</td>
+                  <td>{item.erros}</td>
+                  <td>{item.naoRespondidas}</td>
+                  <td>
+                    <b>{item.aproveitamento}%</b>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="analise-simulado-study__resumo-linhas">
+          <div>
+            <span>Total de acertos</span>
+            <strong>{analise.resumo.totalAcertos}</strong>
+          </div>
+          <div>
+            <span>Total de erros</span>
+            <strong>{analise.resumo.totalErros}</strong>
+          </div>
+          <div>
+            <span>Melhor matéria</span>
+            <strong>
+              {analise.resumo.melhorMateria
+                ? `${analise.resumo.melhorMateria.materia} · ${analise.resumo.melhorMateria.aproveitamento}%`
+                : "—"}
+            </strong>
+          </div>
+          <div>
+            <span>Pior matéria</span>
+            <strong>
+              {analise.resumo.piorMateria
+                ? `${analise.resumo.piorMateria.materia} · ${analise.resumo.piorMateria.aproveitamento}%`
+                : "—"}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="analise-simulado-study__painel">
+        <div className="analise-simulado-study__titulo">
+          <div>
+            <span>ANÁLISE POR ASSUNTO</span>
+            <h3>Domínio e prioridade automática</h3>
+          </div>
+        </div>
+
+        <div className="analise-simulado-study__assuntos">
+          {analise.assuntos.map((item) => (
+            <article
+              key={item.chave}
+              className={`prioridade-${item.prioridade}`}
+            >
+              <div className="analise-simulado-study__assunto-info">
+                <strong>{item.materia}</strong>
+                <span>
+                  {item.modulo ? `${item.modulo} → ` : ""}
+                  {item.assunto}
+                  {item.subassunto ? ` → ${item.subassunto}` : ""}
+                </span>
+                <small>{item.dominio}</small>
+              </div>
+              <div className="analise-simulado-study__assunto-numeros">
+                <strong>{item.percentual}%</strong>
+                <span>
+                  {item.acertos} acertos · {item.erros} erros ·{" "}
+                  {item.naoRespondidas} em branco
+                </span>
+                {item.acertosPorChute > 0 && (
+                  <small>{item.acertosPorChute} acerto(s) por chute</small>
+                )}
+                {item.reincidencias > 0 && (
+                  <small className="reincidencia">
+                    Reincidência detectada em {item.reincidencias} simulado(s)
+                  </small>
+                )}
+              </div>
+              <div className="analise-simulado-study__prioridade">
+                <span>Prioridade {rotuloPrioridade(item.prioridade)}</span>
+                <strong>{item.prioridadeIndice}/100</strong>
+                <small>{item.orientacao}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {acertosPorChute.length > 0 && (
+        <section className="analise-simulado-study__painel">
+          <div className="analise-simulado-study__titulo">
+            <div>
+              <span>ACERTOS POR CHUTE</span>
+              <h3>Acertou, mas ainda precisa confirmar o domínio</h3>
+            </div>
+          </div>
+          <div className="analise-simulado-study__chips">
+            {acertosPorChute.map((item) => (
+              <span key={item.id}>
+                Q{item.numero} · {item.materia} · {item.assuntoEspecifico}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {analise.aindaNaoEstudado.length > 0 && (
+        <section className="analise-simulado-study__painel nao-estudado">
+          <div className="analise-simulado-study__titulo">
+            <div>
+              <span>AINDA NÃO ESTUDADO</span>
+              <h3>Conteúdos que continuam no cronograma normal</h3>
+            </div>
+            <small>
+              O Study Pro não usa essas questões para dizer que você é fraco no assunto.
+            </small>
+          </div>
+          <div className="analise-simulado-study__nao-estudado">
+            {analise.aindaNaoEstudado.map((item) => (
+              <div key={item.questaoId}>
+                <strong>Questão {item.numero}</strong>
+                <span>{item.materia}</span>
+                <small>{item.assuntoEspecifico}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="analise-simulado-study__painel">
+        <div className="analise-simulado-study__titulo">
+          <div>
+            <span>PLANO DE REVISÃO</span>
+            <h3>Corrigir o que está fraco sem parar o edital</h3>
+          </div>
+        </div>
+
+        {analise.planoRevisao.length === 0 ? (
+          <div className="analise-simulado-study__vazio">
+            Nenhum assunto precisa de reforço extraordinário neste simulado.
+          </div>
+        ) : (
+          <div className="analise-simulado-study__plano">
+            {analise.planoRevisao.slice(0, 8).map((item, indice) => (
+              <article key={item.chave}>
+                <span>{indice + 1}</span>
+                <div>
+                  <strong>
+                    {item.materia} · {item.assuntoEspecifico}
+                  </strong>
+                  <p>{item.acao}</p>
+                  <small>
+                    {item.quantidadeQuestoes > 0
+                      ? `Bloco sugerido: ${item.quantidadeQuestoes} questões · `
+                      : ""}
+                    Revisões em 1, 5, 7, 14 e 30 dias
+                    {item.reincidencia ? " · erro reincidente" : ""}
+                  </small>
+                </div>
+                <b className={`nivel-${item.prioridade}`}>
+                  {rotuloPrioridade(item.prioridade)}
+                </b>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <div className="analise-simulado-study__acoes">
+        <button
+          type="button"
+          onClick={() => setCadernoAberto((valor) => !valor)}
+        >
+          <ClipboardList size={18} aria-hidden="true" />
+          Gerar caderno de erros
+        </button>
+        <button type="button" onClick={adicionarARevisao}>
+          <RefreshCcw size={18} aria-hidden="true" />
+          Adicionar erros à revisão
+        </button>
+        <button type="button" onClick={() => navigate("/revisoes")}>
+          <BookOpenCheck size={18} aria-hidden="true" />
+          Revisar agora
+        </button>
+        <button
+          type="button"
+          onClick={() => setEvolucaoAberta((valor) => !valor)}
+        >
+          <BarChart3 size={18} aria-hidden="true" />
+          Ver evolução
+        </button>
+        <button
+          type="button"
+          className="primario"
+          onClick={() =>
+            navigate(origem === "ia" ? "/gerar-simulado-ia" : "/simulados")
+          }
+        >
+          <Sparkles size={18} aria-hidden="true" />
+          Novo simulado
+        </button>
+      </div>
+
+      {cadernoAberto && (
+        <section className="analise-simulado-study__painel caderno-erros">
+          <div className="analise-simulado-study__titulo">
+            <div>
+              <span>CADERNO DE ERROS</span>
+              <h3>Erros e acertos por chute</h3>
+            </div>
+            <small>{analise.cadernoErros.length} item(ns)</small>
+          </div>
+
+          {analise.cadernoErros.length === 0 ? (
+            <div className="analise-simulado-study__vazio">
+              Nenhum erro ou acerto por chute para registrar.
+            </div>
+          ) : (
+            <div className="analise-simulado-study__caderno-lista">
+              {analise.cadernoErros.map((item) => (
+                <article key={item.questaoId}>
+                  <header>
+                    <div>
+                      <span>
+                        Questão {item.numero} · {item.materia}
+                      </span>
+                      <strong>{item.assuntoEspecifico}</strong>
+                    </div>
+                    <b className={item.status}>
+                      {item.status === "acerto_chute"
+                        ? "Acerto por chute"
+                        : "Erro"}
+                    </b>
+                  </header>
+
+                  <p className="enunciado">{item.enunciado}</p>
+
+                  <div className="alternativas">
+                    {item.alternativas.map((alternativa) => (
+                      <div
+                        key={alternativa.id}
+                        className={[
+                          alternativa.id === item.gabarito ? "correta" : "",
+                          alternativa.id === item.respostaAluno &&
+                          alternativa.id !== item.gabarito
+                            ? "marcada-errada"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <strong>{alternativa.id}</strong>
+                        <span>{alternativa.texto}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="respostas">
+                    <span>
+                      Sua resposta: <b>{item.respostaAluno || "em branco"}</b>
+                    </span>
+                    <span>
+                      Gabarito: <b>{item.gabarito}</b>
+                    </span>
+                  </div>
+
+                  <div className="explicacoes">
+                    <div>
+                      <strong>Por que a correta está certa</strong>
+                      <p>{item.comentario}</p>
+                    </div>
+                    <div>
+                      <strong>Motivo do erro</strong>
+                      <p>{item.motivoProvavel}</p>
+                    </div>
+                    <div>
+                      <strong>Bizu de prova</strong>
+                      <p>{item.bizu}</p>
+                    </div>
+                    {item.mnemonico && (
+                      <div>
+                        <strong>Mnemônico / macete</strong>
+                        <p>{item.mnemonico}</p>
+                      </div>
+                    )}
+                    <div>
+                      <strong>O que revisar</strong>
+                      <p>{item.oQueRevisar}</p>
+                    </div>
+                  </div>
+
+                  <div className="motivos">
+                    <span>Marque o motivo para deixar o diagnóstico mais preciso:</span>
+                    <div>
+                      {MOTIVOS.map((motivo) => (
+                        <button
+                          type="button"
+                          key={motivo.id}
+                          className={
+                            motivosErro[item.questaoId] === motivo.id
+                              ? "ativo"
+                              : ""
+                          }
+                          title={rotuloMotivoErro(motivo.id)}
+                          onClick={() =>
+                            marcarMotivo(item.questaoId, motivo.id)
+                          }
+                        >
+                          {motivo.texto}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="analise-simulado-study__painel correcao">
+        <button
+          type="button"
+          className="analise-simulado-study__abrir"
+          onClick={() => setCorrecaoAberta((valor) => !valor)}
+          aria-expanded={correcaoAberta}
+        >
+          <div>
+            <CheckCircle2 size={20} aria-hidden="true" />
+            <span>
+              <strong>Correção questão a questão</strong>
+              <small>
+                Acerto, erro, acerto por chute, não respondida e ainda não estudado
+              </small>
+            </span>
+          </div>
+          <ChevronDown
+            size={20}
+            aria-hidden="true"
+            className={correcaoAberta ? "aberto" : ""}
+          />
+        </button>
+
+        {correcaoAberta && (
+          <div className="analise-simulado-study__correcao-lista">
+            {analise.correcao.map((item) => (
+              <div key={item.id}>
+                <span>Q{item.numero}</span>
+                <strong>
+                  {item.materia} · {item.assuntoEspecifico}
+                </strong>
+                <small>
+                  Marcada: {item.respostaAluno || "—"} · Gabarito: {item.gabarito}
+                </small>
+                <b className={`status-${item.status}`}>
+                  {rotuloStatus(item.status)}
+                </b>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {evolucaoAberta && (
+        <section className="analise-simulado-study__painel evolucao">
+          <div className="analise-simulado-study__titulo">
+            <div>
+              <span>EVOLUÇÃO</span>
+              <h3>Comparação com simulados anteriores</h3>
+            </div>
+            <small>Variação de nota não é igual a perda automática de conhecimento.</small>
+          </div>
+
+          {analise.evolucao.length === 0 ? (
+            <div className="analise-simulado-study__vazio">
+              Ainda não existe outro simulado comparável por matéria.
+            </div>
+          ) : (
+            <div className="analise-simulado-study__evolucao-lista">
+              {analise.evolucao.map((item) => (
+                <article key={item.materia}>
+                  <strong>{item.materia}</strong>
+                  <div>
+                    <span>Anterior: {item.anterior}%</span>
+                    <ArrowRight size={16} aria-hidden="true" />
+                    <span>Atual: {item.atual}%</span>
+                  </div>
+                  <b
+                    className={
+                      item.variacaoPp > 0
+                        ? "subiu"
+                        : item.variacaoPp < 0
+                          ? "caiu"
+                          : ""
+                    }
+                  >
+                    {item.rotulo}
+                  </b>
+                  {item.observacao && <small>{item.observacao}</small>}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <footer className="analise-simulado-study__recomendacao">
+        <Sparkles size={22} aria-hidden="true" />
+        <div>
+          <strong>Recomendação final</strong>
+          <p>{analise.recomendacaoFinal}</p>
+        </div>
+      </footer>
+    </section>
+  );
+}
+
+function rotuloPrioridade(prioridade: "alta" | "media" | "baixa") {
+  if (prioridade === "alta") return "alta";
+  if (prioridade === "media") return "média";
+  return "baixa";
+}
+
+function rotuloStatus(status: string) {
+  if (status === "acerto") return "Acerto";
+  if (status === "erro") return "Erro";
+  if (status === "acerto_chute") return "Acerto por chute";
+  if (status === "nao_respondida") return "Não respondida";
+  if (status === "nao_estudado") return "Ainda não estudado";
+  if (status === "anulada") return "Anulada";
+  return status;
+}
