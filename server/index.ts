@@ -30,6 +30,7 @@ import {
 import {
   agendarJobGeracaoIA,
 } from "./processarGeracaoPersistente.ts";
+import { analisarSimuladoPdfComIA } from "./simuladoPdfAnalise.ts";
 
 const app = express();
 
@@ -954,6 +955,81 @@ Regras:
           erro instanceof Error
             ? erro.message
             : "Erro ao gerar cronograma.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/simulado-pdf/analisar",
+  async (req, res) => {
+    const inicio = Date.now();
+
+    try {
+      const prova = req.body?.prova;
+      const comentado = req.body?.comentado;
+      const totalInformado = Number(req.body?.totalInformado);
+
+      if (
+        !prova ||
+        typeof prova.nome !== "string" ||
+        typeof prova.base64 !== "string" ||
+        !Number.isInteger(totalInformado) ||
+        totalInformado < 1 ||
+        totalInformado > 200
+      ) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Informe o PDF da prova e uma quantidade entre 1 e 200 questões.",
+        });
+        return;
+      }
+
+      const analise = await analisarSimuladoPdfComIA({
+        ai,
+        modelo,
+        modeloFallback,
+        entrada: {
+          prova: {
+            nome: prova.nome,
+            base64: prova.base64,
+          },
+          comentado:
+            comentado &&
+            typeof comentado.nome === "string" &&
+            typeof comentado.base64 === "string"
+              ? {
+                  nome: comentado.nome,
+                  base64: comentado.base64,
+                }
+              : null,
+          totalInformado,
+        },
+      });
+
+      console.info("[simulado-pdf] análise concluída", {
+        userId: req.header("x-study-user-id") || "desconhecido",
+        total: analise.totalQuestoes,
+        duracaoMs: Date.now() - inicio,
+        comentado: Boolean(comentado),
+      });
+
+      res.json({
+        sucesso: true,
+        analise,
+      });
+    } catch (erro) {
+      console.error("[simulado-pdf] análise falhou", {
+        duracaoMs: Date.now() - inicio,
+        erro: erro instanceof Error ? erro.message : String(erro),
+      });
+
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível analisar o simulado em PDF.",
       });
     }
   }
