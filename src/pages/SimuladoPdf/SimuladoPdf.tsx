@@ -417,7 +417,7 @@ export default function SimuladoPdf() {
 
     const questoesValidas = analise.questoes.filter(
       (item) =>
-        item.status === "valida" &&
+        (item.status == null || item.status === "valida") &&
         Boolean(item.gabarito) &&
         item.confianca >= 50
     );
@@ -495,7 +495,8 @@ export default function SimuladoPdf() {
         norma: item.norma,
         dispositivo: item.dispositivo,
         anulada:
-          item.status !== "valida" ||
+          item.status === "anulada" ||
+          item.status === "revisar" ||
           !item.gabarito ||
           item.confianca < 50,
       })),
@@ -1038,7 +1039,7 @@ export default function SimuladoPdf() {
         <AnaliseSimuladoStudyPro
           origem="pdf"
           tentativaId={rascunho?.id ?? "preview-pdf"}
-          simuladoId={rascunho?.id}
+          simuladoId={rascunho ? "pdf-" + rascunho.id : undefined}
           nome={nome}
           data={criadoEm}
           questoes={questoesResultado}
