@@ -74,6 +74,17 @@ export default function Simulados() {
     rascunhoInicial.observacao
   );
 
+  const [analisesPdf, setAnalisesPdf] =
+    useState<AnaliseSimuladoSalva[]>([]);
+  const [
+    carregandoAnalisesPdf,
+    setCarregandoAnalisesPdf,
+  ] = useState(true);
+  const [
+    diagnosticoPdfAberto,
+    setDiagnosticoPdfAberto,
+  ] = useState<string | null>(null);
+
   useEffect(() => {
     let ativo = true;
 
