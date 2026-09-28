@@ -130,6 +130,27 @@ test("não usa o modelo reserva quando o erro é de limite", async () => {
   assert.deepEqual(chamadas, ["primario"]);
 });
 
+test("pode trocar de modelo após 429 quando o fluxo permite", async () => {
+  const chamadas: string[] = [];
+
+  const resultado = await executarComFallbackGemini(
+    async (modelo) => {
+      chamadas.push(modelo);
+      if (modelo === "primario") throw erroComStatus(429);
+      return "ok";
+    },
+    {
+      rotulo: "simulado PDF",
+      modelos: ["primario", "reserva"],
+      trocarEmLimite: true,
+      esperar: async () => undefined,
+    }
+  );
+
+  assert.equal(resultado, "ok");
+  assert.deepEqual(chamadas, ["primario", "reserva"]);
+});
+
 function erroModeloIndisponivel() {
   return Object.assign(new Error(JSON.stringify({ error: {
     code: 404, status: "NOT_FOUND",
