@@ -1037,8 +1037,8 @@ export default function SimuladoPdf() {
 
         <AnaliseSimuladoStudyPro
           origem="pdf"
-          tentativaId={rascunho.id}
-          simuladoId={rascunho.id}
+          tentativaId={rascunho?.id ?? "preview-pdf"}
+          simuladoId={rascunho?.id}
           nome={nome}
           data={criadoEm}
           questoes={questoesResultado}
