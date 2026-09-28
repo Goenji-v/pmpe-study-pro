@@ -764,3 +764,142 @@
     margin-left: 2px;
   }
 }
+
+
+.analise-progresso {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  margin: 6px 0 4px;
+  overflow: hidden;
+  background: rgba(124, 164, 201, .16);
+  border-radius: 999px;
+}
+
+.analise-progresso > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2d8cf0, #67b5ff);
+  border-radius: inherit;
+  transition: width .35s ease;
+}
+
+.simulado-pdf-recuperando {
+  color: #b8cbe0;
+  font-size: 13px;
+}
+
+.simulado-pdf-retomar {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 26px;
+  background: #0b1c30;
+  border: 1px solid #2d5070;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .3);
+}
+
+.simulado-pdf-retomar > span {
+  color: #67adf5;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.simulado-pdf-retomar h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.simulado-pdf-retomar > p {
+  margin: 0;
+  color: #91a9c1;
+  line-height: 1.55;
+}
+
+.simulado-pdf-retomar-resumo {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+}
+
+.simulado-pdf-retomar-resumo > div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  min-width: 0;
+  background: rgba(7, 22, 36, .6);
+  border: 1px solid rgba(73, 118, 161, .25);
+  border-radius: 10px;
+}
+
+.simulado-pdf-retomar-resumo small {
+  color: #708aa4;
+  font-size: 10px;
+}
+
+.simulado-pdf-retomar-resumo strong {
+  overflow: hidden;
+  color: #edf7ff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simulado-pdf-retomar-acoes {
+  display: flex;
+  gap: 10px;
+}
+
+.simulado-pdf-retomar-acoes button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.simulado-pdf-retomar-acoes .continuar {
+  flex: 1;
+  color: #fff;
+  background: #2183ec;
+  border: 1px solid #5aafff;
+}
+
+.simulado-pdf-retomar-acoes .excluir {
+  color: #ffd4d4;
+  background: rgba(177, 58, 58, .14);
+  border: 1px solid rgba(229, 95, 95, .38);
+}
+
+.simulado-pdf-retomar-acoes button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+@media (max-width: 620px) {
+  .simulado-pdf-retomar {
+    padding: 20px 14px;
+  }
+
+  .simulado-pdf-retomar h1 {
+    font-size: 25px;
+  }
+
+  .simulado-pdf-retomar-resumo {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .simulado-pdf-retomar-resumo > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .simulado-pdf-retomar-acoes {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
