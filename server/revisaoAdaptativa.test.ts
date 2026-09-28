@@ -130,10 +130,11 @@ function criarRevisao(
 }
 
 
-test("orienta reforço de conteúdo abaixo de 60% e questões a partir de 60%", () => {
-  assert.equal(orientarRevisaoPorResultado(3, 7)?.modo, "teoria_questoes");
-  assert.equal(orientarRevisaoPorResultado(5, 5)?.modo, "teoria_questoes");
-  assert.equal(orientarRevisaoPorResultado(6, 4)?.modo, "questoes");
+test("orienta revisão pelas faixas 0-49, 50-69, 70-79 e 80+", () => {
+  assert.equal(orientarRevisaoPorResultado(4, 6)?.modo, "teoria_questoes");
+  assert.equal(orientarRevisaoPorResultado(5, 5)?.titulo, "Revisão curta + questões");
+  assert.equal(orientarRevisaoPorResultado(6, 4)?.titulo, "Revisão curta + questões");
+  assert.equal(orientarRevisaoPorResultado(7, 3)?.titulo, "Questões + revisão espaçada");
   assert.equal(orientarRevisaoPorResultado(8, 2)?.modo, "ciclo_normal");
   assert.equal(orientarRevisaoPorResultado(5, 0)?.modo, "ciclo_normal");
   assert.equal(orientarRevisaoPorResultado(3, 1), null);

@@ -12,6 +12,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import QuestaoComunidade from "../../components/QuestaoComunidade/QuestaoComunidade";
 import ExplicacaoQuestao from "../../components/ExplicacaoQuestao/ExplicacaoQuestao";
+import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
+import MarcacaoQuestaoSimulado from "../../components/AnaliseSimuladoStudyPro/MarcacaoQuestaoSimulado";
 
 import "./ResolverSimuladoIA.css";
 import "./ResolverSimuladoIADescartar.css";
@@ -56,6 +58,10 @@ import {
   type RespostasQuestoesIA,
   type ResumoRevisoesResultadoIA,
 } from "../../utils/resultadoQuestoesIA";
+import type {
+  MarcacaoQuestaoSimulado as TipoMarcacaoQuestaoSimulado,
+  QuestaoAnaliseSimulado,
+} from "../../utils/analiseSimuladoStudyPro";
 
 type LetraAlternativa = LetraAlternativaIA;
 type RespostasUsuario = RespostasQuestoesIA;
@@ -95,6 +101,7 @@ type RascunhoQuestoesIA = {
   assinatura: string;
   respostas: RespostasUsuario;
   alternativasEliminadas: AlternativasEliminadas;
+  marcacoes?: Record<string, TipoMarcacaoQuestaoSimulado>;
   questaoAtual: number;
 };
 
@@ -122,6 +129,12 @@ export default function ResolverSimuladoIA() {
     alternativasEliminadas,
     setAlternativasEliminadas,
   ] = useState<AlternativasEliminadas>({});
+
+  const [marcacoes, setMarcacoes] = useState<
+    Record<string, TipoMarcacaoQuestaoSimulado>
+  >({});
+  const [resultadoFinal, setResultadoFinal] =
+    useState<ResultadoSimuladoIA | null>(null);
 
   const [
     questaoAtual,
@@ -166,10 +179,11 @@ export default function ResolverSimuladoIA() {
       assinatura: assinaturaQuestoes(questoes),
       respostas,
       alternativasEliminadas,
+      marcacoes,
       questaoAtual,
     };
     sessionStorage.setItem(CHAVE_RASCUNHO_QUESTOES_IA, JSON.stringify(rascunho));
-  }, [alternativasEliminadas, carregando, finalizado, questaoAtual, questoes, respostas]);
+  }, [alternativasEliminadas, carregando, finalizado, marcacoes, questaoAtual, questoes, respostas]);
 
   const resultado = useMemo(() => {
     if (!finalizado) {
@@ -204,6 +218,32 @@ export default function ResolverSimuladoIA() {
       questoes,
       respostas,
     ]
+  );
+
+  const questoesAnalise = useMemo<QuestaoAnaliseSimulado[]>(
+    () =>
+      questoes.map((item, indice) => ({
+        id: item.id,
+        numero: indice + 1,
+        materia: item.materia,
+        materiaId: item.materiaId,
+        modulo: item.modulo,
+        moduloId: item.moduloId,
+        assunto: item.assunto,
+        assuntoId: item.assuntoId,
+        subassunto: item.subassunto,
+        dificuldade: item.dificuldade,
+        enunciado: item.enunciado,
+        alternativas: Object.entries(item.alternativas).map(([id, texto]) => ({
+          id,
+          texto,
+        })),
+        gabarito: item.respostaCorreta,
+        explicacao: item.explicacao,
+        norma: item.norma,
+        dispositivo: item.dispositivo,
+      })),
+    [questoes]
   );
 
   const statusRevisaoAutomatica = useMemo(() => {
@@ -312,6 +352,7 @@ export default function ResolverSimuladoIA() {
 
       setRespostas(rascunho.respostas ?? {});
       setAlternativasEliminadas(rascunho.alternativasEliminadas ?? {});
+      setMarcacoes(rascunho.marcacoes ?? {});
       setQuestaoAtual(Math.min(
         Math.max(0, Number(rascunho.questaoAtual) || 0),
         Math.max(0, carregadas.length - 1)
@@ -320,6 +361,23 @@ export default function ResolverSimuladoIA() {
     } catch {
       sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
     }
+  }
+
+  function marcarQuestao(
+    questaoId: string,
+    marcacao: TipoMarcacaoQuestaoSimulado
+  ) {
+    if (finalizado) return;
+
+    setMarcacoes((anteriores) => {
+      const proximas = { ...anteriores };
+      if (marcacao === "normal") {
+        delete proximas[questaoId];
+      } else {
+        proximas[questaoId] = marcacao;
+      }
+      return proximas;
+    });
   }
 
   function responder(
@@ -482,6 +540,7 @@ export default function ResolverSimuladoIA() {
             : "O histórico online não pôde ser atualizado.";
       }
 
+      setResultadoFinal(novoResultado);
       setFinalizado(true);
       sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
       if (registroApp.revisaoConcluidaDireta) {
@@ -561,9 +620,20 @@ export default function ResolverSimuladoIA() {
       );
     }
 
+    const questoesDiagnostico = novoResultado.questoes.filter(
+      (item) => marcacoes[item.id] !== "nao_estudado"
+    );
+    const respostasDiagnostico = { ...novoResultado.respostas };
+    questoesDiagnostico.forEach((item) => {
+      const marcacao = marcacoes[item.id];
+      if (marcacao === "chutei" || marcacao === "nao_sei") {
+        delete respostasDiagnostico[item.id];
+      }
+    });
+
     const diagnosticoCompleto = calcularDiagnosticoQuestoesIA(
-      novoResultado.questoes,
-      novoResultado.respostas
+      questoesDiagnostico,
+      respostasDiagnostico
     );
 
     const revisaoDaSessao = cronometroAtivo && sessaoAtiva.objetivo.startsWith("[Questões IA]")
@@ -773,11 +843,13 @@ export default function ResolverSimuladoIA() {
 
   function treinarErros() {
     const questoesParaTreino =
-      questoes.filter(
-        (item) =>
-          respostas[item.id] !==
-          item.respostaCorreta
-      );
+      questoes.filter((item) => {
+        if (marcacoes[item.id] === "nao_estudado") return false;
+        const semSeguranca =
+          marcacoes[item.id] === "chutei" ||
+          marcacoes[item.id] === "nao_sei";
+        return respostas[item.id] !== item.respostaCorreta || semSeguranca;
+      });
 
     if (
       questoesParaTreino.length === 0
@@ -809,6 +881,8 @@ export default function ResolverSimuladoIA() {
 
     setRespostas({});
     setAlternativasEliminadas({});
+    setMarcacoes({});
+    setResultadoFinal(null);
     setQuestaoAtual(0);
     setFinalizado(false);
     setResumoRevisaoFinal(null);
@@ -857,6 +931,8 @@ export default function ResolverSimuladoIA() {
     setQuestoes([]);
     setRespostas({});
     setAlternativasEliminadas({});
+    setMarcacoes({});
+    setResultadoFinal(null);
     setFinalizado(false);
     setMensagem("");
     setResumoRevisaoFinal(null);
@@ -877,6 +953,11 @@ export default function ResolverSimuladoIA() {
       return novas;
     });
     setAlternativasEliminadas((anteriores) => {
+      const novas = { ...anteriores };
+      delete novas[questaoId];
+      return novas;
+    });
+    setMarcacoes((anteriores) => {
       const novas = { ...anteriores };
       delete novas[questaoId];
       return novas;
@@ -1022,7 +1103,10 @@ export default function ResolverSimuladoIA() {
             </div>
           </div>
 
-          <section className="resolver-ia-diagnostico">
+          <section
+            className="resolver-ia-diagnostico"
+            hidden={tipoSessao === "simulado"}
+          >
             <div className="resolver-ia-diagnostico-topo">
               <div>
                 <span>
@@ -1135,6 +1219,21 @@ export default function ResolverSimuladoIA() {
           </section>
         </>
       )}
+
+      {finalizado &&
+        tipoSessao === "simulado" &&
+        resultadoFinal && (
+          <AnaliseSimuladoStudyPro
+            origem="ia"
+            tentativaId={resultadoFinal.id}
+            simuladoId={resultadoFinal.cadernoId}
+            nome={resultadoFinal.nome}
+            data={resultadoFinal.data}
+            questoes={questoesAnalise}
+            respostas={respostas}
+            marcacoes={marcacoes}
+          />
+        )}
 
       <div className="resolver-ia-layout">
         <aside className="resolver-ia-navegacao">
@@ -1281,6 +1380,12 @@ export default function ResolverSimuladoIA() {
           <h2 className="resolver-ia-enunciado">
             {questao.enunciado}
           </h2>
+
+          <MarcacaoQuestaoSimulado
+            valor={marcacoes[questao.id] ?? "normal"}
+            disabled={finalizado}
+            onChange={(valor) => marcarQuestao(questao.id, valor)}
+          />
 
           <div className="resolver-ia-alternativas">
             {(
