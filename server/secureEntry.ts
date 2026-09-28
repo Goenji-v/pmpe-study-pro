@@ -401,7 +401,9 @@ async function autenticarEControlarUso(
     }
 
     const importacao =
-      req.path === "/analisar-prova" || req.path === "/analisar-edital";
+      req.path === "/analisar-prova" ||
+      req.path === "/analisar-edital" ||
+      req.path === "/simulado-pdf/analisar";
     const consultaLeve =
       req.method === "GET" &&
       (
@@ -457,7 +459,9 @@ function validarTamanhoDaRequisicao(
 ) {
   const bytes = Number(req.header("content-length") || 0);
   const importacao =
-    req.path === "/analisar-prova" || req.path === "/analisar-edital";
+    req.path === "/analisar-prova" ||
+    req.path === "/analisar-edital" ||
+    req.path === "/simulado-pdf/analisar";
   const limite = importacao ? 40 * 1024 * 1024 : 2 * 1024 * 1024;
 
   if (Number.isFinite(bytes) && bytes > limite) {
