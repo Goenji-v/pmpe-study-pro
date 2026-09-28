@@ -1,10 +1,10 @@
 import { criarUrlApi } from "../config/api";
 import { fetchApiAutenticada } from "./apiAutenticada";
-import { analisarProvaPdf } from "./importacaoProvaService";
 
 export type QuestaoSimuladoPdfAnalisada = {
   numero: number;
   materia: string;
+  modulo?: string;
   assunto: string;
   subassunto?: string;
   dificuldade: "Fácil" | "Média" | "Difícil";
@@ -12,8 +12,11 @@ export type QuestaoSimuladoPdfAnalisada = {
   alternativas: Array<{ id: string; texto: string }>;
   gabarito: string;
   comentario: string;
+  norma?: string;
+  dispositivo?: string;
   fonteGabarito: "comentado" | "ia";
   confianca: number;
+  status: "valida" | "revisar" | "anulada";
 };
 
 export type AnaliseSimuladoPdf = {
@@ -22,175 +25,195 @@ export type AnaliseSimuladoPdf = {
   alertas: string[];
 };
 
-export async function analisarSimuladoPdf(params: {
+export type JobAnaliseSimuladoPdf = {
+  id: string;
+  requestId: string;
+  status: "fila" | "processando" | "concluida" | "erro";
+  etapa:
+    | "fila"
+    | "gerando"
+    | "revisando"
+    | "corrigindo"
+    | "salvando"
+    | "concluida"
+    | "erro";
+  progresso: number;
+  titulo: string;
+  descricao: string;
+  erro: string | null;
+  totalQuestoes: number;
+  resultado: AnaliseSimuladoPdf | null;
+  criadaEm: string;
+  iniciadaEm: string | null;
+  atualizadaEm: string;
+  concluidaEm: string | null;
+};
+
+type RespostaJob =
+  | {
+      sucesso: true;
+      job: JobAnaliseSimuladoPdf;
+    }
+  | {
+      sucesso: false;
+      erro: string;
+    };
+
+export async function iniciarAnaliseSimuladoPdf(params: {
+  requestId: string;
   prova: File;
   comentado?: File | null;
   totalInformado: number;
-}): Promise<AnaliseSimuladoPdf> {
+  titulo?: string;
+  retomar?: boolean;
+}): Promise<JobAnaliseSimuladoPdf> {
+  validarArquivoPdf(params.prova, "caderno");
+  if (params.comentado) validarArquivoPdf(params.comentado, "comentado");
+
   const [provaBase64, comentadoBase64] = await Promise.all([
     arquivoParaBase64(params.prova),
-    params.comentado ? arquivoParaBase64(params.comentado) : Promise.resolve(null),
+    params.comentado
+      ? arquivoParaBase64(params.comentado)
+      : Promise.resolve(null),
   ]);
 
-  let resposta: Response;
+  const resposta = await fetchApiAutenticada(
+    criarUrlApi("/api/simulados-pdf/jobs"),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId: params.requestId,
+        titulo: params.titulo || "Análise de simulado PDF",
+        totalInformado: params.totalInformado,
+        retomar: params.retomar === true,
+        prova: {
+          nome: params.prova.name,
+          base64: provaBase64,
+        },
+        comentado:
+          params.comentado && comentadoBase64
+            ? {
+                nome: params.comentado.name,
+                base64: comentadoBase64,
+              }
+            : null,
+      }),
+    }
+  );
+
+  return lerJob(resposta);
+}
+
+export async function consultarAnaliseSimuladoPdf(
+  requestId: string
+): Promise<JobAnaliseSimuladoPdf> {
+  const resposta = await fetchApiAutenticada(
+    criarUrlApi(
+      "/api/simulados-pdf/jobs/" + encodeURIComponent(requestId)
+    )
+  );
+
+  return lerJob(resposta);
+}
+
+export async function excluirAnaliseSimuladoPdf(requestId: string) {
+  const resposta = await fetchApiAutenticada(
+    criarUrlApi(
+      "/api/simulados-pdf/jobs/" + encodeURIComponent(requestId)
+    ),
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!resposta.ok) {
+    let mensagem = "Não foi possível excluir a análise em andamento.";
+    try {
+      const dados = (await resposta.json()) as { erro?: string };
+      if (dados.erro) mensagem = dados.erro;
+    } catch {
+      // Mantém a mensagem amigável.
+    }
+    throw new Error(mensagem);
+  }
+}
+
+async function lerJob(resposta: Response) {
+  let dados: RespostaJob;
 
   try {
-    resposta = await fetchApiAutenticada(
-      criarUrlApi("/api/simulado-pdf/analisar"),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prova: {
-            nome: params.prova.name,
-            base64: provaBase64,
-          },
-          comentado:
-            params.comentado && comentadoBase64
-              ? {
-                  nome: params.comentado.name,
-                  base64: comentadoBase64,
-                }
-              : null,
-          totalInformado: params.totalInformado,
-        }),
-      }
-    );
+    dados = (await resposta.json()) as RespostaJob;
   } catch {
-    return criarAnaliseDeDemonstracao(params.totalInformado, [
-      "Modo de prévia: o leitor continua funcionando mesmo sem conexão com a análise automática. A correção real será conectada ao backend depois da aprovação desta experiência.",
-    ]);
+    throw new Error(
+      "O servidor retornou uma resposta inválida para a análise do simulado."
+    );
   }
 
-  const dados = (await resposta.json()) as {
-    sucesso?: boolean;
-    analise?: AnaliseSimuladoPdf;
-    erro?: string;
+  if (!resposta.ok && resposta.status !== 202) {
+    throw new Error(
+      "erro" in dados
+        ? dados.erro
+        : "Não foi possível consultar a análise do simulado."
+    );
+  }
+
+  if (!dados.sucesso || !dados.job) {
+    throw new Error(
+      "erro" in dados
+        ? dados.erro
+        : "A análise do simulado não retornou um estado válido."
+    );
+  }
+
+  return {
+    ...dados.job,
+    progresso: Math.max(
+      0,
+      Math.min(100, Math.round(Number(dados.job.progresso) || 0))
+    ),
   };
+}
 
-  if (resposta.ok && dados.sucesso && dados.analise) {
-    return dados.analise;
+function validarArquivoPdf(arquivo: File, rotulo: string) {
+  const ehPdf =
+    arquivo.type === "application/pdf" ||
+    arquivo.name.toLowerCase().endsWith(".pdf");
+
+  if (!ehPdf) {
+    throw new Error(`O arquivo de ${rotulo} precisa estar em PDF.`);
   }
 
-  if (
-    (resposta.status === 404 || resposta.status === 405) &&
-    params.comentado
-  ) {
-    return analisarComRotaExistente(params.prova, params.comentado);
+  if (arquivo.size > 12 * 1024 * 1024) {
+    throw new Error(`O PDF de ${rotulo} ultrapassa o limite de 12 MB.`);
   }
-
-  if (resposta.status === 404 || resposta.status === 405) {
-    return criarAnaliseDeDemonstracao(params.totalInformado, [
-      "Nesta prévia isolada, a correção real por IA sem PDF comentado ainda não está ligada ao backend oficial. O leitor, cronômetro, respostas e anotações podem ser testados normalmente.",
-    ]);
-  }
-
-  throw new Error(dados.erro || "Não foi possível analisar o simulado em PDF.");
 }
 
 function arquivoParaBase64(arquivo: File) {
   return new Promise<string>((resolve, reject) => {
     const leitor = new FileReader();
 
-    leitor.onerror = () => reject(new Error(`Não foi possível ler ${arquivo.name}.`));
+    leitor.onerror = () =>
+      reject(new Error(`Não foi possível ler ${arquivo.name}.`));
+
     leitor.onload = () => {
       const resultado = String(leitor.result || "");
       const separador = resultado.indexOf(",");
+
       if (separador < 0) {
-        reject(new Error(`O arquivo ${arquivo.name} não pôde ser convertido para análise.`));
+        reject(
+          new Error(
+            `O arquivo ${arquivo.name} não pôde ser preparado para análise.`
+          )
+        );
         return;
       }
+
       resolve(resultado.slice(separador + 1));
     };
 
     leitor.readAsDataURL(arquivo);
   });
-}
-
-
-async function analisarComRotaExistente(
-  prova: File,
-  comentado: File
-): Promise<AnaliseSimuladoPdf> {
-  const resultado = await analisarProvaPdf({
-    prova,
-    gabarito: comentado,
-    metadados: {
-      concursoAlvo: "PMPE",
-      editalAlvo: "Study Pro",
-      concursoOrigem: "Simulado de domingo",
-      cargoOrigem: "Aluno",
-      anoOrigem: new Date().getFullYear(),
-      banca: "Não informada",
-      fonteNome: prova.name,
-    },
-    mapaEdital: [],
-  });
-
-  return {
-    totalQuestoes: resultado.totalEsperadas,
-    alertas: resultado.alertas,
-    questoes: resultado.questoes.map((questao) => ({
-      numero: questao.numeroOriginal,
-      materia: questao.materia || "Não classificada",
-      assunto: questao.assunto || "Não classificado",
-      subassunto: questao.subassunto || undefined,
-      dificuldade:
-        questao.dificuldade === "facil"
-          ? "Fácil"
-          : questao.dificuldade === "dificil"
-            ? "Difícil"
-            : "Média",
-      enunciado: questao.enunciado,
-      alternativas: questao.alternativas.map((alternativa) => ({
-        id: alternativa.id,
-        texto: alternativa.texto,
-      })),
-      gabarito:
-        questao.statusSugerido === "anulada"
-          ? ""
-          : questao.respostaCorretaId,
-      comentario:
-        questao.explicacao ||
-        questao.motivoStatus ||
-        "Questão analisada a partir do PDF comentado.",
-      fonteGabarito: "comentado",
-      confianca:
-        questao.statusSugerido === "anulada"
-          ? 0
-          : questao.confiancaClassificacao === "alta"
-            ? 95
-            : questao.confiancaClassificacao === "media"
-              ? 75
-              : 45,
-    })),
-  };
-}
-
-function criarAnaliseDeDemonstracao(
-  total: number,
-  alertas: string[]
-): AnaliseSimuladoPdf {
-  const quantidade = Math.max(1, Math.min(200, Math.round(total)));
-
-  return {
-    totalQuestoes: quantidade,
-    alertas,
-    questoes: Array.from({ length: quantidade }, (_, indice) => ({
-      numero: indice + 1,
-      materia: "Prévia",
-      assunto: "Correção aguardando backend",
-      dificuldade: "Média" as const,
-      enunciado:
-        "A questão permanece disponível no PDF. Esta prévia não usa um gabarito inventado.",
-      alternativas: [],
-      gabarito: "",
-      comentario:
-        "Sem gabarito nesta prévia. A questão é anulada no diagnóstico para não gerar nota incorreta.",
-      fonteGabarito: "ia" as const,
-      confianca: 0,
-    })),
-  };
 }
