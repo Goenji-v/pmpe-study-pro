@@ -579,7 +579,13 @@ export default function AnaliseSimuladoStudyPro({
           type="button"
           className="primario"
           onClick={() =>
-            navigate(origem === "ia" ? "/gerar-simulado-ia" : "/simulados")
+            navigate(
+              origem === "ia"
+                ? "/gerar-simulado-ia"
+                : origem === "pdf"
+                  ? "/plano"
+                  : "/simulados"
+            )
           }
         >
           <Sparkles size={18} aria-hidden="true" />
