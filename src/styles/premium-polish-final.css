@@ -140,9 +140,9 @@ html:not([data-study-base-theme="claro"]) .page {
 }
 
 .sidebar-logo {
+  display: block !important;
   flex: 0 0 auto;
   min-height: 142px;
-  grid-template-rows: minmax(0, 1fr);
   height: 142px !important;
   width: calc(100% + 26px) !important;
   margin: -14px -13px 12px !important;
