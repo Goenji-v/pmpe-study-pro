@@ -49,6 +49,9 @@ export default function AnaliseSimuladoStudyPro({
   questoes,
   respostas,
   marcacoes,
+  persistir = true,
+  agendarAutomaticamente = true,
+  somenteLeitura = false,
 }: {
   origem: OrigemAnaliseSimulado;
   tentativaId: string;
@@ -58,6 +61,9 @@ export default function AnaliseSimuladoStudyPro({
   questoes: QuestaoAnaliseSimulado[];
   respostas: Record<string, string | undefined>;
   marcacoes: Record<string, MarcacaoQuestaoSimulado | undefined>;
+  persistir?: boolean;
+  agendarAutomaticamente?: boolean;
+  somenteLeitura?: boolean;
 }) {
   const navigate = useNavigate();
   const { materias, revisoes, setRevisoes } = useApp();
@@ -143,7 +149,7 @@ export default function AnaliseSimuladoStudyPro({
   );
 
   useEffect(() => {
-    if (!historicoCarregado) return;
+    if (!historicoCarregado || !persistir) return;
 
     const timeout = window.setTimeout(() => {
       void salvarAnaliseSimulado({
@@ -165,6 +171,7 @@ export default function AnaliseSimuladoStudyPro({
     origem,
     simuladoId,
     tentativaId,
+    persistir,
   ]);
 
   const assinaturaPlanoRevisao = useMemo(
@@ -179,7 +186,11 @@ export default function AnaliseSimuladoStudyPro({
   );
 
   useEffect(() => {
-    if (!historicoCarregado || analise.planoRevisao.length === 0) return;
+    if (
+      !historicoCarregado ||
+      !agendarAutomaticamente ||
+      analise.planoRevisao.length === 0
+    ) return;
 
     const chaveExecucao = `${tentativaId}:${assinaturaPlanoRevisao}`;
     if (revisaoAutomaticaRef.current === chaveExecucao) return;
@@ -199,9 +210,15 @@ export default function AnaliseSimuladoStudyPro({
     materias,
     setRevisoes,
     tentativaId,
+    agendarAutomaticamente,
   ]);
 
   function adicionarARevisao() {
+    if (somenteLeitura) {
+      setMensagem("Prévia de teste: nenhuma revisão da sua conta foi alterada.");
+      return;
+    }
+
     const resultado = adicionarErrosSimuladoARevisao({
       revisoes,
       materias,
@@ -562,7 +579,13 @@ export default function AnaliseSimuladoStudyPro({
           type="button"
           className="primario"
           onClick={() =>
-            navigate(origem === "ia" ? "/gerar-simulado-ia" : "/simulados")
+            navigate(
+              origem === "ia"
+                ? "/gerar-simulado-ia"
+                : origem === "pdf"
+                  ? "/plano"
+                  : "/simulados"
+            )
           }
         >
           <Sparkles size={18} aria-hidden="true" />
