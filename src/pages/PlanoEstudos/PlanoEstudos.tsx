@@ -28,10 +28,7 @@ import {
 
 import { localizarConteudoDaMissao, localizarConteudosDaMissao } from "../../services/conteudos/localizarConteudo";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
-import {
-  enviarPdfSimulado,
-  removerPdfSimulado,
-} from "../../services/simuladoService";
+import { guardarRascunhoSimuladoPdf } from "../../services/simuladoPdfDraft";
 import {
   getProgressoPlano,
   getProgressoSemana,
@@ -81,11 +78,8 @@ export default function PlanoEstudos() {
   const [notaRedacao, setNotaRedacao] = useState("");
   const [nomeSimulado, setNomeSimulado] = useState("");
   const [totalSimulado, setTotalSimulado] = useState("");
-  const [acertosSimulado, setAcertosSimulado] = useState("");
-  const [minutosSimulado, setMinutosSimulado] = useState("");
   const [cadernoPdf, setCadernoPdf] = useState<File | null>(null);
   const [comentadoPdf, setComentadoPdf] = useState<File | null>(null);
-  const [salvandoSimulado, setSalvandoSimulado] = useState(false);
   const [mensagemDomingo, setMensagemDomingo] = useState("");
 
   function marcarMissaoDomingoConcluida(tipo: "redacao" | "simulado") {
@@ -149,95 +143,30 @@ export default function PlanoEstudos() {
     setMensagemDomingo("Redação salva. O simulado pode ser feito e salvo depois.");
   }
 
-  async function salvarSimuladoDomingo() {
-    const nome = nomeSimulado.trim();
+  function iniciarSimuladoPdfDomingo() {
     const total = Number(totalSimulado);
-    const acertos = Number(acertosSimulado);
-    const minutosSim = Number(minutosSimulado);
-    const domingoAtual = planoCalendario
-      .find((semana) => semana.numero === semanaSelecionada)
-      ?.dias.find((itemDia) => itemDia.numero === 7);
-    const missaoSimulado = domingoAtual?.missoes.find((item) => item.tipo === "simulado");
 
-    if (missaoSimulado && concluidas.includes(missaoSimulado.id)) {
-      setMensagemDomingo("O simulado deste domingo já foi salvo.");
+    if (!cadernoPdf) {
+      setMensagemDomingo("Selecione o PDF do caderno de questões.");
       return;
     }
 
-    if (salvandoSimulado) return;
-
-    if (!nome || !Number.isInteger(total) || total < 1 || !Number.isInteger(acertos) || acertos < 0 || acertos > total || !Number.isFinite(minutosSim) || minutosSim < 1) {
-      setMensagemDomingo("Preencha corretamente o nome, total, acertos e tempo do simulado.");
+    if (!Number.isInteger(total) || total < 1 || total > 200) {
+      setMensagemDomingo("Informe a quantidade de questões entre 1 e 200.");
       return;
     }
 
-    const simuladoId = crypto.randomUUID();
-    let cadernoEnviado: Awaited<ReturnType<typeof enviarPdfSimulado>> | undefined;
-    let comentadoEnviado: Awaited<ReturnType<typeof enviarPdfSimulado>> | undefined;
+    guardarRascunhoSimuladoPdf({
+      id: crypto.randomUUID(),
+      nome: nomeSimulado.trim() || "Simulado de domingo",
+      totalQuestoes: total,
+      caderno: cadernoPdf,
+      comentado: comentadoPdf,
+      semana: semanaSelecionada,
+      dia: 7,
+    });
 
-    setSalvandoSimulado(true);
-    setMensagemDomingo(
-      cadernoPdf || comentadoPdf
-        ? "Enviando os PDFs e salvando o simulado..."
-        : "Salvando simulado..."
-    );
-
-    try {
-      if (cadernoPdf) {
-        cadernoEnviado = await enviarPdfSimulado(
-          cadernoPdf,
-          simuladoId,
-          "caderno"
-        );
-      }
-
-      if (comentadoPdf) {
-        comentadoEnviado = await enviarPdfSimulado(
-          comentadoPdf,
-          simuladoId,
-          "comentado"
-        );
-      }
-
-      const agora = new Date().toISOString();
-      setSimulados((anteriores) => [{
-        id: simuladoId,
-        nome,
-        banca: "Misto",
-        certas: acertos,
-        erradas: total - acertos,
-        anuladas: 0,
-        totalQuestoes: total,
-        minutos: Math.round(minutosSim),
-        data: agora,
-        cadernoStoragePath: cadernoEnviado?.storagePath,
-        cadernoNomeArquivo: cadernoEnviado?.nomeArquivo,
-        comentadoStoragePath: comentadoEnviado?.storagePath,
-        comentadoNomeArquivo: comentadoEnviado?.nomeArquivo,
-      }, ...anteriores]);
-
-      marcarMissaoDomingoConcluida("simulado");
-      setNomeSimulado("");
-      setTotalSimulado("");
-      setAcertosSimulado("");
-      setMinutosSimulado("");
-      setCadernoPdf(null);
-      setComentadoPdf(null);
-      setMensagemDomingo(`Simulado salvo: ${acertos}/${total} questões (${Math.round(acertos / total * 100)}%).`);
-    } catch (erro) {
-      await Promise.all([
-        removerPdfSimulado(cadernoEnviado?.storagePath),
-        removerPdfSimulado(comentadoEnviado?.storagePath),
-      ]);
-
-      setMensagemDomingo(
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível salvar o simulado com os PDFs."
-      );
-    } finally {
-      setSalvandoSimulado(false);
-    }
+    navigate("/simulado-pdf");
   }
 
   const {
@@ -768,42 +697,60 @@ export default function PlanoEstudos() {
                     {simuladoDomingoConcluido && <span>✓ Concluído</span>}
                   </div>
                   <div className="plano-domingo-form">
-                    <input disabled={simuladoDomingoConcluido || salvandoSimulado} value={nomeSimulado} onChange={(e) => setNomeSimulado(e.target.value)} placeholder="Nome do simulado" />
-                    <div><input disabled={simuladoDomingoConcluido || salvandoSimulado} type="number" min="1" value={totalSimulado} onChange={(e) => setTotalSimulado(e.target.value)} placeholder="Total" /><input disabled={simuladoDomingoConcluido || salvandoSimulado} type="number" min="0" value={acertosSimulado} onChange={(e) => setAcertosSimulado(e.target.value)} placeholder="Acertos" /><input disabled={simuladoDomingoConcluido || salvandoSimulado} type="number" min="1" value={minutosSimulado} onChange={(e) => setMinutosSimulado(e.target.value)} placeholder="Minutos" /></div>
+                    <input
+                      disabled={simuladoDomingoConcluido}
+                      value={nomeSimulado}
+                      onChange={(e) => setNomeSimulado(e.target.value)}
+                      placeholder="Nome do simulado"
+                    />
+                    <input
+                      disabled={simuladoDomingoConcluido}
+                      type="number"
+                      min="1"
+                      max="200"
+                      value={totalSimulado}
+                      onChange={(e) => setTotalSimulado(e.target.value)}
+                      placeholder="Quantidade de questões · ex.: 60"
+                    />
+                    <small className="plano-domingo-ajuda">
+                      Informe a quantidade para começar na hora. A IA analisa o PDF em segundo plano.
+                    </small>
                     <div className="plano-domingo-arquivo">
                       <span>Caderno de questões (PDF)</span>
-                      <label className={`plano-domingo-upload ${simuladoDomingoConcluido || salvandoSimulado ? "plano-domingo-upload-desabilitado" : ""}`}>
+                      <label className={"plano-domingo-upload " + (simuladoDomingoConcluido ? "plano-domingo-upload-desabilitado" : "")}>
                         <input
-                          key={cadernoPdf ? `caderno-${cadernoPdf.name}-${cadernoPdf.lastModified}` : "caderno-vazio"}
                           hidden
                           type="file"
                           accept="application/pdf,.pdf"
-                          disabled={simuladoDomingoConcluido || salvandoSimulado}
+                          disabled={simuladoDomingoConcluido}
                           onChange={(e) => setCadernoPdf(e.target.files?.[0] ?? null)}
                         />
                         <strong>📎 {cadernoPdf ? "Substituir PDF" : "Selecionar PDF"}</strong>
-                        <small>{cadernoPdf?.name ?? "Nenhum PDF selecionado · máximo 50 MB"}</small>
+                        <small>{cadernoPdf?.name ?? "PDF da prova · máximo 50 MB"}</small>
                       </label>
                     </div>
                     <div className="plano-domingo-arquivo">
-                      <span>Simulado comentado (PDF)</span>
-                      <label className={`plano-domingo-upload ${simuladoDomingoConcluido || salvandoSimulado ? "plano-domingo-upload-desabilitado" : ""}`}>
+                      <span>PDF comentado/gabarito (opcional)</span>
+                      <label className={"plano-domingo-upload " + (simuladoDomingoConcluido ? "plano-domingo-upload-desabilitado" : "")}>
                         <input
-                          key={comentadoPdf ? `comentado-${comentadoPdf.name}-${comentadoPdf.lastModified}` : "comentado-vazio"}
                           hidden
                           type="file"
                           accept="application/pdf,.pdf"
-                          disabled={simuladoDomingoConcluido || salvandoSimulado}
+                          disabled={simuladoDomingoConcluido}
                           onChange={(e) => setComentadoPdf(e.target.files?.[0] ?? null)}
                         />
-                        <strong>📎 {comentadoPdf ? "Substituir PDF" : "Selecionar PDF"}</strong>
-                        <small>{comentadoPdf?.name ?? "Nenhum PDF selecionado · máximo 50 MB"}</small>
+                        <strong>📎 {comentadoPdf ? "Substituir PDF" : "Adicionar PDF comentado"}</strong>
+                        <small>{comentadoPdf?.name ?? "Opcional · melhora a validação do gabarito"}</small>
                       </label>
                     </div>
                   </div>
                   <div className="plano-domingo-acao-missao">
-                    <button type="button" onClick={salvarSimuladoDomingo} disabled={simuladoDomingoConcluido || salvandoSimulado}>
-                      {salvandoSimulado ? "Enviando PDFs..." : simuladoDomingoConcluido ? "Simulado salvo" : "Salvar simulado"}
+                    <button
+                      type="button"
+                      onClick={iniciarSimuladoPdfDomingo}
+                      disabled={simuladoDomingoConcluido}
+                    >
+                      {simuladoDomingoConcluido ? "Simulado concluído" : "Analisar e começar simulado"}
                     </button>
                   </div>
                 </article>
