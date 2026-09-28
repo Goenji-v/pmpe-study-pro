@@ -1,5 +1,8 @@
 import { armazenamentoLocalDaConta as localStorage } from "./armazenamentoConta";
-import type { AnaliseSimuladoPdf } from "./simuladoPdfAnaliseService";
+import type {
+  AnaliseSimuladoPdf,
+  EstadoRemotoSimuladoPdf,
+} from "./simuladoPdfAnaliseService";
 
 export type ProcessoSimuladoPdfPersistido = {
   id: string;
@@ -17,6 +20,7 @@ export type ProcessoSimuladoPdfPersistido = {
   estadoAnalise: "analisando" | "concluida" | "erro";
   progressoAnalise: number;
   erroAnalise?: string;
+  remoto?: EstadoRemotoSimuladoPdf | null;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -77,6 +81,13 @@ export function carregarProcessoSimuladoPdf(): ProcessoSimuladoPdfPersistido | n
       ),
       erroAnalise:
         typeof item.erroAnalise === "string" ? item.erroAnalise : undefined,
+      remoto:
+        item.remoto &&
+        typeof item.remoto === "object" &&
+        typeof item.remoto.requestId === "string" &&
+        typeof item.remoto.cadernoStoragePath === "string"
+          ? (item.remoto as EstadoRemotoSimuladoPdf)
+          : null,
       criadoEm:
         typeof item.criadoEm === "string"
           ? item.criadoEm
