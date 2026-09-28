@@ -7,6 +7,7 @@ export type ProcessoSimuladoPdfPersistido = {
   totalQuestoes: number;
   semana?: number;
   dia?: number;
+  missaoId?: string;
   respostas: Record<string, string>;
   questaoAtual: number;
   segundos: number;
@@ -55,6 +56,8 @@ export function carregarProcessoSimuladoPdf(): ProcessoSimuladoPdfPersistido | n
       totalQuestoes: Math.max(1, Math.min(200, Number(item.totalQuestoes))),
       semana: numeroOpcional(item.semana),
       dia: numeroOpcional(item.dia),
+      missaoId:
+        typeof item.missaoId === "string" ? item.missaoId : undefined,
       respostas:
         item.respostas && typeof item.respostas === "object"
           ? (item.respostas as Record<string, string>)
