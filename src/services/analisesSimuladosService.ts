@@ -5,7 +5,7 @@ import type {
 } from "../utils/analiseSimuladoStudyPro";
 import { resumirAnaliseParaHistorico } from "../utils/analiseSimuladoStudyPro";
 
-export type OrigemAnaliseSimulado = "ia" | "oficial";
+export type OrigemAnaliseSimulado = "ia" | "oficial" | "pdf";
 
 type LinhaAnaliseSimulado = {
   id: string;
