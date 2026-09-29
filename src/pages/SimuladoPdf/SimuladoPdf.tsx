@@ -53,6 +53,34 @@ import "./SimuladoPdf.css";
 
 const LETRAS = ["A", "B", "C", "D", "E"];
 const INTERVALO_POLLING_MS = 2_500;
+
+function analisePdfProntaParaCorrecao(
+  analise: AnaliseSimuladoPdf | null | undefined,
+  totalQuestoes: number
+) {
+  if (!analise || totalQuestoes <= 0) return false;
+
+  const porNumero = new Map(
+    analise.questoes.map((questao) => [questao.numero, questao] as const)
+  );
+
+  return Array.from(
+    { length: totalQuestoes },
+    (_, indice) => indice + 1
+  ).every((numero) => {
+    const questao = porNumero.get(numero);
+
+    if (!questao) return false;
+    if (questao.status === "anulada") return true;
+
+    return (
+      questao.status === "valida" &&
+      Boolean(questao.gabarito?.trim()) &&
+      Number(questao.confianca) >= 50
+    );
+  });
+}
+
 // A sala fica fora do menu lateral e só é aberta pelo fluxo semanal do plano.
 
 export default function SimuladoPdf() {
@@ -128,6 +156,23 @@ export default function SimuladoPdf() {
       }
 
       if (job.status === "concluida" && job.resultado) {
+        if (
+          !analisePdfProntaParaCorrecao(
+            job.resultado,
+            job.totalQuestoes
+          )
+        ) {
+          setAnalise(null);
+          setEstadoAnalise("erro");
+          setErroAnalise(
+            "A leitura terminou incompleta. O Study Pro não vai calcular sua nota até recuperar todas as questões pendentes."
+          );
+          setDescricaoAnalise(
+            "Resultado protegido. Retome a análise para buscar somente as questões faltantes."
+          );
+          return;
+        }
+
         setAnalise(job.resultado);
         setEstadoAnalise("concluida");
         setProgressoAnalise(100);
@@ -672,12 +717,29 @@ export default function SimuladoPdf() {
       setIniciado(true);
       setProcessoRecuperavel(null);
 
-      if (analiseSalva) {
+      if (
+        analiseSalva &&
+        analisePdfProntaParaCorrecao(
+          analiseSalva,
+          processo.totalQuestoes
+        )
+      ) {
         setAnalise(analiseSalva);
         setEstadoAnalise("concluida");
         setProgressoAnalise(100);
         setDescricaoAnalise("Análise pronta.");
       } else {
+        if (analiseSalva) {
+          setAnalise(null);
+          setFinalizado(false);
+          setPausado(true);
+          setFinalizarQuandoPronto(true);
+          setEstadoAnalise("analisando");
+          setDescricaoAnalise(
+            "A análise salva estava incompleta. Recuperando apenas as questões pendentes."
+          );
+        }
+
         // Ao recuperar uma página atualizada/fechada, sempre permita ao
         // backend retomar um job que possa ter caído enquanto a aba estava
         // fora. Se ele ainda estiver processando ou já tiver concluído,
