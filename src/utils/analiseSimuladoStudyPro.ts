@@ -220,6 +220,8 @@ export type EntradaAnaliseSimulado = {
 };
 
 const AGENDA_REVISAO_DIAS = [1, 5, 7, 14, 30];
+const MAX_PRIORIDADES_REVISAO = 8;
+const MAX_PRIORIDADES_POR_MATERIA = 2;
 
 export function analisarSimuladoStudyPro(
   entrada: EntradaAnaliseSimulado
@@ -229,8 +231,9 @@ export function analisarSimuladoStudyPro(
   const historico = (entrada.historico ?? []).filter(
     (item) => item.tentativaId !== entrada.tentativaId
   );
+  const questoes = entrada.questoes.map(normalizarTaxonomiaQuestao);
 
-  const correcao = entrada.questoes.map((questao) => {
+  const correcao = questoes.map((questao) => {
     const respostaAluno = normalizarResposta(entrada.respostas[questao.id]);
     const marcacao = marcacoes[questao.id] ?? "normal";
     const motivoErro = motivosErro[questao.id];
@@ -271,7 +274,7 @@ export function analisarSimuladoStudyPro(
   );
 
   const assuntos = calcularAssuntos(
-    entrada.questoes,
+    questoes,
     correcao,
     historico,
     materiasComMaisErros
@@ -279,13 +282,13 @@ export function analisarSimuladoStudyPro(
 
   const resumo = calcularResumo(materias, correcao);
   const cadernoErros = gerarCadernoErros(
-    entrada.questoes,
+    questoes,
     correcao,
     motivosErro
   );
   const aindaNaoEstudado = gerarAindaNaoEstudado(correcao);
   const planoRevisao = gerarPlanoRevisao(assuntos);
-  const dificuldade = calcularDificuldade(entrada.questoes);
+  const dificuldade = calcularDificuldade(questoes);
   const evolucao = calcularEvolucao(materias, historico, dificuldade.geral);
   const recomendacaoFinal = gerarRecomendacaoFinal(
     materias,
@@ -439,7 +442,8 @@ function calcularAssuntos(
     const questao = questaoPorId.get(item.id);
     if (!questao) continue;
 
-    const especifico = assuntoEspecifico(questao);
+    const especifico =
+      questao.assunto?.trim() || assuntoEspecifico(questao);
     const chave = criarChaveAssunto(questao);
     const atual = mapa.get(chave) ?? {
       chave,
@@ -449,7 +453,7 @@ function calcularAssuntos(
       moduloId: questao.moduloId,
       assunto: item.assunto,
       assuntoId: questao.assuntoId,
-      subassunto: questao.subassunto,
+      subassunto: undefined,
       assuntoEspecifico: especifico,
       total: 0,
       avaliadas: 0,
@@ -661,7 +665,7 @@ function gerarAindaNaoEstudado(
 function gerarPlanoRevisao(
   assuntos: AnaliseAssuntoSimulado[]
 ): PlanoRevisaoAssuntoSimulado[] {
-  return assuntos
+  const candidatos = assuntos
     .filter(
       (item) =>
         item.avaliadas > 0 &&
@@ -687,6 +691,55 @@ function gerarPlanoRevisao(
         b.prioridadeIndice - a.prioridadeIndice ||
         a.materia.localeCompare(b.materia, "pt-BR")
     );
+
+  const selecionados: PlanoRevisaoAssuntoSimulado[] = [];
+  const porMateria = new Map<string, number>();
+
+  const tentarAdicionar = (
+    item: PlanoRevisaoAssuntoSimulado,
+    respeitarLimiteMateria: boolean
+  ) => {
+    if (selecionados.length >= MAX_PRIORIDADES_REVISAO) return;
+
+    const materia = normalizarTexto(item.materia);
+    const quantidadeMateria = porMateria.get(materia) ?? 0;
+
+    if (
+      respeitarLimiteMateria &&
+      quantidadeMateria >= MAX_PRIORIDADES_POR_MATERIA
+    ) {
+      return;
+    }
+
+    const repetida = selecionados.some(
+      (selecionado) =>
+        normalizarTexto(selecionado.materia) === materia &&
+        assuntosSemelhantes(
+          selecionado.assuntoEspecifico,
+          item.assuntoEspecifico
+        )
+    );
+
+    if (repetida) return;
+
+    selecionados.push(item);
+    porMateria.set(materia, quantidadeMateria + 1);
+  };
+
+  for (const item of candidatos) {
+    tentarAdicionar(item, true);
+  }
+
+  if (selecionados.length < MAX_PRIORIDADES_REVISAO) {
+    for (const item of candidatos) {
+      if (selecionados.some((selecionado) => selecionado.chave === item.chave)) {
+        continue;
+      }
+      tentarAdicionar(item, false);
+    }
+  }
+
+  return selecionados;
 }
 
 function calcularDificuldade(
@@ -828,6 +881,16 @@ function calcularIndicePrioridade(params: {
     params.erros + params.naoRespondidas >= 2
   ) {
     indice = Math.max(indice, 65);
+  }
+
+  // Uma única questão não é evidência suficiente para rotular um assunto
+  // como prioridade alta, salvo quando há chute ou reincidência histórica.
+  if (
+    params.avaliadas === 1 &&
+    params.acertosPorChute === 0 &&
+    params.reincidencias === 0
+  ) {
+    indice = Math.min(indice, 58);
   }
 
   return Math.max(0, Math.min(100, indice));
@@ -1016,8 +1079,196 @@ function criarChaveAssunto(questao: QuestaoAnaliseSimulado) {
       questao.materia,
       questao.modulo || "Geral",
       questao.assunto,
-      questao.subassunto || "",
     ].join("::")
+  );
+}
+
+function normalizarTaxonomiaQuestao(
+  questao: QuestaoAnaliseSimulado
+): QuestaoAnaliseSimulado {
+  const materiaOriginal = limparTexto(questao.materia) || "Sem matéria";
+  const modulo = limparTexto(questao.modulo) || undefined;
+  const assunto = limparTexto(questao.assunto) || "Sem assunto";
+  const subassuntoOriginal = limparTexto(questao.subassunto) || undefined;
+  const subassunto =
+    subassuntoOriginal &&
+    normalizarTexto(subassuntoOriginal) !== normalizarTexto(assunto)
+      ? subassuntoOriginal
+      : undefined;
+
+  return {
+    ...questao,
+    materia: questao.materiaId
+      ? materiaOriginal
+      : materiaCanonica({
+          ...questao,
+          materia: materiaOriginal,
+          modulo,
+          assunto,
+          subassunto,
+        }),
+    modulo,
+    assunto,
+    subassunto,
+  };
+}
+
+function materiaCanonica(
+  questao: Pick<
+    QuestaoAnaliseSimulado,
+    "materia" | "modulo" | "assunto" | "subassunto" | "enunciado"
+  >
+) {
+  const materia = normalizarTexto(questao.materia);
+  const contexto = normalizarTexto(
+    [
+      questao.materia,
+      questao.modulo,
+      questao.assunto,
+      questao.subassunto,
+      questao.enunciado,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  if (/lingua portuguesa|portugues/.test(materia)) {
+    return "Língua Portuguesa";
+  }
+  if (/informatica|tecnologia da informacao|computacao/.test(materia)) {
+    return "Informática";
+  }
+  if (/raciocinio logico|logica proposicional|logica matematica/.test(materia)) {
+    return "Raciocínio Lógico";
+  }
+  if (/^matematica\b/.test(materia)) {
+    return "Matemática";
+  }
+  if (/direitos humanos/.test(materia)) {
+    return "Direitos Humanos";
+  }
+  if (/direito penal militar/.test(materia)) {
+    return "Direito Penal Militar";
+  }
+  if (/processo penal militar/.test(materia)) {
+    return "Processo Penal Militar";
+  }
+  if (/processo penal/.test(materia)) {
+    return "Processo Penal";
+  }
+  if (/direito penal/.test(materia)) {
+    return "Direito Penal";
+  }
+  if (/legislacao.*(extravagante|especial)/.test(materia)) {
+    return "Legislação Extravagante";
+  }
+
+  const misturaDireito =
+    /administrativ/.test(materia) && /constitucional/.test(materia);
+
+  if (misturaDireito) {
+    if (
+      /constitu|direitos fundamentais|direitos e garantias|habeas corpus|habeas data|mandado de seguranca|mandado de injuncao|poder constituinte|controle de constitucionalidade|organizacao do estado/.test(
+        contexto
+      )
+    ) {
+      return "Direito Constitucional";
+    }
+
+    if (
+      /ato administrativ|licitac|contrato administrativ|agente publico|servidor publico|poder administrativ|servico publico|responsabilidade civil do estado|administracao publica|improbidade/.test(
+        contexto
+      )
+    ) {
+      return "Direito Administrativo";
+    }
+
+    return "Direito Público";
+  }
+
+  if (/direito constitucional|constitucional/.test(materia)) {
+    return "Direito Constitucional";
+  }
+  if (/direito administrativo|administrativ/.test(materia)) {
+    return "Direito Administrativo";
+  }
+
+  if (/historia/.test(materia)) {
+    if (
+      /pernambuc|guerra dos mascates|confederacao do equador|revolucao pernambucana|revolucao de 1817|quilombo dos palmares/.test(
+        contexto
+      )
+    ) {
+      return "História de Pernambuco";
+    }
+
+    if (
+      /historia e cultura brasileira|historia do brasil|brasileir|era vargas|estado novo|republica velha|primeira republica|brasil imperio|ditadura militar|colonizacao portuguesa/.test(
+        contexto
+      )
+    ) {
+      return "História do Brasil";
+    }
+
+    return "História";
+  }
+
+  return questao.materia;
+}
+
+function assuntosSemelhantes(a: string, b: string) {
+  const normalizadoA = normalizarTexto(a);
+  const normalizadoB = normalizarTexto(b);
+
+  if (normalizadoA === normalizadoB) return true;
+  if (
+    normalizadoA.length >= 8 &&
+    normalizadoB.length >= 8 &&
+    (normalizadoA.includes(normalizadoB) ||
+      normalizadoB.includes(normalizadoA))
+  ) {
+    return true;
+  }
+
+  const tokensA = tokensRelevantes(normalizadoA);
+  const tokensB = tokensRelevantes(normalizadoB);
+  if (tokensA.size === 0 || tokensB.size === 0) return false;
+
+  const intersecao = [...tokensA].filter((token) =>
+    tokensB.has(token)
+  ).length;
+  const uniao = new Set([...tokensA, ...tokensB]).size;
+
+  return uniao > 0 && intersecao / uniao >= 0.6;
+}
+
+function tokensRelevantes(valor: string) {
+  const ignorar = new Set([
+    "de",
+    "da",
+    "do",
+    "das",
+    "dos",
+    "e",
+    "em",
+    "para",
+    "com",
+    "sem",
+    "geral",
+    "gerais",
+    "aspecto",
+    "aspectos",
+  ]);
+
+  return new Set(
+    valor
+      .split(/[^a-z0-9]+/)
+      .map((token) =>
+        token.length > 4 && token.endsWith("s")
+          ? token.slice(0, -1)
+          : token
+      )
+      .filter((token) => token.length >= 3 && !ignorar.has(token))
   );
 }
 
