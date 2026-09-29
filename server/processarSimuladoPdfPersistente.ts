@@ -388,135 +388,66 @@ async function processar(
       }
     }
 
-    const execucaoBlocos = await executarBlocosSimuladoPdfPersistentes({
+    const resultadoAnterior = obterResultadoParcial(
+      job.resultado,
+      payload.totalInformado
+    );
+
+    const pipeline = await executarPipelineQuestaoAPorQuestao({
       totalQuestoes: payload.totalInformado,
-      resultadoAnterior: job.resultado,
-      alertasIniciais: alertas,
-      analisar: (intervalo) =>
-        analisarBlocoComRecuperacao(
+      estadoAnterior: resultadoAnterior?.questoes ?? [],
+      temExtracao: questaoSimuladoPdfTemExtracaoConfiavel,
+      estaPronta: questaoSimuladoPdfProntaParaCorrecao,
+      extrair: (numeros) =>
+        extrairQuestoesBasicasComRecuperacao(
           dependencias.ai,
           modelos,
           payload,
-          intervalo,
-          gabaritoComentado
+          numeros
+        ),
+      resolver: (questao) =>
+        resolverQuestaoExtraida(
+          dependencias.ai,
+          modelos,
+          questao,
+          gabaritoComentado.get(questao.numero),
+          Boolean(payload.comentado)
         ),
       salvar: async ({
-        concluidos,
-        totalBlocos,
+        fase,
         progresso,
         descricao,
-        resultado,
+        itens,
       }) => {
         await atualizar(
-          concluidos === totalBlocos ? "revisando" : "gerando",
+          fase === "extraindo" ? "gerando" : "corrigindo",
           progresso,
           descricao,
-          resultado
+          {
+            totalQuestoes: payload.totalInformado,
+            questoes: itens,
+            alertas: Array.from(new Set([
+              ...alertas,
+              ...(resultadoAnterior?.alertas ?? []),
+            ])).slice(0, 30),
+          }
         );
       },
     });
 
-    const porNumero = execucaoBlocos.porNumero;
-    alertas.splice(0, alertas.length, ...execucaoBlocos.alertas);
-
-    const pendentesAntesDaRecuperacao = numerosPendentes(
-      porNumero,
-      payload.totalInformado
+    const porNumero = new Map(
+      pipeline.itens.map(
+        (questao) => [questao.numero, questao] as const
+      )
     );
 
-    if (pendentesAntesDaRecuperacao.length > 0) {
-      const grupos = agruparNumeros(
-        pendentesAntesDaRecuperacao,
-        5
-      );
-
-      for (let indice = 0; indice < grupos.length; indice += 1) {
-        const grupo = grupos[indice];
-
-        await atualizar(
-          "corrigindo",
-          91 + Math.round(((indice + 1) / grupos.length) * 5),
-          `Recuperando questões ${grupo.join(", ")} · ${indice + 1}/${grupos.length}.`,
-          {
-            totalQuestoes: payload.totalInformado,
-            questoes: Array.from(porNumero.values()).sort(
-              (a, b) => a.numero - b.numero
-            ),
-            alertas: Array.from(new Set(alertas)).slice(0, 30),
-          }
-        );
-
-        const recuperadas = await analisarBlocoComRecuperacao(
-          dependencias.ai,
-          modelos,
-          payload,
-          {
-            inicio: Math.min(...grupo),
-            fim: Math.max(...grupo),
-            numerosEspecificos: grupo,
-          },
-          gabaritoComentado
-        );
-
-        for (const questao of recuperadas) {
-          porNumero.set(
-            questao.numero,
-            escolherMelhorQuestao(
-              porNumero.get(questao.numero),
-              questao
-            )
-          );
-
-          const prontasAgora =
-            payload.totalInformado -
-            numerosPendentes(
-              porNumero,
-              payload.totalInformado
-            ).length;
-
-          await atualizar(
-            "corrigindo",
-            91 + Math.round(((indice + 1) / grupos.length) * 5),
-            `Questão ${questao.numero} recuperada e salva · ${prontasAgora}/${payload.totalInformado} prontas.`,
-            {
-              totalQuestoes: payload.totalInformado,
-              questoes: Array.from(porNumero.values()).sort(
-                (a, b) => a.numero - b.numero
-              ),
-              alertas: Array.from(new Set(alertas)).slice(0, 30),
-            }
-          );
-        }
+    if (pipeline.pendentes.length > 0) {
+      for (const numero of pipeline.pendentes) {
+        alertas.push(`Questão ${numero}: ainda pendente após a etapa individual.`);
       }
-    }
-
-    const aindaPendentes = numerosPendentes(
-      porNumero,
-      payload.totalInformado
-    );
-
-    if (aindaPendentes.length > 0) {
-      for (const numero of aindaPendentes) {
-        alertas.push(`Questão ${numero}: leitura incompleta.`);
-      }
-
-      const resultadoParcial: ResultadoSimuladoPdfProcessado = {
-        totalQuestoes: payload.totalInformado,
-        questoes: Array.from(porNumero.values()).sort(
-          (a, b) => a.numero - b.numero
-        ),
-        alertas: Array.from(new Set(alertas)).slice(0, 30),
-      };
-
-      await atualizar(
-        "corrigindo",
-        96,
-        `A leitura ficou incompleta: ${payload.totalInformado - aindaPendentes.length}/${payload.totalInformado} questões prontas. O resultado não será fechado.`,
-        resultadoParcial
-      );
 
       throw new Error(
-        `A análise ficou incompleta: ${aindaPendentes.length} questão(ões) ainda precisam ser recuperadas. Tente novamente para continuar do ponto salvo.`
+        `A análise ficou incompleta: ${pipeline.pendentes.length} questão(ões) ainda precisam ser recuperadas. O que já ficou pronto foi salvo.`
       );
     }
 
@@ -649,6 +580,214 @@ async function extrairGabaritoComentado(
       },
     ];
   });
+}
+
+async function extrairQuestoesBasicasComRecuperacao(
+  ai: GoogleGenAI,
+  modelos: string[],
+  payload: PayloadSimuladoPdf,
+  numeros: number[]
+) {
+  return executarAnaliseSimuladoComSubdivisao(
+    numeros,
+    (numerosAtual) =>
+      extrairQuestoesBasicas(
+        ai,
+        modelos,
+        payload,
+        numerosAtual
+      )
+  );
+}
+
+async function extrairQuestoesBasicas(
+  ai: GoogleGenAI,
+  modelos: string[],
+  payload: PayloadSimuladoPdf,
+  numeros: number[]
+): Promise<QuestaoSimuladoPdfProcessada[]> {
+  const prompt = [
+    "Você é o extrator literal de questões do Study Pro.",
+    `Extraia SOMENTE as questões: ${numeros.join(", ")}.`,
+    "Não resolva, não classifique matéria e não explique.",
+    "Preserve o enunciado e as alternativas como aparecem no PDF.",
+    "Se uma questão não estiver legível, omita essa questão em vez de inventar.",
+    "Retorne SOMENTE JSON válido:",
+    '{"questoes":[{"numero":1,"enunciado":"...","alternativas":[{"id":"A","texto":"..."}],"confiancaLeitura":95}]}',
+  ].join("\n");
+
+  const resposta = await gerarJsonComPdfs(
+    ai,
+    modelos,
+    prompt,
+    [payload.prova],
+    16384,
+    `extração das questões ${numeros.join(",")}`
+  );
+
+  const raiz = objetoSeguro(resposta);
+  const itens = Array.isArray(raiz.questoes) ? raiz.questoes : [];
+
+  return itens.flatMap((valor) => {
+    const item = objetoSeguro(valor);
+    const numero = Math.round(numeroSeguro(item.numero));
+
+    if (!numeros.includes(numero)) return [];
+
+    const enunciado = textoSeguro(item.enunciado);
+    const alternativas = Array.isArray(item.alternativas)
+      ? item.alternativas.flatMap((valorAlternativa) => {
+          const alternativa = objetoSeguro(valorAlternativa);
+          const id = textoSeguro(alternativa.id).toUpperCase().slice(0, 3);
+          const texto = textoSeguro(alternativa.texto);
+          return id && texto ? [{ id, texto }] : [];
+        })
+      : [];
+    const confiancaLeitura = limitarPercentual(
+      item.confiancaLeitura,
+      0
+    );
+
+    if (
+      !enunciado ||
+      alternativas.length < 2 ||
+      confiancaLeitura < 50
+    ) {
+      return [];
+    }
+
+    return [{
+      numero,
+      materia: "Não classificada",
+      assunto: "Aguardando análise",
+      dificuldade: "Média",
+      enunciado,
+      alternativas,
+      gabarito: "",
+      comentario: "Questão extraída; aguardando resolução.",
+      fonteGabarito: payload.comentado ? "comentado" : "ia",
+      confianca: 0,
+      status: "revisar",
+      etapaPipeline: "extraida",
+      confiancaLeitura,
+    } satisfies QuestaoSimuladoPdfProcessada];
+  });
+}
+
+async function resolverQuestaoExtraida(
+  ai: GoogleGenAI,
+  modelos: string[],
+  questao: QuestaoSimuladoPdfProcessada,
+  gabaritoComentado: ItemGabarito | undefined,
+  temComentado: boolean
+): Promise<QuestaoSimuladoPdfProcessada> {
+  const prompt = [
+    "Você é o resolvedor e classificador de uma única questão do Study Pro.",
+    "A questão já foi extraída do PDF. Não altere o enunciado nem as alternativas.",
+    gabaritoComentado
+      ? `Use este gabarito confirmado do material comentado: ${JSON.stringify(gabaritoComentado)}`
+      : "Não há gabarito comentado confirmado; resolva a questão.",
+    "Retorne apenas os campos de análise abaixo em JSON válido.",
+    JSON.stringify({
+      numero: questao.numero,
+      enunciado: questao.enunciado,
+      alternativas: questao.alternativas,
+    }),
+    '{"analise":{"materia":"Português","modulo":"Gramática","assunto":"Crase","subassunto":"Crase obrigatória","dificuldade":"Média","gabarito":"A","comentario":"...","norma":"","dispositivo":"","confianca":90,"status":"valida"}}',
+  ].join("\n");
+
+  let ultimoErro: unknown;
+
+  for (let tentativa = 1; tentativa <= 2; tentativa += 1) {
+    try {
+      const resposta = await gerarJsonComPdfs(
+        ai,
+        modelos,
+        prompt,
+        [],
+        4096,
+        `resolução da questão ${questao.numero}`
+      );
+
+      const raiz = objetoSeguro(resposta);
+      const item = objetoSeguro(raiz.analise);
+      const status =
+        item.status === "anulada"
+          ? "anulada"
+          : item.status === "revisar"
+            ? "revisar"
+            : "valida";
+      const dificuldade =
+        item.dificuldade === "Fácil" || item.dificuldade === "Difícil"
+          ? item.dificuldade
+          : "Média";
+      const idsAlternativas = new Set(
+        questao.alternativas.map((alternativa) => alternativa.id)
+      );
+      const gabaritoGerado = textoSeguro(item.gabarito)
+        .toUpperCase()
+        .slice(0, 3);
+      const gabarito =
+        status === "anulada"
+          ? ""
+          : gabaritoComentado?.anulada
+            ? ""
+            : gabaritoComentado?.resposta ||
+              (idsAlternativas.has(gabaritoGerado)
+                ? gabaritoGerado
+                : "");
+      const statusFinal =
+        gabaritoComentado?.anulada
+          ? "anulada"
+          : status === "anulada" && !gabaritoComentado
+            ? "revisar"
+            : gabarito
+              ? "valida"
+              : "revisar";
+      const confianca = gabaritoComentado
+        ? Math.max(
+            limitarPercentual(item.confianca, 70),
+            gabaritoComentado.confianca
+          )
+        : limitarPercentual(item.confianca, 60);
+
+      const resolvida: QuestaoSimuladoPdfProcessada = {
+        ...questao,
+        materia: textoSeguro(item.materia, "Não classificada"),
+        modulo: textoSeguro(item.modulo) || undefined,
+        assunto: textoSeguro(item.assunto, "Não classificado"),
+        subassunto: textoSeguro(item.subassunto) || undefined,
+        dificuldade,
+        gabarito,
+        comentario: textoSeguro(
+          item.comentario,
+          "Revise o conteúdo central cobrado nesta questão."
+        ),
+        norma: textoSeguro(item.norma) || undefined,
+        dispositivo: textoSeguro(item.dispositivo) || undefined,
+        fonteGabarito: gabaritoComentado ? "comentado" : "ia",
+        confianca,
+        status: statusFinal,
+        etapaPipeline: "resolvida",
+      };
+
+      return aplicarGabaritoComentado(
+        resolvida,
+        gabaritoComentado,
+        temComentado
+      );
+    } catch (erro) {
+      ultimoErro = erro;
+
+      if (!(erro instanceof ErroJsonInvalidoIA) || tentativa === 2) {
+        throw erro;
+      }
+    }
+  }
+
+  throw ultimoErro instanceof Error
+    ? ultimoErro
+    : new Error(`Não foi possível resolver a questão ${questao.numero}.`);
 }
 
 async function analisarBlocoComRecuperacao(
