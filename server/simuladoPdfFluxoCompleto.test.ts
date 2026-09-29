@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -402,5 +403,38 @@ test("checkpoint é salvo conforme cada questão fica pronta", async () => {
         item.quantidade === 10 &&
         item.progresso === 90
     )
+  );
+});
+
+
+test("questão problemática usa recuperação em duas etapas e não reenvia PDF na resolução", async () => {
+  const codigo = await readFile(
+    "server/processarSimuladoPdfPersistente.ts",
+    "utf8"
+  );
+
+  assert.match(
+    codigo,
+    /recuperarQuestaoSimuladoPdfEmDuasEtapas/
+  );
+  assert.match(
+    codigo,
+    /Você está apenas EXTRAINDO uma questão de um PDF/
+  );
+  assert.match(
+    codigo,
+    /Você está na etapa de RESOLUÇÃO E CLASSIFICAÇÃO/
+  );
+  assert.match(
+    codigo,
+    /Não há PDF nesta etapa/
+  );
+  assert.match(
+    codigo,
+    /async function gerarJsonTexto/
+  );
+  assert.match(
+    codigo,
+    /parts: \[\{ text: prompt \}\]/
   );
 });

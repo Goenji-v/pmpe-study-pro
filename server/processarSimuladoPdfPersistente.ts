@@ -648,7 +648,7 @@ async function analisarBlocoComRecuperacao(
       (_, indice) => intervalo.inicio + indice
     );
 
-  return executarAnaliseSimuladoComSubdivisao(
+  const leituraInicial = await executarAnaliseSimuladoComSubdivisao(
     numeros,
     (numerosAtual) =>
       analisarBloco(
@@ -672,6 +672,251 @@ async function analisarBlocoComRecuperacao(
       );
     }
   );
+
+  const porNumero = new Map(
+    leituraInicial.map(
+      (questao) => [questao.numero, questao] as const
+    )
+  );
+  const pendentes = numeros.filter(
+    (numero) =>
+      !questaoSimuladoPdfProntaParaCorrecao(
+        porNumero.get(numero)
+      )
+  );
+
+  for (const numero of pendentes) {
+    try {
+      const recuperada =
+        await recuperarQuestaoSimuladoPdfEmDuasEtapas(
+          ai,
+          modelos,
+          payload,
+          numero,
+          gabaritoComentado.get(numero)
+        );
+
+      if (recuperada) {
+        porNumero.set(
+          numero,
+          escolherMelhorQuestao(
+            porNumero.get(numero),
+            recuperada
+          )
+        );
+      }
+    } catch (erro) {
+      if (erro instanceof ErroJsonInvalidoIA) {
+        console.warn(
+          "[simulado-pdf-job] recuperação em duas etapas manteve questão pendente",
+          {
+            numero,
+            erro: erro.message,
+          }
+        );
+        continue;
+      }
+
+      throw erro;
+    }
+  }
+
+  return Array.from(porNumero.values()).sort(
+    (a, b) => a.numero - b.numero
+  );
+}
+
+type QuestaoExtraidaPdf = {
+  numero: number;
+  enunciado: string;
+  alternativas: Array<{ id: string; texto: string }>;
+  confiancaLeitura: number;
+};
+
+async function recuperarQuestaoSimuladoPdfEmDuasEtapas(
+  ai: GoogleGenAI,
+  modelos: string[],
+  payload: PayloadSimuladoPdf,
+  numero: number,
+  gabaritoConhecido?: ItemGabarito
+): Promise<QuestaoSimuladoPdfProcessada | null> {
+  const leitura = await gerarJsonComPdfs(
+    ai,
+    modelos,
+    [
+      "Você está apenas EXTRAINDO uma questão de um PDF de concurso.",
+      `Leia SOMENTE a questão ${numero}.`,
+      "Não resolva, não classifique matéria e não explique.",
+      "Copie o enunciado e as alternativas exatamente como aparecem.",
+      "Se algum trecho não estiver legível, não invente.",
+      "Retorne somente JSON válido:",
+      '{"questao":{"numero":1,"enunciado":"...","alternativas":[{"id":"A","texto":"..."}],"confiancaLeitura":90}}',
+    ].join("\n"),
+    [payload.prova],
+    8192,
+    `extração isolada da questão ${numero}`
+  );
+
+  const raizLeitura = objetoSeguro(leitura);
+  const brutoQuestao =
+    raizLeitura.questao ??
+    (Array.isArray(raizLeitura.questoes)
+      ? raizLeitura.questoes[0]
+      : null);
+  const itemLeitura = objetoSeguro(brutoQuestao);
+  const numeroLido = Math.round(
+    numeroSeguro(itemLeitura.numero)
+  );
+  const enunciado = textoSeguro(
+    itemLeitura.enunciado
+  );
+  const alternativas = Array.isArray(
+    itemLeitura.alternativas
+  )
+    ? itemLeitura.alternativas.flatMap(
+        (valorAlternativa) => {
+          const alternativa = objetoSeguro(
+            valorAlternativa
+          );
+          const id = textoSeguro(
+            alternativa.id
+          ).toUpperCase().slice(0, 3);
+          const texto = textoSeguro(
+            alternativa.texto
+          );
+
+          return id && texto
+            ? [{ id, texto }]
+            : [];
+        }
+      )
+    : [];
+
+  const extraida: QuestaoExtraidaPdf = {
+    numero:
+      numeroLido === numero
+        ? numeroLido
+        : numero,
+    enunciado,
+    alternativas,
+    confiancaLeitura: limitarPercentual(
+      itemLeitura.confiancaLeitura,
+      enunciado && alternativas.length >= 2
+        ? 75
+        : 35
+    ),
+  };
+
+  if (
+    !extraida.enunciado ||
+    extraida.alternativas.length < 2
+  ) {
+    return null;
+  }
+
+  const resposta = await gerarJsonTexto(
+    ai,
+    modelos,
+    [
+      "Você está na etapa de RESOLUÇÃO E CLASSIFICAÇÃO de uma questão já extraída.",
+      "Não há PDF nesta etapa. Use somente o texto abaixo.",
+      `Número: ${numero}`,
+      `Enunciado: ${extraida.enunciado}`,
+      `Alternativas: ${JSON.stringify(extraida.alternativas)}`,
+      gabaritoConhecido
+        ? `Gabarito externo confirmado: ${JSON.stringify(gabaritoConhecido)}`
+        : "Não existe gabarito externo confirmado; resolva a questão com cuidado.",
+      "",
+      "Retorne matéria, módulo, assunto, subassunto, dificuldade, gabarito, comentário, norma, dispositivo, confiança e status.",
+      "Se houver gabarito externo confirmado, ele prevalece.",
+      "Se houver dúvida real sem fonte confirmada, use status revisar e confiança abaixo de 50.",
+      "Retorne somente JSON válido:",
+      '{"materia":"Português","modulo":"Gramática","assunto":"Crase","subassunto":"Crase obrigatória","dificuldade":"Média","gabarito":"A","comentario":"...","norma":"","dispositivo":"","confianca":85,"status":"valida"}',
+    ].join("\n"),
+    8192,
+    `resolução isolada da questão ${numero}`
+  );
+
+  const item = objetoSeguro(resposta);
+  const status =
+    gabaritoConhecido?.anulada === true ||
+    item.status === "anulada"
+      ? "anulada"
+      : item.status === "revisar"
+        ? "revisar"
+        : "valida";
+  const dificuldade =
+    item.dificuldade === "Fácil" ||
+    item.dificuldade === "Difícil"
+      ? item.dificuldade
+      : "Média";
+  const gabarito =
+    status === "anulada"
+      ? ""
+      : gabaritoConhecido?.resposta ||
+        textoSeguro(item.gabarito)
+          .toUpperCase()
+          .slice(0, 3);
+  const fonteGabarito =
+    gabaritoConhecido
+      ? "comentado"
+      : "ia";
+  const confiancaResolucao =
+    gabaritoConhecido
+      ? Math.max(
+          limitarPercentual(
+            item.confianca,
+            70
+          ),
+          gabaritoConhecido.confianca
+        )
+      : limitarPercentual(
+          item.confianca,
+          60
+        );
+  const confianca = Math.min(
+    extraida.confiancaLeitura,
+    confiancaResolucao
+  );
+
+  return {
+    numero,
+    materia: textoSeguro(
+      item.materia,
+      "Não classificada"
+    ),
+    modulo:
+      textoSeguro(item.modulo) ||
+      undefined,
+    assunto: textoSeguro(
+      item.assunto,
+      "Não classificado"
+    ),
+    subassunto:
+      textoSeguro(item.subassunto) ||
+      undefined,
+    dificuldade,
+    enunciado: extraida.enunciado,
+    alternativas: extraida.alternativas,
+    gabarito,
+    comentario: textoSeguro(
+      item.comentario,
+      "Revise o conteúdo central cobrado nesta questão."
+    ),
+    norma:
+      textoSeguro(item.norma) ||
+      undefined,
+    dispositivo:
+      textoSeguro(item.dispositivo) ||
+      undefined,
+    fonteGabarito,
+    confianca,
+    status:
+      status === "valida" &&
+      (!gabarito || confianca < 50)
+        ? "revisar"
+        : status,
+  };
 }
 
 async function analisarBloco(
@@ -852,6 +1097,84 @@ function aplicarGabaritoComentado(
     confianca: Math.max(questao.confianca, gabarito.confianca),
     status: "valida",
   } satisfies QuestaoSimuladoPdfProcessada;
+}
+
+async function gerarJsonTexto(
+  ai: GoogleGenAI,
+  modelos: string[],
+  prompt: string,
+  maxOutputTokens: number,
+  rotulo: string
+) {
+  const resposta = await executarComFallbackGemini(
+    (modeloAtual) =>
+      ai.models.generateContent({
+        model: modeloAtual,
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+        config: {
+          ...parametrosExtracaoGemini(modeloAtual),
+          responseMimeType: "application/json",
+          maxOutputTokens,
+        },
+      }),
+    {
+      rotulo,
+      modelos,
+      tentativasPorModelo: [3, 2, 2],
+      atrasosMs: [4_000, 10_000, 20_000],
+      trocarEmLimite: true,
+      aoTentarNovamente: ({
+        modelo,
+        tentativaAtual,
+        proximaTentativa,
+        status,
+        esperaMs,
+      }) => {
+        console.warn(
+          "[simulado-pdf-job] nova tentativa textual do Gemini",
+          {
+            rotulo,
+            modelo,
+            tentativaAtual,
+            proximaTentativa,
+            status,
+            esperaMs,
+          }
+        );
+      },
+      aoTrocarModelo: ({
+        modeloAnterior,
+        modeloSeguinte,
+        status,
+      }) => {
+        console.warn(
+          "[simulado-pdf-job] trocando modelo na etapa textual",
+          {
+            rotulo,
+            modeloAnterior,
+            modeloSeguinte,
+            status,
+          }
+        );
+      },
+    }
+  );
+
+  if (!resposta.text) {
+    throw new Error(
+      `A IA não retornou a leitura de ${rotulo}.`
+    );
+  }
+
+  return parsearJsonDaIA(
+    resposta.text,
+    rotulo
+  );
 }
 
 async function gerarJsonComPdfs(
