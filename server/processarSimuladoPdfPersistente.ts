@@ -387,135 +387,68 @@ async function processar(
       }
     }
 
-    const execucaoBlocos = await executarBlocosSimuladoPdfPersistentes({
+    const resultadoAnterior = obterResultadoParcial(
+      job.resultado,
+      payload.totalInformado
+    );
+
+    const pipeline = await executarPipelineQuestaoAPorQuestao({
       totalQuestoes: payload.totalInformado,
-      resultadoAnterior: job.resultado,
-      alertasIniciais: alertas,
-      analisar: (intervalo) =>
-        analisarBlocoComRecuperacao(
+      estadoAnterior: resultadoAnterior?.questoes ?? [],
+      temExtracao: questaoSimuladoPdfTemExtracaoConfiavel,
+      estaPronta: questaoSimuladoPdfProntaParaCorrecao,
+      extrair: (numeros) =>
+        extrairQuestoesBasicasComRecuperacao(
           dependencias.ai,
           modelos,
           payload,
-          intervalo,
-          gabaritoComentado
+          numeros
+        ),
+      resolver: (questao) =>
+        resolverQuestaoExtraida(
+          dependencias.ai,
+          modelos,
+          questao,
+          gabaritoComentado.get(questao.numero),
+          Boolean(payload.comentado)
         ),
       salvar: async ({
-        concluidos,
-        totalBlocos,
+        fase,
         progresso,
         descricao,
-        resultado,
+        itens,
       }) => {
         await atualizar(
-          concluidos === totalBlocos ? "revisando" : "gerando",
+          fase === "extraindo" ? "gerando" : "corrigindo",
           progresso,
           descricao,
-          resultado
+          {
+            totalQuestoes: payload.totalInformado,
+            questoes: itens,
+            alertas: Array.from(new Set([
+              ...alertas,
+              ...(resultadoAnterior?.alertas ?? []),
+            ])).slice(0, 30),
+          }
         );
       },
     });
 
-    const porNumero = execucaoBlocos.porNumero;
-    alertas.splice(0, alertas.length, ...execucaoBlocos.alertas);
-
-    const pendentesAntesDaRecuperacao = numerosPendentes(
-      porNumero,
-      payload.totalInformado
+    const porNumero = new Map(
+      pipeline.itens.map(
+        (questao) => [questao.numero, questao] as const
+      )
     );
 
-    if (pendentesAntesDaRecuperacao.length > 0) {
-      const grupos = agruparNumeros(
-        pendentesAntesDaRecuperacao,
-        5
-      );
-
-      for (let indice = 0; indice < grupos.length; indice += 1) {
-        const grupo = grupos[indice];
-
-        await atualizar(
-          "corrigindo",
-          91 + Math.round(((indice + 1) / grupos.length) * 5),
-          `Recuperando questões ${grupo.join(", ")} · ${indice + 1}/${grupos.length}.`,
-          {
-            totalQuestoes: payload.totalInformado,
-            questoes: Array.from(porNumero.values()).sort(
-              (a, b) => a.numero - b.numero
-            ),
-            alertas: Array.from(new Set(alertas)).slice(0, 30),
-          }
+    if (pipeline.pendentes.length > 0) {
+      for (const numero of pipeline.pendentes) {
+        alertas.push(
+          `Questão ${numero}: ainda pendente após a etapa individual.`
         );
-
-        const recuperadas = await analisarBlocoComRecuperacao(
-          dependencias.ai,
-          modelos,
-          payload,
-          {
-            inicio: Math.min(...grupo),
-            fim: Math.max(...grupo),
-            numerosEspecificos: grupo,
-          },
-          gabaritoComentado
-        );
-
-        for (const questao of recuperadas) {
-          porNumero.set(
-            questao.numero,
-            escolherMelhorQuestao(
-              porNumero.get(questao.numero),
-              questao
-            )
-          );
-
-          const prontasAgora =
-            payload.totalInformado -
-            numerosPendentes(
-              porNumero,
-              payload.totalInformado
-            ).length;
-
-          await atualizar(
-            "corrigindo",
-            91 + Math.round(((indice + 1) / grupos.length) * 5),
-            `Questão ${questao.numero} recuperada e salva · ${prontasAgora}/${payload.totalInformado} prontas.`,
-            {
-              totalQuestoes: payload.totalInformado,
-              questoes: Array.from(porNumero.values()).sort(
-                (a, b) => a.numero - b.numero
-              ),
-              alertas: Array.from(new Set(alertas)).slice(0, 30),
-            }
-          );
-        }
       }
-    }
-
-    const aindaPendentes = numerosPendentes(
-      porNumero,
-      payload.totalInformado
-    );
-
-    if (aindaPendentes.length > 0) {
-      for (const numero of aindaPendentes) {
-        alertas.push(`Questão ${numero}: leitura incompleta.`);
-      }
-
-      const resultadoParcial: ResultadoSimuladoPdfProcessado = {
-        totalQuestoes: payload.totalInformado,
-        questoes: Array.from(porNumero.values()).sort(
-          (a, b) => a.numero - b.numero
-        ),
-        alertas: Array.from(new Set(alertas)).slice(0, 30),
-      };
-
-      await atualizar(
-        "corrigindo",
-        96,
-        `A leitura ficou incompleta: ${payload.totalInformado - aindaPendentes.length}/${payload.totalInformado} questões prontas. O resultado não será fechado.`,
-        resultadoParcial
-      );
 
       throw new Error(
-        `A análise ficou incompleta: ${aindaPendentes.length} questão(ões) ainda precisam ser recuperadas. Tente novamente para continuar do ponto salvo.`
+        `A análise ficou incompleta: ${pipeline.pendentes.length} questão(ões) ainda precisam ser recuperadas. O que já ficou pronto foi salvo.`
       );
     }
 
