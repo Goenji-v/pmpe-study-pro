@@ -33,6 +33,7 @@ import {
 } from "./processarGeracaoPersistente.ts";
 import {
   agendarJobAnaliseSimuladoPdf,
+  calcularProgressoRetomadaSimuladoPdf,
   ehJobSimuladoPdf,
   resultadoSimuladoPdfPrecisaRetomar,
   type ResultadoSimuladoPdfProcessado,
@@ -379,7 +380,10 @@ app.post(
           (await atualizarJobGeracaoIA(contexto, job.id, {
             status: "fila",
             etapa: "fila",
-            progresso: Math.max(1, Math.round(Number(job.progresso) || 1)),
+            progresso: calcularProgressoRetomadaSimuladoPdf(
+              job.resultado,
+              totalInformado
+            ),
             // Mantém o resultado parcial: blocos já concluídos não são
             // descartados quando a IA falha temporariamente.
             resultado: job.resultado,

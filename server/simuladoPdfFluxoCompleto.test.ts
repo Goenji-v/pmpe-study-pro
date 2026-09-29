@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  calcularProgressoRetomadaSimuladoPdf,
+  executarAnaliseSimuladoComSubdivisao,
   executarBlocosSimuladoPdfPersistentes,
   resultadoSimuladoPdfPrecisaRetomar,
   type QuestaoSimuladoPdfProcessada,
   type ResultadoSimuladoPdfProcessado,
 } from "./processarSimuladoPdfPersistente.ts";
 import { analisarSimuladoStudyPro } from "../src/utils/analiseSimuladoStudyPro.ts";
+import { ErroJsonInvalidoIA } from "./jsonIa.ts";
 
 function criarQuestao(numero: number): QuestaoSimuladoPdfProcessada {
   const letras = ["A", "B", "C", "D", "E"];
@@ -269,5 +272,64 @@ test("resultado com 50 questões em revisão não pode ser tratado como concluí
       60
     ),
     false
+  );
+});
+
+
+test("JSON inválido em lote de 10 divide automaticamente em lotes menores", async () => {
+  const chamadas: number[][] = [];
+
+  const resultado = await executarAnaliseSimuladoComSubdivisao(
+    Array.from({ length: 10 }, (_, indice) => indice + 1),
+    async (numeros) => {
+      chamadas.push([...numeros]);
+
+      if (numeros.length > 5) {
+        throw new ErroJsonInvalidoIA(
+          `questões ${numeros.join(",")}`
+        );
+      }
+
+      return numeros;
+    }
+  );
+
+  assert.deepEqual(resultado, [
+    1, 2, 3, 4, 5,
+    6, 7, 8, 9, 10,
+  ]);
+  assert.deepEqual(chamadas, [
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    [1, 2, 3, 4, 5],
+    [6, 7, 8, 9, 10],
+  ]);
+});
+
+test("retomada de legado em 100% recalcula o progresso pelos blocos realmente válidos", () => {
+  const questoes = Array.from({ length: 60 }, (_, indice) => {
+    const numero = indice + 1;
+
+    if (numero >= 11 && numero <= 20) {
+      return criarQuestao(numero);
+    }
+
+    return {
+      ...criarQuestao(numero),
+      gabarito: "",
+      confianca: 0,
+      status: "revisar" as const,
+    };
+  });
+
+  assert.equal(
+    calcularProgressoRetomadaSimuladoPdf(
+      {
+        totalQuestoes: 60,
+        questoes,
+        alertas: [],
+      },
+      60
+    ),
+    28
   );
 });
