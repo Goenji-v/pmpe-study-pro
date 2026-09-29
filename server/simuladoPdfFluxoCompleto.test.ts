@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   executarBlocosSimuladoPdfPersistentes,
+  resultadoSimuladoPdfPrecisaRetomar,
   type QuestaoSimuladoPdfProcessada,
   type ResultadoSimuladoPdfProcessado,
 } from "./processarSimuladoPdfPersistente.ts";
@@ -110,7 +111,10 @@ test("60 questões: salva 1/6, falha, retoma de 2/6 e conclui 6/6 sem repetir bl
     "51-60",
   ]);
   assert.equal(salvamentosRetomada[0].progresso, 28);
-  assert.match(salvamentosRetomada[0].descricao, /Retomando do bloco 2\/6/);
+  assert.match(
+    salvamentosRetomada[0].descricao,
+    /Retomando análise: 1\/6 bloco\(s\) já estavam completos/
+  );
   assert.deepEqual(
     salvamentosRetomada.at(-1) &&
       {
@@ -172,4 +176,98 @@ test("60 questões: salva 1/6, falha, retoma de 2/6 e conclui 6/6 sem repetir bl
   assert.ok(diagnostico.assuntos.length >= 2);
   assert.ok(diagnostico.cadernoErros.length > 0);
   assert.ok(diagnostico.planoRevisao.length > 0);
+});
+
+
+test("bloco parcial não conta como concluído e tenta recuperar somente as questões faltantes", async () => {
+  const chamadas: Array<{
+    inicio: number;
+    fim: number;
+    numerosEspecificos?: number[];
+  }> = [];
+  const salvamentos: Array<{
+    concluidos: number;
+    progresso: number;
+    descricao: string;
+  }> = [];
+
+  const resultado = await executarBlocosSimuladoPdfPersistentes({
+    totalQuestoes: 10,
+    analisar: async (intervalo) => {
+      chamadas.push(structuredClone(intervalo));
+
+      if (!intervalo.numerosEspecificos) {
+        return questoesDoIntervalo(1, 5);
+      }
+
+      return intervalo.numerosEspecificos.map(criarQuestao);
+    },
+    salvar: async ({ concluidos, progresso, descricao }) => {
+      salvamentos.push({
+        concluidos,
+        progresso,
+        descricao,
+      });
+    },
+  });
+
+  assert.equal(chamadas.length, 2);
+  assert.deepEqual(chamadas[0], {
+    inicio: 1,
+    fim: 10,
+  });
+  assert.deepEqual(chamadas[1], {
+    inicio: 6,
+    fim: 10,
+    numerosEspecificos: [6, 7, 8, 9, 10],
+  });
+  assert.equal(resultado.porNumero.size, 10);
+  assert.equal(salvamentos.at(-1)?.concluidos, 1);
+  assert.equal(salvamentos.at(-1)?.progresso, 90);
+});
+
+test("resultado com 50 questões em revisão não pode ser tratado como concluído", () => {
+  const questoes = Array.from({ length: 60 }, (_, indice) => {
+    const numero = indice + 1;
+
+    if (numero >= 11 && numero <= 20) {
+      return criarQuestao(numero);
+    }
+
+    return {
+      ...criarQuestao(numero),
+      materia: "Não classificada",
+      assunto: "Revisão manual",
+      gabarito: "",
+      confianca: 0,
+      status: "revisar" as const,
+    };
+  });
+
+  assert.equal(
+    resultadoSimuladoPdfPrecisaRetomar(
+      {
+        totalQuestoes: 60,
+        questoes,
+        alertas: [],
+      },
+      60
+    ),
+    true
+  );
+
+  assert.equal(
+    resultadoSimuladoPdfPrecisaRetomar(
+      {
+        totalQuestoes: 60,
+        questoes: Array.from(
+          { length: 60 },
+          (_, indice) => criarQuestao(indice + 1)
+        ),
+        alertas: [],
+      },
+      60
+    ),
+    false
+  );
 });
