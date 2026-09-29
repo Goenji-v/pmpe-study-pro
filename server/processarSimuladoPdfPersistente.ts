@@ -583,7 +583,275 @@ async function extrairGabaritoComentado(
   });
 }
 
-async function analisarBlocoComRecuperacao(
+async function extrairQuestoesBasicasComRecuperacao(
+  ai: GoogleGenAI,
+  modelos: string[],
+  payload: PayloadSimuladoPdf,
+  numeros: number[]
+) {
+  return executarAnaliseSimuladoComSubdivisao(
+    numeros,
+    (numerosAtual) =>
+      extrairQuestoesBasicas(
+        ai,
+        modelos,
+        payload,
+        numerosAtual
+      )
+  );
+}
+
+async function extrairQuestoesBasicas(
+  ai: GoogleGenAI,
+  modelos: string[],
+  payload: PayloadSimuladoPdf,
+  numeros: number[]
+): Promise<QuestaoSimuladoPdfProcessada[]> {
+  const resposta = await gerarJsonComPdfs(
+    ai,
+    modelos,
+    [
+      "Você é o extrator literal de questões do Study Pro.",
+      `Extraia SOMENTE as questões: ${numeros.join(", ")}.`,
+      "Não resolva, não classifique matéria e não explique.",
+      "Preserve o enunciado e as alternativas como aparecem no PDF.",
+      "Se uma questão não estiver legível, omita essa questão em vez de inventar.",
+      "Retorne SOMENTE JSON válido:",
+      '{"questoes":[{"numero":1,"enunciado":"...","alternativas":[{"id":"A","texto":"..."}],"confiancaLeitura":95}]}',
+    ].join("\n"),
+    [payload.prova],
+    16384,
+    `extração das questões ${numeros.join(",")}`
+  );
+
+  const raiz = objetoSeguro(resposta);
+  const itens = Array.isArray(raiz.questoes)
+    ? raiz.questoes
+    : [];
+
+  return itens.flatMap((valor) => {
+    const item = objetoSeguro(valor);
+    const numero = Math.round(
+      numeroSeguro(item.numero)
+    );
+
+    if (!numeros.includes(numero)) return [];
+
+    const enunciado = textoSeguro(
+      item.enunciado
+    );
+    const alternativas = Array.isArray(
+      item.alternativas
+    )
+      ? item.alternativas.flatMap(
+          (valorAlternativa) => {
+            const alternativa =
+              objetoSeguro(valorAlternativa);
+            const id = textoSeguro(
+              alternativa.id
+            ).toUpperCase().slice(0, 3);
+            const texto = textoSeguro(
+              alternativa.texto
+            );
+
+            return id && texto
+              ? [{ id, texto }]
+              : [];
+          }
+        )
+      : [];
+    const confiancaLeitura =
+      limitarPercentual(
+        item.confiancaLeitura,
+        enunciado && alternativas.length >= 2
+          ? 75
+          : 0
+      );
+
+    if (
+      !enunciado ||
+      alternativas.length < 2 ||
+      confiancaLeitura < 50
+    ) {
+      return [];
+    }
+
+    return [{
+      numero,
+      materia: "Não classificada",
+      assunto: "Aguardando análise",
+      dificuldade: "Média",
+      enunciado,
+      alternativas,
+      gabarito: "",
+      comentario:
+        "Questão extraída; aguardando resolução.",
+      fonteGabarito: payload.comentado
+        ? "comentado"
+        : "ia",
+      confianca: 0,
+      status: "revisar",
+      etapaPipeline: "extraida",
+      confiancaLeitura,
+    } satisfies QuestaoSimuladoPdfProcessada];
+  });
+}
+
+async function resolverQuestaoExtraida(
+  ai: GoogleGenAI,
+  modelos: string[],
+  questao: QuestaoSimuladoPdfProcessada,
+  gabaritoConhecido: ItemGabarito | undefined,
+  temComentado: boolean
+): Promise<QuestaoSimuladoPdfProcessada> {
+  const prompt = [
+    "Você está na etapa de RESOLUÇÃO E CLASSIFICAÇÃO de uma única questão já extraída.",
+    "Não há PDF nesta etapa. Use somente o texto fornecido.",
+    "Não altere o enunciado nem as alternativas.",
+    `Número: ${questao.numero}`,
+    `Enunciado: ${questao.enunciado}`,
+    `Alternativas: ${JSON.stringify(questao.alternativas)}`,
+    gabaritoConhecido
+      ? `Gabarito externo confirmado: ${JSON.stringify(gabaritoConhecido)}`
+      : "Não existe gabarito externo confirmado; resolva a questão com cuidado.",
+    "",
+    "Retorne matéria, módulo, assunto, subassunto, dificuldade, gabarito, comentário, norma, dispositivo, confiança e status.",
+    "Se houver gabarito externo confirmado, ele prevalece.",
+    "Se houver dúvida real sem fonte confirmada, use status revisar e confiança abaixo de 50.",
+    "Retorne somente JSON válido:",
+    '{"materia":"Português","modulo":"Gramática","assunto":"Crase","subassunto":"Crase obrigatória","dificuldade":"Média","gabarito":"A","comentario":"...","norma":"","dispositivo":"","confianca":85,"status":"valida"}',
+  ].join("\n");
+
+  let ultimoErro: unknown;
+
+  for (
+    let tentativaJson = 1;
+    tentativaJson <= 2;
+    tentativaJson += 1
+  ) {
+    try {
+      const resposta = await gerarJsonTexto(
+        ai,
+        modelos,
+        prompt,
+        4096,
+        `resolução da questão ${questao.numero}`
+      );
+
+      const item = objetoSeguro(resposta);
+      const status =
+        gabaritoConhecido?.anulada === true ||
+        item.status === "anulada"
+          ? "anulada"
+          : item.status === "revisar"
+            ? "revisar"
+            : "valida";
+      const dificuldade =
+        item.dificuldade === "Fácil" ||
+        item.dificuldade === "Difícil"
+          ? item.dificuldade
+          : "Média";
+      const idsAlternativas = new Set(
+        questao.alternativas.map(
+          (alternativa) => alternativa.id
+        )
+      );
+      const gabaritoGerado =
+        textoSeguro(item.gabarito)
+          .toUpperCase()
+          .slice(0, 3);
+      const gabarito =
+        status === "anulada"
+          ? ""
+          : gabaritoConhecido?.resposta ||
+            (idsAlternativas.has(gabaritoGerado)
+              ? gabaritoGerado
+              : "");
+      const confiancaResolucao =
+        gabaritoConhecido
+          ? Math.max(
+              limitarPercentual(
+                item.confianca,
+                70
+              ),
+              gabaritoConhecido.confianca
+            )
+          : limitarPercentual(
+              item.confianca,
+              60
+            );
+      const confianca = Math.min(
+        Number(
+          questao.confiancaLeitura ?? 100
+        ),
+        confiancaResolucao
+      );
+
+      const resolvida: QuestaoSimuladoPdfProcessada = {
+        ...questao,
+        materia: textoSeguro(
+          item.materia,
+          "Não classificada"
+        ),
+        modulo:
+          textoSeguro(item.modulo) ||
+          undefined,
+        assunto: textoSeguro(
+          item.assunto,
+          "Não classificado"
+        ),
+        subassunto:
+          textoSeguro(item.subassunto) ||
+          undefined,
+        dificuldade,
+        gabarito,
+        comentario: textoSeguro(
+          item.comentario,
+          "Revise o conteúdo central cobrado nesta questão."
+        ),
+        norma:
+          textoSeguro(item.norma) ||
+          undefined,
+        dispositivo:
+          textoSeguro(item.dispositivo) ||
+          undefined,
+        fonteGabarito: gabaritoConhecido
+          ? "comentado"
+          : "ia",
+        confianca,
+        status:
+          status === "valida" &&
+          (!gabarito || confianca < 50)
+            ? "revisar"
+            : status,
+        etapaPipeline: "resolvida",
+      };
+
+      return aplicarGabaritoComentado(
+        resolvida,
+        gabaritoConhecido,
+        temComentado
+      );
+    } catch (erro) {
+      ultimoErro = erro;
+
+      if (
+        !(erro instanceof ErroJsonInvalidoIA) ||
+        tentativaJson === 2
+      ) {
+        throw erro;
+      }
+    }
+  }
+
+  throw ultimoErro instanceof Error
+    ? ultimoErro
+    : new Error(
+        `Não foi possível resolver a questão ${questao.numero}.`
+      );
+}
+
+export async function analisarBlocoComRecuperacao(
   ai: GoogleGenAI,
   modelos: string[],
   payload: PayloadSimuladoPdf,
