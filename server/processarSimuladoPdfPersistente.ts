@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { GoogleGenAI } from "@google/genai";
 
-import { parsearJsonDaIA } from "./jsonIa.ts";
+import {
+  ErroJsonInvalidoIA,
+  parsearJsonDaIA,
+} from "./jsonIa.ts";
 import { parametrosExtracaoGemini } from "./modelosGemini.ts";
 import {
   atualizarJobGeracaoIA,
@@ -167,6 +170,83 @@ function agruparNumeros(
   return grupos;
 }
 
+
+export function calcularProgressoRetomadaSimuladoPdf(
+  valor: unknown,
+  totalQuestoes: number
+) {
+  const resultado = obterResultadoParcial(
+    valor,
+    totalQuestoes
+  );
+  const intervalos = criarIntervalos(totalQuestoes);
+
+  if (!resultado || intervalos.length === 0) return 1;
+
+  const porNumero = new Map(
+    resultado.questoes.map(
+      (questao) => [questao.numero, questao] as const
+    )
+  );
+
+  const blocosConcluidos = intervalos.filter(
+    (intervalo) =>
+      Array.from(
+        { length: intervalo.fim - intervalo.inicio + 1 },
+        (_, indice) => intervalo.inicio + indice
+      ).every(
+        (numero) =>
+          questaoSimuladoPdfProntaParaCorrecao(
+            porNumero.get(numero)
+          )
+      )
+  ).length;
+
+  if (blocosConcluidos === 0) return 1;
+
+  return Math.min(
+    90,
+    15 +
+      Math.round(
+        (blocosConcluidos / intervalos.length) * 75
+      )
+  );
+}
+
+export async function executarAnaliseSimuladoComSubdivisao<T>(
+  numeros: number[],
+  executar: (numerosAtual: number[]) => Promise<T[]>
+): Promise<T[]> {
+  if (numeros.length === 0) return [];
+
+  try {
+    return await executar(numeros);
+  } catch (erro) {
+    if (
+      !(erro instanceof ErroJsonInvalidoIA) ||
+      numeros.length <= 1
+    ) {
+      throw erro;
+    }
+
+    const meio = Math.ceil(numeros.length / 2);
+    const primeiraParte = numeros.slice(0, meio);
+    const segundaParte = numeros.slice(meio);
+
+    const primeira = await executarAnaliseSimuladoComSubdivisao(
+      primeiraParte,
+      executar
+    );
+    const segunda = await executarAnaliseSimuladoComSubdivisao(
+      segundaParte,
+      executar
+    );
+
+    return [...primeira, ...segunda];
+  }
+}
+
+
 export function agendarJobAnaliseSimuladoPdf(
   job: JobGeracaoIA,
   contexto: ContextoSupabaseJob,
@@ -217,7 +297,10 @@ async function processar(
       dependencias.modeloFallback,
     ])
   );
-  let ultimoProgresso = Math.max(1, Math.round(Number(job.progresso) || 1));
+  let ultimoProgresso = calcularProgressoRetomadaSimuladoPdf(
+    job.resultado,
+    payload.totalInformado
+  );
 
   const atualizar = async (
     etapa: "gerando" | "revisando" | "corrigindo" | "salvando",
@@ -291,7 +374,7 @@ async function processar(
       resultadoAnterior: job.resultado,
       alertasIniciais: alertas,
       analisar: (intervalo) =>
-        analisarBloco(
+        analisarBlocoComRecuperacao(
           dependencias.ai,
           modelos,
           payload,
@@ -344,7 +427,7 @@ async function processar(
           }
         );
 
-        const recuperadas = await analisarBloco(
+        const recuperadas = await analisarBlocoComRecuperacao(
           dependencias.ai,
           modelos,
           payload,
@@ -527,6 +610,41 @@ async function extrairGabaritoComentado(
       },
     ];
   });
+}
+
+async function analisarBlocoComRecuperacao(
+  ai: GoogleGenAI,
+  modelos: string[],
+  payload: PayloadSimuladoPdf,
+  intervalo: {
+    inicio: number;
+    fim: number;
+    numerosEspecificos?: number[];
+  },
+  gabaritoComentado: Map<number, ItemGabarito>
+) {
+  const numeros =
+    intervalo.numerosEspecificos ??
+    Array.from(
+      { length: intervalo.fim - intervalo.inicio + 1 },
+      (_, indice) => intervalo.inicio + indice
+    );
+
+  return executarAnaliseSimuladoComSubdivisao(
+    numeros,
+    (numerosAtual) =>
+      analisarBloco(
+        ai,
+        modelos,
+        payload,
+        {
+          inicio: Math.min(...numerosAtual),
+          fim: Math.max(...numerosAtual),
+          numerosEspecificos: numerosAtual,
+        },
+        gabaritoComentado
+      )
+  );
 }
 
 async function analisarBloco(
