@@ -14,4 +14,7 @@ test("simulado PDF salva cada bloco e preserva o parcial na retomada", async () 
   assert.doesNotMatch(processador, /const CONCORRENCIA = 2/);
   assert.match(api, /resultado: job\.resultado/);
   assert.match(api, /último bloco salvo/);
+  assert.match(api, /resultadoSimuladoPdfPrecisaRetomar/);
+  assert.match(api, /Resultado incompleto detectado/);
+  assert.match(api, /legadoIncompleto/);
 });
