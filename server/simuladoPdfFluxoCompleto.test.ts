@@ -116,7 +116,7 @@ test("60 questões: salva 1/6, falha, retoma de 2/6 e conclui 6/6 sem repetir bl
   assert.equal(salvamentosRetomada[0].progresso, 28);
   assert.match(
     salvamentosRetomada[0].descricao,
-    /Retomando análise: 1\/6 bloco\(s\) já estavam completos/
+    /Retomando análise: 10\/60 questões já estavam prontas/
   );
   assert.deepEqual(
     salvamentosRetomada.at(-1) &&
@@ -331,5 +331,76 @@ test("retomada de legado em 100% recalcula o progresso pelos blocos realmente v�
       60
     ),
     28
+  );
+});
+
+
+test("JSON inválido em uma única questão não derruba as demais", async () => {
+  const falhas: number[] = [];
+
+  const resultado = await executarAnaliseSimuladoComSubdivisao(
+    [1, 2, 3, 4],
+    async (numeros) => {
+      if (numeros.includes(3)) {
+        if (numeros.length === 1) {
+          throw new ErroJsonInvalidoIA("questão 3");
+        }
+
+        throw new ErroJsonInvalidoIA(
+          `questões ${numeros.join(",")}`
+        );
+      }
+
+      return numeros;
+    },
+    ({ numero }) => {
+      falhas.push(numero);
+    }
+  );
+
+  assert.deepEqual(resultado, [1, 2, 4]);
+  assert.deepEqual(falhas, [3]);
+});
+
+test("checkpoint é salvo conforme cada questão fica pronta", async () => {
+  const checkpoints: Array<{
+    quantidade: number;
+    progresso: number;
+    descricao: string;
+  }> = [];
+
+  await executarBlocosSimuladoPdfPersistentes({
+    totalQuestoes: 10,
+    analisar: async ({ numerosEspecificos }) => {
+      const numeros =
+        numerosEspecificos ??
+        Array.from({ length: 10 }, (_, indice) => indice + 1);
+
+      return numeros.map(criarQuestao);
+    },
+    salvar: async ({ resultado, progresso, descricao }) => {
+      checkpoints.push({
+        quantidade: resultado.questoes.filter(
+          (questao) => questao.status === "valida"
+        ).length,
+        progresso,
+        descricao,
+      });
+    },
+  });
+
+  assert.ok(
+    checkpoints.some(
+      (item) =>
+        item.quantidade === 1 &&
+        /Questão 1 salva/.test(item.descricao)
+    )
+  );
+  assert.ok(
+    checkpoints.some(
+      (item) =>
+        item.quantidade === 10 &&
+        item.progresso === 90
+    )
   );
 });
