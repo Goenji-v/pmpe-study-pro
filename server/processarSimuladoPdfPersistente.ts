@@ -445,6 +445,26 @@ async function processar(
               questao
             )
           );
+
+          const prontasAgora =
+            payload.totalInformado -
+            numerosPendentes(
+              porNumero,
+              payload.totalInformado
+            ).length;
+
+          await atualizar(
+            "corrigindo",
+            91 + Math.round(((indice + 1) / grupos.length) * 5),
+            `Questão ${questao.numero} recuperada e salva · ${prontasAgora}/${payload.totalInformado} prontas.`,
+            {
+              totalQuestoes: payload.totalInformado,
+              questoes: Array.from(porNumero.values()).sort(
+                (a, b) => a.numero - b.numero
+              ),
+              alertas: Array.from(new Set(alertas)).slice(0, 30),
+            }
+          );
         }
       }
     }
