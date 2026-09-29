@@ -82,3 +82,38 @@ test("histórico PDF mantém layout utilizável em celular", async () => {
     /\.simulado-pdf-ver-diagnostico[\s\S]*width:\s*100%/
   );
 });
+
+
+test("frontend não aceita diagnóstico PDF com questões sem gabarito confiável", async () => {
+  const [simuladoPdf, simulados] = await Promise.all([
+    readFile(
+      "src/pages/SimuladoPdf/SimuladoPdf.tsx",
+      "utf8"
+    ),
+    readFile(
+      "src/pages/Simulados/Simulados.tsx",
+      "utf8"
+    ),
+  ]);
+
+  assert.match(
+    simuladoPdf,
+    /analisePdfProntaParaCorrecao/
+  );
+  assert.match(
+    simuladoPdf,
+    /não vai calcular sua nota até recuperar todas as questões pendentes/
+  );
+  assert.match(
+    simuladoPdf,
+    /A análise salva estava incompleta/
+  );
+  assert.match(
+    simuladoPdf,
+    /setFinalizarQuandoPronto\(true\)/
+  );
+  assert.match(
+    simulados,
+    /resumo\.totalValidas >= minimoConfiavel/
+  );
+});
