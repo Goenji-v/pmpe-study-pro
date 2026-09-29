@@ -34,6 +34,7 @@ import {
 import {
   agendarJobAnaliseSimuladoPdf,
   ehJobSimuladoPdf,
+  resultadoSimuladoPdfPrecisaRetomar,
   type ResultadoSimuladoPdfProcessado,
 } from "./processarSimuladoPdfPersistente.ts";
 
@@ -363,7 +364,17 @@ app.post(
         },
       });
 
-      if (job.status === "erro" && req.body?.retomar === true) {
+      const resultadoIncompleto =
+        job.status === "concluida" &&
+        resultadoSimuladoPdfPrecisaRetomar(
+          job.resultado,
+          totalInformado
+        );
+
+      if (
+        req.body?.retomar === true &&
+        (job.status === "erro" || resultadoIncompleto)
+      ) {
         job =
           (await atualizarJobGeracaoIA(contexto, job.id, {
             status: "fila",
@@ -376,7 +387,9 @@ app.post(
             concluida_em: null,
             execucao_id: null,
             lease_ate: null,
-            descricao: "Análise recolocada na fila a partir do último bloco salvo.",
+            descricao: resultadoIncompleto
+              ? "Resultado incompleto detectado. Recuperando apenas as questões pendentes."
+              : "Análise recolocada na fila a partir do último bloco salvo.",
             payload: {
               tipo: "simulado_pdf",
               totalInformado,
@@ -674,27 +687,40 @@ function agendarJobPersistente(
 }
 
 function serializarJobSimuladoPdf(job: JobGeracaoIA) {
+  const resultado =
+    job.resultado as ResultadoSimuladoPdfProcessado | null;
+  const totalQuestoes = Math.max(
+    0,
+    Number(job.payload?.totalInformado) ||
+      Number(resultado?.totalQuestoes) ||
+      0
+  );
+  const legadoIncompleto =
+    job.status === "concluida" &&
+    totalQuestoes > 0 &&
+    resultadoSimuladoPdfPrecisaRetomar(
+      resultado,
+      totalQuestoes
+    );
+  const status = legadoIncompleto ? "erro" : job.status;
+
   return {
     id: job.id,
     requestId: job.request_id,
-    status: job.status,
-    etapa: job.etapa,
+    status,
+    etapa: legadoIncompleto ? "erro" : job.etapa,
     progresso: job.progresso,
     titulo: job.titulo,
-    descricao: job.descricao,
-    erro: job.erro,
-    totalQuestoes: Math.max(
-      0,
-      Number(job.payload?.totalInformado) ||
-        Number(
-          (job.resultado as ResultadoSimuladoPdfProcessado | null)
-            ?.totalQuestoes
-        ) ||
-        0
-    ),
+    descricao: legadoIncompleto
+      ? "A análise terminou incompleta e precisa ser retomada."
+      : job.descricao,
+    erro: legadoIncompleto
+      ? "Nem todas as questões receberam leitura e gabarito confiáveis. Tente novamente para recuperar somente as pendentes."
+      : job.erro,
+    totalQuestoes,
     resultado:
-      job.status === "concluida"
-        ? (job.resultado as ResultadoSimuladoPdfProcessado | null)
+      status === "concluida"
+        ? resultado
         : null,
     criadaEm: job.criada_em,
     iniciadaEm: job.iniciada_em,
