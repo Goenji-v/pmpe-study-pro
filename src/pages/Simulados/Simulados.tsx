@@ -95,7 +95,16 @@ export default function Simulados() {
 
         setAnalisesPdf(
           itens
-            .filter((item) => item.origem === "pdf")
+            .filter((item) => {
+              if (item.origem !== "pdf") return false;
+
+              const resumo = item.analise.resumo;
+              const minimoConfiavel = Math.ceil(
+                resumo.totalQuestoes * 0.8
+              );
+
+              return resumo.totalValidas >= minimoConfiavel;
+            })
             .sort(
               (a, b) =>
                 Date.parse(b.atualizadoEm) -
