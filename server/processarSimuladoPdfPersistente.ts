@@ -179,54 +179,50 @@ export function calcularProgressoRetomadaSimuladoPdf(
     valor,
     totalQuestoes
   );
-  const intervalos = criarIntervalos(totalQuestoes);
 
-  if (!resultado || intervalos.length === 0) return 1;
+  if (!resultado || totalQuestoes <= 0) return 1;
 
-  const porNumero = new Map(
-    resultado.questoes.map(
-      (questao) => [questao.numero, questao] as const
-    )
-  );
-
-  const blocosConcluidos = intervalos.filter(
-    (intervalo) =>
-      Array.from(
-        { length: intervalo.fim - intervalo.inicio + 1 },
-        (_, indice) => intervalo.inicio + indice
-      ).every(
-        (numero) =>
-          questaoSimuladoPdfProntaParaCorrecao(
-            porNumero.get(numero)
-          )
+  const prontas = resultado.questoes.filter(
+    (questao) =>
+      questaoSimuladoPdfProntaParaCorrecao(
+        questao
       )
   ).length;
 
-  if (blocosConcluidos === 0) return 1;
+  if (prontas === 0) return 1;
 
   return Math.min(
     90,
     15 +
       Math.round(
-        (blocosConcluidos / intervalos.length) * 75
+        (prontas / totalQuestoes) * 75
       )
   );
 }
 
 export async function executarAnaliseSimuladoComSubdivisao<T>(
   numeros: number[],
-  executar: (numerosAtual: number[]) => Promise<T[]>
+  executar: (numerosAtual: number[]) => Promise<T[]>,
+  aoFalharQuestao?: (dados: {
+    numero: number;
+    erro: Error;
+  }) => void
 ): Promise<T[]> {
   if (numeros.length === 0) return [];
 
   try {
     return await executar(numeros);
   } catch (erro) {
-    if (
-      !(erro instanceof ErroJsonInvalidoIA) ||
-      numeros.length <= 1
-    ) {
+    if (!(erro instanceof ErroJsonInvalidoIA)) {
       throw erro;
+    }
+
+    if (numeros.length === 1) {
+      aoFalharQuestao?.({
+        numero: numeros[0],
+        erro,
+      });
+      return [];
     }
 
     const meio = Math.ceil(numeros.length / 2);
@@ -235,11 +231,13 @@ export async function executarAnaliseSimuladoComSubdivisao<T>(
 
     const primeira = await executarAnaliseSimuladoComSubdivisao(
       primeiraParte,
-      executar
+      executar,
+      aoFalharQuestao
     );
     const segunda = await executarAnaliseSimuladoComSubdivisao(
       segundaParte,
-      executar
+      executar,
+      aoFalharQuestao
     );
 
     return [...primeira, ...segunda];
@@ -643,7 +641,16 @@ async function analisarBlocoComRecuperacao(
           numerosEspecificos: numerosAtual,
         },
         gabaritoComentado
-      )
+      ),
+    ({ numero, erro }) => {
+      console.warn(
+        "[simulado-pdf-job] questão isolada ficou pendente após JSON inválido",
+        {
+          numero,
+          erro: erro.message,
+        }
+      );
+    }
   );
 }
 
