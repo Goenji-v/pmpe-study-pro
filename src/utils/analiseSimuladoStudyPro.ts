@@ -1180,7 +1180,7 @@ function materiaCanonica(
     }
 
     if (
-      /ato administrativ|licitac|contrato administrativ|agente publico|servidor publico|poder administrativ|servico publico|responsabilidade civil do estado|administracao publica|improbidade/.test(
+      /atos? administrativ|licitac|contratos? administrativ|agentes? public|servidores? public|poder(?:es)? administrativ|servicos? public|responsabilidade civil do estado|administracao publica|improbidade/.test(
         contextoEspecifico
       )
     ) {
