@@ -13,6 +13,7 @@ import {
   type JobGeracaoIA,
 } from "./geracaoPersistente.ts";
 import { executarComFallbackGemini } from "./retryGemini.ts";
+import { executarPipelineQuestaoAPorQuestao } from "./simuladoPdfPipeline.ts";
 
 export type QuestaoSimuladoPdfProcessada = {
   numero: number;
@@ -30,6 +31,8 @@ export type QuestaoSimuladoPdfProcessada = {
   fonteGabarito: "comentado" | "ia";
   confianca: number;
   status: "valida" | "revisar" | "anulada";
+  etapaPipeline?: "extraida" | "resolvida";
+  confiancaLeitura?: number;
 };
 
 export type ResultadoSimuladoPdfProcessado = {
@@ -77,6 +80,7 @@ export function questaoSimuladoPdfProntaParaCorrecao(
   questao: QuestaoSimuladoPdfProcessada | undefined
 ) {
   if (!questao) return false;
+  if (questao.etapaPipeline === "extraida") return false;
   if (questao.status === "anulada") return true;
 
   return (
@@ -154,6 +158,23 @@ function numerosPendentes(
       !questaoSimuladoPdfProntaParaCorrecao(
         porNumero.get(numero)
       )
+  );
+}
+
+
+export function questaoSimuladoPdfTemExtracaoConfiavel(
+  questao: QuestaoSimuladoPdfProcessada | undefined
+) {
+  if (!questao) return false;
+  if (questaoSimuladoPdfProntaParaCorrecao(questao)) return true;
+
+  return (
+    Boolean(questao.enunciado?.trim()) &&
+    questao.enunciado !== "Questão não extraída integralmente." &&
+    questao.enunciado !== "Questão não extraída com segurança do PDF." &&
+    Array.isArray(questao.alternativas) &&
+    questao.alternativas.length >= 2 &&
+    Number(questao.confiancaLeitura ?? 0) >= 50
   );
 }
 
