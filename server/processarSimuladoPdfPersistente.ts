@@ -69,6 +69,104 @@ export function ehJobSimuladoPdf(job: JobGeracaoIA) {
   return job.payload?.tipo === "simulado_pdf";
 }
 
+
+export function questaoSimuladoPdfProntaParaCorrecao(
+  questao: QuestaoSimuladoPdfProcessada | undefined
+) {
+  if (!questao) return false;
+  if (questao.status === "anulada") return true;
+
+  return (
+    questao.status === "valida" &&
+    Boolean(questao.gabarito?.trim()) &&
+    Number(questao.confianca) >= 50
+  );
+}
+
+export function resultadoSimuladoPdfPrecisaRetomar(
+  valor: unknown,
+  totalQuestoes: number
+) {
+  if (!valor || typeof valor !== "object") return true;
+
+  const raiz = valor as { questoes?: unknown };
+  if (!Array.isArray(raiz.questoes)) return true;
+
+  const porNumero = new Map<number, QuestaoSimuladoPdfProcessada>();
+
+  for (const item of raiz.questoes) {
+    if (!item || typeof item !== "object") continue;
+
+    const questao = item as QuestaoSimuladoPdfProcessada;
+    const numero = Number(questao.numero);
+
+    if (
+      Number.isInteger(numero) &&
+      numero >= 1 &&
+      numero <= totalQuestoes
+    ) {
+      porNumero.set(numero, questao);
+    }
+  }
+
+  return Array.from(
+    { length: totalQuestoes },
+    (_, indice) => indice + 1
+  ).some(
+    (numero) =>
+      !questaoSimuladoPdfProntaParaCorrecao(
+        porNumero.get(numero)
+      )
+  );
+}
+
+function escolherMelhorQuestao(
+  atual: QuestaoSimuladoPdfProcessada | undefined,
+  candidata: QuestaoSimuladoPdfProcessada
+) {
+  if (!atual) return candidata;
+
+  const atualPronta =
+    questaoSimuladoPdfProntaParaCorrecao(atual);
+  const candidataPronta =
+    questaoSimuladoPdfProntaParaCorrecao(candidata);
+
+  if (candidataPronta && !atualPronta) return candidata;
+  if (atualPronta && !candidataPronta) return atual;
+
+  return candidata.confianca >= atual.confianca
+    ? candidata
+    : atual;
+}
+
+function numerosPendentes(
+  porNumero: Map<number, QuestaoSimuladoPdfProcessada>,
+  totalQuestoes: number
+) {
+  return Array.from(
+    { length: totalQuestoes },
+    (_, indice) => indice + 1
+  ).filter(
+    (numero) =>
+      !questaoSimuladoPdfProntaParaCorrecao(
+        porNumero.get(numero)
+      )
+  );
+}
+
+function agruparNumeros(
+  numeros: number[],
+  tamanho = 5
+) {
+  const grupos: number[][] = [];
+
+  for (let indice = 0; indice < numeros.length; indice += tamanho) {
+    grupos.push(numeros.slice(indice, indice + tamanho));
+  }
+
+  return grupos;
+}
+
 export function agendarJobAnaliseSimuladoPdf(
   job: JobGeracaoIA,
   contexto: ContextoSupabaseJob,
@@ -219,56 +317,85 @@ async function processar(
     const porNumero = execucaoBlocos.porNumero;
     alertas.splice(0, alertas.length, ...execucaoBlocos.alertas);
 
-    const faltantes = Array.from(
-      { length: payload.totalInformado },
-      (_, indice) => indice + 1
-    ).filter((numero) => !porNumero.has(numero));
+    const pendentesAntesDaRecuperacao = numerosPendentes(
+      porNumero,
+      payload.totalInformado
+    );
 
-    if (faltantes.length > 0) {
-      await atualizar(
-        "corrigindo",
-        92,
-        "Recuperando questões que não foram extraídas na primeira leitura."
+    if (pendentesAntesDaRecuperacao.length > 0) {
+      const grupos = agruparNumeros(
+        pendentesAntesDaRecuperacao,
+        5
       );
 
-      const recuperadas = await analisarBloco(
-        dependencias.ai,
-        modelos,
-        payload,
-        {
-          inicio: Math.min(...faltantes),
-          fim: Math.max(...faltantes),
-          numerosEspecificos: faltantes,
-        },
-        gabaritoComentado
-      );
+      for (let indice = 0; indice < grupos.length; indice += 1) {
+        const grupo = grupos[indice];
 
-      for (const questao of recuperadas) {
-        porNumero.set(questao.numero, questao);
+        await atualizar(
+          "corrigindo",
+          91 + Math.round(((indice + 1) / grupos.length) * 5),
+          `Recuperando questões ${grupo.join(", ")} · ${indice + 1}/${grupos.length}.`,
+          {
+            totalQuestoes: payload.totalInformado,
+            questoes: Array.from(porNumero.values()).sort(
+              (a, b) => a.numero - b.numero
+            ),
+            alertas: Array.from(new Set(alertas)).slice(0, 30),
+          }
+        );
+
+        const recuperadas = await analisarBloco(
+          dependencias.ai,
+          modelos,
+          payload,
+          {
+            inicio: Math.min(...grupo),
+            fim: Math.max(...grupo),
+            numerosEspecificos: grupo,
+          },
+          gabaritoComentado
+        );
+
+        for (const questao of recuperadas) {
+          porNumero.set(
+            questao.numero,
+            escolherMelhorQuestao(
+              porNumero.get(questao.numero),
+              questao
+            )
+          );
+        }
       }
     }
 
-    const aindaFaltantes = Array.from(
-      { length: payload.totalInformado },
-      (_, indice) => indice + 1
-    ).filter((numero) => !porNumero.has(numero));
+    const aindaPendentes = numerosPendentes(
+      porNumero,
+      payload.totalInformado
+    );
 
-    for (const numero of aindaFaltantes) {
-      porNumero.set(numero, {
-        numero,
-        materia: "Não classificada",
-        assunto: "Revisão manual",
-        dificuldade: "Média",
-        enunciado: "Questão não extraída com segurança do PDF.",
-        alternativas: [],
-        gabarito: "",
-        comentario:
-          "O Study Pro não conseguiu ler esta questão com segurança. Ela não deve reduzir a nota até revisão manual.",
-        fonteGabarito: payload.comentado ? "comentado" : "ia",
-        confianca: 0,
-        status: "revisar",
-      });
-      alertas.push(`Questão ${numero}: leitura incompleta.`);
+    if (aindaPendentes.length > 0) {
+      for (const numero of aindaPendentes) {
+        alertas.push(`Questão ${numero}: leitura incompleta.`);
+      }
+
+      const resultadoParcial: ResultadoSimuladoPdfProcessado = {
+        totalQuestoes: payload.totalInformado,
+        questoes: Array.from(porNumero.values()).sort(
+          (a, b) => a.numero - b.numero
+        ),
+        alertas: Array.from(new Set(alertas)).slice(0, 30),
+      };
+
+      await atualizar(
+        "corrigindo",
+        96,
+        `A leitura ficou incompleta: ${payload.totalInformado - aindaPendentes.length}/${payload.totalInformado} questões prontas. O resultado não será fechado.`,
+        resultadoParcial
+      );
+
+      throw new Error(
+        `A análise ficou incompleta: ${aindaPendentes.length} questão(ões) ainda precisam ser recuperadas. Tente novamente para continuar do ponto salvo.`
+      );
     }
 
     const questoes = Array.from(porNumero.values())
@@ -665,6 +792,7 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
   analisar: (intervalo: {
     inicio: number;
     fim: number;
+    numerosEspecificos?: number[];
   }) => Promise<QuestaoSimuladoPdfProcessada[]>;
   salvar: (estado: {
     concluidos: number;
@@ -693,12 +821,20 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
     Array.from(
       { length: intervalo.fim - intervalo.inicio + 1 },
       (_, indice) => intervalo.inicio + indice
-    ).every((numero) => porNumero.has(numero));
+    ).every(
+      (numero) =>
+        questaoSimuladoPdfProntaParaCorrecao(
+          porNumero.get(numero)
+        )
+    );
+
+  const contarConcluidos = () =>
+    intervalos.filter(intervaloCompleto).length;
 
   const intervalosPendentes = intervalos.filter(
     (intervalo) => !intervaloCompleto(intervalo)
   );
-  let concluidos = intervalos.length - intervalosPendentes.length;
+  let concluidos = contarConcluidos();
 
   const resultadoAtual = (): ResultadoSimuladoPdfProcessado => ({
     totalQuestoes: args.totalQuestoes,
@@ -714,7 +850,7 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
       totalBlocos: intervalos.length,
       progresso: 15 + Math.round((concluidos / intervalos.length) * 75),
       descricao:
-        `Retomando do bloco ${concluidos + 1}/${intervalos.length}; ${concluidos} bloco(s) já estavam salvos.`,
+        `Retomando análise: ${concluidos}/${intervalos.length} bloco(s) já estavam completos.`,
       resultado: resultadoAtual(),
     });
   }
@@ -723,19 +859,55 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
     const questoesDoBloco = await args.analisar(intervalo);
 
     for (const questao of questoesDoBloco) {
-      porNumero.set(questao.numero, questao);
+      porNumero.set(
+        questao.numero,
+        escolherMelhorQuestao(
+          porNumero.get(questao.numero),
+          questao
+        )
+      );
     }
 
-    concluidos += 1;
+    const pendentesDoBloco = Array.from(
+      { length: intervalo.fim - intervalo.inicio + 1 },
+      (_, indice) => intervalo.inicio + indice
+    ).filter(
+      (numero) =>
+        !questaoSimuladoPdfProntaParaCorrecao(
+          porNumero.get(numero)
+        )
+    );
+
+    if (pendentesDoBloco.length > 0) {
+      const recuperadas = await args.analisar({
+        inicio: Math.min(...pendentesDoBloco),
+        fim: Math.max(...pendentesDoBloco),
+        numerosEspecificos: pendentesDoBloco,
+      });
+
+      for (const questao of recuperadas) {
+        porNumero.set(
+          questao.numero,
+          escolherMelhorQuestao(
+            porNumero.get(questao.numero),
+            questao
+          )
+        );
+      }
+    }
+
+    concluidos = contarConcluidos();
     const progresso =
       15 + Math.round((concluidos / intervalos.length) * 75);
+    const blocoCompleto = intervaloCompleto(intervalo);
 
     await args.salvar({
       concluidos,
       totalBlocos: intervalos.length,
       progresso,
-      descricao:
-        `Questões ${intervalo.inicio}–${intervalo.fim} processadas · ${concluidos}/${intervalos.length} blocos · progresso salvo.`,
+      descricao: blocoCompleto
+        ? `Questões ${intervalo.inicio}–${intervalo.fim} processadas · ${concluidos}/${intervalos.length} blocos · progresso salvo.`
+        : `Questões ${intervalo.inicio}–${intervalo.fim} ainda incompletas · progresso parcial salvo para nova tentativa.`,
       resultado: resultadoAtual(),
     });
   }
