@@ -1120,14 +1120,18 @@ function materiaCanonica(
   >
 ) {
   const materia = normalizarTexto(questao.materia);
-  const contexto = normalizarTexto(
+  const contextoEspecifico = normalizarTexto(
     [
-      questao.materia,
       questao.modulo,
       questao.assunto,
       questao.subassunto,
       questao.enunciado,
     ]
+      .filter(Boolean)
+      .join(" ")
+  );
+  const contexto = normalizarTexto(
+    [questao.materia, contextoEspecifico]
       .filter(Boolean)
       .join(" ")
   );
@@ -1169,7 +1173,7 @@ function materiaCanonica(
   if (misturaDireito) {
     if (
       /constitu|direitos fundamentais|direitos e garantias|habeas corpus|habeas data|mandado de seguranca|mandado de injuncao|poder constituinte|controle de constitucionalidade|organizacao do estado/.test(
-        contexto
+        contextoEspecifico
       )
     ) {
       return "Direito Constitucional";
@@ -1177,7 +1181,7 @@ function materiaCanonica(
 
     if (
       /ato administrativ|licitac|contrato administrativ|agente publico|servidor publico|poder administrativ|servico publico|responsabilidade civil do estado|administracao publica|improbidade/.test(
-        contexto
+        contextoEspecifico
       )
     ) {
       return "Direito Administrativo";
