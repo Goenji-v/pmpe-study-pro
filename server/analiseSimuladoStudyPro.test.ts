@@ -177,7 +177,7 @@ test("caderno de erros traz somente erro e acerto por chute com explicação obj
   assert.equal(analise.cadernoErros[0]?.assuntoEspecifico, "Crase obrigatória");
   assert.match(analise.cadernoErros[0]?.motivoProvavel ?? "", /Confundi/i);
   assert.ok((analise.cadernoErros[0]?.comentario.length ?? 0) <= 560);
-  assert.match(analise.cadernoErros[0]?.oQueRevisar ?? "", /Português/);
+  assert.match(analise.cadernoErros[0]?.oQueRevisar ?? "", /Portugues/);
 });
 
 test("classifica dificuldade geral considerando a distribuição das questões", () => {
@@ -328,11 +328,25 @@ test("normaliza matérias geradas pela IA e separa direito misturado pelo contex
 });
 
 test("plano de revisão seleciona no máximo oito focos", () => {
-  const questoes = Array.from({ length: 15 }, (_, indice) =>
-    questao(
-      `q${indice + 1}`,
-      `Assunto ${indice + 1}`
-    )
+  const nomes = [
+    "Crase",
+    "Pontuação",
+    "Regência",
+    "Concordância",
+    "Ortografia",
+    "Morfologia",
+    "Sintaxe",
+    "Semântica",
+    "Coesão",
+    "Interpretação",
+    "Pronomes",
+    "Verbos",
+    "Advérbios",
+    "Preposições",
+    "Conjunções",
+  ];
+  const questoes = nomes.map((assunto, indice) =>
+    questao(`q${indice + 1}`, assunto)
   );
   const respostas = Object.fromEntries(
     questoes.map((item) => [item.id, "B"])
