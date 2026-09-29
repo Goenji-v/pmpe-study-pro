@@ -39,7 +39,7 @@ test("histórico de simulados exibe diagnósticos PDF salvos e reabríveis", asy
   assert.match(codigo, /listarAnalisesSimulados/);
   assert.match(
     codigo,
-    /item\.origem === "pdf"/
+    /item\.origem !== "pdf"/
   );
   assert.match(
     codigo,
