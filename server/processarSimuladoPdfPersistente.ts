@@ -179,54 +179,50 @@ export function calcularProgressoRetomadaSimuladoPdf(
     valor,
     totalQuestoes
   );
-  const intervalos = criarIntervalos(totalQuestoes);
 
-  if (!resultado || intervalos.length === 0) return 1;
+  if (!resultado || totalQuestoes <= 0) return 1;
 
-  const porNumero = new Map(
-    resultado.questoes.map(
-      (questao) => [questao.numero, questao] as const
-    )
-  );
-
-  const blocosConcluidos = intervalos.filter(
-    (intervalo) =>
-      Array.from(
-        { length: intervalo.fim - intervalo.inicio + 1 },
-        (_, indice) => intervalo.inicio + indice
-      ).every(
-        (numero) =>
-          questaoSimuladoPdfProntaParaCorrecao(
-            porNumero.get(numero)
-          )
+  const prontas = resultado.questoes.filter(
+    (questao) =>
+      questaoSimuladoPdfProntaParaCorrecao(
+        questao
       )
   ).length;
 
-  if (blocosConcluidos === 0) return 1;
+  if (prontas === 0) return 1;
 
   return Math.min(
     90,
     15 +
       Math.round(
-        (blocosConcluidos / intervalos.length) * 75
+        (prontas / totalQuestoes) * 75
       )
   );
 }
 
 export async function executarAnaliseSimuladoComSubdivisao<T>(
   numeros: number[],
-  executar: (numerosAtual: number[]) => Promise<T[]>
+  executar: (numerosAtual: number[]) => Promise<T[]>,
+  aoFalharQuestao?: (dados: {
+    numero: number;
+    erro: Error;
+  }) => void
 ): Promise<T[]> {
   if (numeros.length === 0) return [];
 
   try {
     return await executar(numeros);
   } catch (erro) {
-    if (
-      !(erro instanceof ErroJsonInvalidoIA) ||
-      numeros.length <= 1
-    ) {
+    if (!(erro instanceof ErroJsonInvalidoIA)) {
       throw erro;
+    }
+
+    if (numeros.length === 1) {
+      aoFalharQuestao?.({
+        numero: numeros[0],
+        erro,
+      });
+      return [];
     }
 
     const meio = Math.ceil(numeros.length / 2);
@@ -235,11 +231,13 @@ export async function executarAnaliseSimuladoComSubdivisao<T>(
 
     const primeira = await executarAnaliseSimuladoComSubdivisao(
       primeiraParte,
-      executar
+      executar,
+      aoFalharQuestao
     );
     const segunda = await executarAnaliseSimuladoComSubdivisao(
       segundaParte,
-      executar
+      executar,
+      aoFalharQuestao
     );
 
     return [...primeira, ...segunda];
@@ -447,6 +445,26 @@ async function processar(
               questao
             )
           );
+
+          const prontasAgora =
+            payload.totalInformado -
+            numerosPendentes(
+              porNumero,
+              payload.totalInformado
+            ).length;
+
+          await atualizar(
+            "corrigindo",
+            91 + Math.round(((indice + 1) / grupos.length) * 5),
+            `Questão ${questao.numero} recuperada e salva · ${prontasAgora}/${payload.totalInformado} prontas.`,
+            {
+              totalQuestoes: payload.totalInformado,
+              questoes: Array.from(porNumero.values()).sort(
+                (a, b) => a.numero - b.numero
+              ),
+              alertas: Array.from(new Set(alertas)).slice(0, 30),
+            }
+          );
         }
       }
     }
@@ -643,7 +661,16 @@ async function analisarBlocoComRecuperacao(
           numerosEspecificos: numerosAtual,
         },
         gabaritoComentado
-      )
+      ),
+    ({ numero, erro }) => {
+      console.warn(
+        "[simulado-pdf-job] questão isolada ficou pendente após JSON inválido",
+        {
+          numero,
+          erro: erro.message,
+        }
+      );
+    }
   );
 }
 
@@ -949,6 +976,27 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
   const contarConcluidos = () =>
     intervalos.filter(intervaloCompleto).length;
 
+  const contarProntas = () =>
+    Array.from(porNumero.values()).filter(
+      (questao) =>
+        questaoSimuladoPdfProntaParaCorrecao(
+          questao
+        )
+    ).length;
+
+  const progressoPorQuestoes = () => {
+    const prontas = contarProntas();
+    if (prontas === 0) return 1;
+
+    return Math.min(
+      90,
+      15 +
+        Math.round(
+          (prontas / args.totalQuestoes) * 75
+        )
+    );
+  };
+
   const intervalosPendentes = intervalos.filter(
     (intervalo) => !intervaloCompleto(intervalo)
   );
@@ -962,15 +1010,23 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
     alertas: Array.from(new Set(alertas)).slice(0, 30),
   });
 
-  if (concluidos > 0) {
+  const salvarCheckpoint = async (
+    descricao: string
+  ) => {
+    concluidos = contarConcluidos();
     await args.salvar({
       concluidos,
       totalBlocos: intervalos.length,
-      progresso: 15 + Math.round((concluidos / intervalos.length) * 75),
-      descricao:
-        `Retomando análise: ${concluidos}/${intervalos.length} bloco(s) já estavam completos.`,
+      progresso: progressoPorQuestoes(),
+      descricao,
       resultado: resultadoAtual(),
     });
+  };
+
+  if (contarProntas() > 0) {
+    await salvarCheckpoint(
+      `Retomando análise: ${contarProntas()}/${args.totalQuestoes} questões já estavam prontas.`
+    );
   }
 
   for (const intervalo of intervalosPendentes) {
@@ -983,6 +1039,10 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
           porNumero.get(questao.numero),
           questao
         )
+      );
+
+      await salvarCheckpoint(
+        `Questão ${questao.numero} salva · ${contarProntas()}/${args.totalQuestoes} questões prontas.`
       );
     }
 
@@ -1011,23 +1071,20 @@ export async function executarBlocosSimuladoPdfPersistentes(args: {
             questao
           )
         );
+
+        await salvarCheckpoint(
+          `Questão ${questao.numero} recuperada · ${contarProntas()}/${args.totalQuestoes} questões prontas.`
+        );
       }
     }
 
-    concluidos = contarConcluidos();
-    const progresso =
-      15 + Math.round((concluidos / intervalos.length) * 75);
     const blocoCompleto = intervaloCompleto(intervalo);
 
-    await args.salvar({
-      concluidos,
-      totalBlocos: intervalos.length,
-      progresso,
-      descricao: blocoCompleto
-        ? `Questões ${intervalo.inicio}–${intervalo.fim} processadas · ${concluidos}/${intervalos.length} blocos · progresso salvo.`
-        : `Questões ${intervalo.inicio}–${intervalo.fim} ainda incompletas · progresso parcial salvo para nova tentativa.`,
-      resultado: resultadoAtual(),
-    });
+    await salvarCheckpoint(
+      blocoCompleto
+        ? `Questões ${intervalo.inicio}–${intervalo.fim} processadas e persistidas.`
+        : `Questões ${intervalo.inicio}–${intervalo.fim} ainda têm pendências; o que ficou pronto já foi salvo.`
+    );
   }
 
   return {
