@@ -76,6 +76,7 @@ export default function AnaliseSimuladoStudyPro({
   const [cadernoAberto, setCadernoAberto] = useState(false);
   const [correcaoAberta, setCorrecaoAberta] = useState(false);
   const [evolucaoAberta, setEvolucaoAberta] = useState(false);
+  const [todosAssuntosAbertos, setTodosAssuntosAbertos] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [avisoPersistencia, setAvisoPersistencia] = useState("");
   const revisaoAutomaticaRef = useRef("");
@@ -290,9 +291,10 @@ export default function AnaliseSimuladoStudyPro({
     }));
   }
 
-  const prioridades = analise.assuntos.filter(
-    (item) => item.prioridade !== "baixa"
-  );
+  const prioridades = analise.planoRevisao;
+  const assuntosVisiveis = todosAssuntosAbertos
+    ? analise.assuntos
+    : analise.assuntos.slice(0, 12);
   const acertosPorChute = analise.correcao.filter(
     (item) => item.status === "acerto_chute"
   );
@@ -362,12 +364,12 @@ export default function AnaliseSimuladoStudyPro({
         </article>
         <article>
           <AlertTriangle size={20} aria-hidden="true" />
-          <span>Assuntos com mais erros</span>
+          <span>Prioridades principais</span>
           <strong>{prioridades.length}</strong>
           <small>
             {prioridades[0]
-              ? `Prioridade: ${prioridades[0].assuntoEspecifico}`
-              : "Nenhuma prioridade alta/média"}
+              ? `Primeira: ${prioridades[0].assuntoEspecifico}`
+              : "Nenhum reforço extraordinário"}
           </small>
         </article>
         <article>
@@ -384,9 +386,9 @@ export default function AnaliseSimuladoStudyPro({
         </article>
         <article>
           <Sparkles size={20} aria-hidden="true" />
-          <span>Prioridades de revisão</span>
+          <span>Plano de revisão</span>
           <strong>{analise.planoRevisao.length}</strong>
-          <small>Ciclo 1 · 5 · 7 · 14 · 30 dias.</small>
+          <small>Até 8 focos · ciclo 1 · 5 · 7 · 14 · 30 dias.</small>
         </article>
       </div>
 
@@ -482,10 +484,14 @@ export default function AnaliseSimuladoStudyPro({
             <span>ANÁLISE POR ASSUNTO</span>
             <h3>Domínio e prioridade automática</h3>
           </div>
+          <small>
+            Subassuntos semelhantes são consolidados. A correção questão a questão
+            continua completa mais abaixo.
+          </small>
         </div>
 
         <div className="analise-simulado-study__assuntos">
-          {analise.assuntos.map((item) => (
+          {assuntosVisiveis.map((item) => (
             <article
               key={item.chave}
               className={`prioridade-${item.prioridade}`}
@@ -522,6 +528,20 @@ export default function AnaliseSimuladoStudyPro({
             </article>
           ))}
         </div>
+
+        {analise.assuntos.length > 12 && (
+          <button
+            type="button"
+            className="analise-simulado-study__mostrar-assuntos"
+            onClick={() =>
+              setTodosAssuntosAbertos((valor) => !valor)
+            }
+          >
+            {todosAssuntosAbertos
+              ? "Mostrar só os 12 mais relevantes"
+              : `Ver todos os ${analise.assuntos.length} assuntos`}
+          </button>
+        )}
       </section>
 
       {acertosPorChute.length > 0 && (
@@ -569,8 +589,12 @@ export default function AnaliseSimuladoStudyPro({
         <div className="analise-simulado-study__titulo">
           <div>
             <span>PLANO DE REVISÃO</span>
-            <h3>Corrigir o que está fraco sem parar o edital</h3>
+            <h3>Top prioridades para corrigir sem parar o edital</h3>
           </div>
+          <small>
+            O Study Pro seleciona no máximo 8 focos, evitando transformar cada
+            questão errada em uma revisão diferente.
+          </small>
         </div>
 
         {analise.planoRevisao.length === 0 ? (
@@ -579,7 +603,7 @@ export default function AnaliseSimuladoStudyPro({
           </div>
         ) : (
           <div className="analise-simulado-study__plano">
-            {analise.planoRevisao.slice(0, 8).map((item, indice) => (
+            {analise.planoRevisao.map((item, indice) => (
               <article key={item.chave}>
                 <span>{indice + 1}</span>
                 <div>
