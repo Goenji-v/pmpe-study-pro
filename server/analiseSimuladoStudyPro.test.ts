@@ -258,3 +258,97 @@ test("comparação usa pontos percentuais e avisa quando a dificuldade mudou", (
   assert.equal(atual.evolucao[0]?.rotulo, "Evolução: +50 p.p.");
   assert.match(atual.evolucao[0]?.observacao ?? "", /dificuldade/i);
 });
+
+
+test("consolida subassuntos do mesmo assunto em uma única análise", () => {
+  const analise = analisar({
+    questoes: [
+      questao("q1", "Crase", "Média", "Crase obrigatória"),
+      questao("q2", "Crase", "Média", "Crase facultativa"),
+    ],
+    respostas: {
+      q1: "B",
+      q2: "B",
+    },
+  });
+
+  const crase = analise.assuntos.filter(
+    (item) => item.assunto === "Crase"
+  );
+
+  assert.equal(crase.length, 1);
+  assert.equal(crase[0]?.total, 2);
+  assert.equal(crase[0]?.erros, 2);
+  assert.equal(crase[0]?.assuntoEspecifico, "Crase");
+  assert.equal(analise.planoRevisao.length, 1);
+});
+
+test("normaliza matérias geradas pela IA e separa direito misturado pelo contexto", () => {
+  const q1 = {
+    ...questao("q1", "Brasil Império"),
+    materia: "História e Cultura Brasileira",
+  };
+  const q2 = {
+    ...questao("q2", "Era Vargas"),
+    materia: "História",
+  };
+  const q3 = {
+    ...questao("q3", "Habeas corpus e direitos fundamentais"),
+    materia: "Direito Administrativo e Constitucional",
+  };
+  const q4 = {
+    ...questao("q4", "Atos administrativos e poderes administrativos"),
+    materia: "Direito Administrativo e Constitucional",
+  };
+
+  const analise = analisar({
+    questoes: [q1, q2, q3, q4],
+    respostas: {
+      q1: "A",
+      q2: "A",
+      q3: "A",
+      q4: "A",
+    },
+  });
+
+  const porMateria = Object.fromEntries(
+    analise.materias.map((item) => [item.materia, item.total])
+  );
+
+  assert.equal(porMateria["História do Brasil"], 2);
+  assert.equal(porMateria["Direito Constitucional"], 1);
+  assert.equal(porMateria["Direito Administrativo"], 1);
+  assert.equal(
+    analise.materias.some(
+      (item) =>
+        item.materia === "Direito Administrativo e Constitucional"
+    ),
+    false
+  );
+});
+
+test("plano de revisão seleciona no máximo oito focos", () => {
+  const questoes = Array.from({ length: 15 }, (_, indice) =>
+    questao(
+      `q${indice + 1}`,
+      `Assunto ${indice + 1}`
+    )
+  );
+  const respostas = Object.fromEntries(
+    questoes.map((item) => [item.id, "B"])
+  );
+
+  const analise = analisar({
+    questoes,
+    respostas,
+  });
+
+  assert.equal(analise.planoRevisao.length, 8);
+  assert.ok(
+    analise.planoRevisao.every(
+      (item) => item.prioridade !== "alta"
+    )
+  );
+  assert.equal(analise.correcao.length, 15);
+  assert.equal(analise.cadernoErros.length, 15);
+});
