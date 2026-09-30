@@ -47,19 +47,19 @@ type Dependencias = {
   modeloFallback: string;
 };
 
-type ArquivoPayload = {
+export type ArquivoPayload = {
   nome: string;
   base64: string;
 };
 
-type PayloadSimuladoPdf = {
+export type PayloadSimuladoPdf = {
   tipo: "simulado_pdf";
   totalInformado: number;
   prova: ArquivoPayload;
   comentado?: ArquivoPayload | null;
 };
 
-type ItemGabarito = {
+export type ItemGabarito = {
   numero: number;
   resposta: string;
   anulada: boolean;
@@ -532,7 +532,7 @@ async function processar(
   }
 }
 
-async function extrairGabaritoComentado(
+export async function extrairGabaritoComentado(
   ai: GoogleGenAI,
   modelos: string[],
   arquivo: ArquivoPayload,
@@ -583,7 +583,7 @@ async function extrairGabaritoComentado(
   });
 }
 
-async function extrairQuestoesBasicasComRecuperacao(
+export async function extrairQuestoesBasicasComRecuperacao(
   ai: GoogleGenAI,
   modelos: string[],
   payload: PayloadSimuladoPdf,
@@ -697,7 +697,7 @@ async function extrairQuestoesBasicas(
   });
 }
 
-async function resolverQuestaoExtraida(
+export async function resolverQuestaoExtraida(
   ai: GoogleGenAI,
   modelos: string[],
   questao: QuestaoSimuladoPdfProcessada,
