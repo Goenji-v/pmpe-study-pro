@@ -84,8 +84,8 @@ export default function CloudStatus() {
     if (executando) return;
 
     const texto = preferencia === "nuvem"
-      ? "Usar a versão da nuvem? Isso substituirá o estado atual deste aparelho. Antes da troca, as duas versões serão preservadas em backup local e no Supabase."
-      : "Usar a versão deste aparelho? Isso substituirá o estado atual da nuvem. Antes da troca, as duas versões serão preservadas em backup local e no Supabase.";
+      ? "Usar a versão da nuvem? Isso substituirá o estado atual deste aparelho. Antes da troca, o Study Pro preservará as duas versões no Supabase e tentará manter também uma cópia local."
+      : "Usar a versão deste aparelho? Isso substituirá o estado atual da nuvem. Antes da troca, o Study Pro preservará as duas versões no Supabase e tentará manter também uma cópia local.";
 
     if (!window.confirm(texto)) return;
 
@@ -177,7 +177,7 @@ export default function CloudStatus() {
             {statusNuvem === "conflito" && (
               <>
                 <p className="cloud-status-mensagem">
-                  As versões são realmente diferentes. Escolher uma versão substitui a outra; o Study Pro fará backup das duas antes da troca.
+                  As versões são realmente diferentes. Escolher uma versão substitui a outra; o Study Pro preservará as duas versões no Supabase antes da troca.
                 </p>
                 <button
                   type="button"
