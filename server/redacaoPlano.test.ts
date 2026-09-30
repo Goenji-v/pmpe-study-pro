@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { criarPlanoCalendario } from "../src/utils/planoCalendario";
+import { aplicarDiasAtividadesSemanais } from "../src/utils/atividadesSemanaisPlano";
 import { localizarMissaoRedacaoPendenteDoDia } from "../src/utils/redacaoPlano";
 
 test("redação iniciada no dia da missão recebe o vínculo pendente", () => {
@@ -45,4 +46,24 @@ test("redação de outro dia não conclui a missão semanal por engano", () => {
     localizarMissaoRedacaoPendenteDoDia(plano, [], 1, 6),
     null
   );
+});
+
+
+test("redação respeita o dia semanal configurado na Central", () => {
+  const plano = aplicarDiasAtividadesSemanais(
+    criarPlanoCalendario(1),
+    {
+      diaRedacaoSemanal: "sab",
+      diaSimuladoSemanal: "dom",
+    }
+  );
+
+  const vinculoSabado =
+    localizarMissaoRedacaoPendenteDoDia(plano, [], 1, 6);
+  const vinculoDomingo =
+    localizarMissaoRedacaoPendenteDoDia(plano, [], 1, 7);
+
+  assert.ok(vinculoSabado);
+  assert.equal(vinculoSabado.dia, 6);
+  assert.equal(vinculoDomingo, null);
 });
