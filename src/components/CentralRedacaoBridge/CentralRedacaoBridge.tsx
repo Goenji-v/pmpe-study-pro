@@ -16,6 +16,7 @@ import {
   normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
+import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
 import { getSemanaAtual } from "../../utils/planoUtils";
 import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
 import {
@@ -64,11 +65,22 @@ export default function CentralRedacaoBridge() {
 
   const planoCalendario = useMemo(
     () =>
-      criarPlanoCalendario(
-        normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
-        configuracoes.planoPadraoAtivo !== false
+      aplicarDiasAtividadesSemanais(
+        criarPlanoCalendario(
+          normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
+          configuracoes.planoPadraoAtivo !== false
+        ),
+        {
+          diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
+          diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
+        }
       ),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo]
+    [
+      configuracoes.missoesPorDia,
+      configuracoes.planoPadraoAtivo,
+      configuracoes.diaRedacaoSemanal,
+      configuracoes.diaSimuladoSemanal,
+    ]
   );
 
   const semanaAtual = useMemo(
