@@ -3,7 +3,6 @@ import type { CorsOptions } from "cors";
 const origensPermitidas = new Set(
   [
     "https://pmpe-study-pro-two.vercel.app",
-    "https://pmpe-study-pro-git-preview-simulado-pdf-f-84a165-pmpe-study-pro.vercel.app",
     ...(process.env.FRONTEND_URL || "")
       .split(",")
       .map((origem) => origem.trim())
