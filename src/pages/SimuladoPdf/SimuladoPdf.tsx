@@ -983,7 +983,7 @@ export default function SimuladoPdf() {
 
           <div>
             <span>
-              PRÉVIA · SIMULADO DE DOMINGO
+              SIMULADO DE DOMINGO
             </span>
             <h1>
               PDF + folha de respostas
@@ -1180,7 +1180,7 @@ export default function SimuladoPdf() {
 
         <AnaliseSimuladoStudyPro
           origem="pdf"
-          tentativaId={rascunho?.id ?? "preview-pdf"}
+          tentativaId={rascunho?.id ?? "simulado-pdf"}
           simuladoId={rascunho?.id}
           nome={nome}
           data={criadoEm}
