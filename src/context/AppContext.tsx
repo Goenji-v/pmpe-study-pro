@@ -1838,11 +1838,21 @@ function EstadoDaConta({
                 return;
               }
           
-              criarBackupAutomaticoLocal(
-                usuario.id,
-                estadoLocal,
-                "antes_resolucao_conflito"
-              );
+              try {
+                criarBackupAutomaticoLocal(
+                  usuario.id,
+                  estadoLocal,
+                  "antes_resolucao_conflito"
+                );
+              } catch (erroBackupLocal) {
+                // O localStorage pode estar cheio. Não bloqueamos a resolução
+                // porque o backup completo das duas versões no Supabase é a
+                // proteção obrigatória antes de qualquer substituição.
+                console.warn(
+                  "Backup local do conflito indisponível; seguindo com backup no Supabase:",
+                  erroBackupLocal
+                );
+              }
           
               await registrarBackupConflitoNaNuvem({
                 usuarioId: usuario.id,
@@ -1867,16 +1877,14 @@ function EstadoDaConta({
           
               validarIntegridadeEstado(localParaSalvar);
           
-              if (estadoNuvem) {
-                await salvarEstadoEstruturalComSeguranca(
-                  usuario.id,
-                  estadoNuvem,
-                  localParaSalvar,
-                  "antes_resolucao_conflito"
-                );
-              } else {
-                await salvarEstadoNaNuvem(usuario.id, localParaSalvar);
-              }
+              // O backup completo das duas versões já foi confirmado no
+              // Supabase acima. Salvar diretamente evita uma segunda tentativa
+              // obrigatória de backup no localStorage, que pode estar sem cota
+              // e era o que fazia "Usar este aparelho" voltar ao conflito.
+              await salvarEstadoNaNuvem(
+                usuario.id,
+                localParaSalvar
+              );
           
               aplicarEstadoDaNuvem(localParaSalvar);
               confirmarSincronizacaoLocal(usuario.id, localParaSalvar);
