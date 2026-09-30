@@ -1011,6 +1011,33 @@ function EstadoDaConta({
   const revisaoBaseRef = useRef(0);
   const conflitoRef = useRef(false);
 
+  // Todas as operações de sincronização desta aba passam pela mesma fila.
+  // Isso impede dois autosaves (ou um autosave + sincronização manual) de
+  // lerem a mesma revisão e tentarem gravar simultaneamente.
+  const filaOperacoesNuvemRef =
+    useRef<Promise<void>>(Promise.resolve());
+
+  function executarOperacaoNuvemSerializada<T>(
+    operacao: () => Promise<T>
+  ): Promise<T> {
+    const anterior =
+      filaOperacoesNuvemRef.current.catch(
+        () => undefined
+      );
+
+    const atual = anterior.then(
+      () => operacao()
+    );
+
+    filaOperacoesNuvemRef.current =
+      atual.then(
+        () => undefined,
+        () => undefined
+      );
+
+    return atual;
+  }
+
   const dadosAtuaisRef = useRef({
     materias,
     questoes,
@@ -1571,64 +1598,89 @@ function EstadoDaConta({
     estado: EstadoAppNuvem,
     assinatura: string
   ) {
-    try {
-      registrarTentativaPendente(idDaConta);
-
-      const pendente =
-        obterEstadoPendenteSincronizacao(idDaConta);
-      const revisaoBase =
-        pendente?.baseRevision ?? revisaoBaseRef.current;
-
-      const salvo =
-        await salvarEstadoComControleDeRevisao(
-          idDaConta,
-          estado,
-          revisaoBase
-        );
-
-      ultimoEstadoSalvoRef.current =
-        assinatura;
-
-      confirmarSincronizacaoLocal(idDaConta, salvo);
-    } catch (erro) {
-      if (erro instanceof ConflitoSincronizacaoError) {
+    return executarOperacaoNuvemSerializada(
+      async () => {
         try {
-          if (
-            await tentarResolverConflitoEquivalente(
-              idDaConta,
-              estado
-            )
-          ) {
+          if (conflitoRef.current) {
+            setStatusNuvem("conflito");
             return;
           }
-        } catch (erroComparacao) {
-          console.error(
-            "Falha ao comparar conflito equivalente:",
-            erroComparacao
+
+          setStatusNuvem("salvando");
+
+          // A revisão é lida somente quando esta operação chega à frente da
+          // fila. Assim um save que ficou aguardando usa a revisão confirmada
+          // pelo save anterior, em vez de reutilizar uma revisão antiga.
+          const revisaoBase =
+            revisaoBaseRef.current;
+
+          registrarEstadoPendenteSincronizacao(
+            idDaConta,
+            estado,
+            revisaoBase
           );
+          registrarTentativaPendente(idDaConta);
+
+          const salvo =
+            await salvarEstadoComControleDeRevisao(
+              idDaConta,
+              estado,
+              revisaoBase
+            );
+
+          ultimoEstadoSalvoRef.current =
+            assinatura;
+
+          confirmarSincronizacaoLocal(
+            idDaConta,
+            salvo
+          );
+        } catch (erro) {
+          if (
+            erro instanceof
+            ConflitoSincronizacaoError
+          ) {
+            try {
+              if (
+                await tentarResolverConflitoEquivalente(
+                  idDaConta,
+                  estado
+                )
+              ) {
+                return;
+              }
+            } catch (erroComparacao) {
+              console.error(
+                "Falha ao comparar conflito equivalente:",
+                erroComparacao
+              );
+            }
+
+            marcarConflito(erro);
+            return;
+          }
+
+          const mensagem =
+            obterMensagemErro(
+              erro,
+              "Erro ao salvar na nuvem."
+            );
+
+          console.error(
+            "Erro ao salvar na nuvem:",
+            erro
+          );
+
+          setErroNuvem(mensagem);
+          setStatusNuvem(
+            navegadorEstaOnline()
+              ? "erro"
+              : "offline"
+          );
+          setAlteracoesPendentes(1);
         }
-
-        marcarConflito(erro);
-        return;
       }
-
-      const mensagem =
-        obterMensagemErro(
-          erro,
-          "Erro ao salvar na nuvem."
-        );
-
-      console.error(
-        "Erro ao salvar na nuvem:",
-        erro
-      );
-
-      setErroNuvem(mensagem);
-      setStatusNuvem(
-        navegadorEstaOnline() ? "erro" : "offline"
-      );
-      setAlteracoesPendentes(1);
-    }
+    );
   }
 
   async function sincronizarAgora() {
@@ -1643,93 +1695,98 @@ function EstadoDaConta({
       throw new Error("Sem conexão com a internet.");
     }
 
-    try {
-      setStatusNuvem("salvando");
-
-      const estado =
-        montarEstadoNuvem(
-          dadosAtuaisRef.current
-        );
-      const assinaturaAtual = assinaturaEstado(estado);
-      let pendente = obterEstadoPendenteSincronizacao(usuario.id);
-
-      if (pendente) {
-        const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
-        if (estadoNuvem && houveReinicioDaConta(pendente.estado.configuracoes, estadoNuvem.configuracoes)) {
-          aplicarEstadoDaNuvem(estadoNuvem);
-          confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
-          return;
-        }
-      }
-
-      // Sem alteração local pendente, "sincronizar" significa primeiro
-      // consultar a nuvem. Assim um aparelho que apenas voltou a ficar online
-      // recebe uma revisão mais nova em vez de tentar sobrescrevê-la.
-      if (
-        !pendente &&
-        assinaturaAtual === ultimoEstadoSalvoRef.current
-      ) {
-        const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
-
-        if (estadoNuvem) {
-          aplicarEstadoDaNuvem(estadoNuvem);
-          confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
-          return;
-        }
-      }
-
-      if (!pendente) {
-        pendente = registrarEstadoPendenteSincronizacao(
-          usuario.id,
-          estado,
-          revisaoBaseRef.current
-        );
-      }
-
-      setAlteracoesPendentes(1);
-      registrarTentativaPendente(usuario.id);
-
-      const salvo =
-        await salvarEstadoComControleDeRevisao(
-          usuario.id,
-          pendente.estado,
-          pendente.baseRevision
-        );
-
-      confirmarSincronizacaoLocal(usuario.id, salvo);
-    } catch (erro) {
-      if (erro instanceof ConflitoSincronizacaoError) {
-        try {
-          if (
-            await tentarResolverConflitoEquivalente(
-              usuario.id
-            )
-          ) {
+    return executarOperacaoNuvemSerializada(
+      async () => {
+  
+      try {
+        setStatusNuvem("salvando");
+  
+        const estado =
+          montarEstadoNuvem(
+            dadosAtuaisRef.current
+          );
+        const assinaturaAtual = assinaturaEstado(estado);
+        let pendente = obterEstadoPendenteSincronizacao(usuario.id);
+  
+        if (pendente) {
+          const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
+          if (estadoNuvem && houveReinicioDaConta(pendente.estado.configuracoes, estadoNuvem.configuracoes)) {
+            aplicarEstadoDaNuvem(estadoNuvem);
+            confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
             return;
           }
-        } catch (erroComparacao) {
-          console.error(
-            "Falha ao comparar conflito equivalente:",
-            erroComparacao
+        }
+  
+        // Sem alteração local pendente, "sincronizar" significa primeiro
+        // consultar a nuvem. Assim um aparelho que apenas voltou a ficar online
+        // recebe uma revisão mais nova em vez de tentar sobrescrevê-la.
+        if (
+          !pendente &&
+          assinaturaAtual === ultimoEstadoSalvoRef.current
+        ) {
+          const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
+  
+          if (estadoNuvem) {
+            aplicarEstadoDaNuvem(estadoNuvem);
+            confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
+            return;
+          }
+        }
+  
+        if (!pendente) {
+          pendente = registrarEstadoPendenteSincronizacao(
+            usuario.id,
+            estado,
+            revisaoBaseRef.current
           );
         }
-
-        marcarConflito(erro);
+  
+        setAlteracoesPendentes(1);
+        registrarTentativaPendente(usuario.id);
+  
+        const salvo =
+          await salvarEstadoComControleDeRevisao(
+            usuario.id,
+            pendente.estado,
+            pendente.baseRevision
+          );
+  
+        confirmarSincronizacaoLocal(usuario.id, salvo);
+      } catch (erro) {
+        if (erro instanceof ConflitoSincronizacaoError) {
+          try {
+            if (
+              await tentarResolverConflitoEquivalente(
+                usuario.id
+              )
+            ) {
+              return;
+            }
+          } catch (erroComparacao) {
+            console.error(
+              "Falha ao comparar conflito equivalente:",
+              erroComparacao
+            );
+          }
+  
+          marcarConflito(erro);
+          throw erro;
+        }
+  
+        const mensagem =
+          obterMensagemErro(
+            erro,
+            "Erro ao sincronizar."
+          );
+  
+        setErroNuvem(mensagem);
+        setStatusNuvem(
+          navegadorEstaOnline() ? "erro" : "offline"
+        );
         throw erro;
       }
-
-      const mensagem =
-        obterMensagemErro(
-          erro,
-          "Erro ao sincronizar."
-        );
-
-      setErroNuvem(mensagem);
-      setStatusNuvem(
-        navegadorEstaOnline() ? "erro" : "offline"
-      );
-      throw erro;
-    }
+      }
+    );
   }
 
   async function resolverConflitoSincronizacao(
@@ -1743,77 +1800,110 @@ function EstadoDaConta({
       throw new Error("É necessário estar online para resolver o conflito.");
     }
 
-    setStatusNuvem("salvando");
 
-    const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
-    const pendenteLocal =
-      obterEstadoPendenteSincronizacao(usuario.id);
-    const estadoLocal =
-      pendenteLocal?.estado ??
-      montarEstadoNuvem(dadosAtuaisRef.current);
-
-    if (!estadoNuvem) {
-      throw new Error(
-        "Não existe estado na nuvem para resolver este conflito."
-      );
+    if (timerSalvarRef.current) {
+      clearTimeout(timerSalvarRef.current);
+      timerSalvarRef.current = null;
     }
 
-    if (
-      estadosEquivalentesParaSincronizacao(
-        estadoLocal,
-        estadoNuvem
-      )
-    ) {
-      aplicarEstadoDaNuvem(estadoNuvem);
-      confirmarSincronizacaoLocal(
-        usuario.id,
-        estadoNuvem
-      );
-      return;
-    }
+    return executarOperacaoNuvemSerializada(
+      async () => {
+        try {
+              setStatusNuvem("salvando");
+          
+              const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
+              const pendenteLocal =
+                obterEstadoPendenteSincronizacao(usuario.id);
+              const estadoLocal =
+                pendenteLocal?.estado ??
+                montarEstadoNuvem(dadosAtuaisRef.current);
+          
+              if (!estadoNuvem) {
+                throw new Error(
+                  "Não existe estado na nuvem para resolver este conflito."
+                );
+              }
+          
+              if (
+                estadosEquivalentesParaSincronizacao(
+                  estadoLocal,
+                  estadoNuvem
+                )
+              ) {
+                aplicarEstadoDaNuvem(estadoNuvem);
+                confirmarSincronizacaoLocal(
+                  usuario.id,
+                  estadoNuvem
+                );
+                return;
+              }
+          
+              criarBackupAutomaticoLocal(
+                usuario.id,
+                estadoLocal,
+                "antes_resolucao_conflito"
+              );
+          
+              await registrarBackupConflitoNaNuvem({
+                usuarioId: usuario.id,
+                estadoLocal,
+                estadoNuvem,
+              });
+          
+              if (preferencia === "nuvem" || houveReinicioDaConta(estadoLocal.configuracoes, estadoNuvem.configuracoes)) {
+                aplicarEstadoDaNuvem(estadoNuvem);
+                confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
+                return;
+              }
+          
+              const agora = new Date().toISOString();
+              const revisaoNuvem = obterRevisaoSincronizacao(estadoNuvem);
+              const localParaSalvar: EstadoAppNuvem = {
+                ...estadoLocal,
+                syncRevision: revisaoNuvem + 1,
+                atualizadoEm: agora,
+                salvoEm: agora,
+              };
+          
+              validarIntegridadeEstado(localParaSalvar);
+          
+              if (estadoNuvem) {
+                await salvarEstadoEstruturalComSeguranca(
+                  usuario.id,
+                  estadoNuvem,
+                  localParaSalvar,
+                  "antes_resolucao_conflito"
+                );
+              } else {
+                await salvarEstadoNaNuvem(usuario.id, localParaSalvar);
+              }
+          
+              aplicarEstadoDaNuvem(localParaSalvar);
+              confirmarSincronizacaoLocal(usuario.id, localParaSalvar);
+           
+        } catch (erro) {
+          const mensagem =
+            obterMensagemErro(
+              erro,
+              "Erro ao resolver o conflito de sincronização."
+            );
 
-    criarBackupAutomaticoLocal(
-      usuario.id,
-      estadoLocal,
-      "antes_resolucao_conflito"
+          console.error(
+            "Erro ao resolver conflito de sincronização:",
+            erro
+          );
+
+          setErroNuvem(mensagem);
+          setAlteracoesPendentes(1);
+          setStatusNuvem(
+            navegadorEstaOnline()
+              ? "conflito"
+              : "offline"
+          );
+          throw erro;
+        }
+      }
     );
-
-    await registrarBackupConflitoNaNuvem({
-      usuarioId: usuario.id,
-      estadoLocal,
-      estadoNuvem,
-    });
-
-    if (preferencia === "nuvem" || houveReinicioDaConta(estadoLocal.configuracoes, estadoNuvem.configuracoes)) {
-      aplicarEstadoDaNuvem(estadoNuvem);
-      confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
-      return;
-    }
-
-    const agora = new Date().toISOString();
-    const revisaoNuvem = obterRevisaoSincronizacao(estadoNuvem);
-    const localParaSalvar: EstadoAppNuvem = {
-      ...estadoLocal,
-      syncRevision: revisaoNuvem + 1,
-      atualizadoEm: agora,
-      salvoEm: agora,
-    };
-
-    validarIntegridadeEstado(localParaSalvar);
-
-    if (estadoNuvem) {
-      await salvarEstadoEstruturalComSeguranca(
-        usuario.id,
-        estadoNuvem,
-        localParaSalvar,
-        "antes_resolucao_conflito"
-      );
-    } else {
-      await salvarEstadoNaNuvem(usuario.id, localParaSalvar);
-    }
-
-    aplicarEstadoDaNuvem(localParaSalvar);
-    confirmarSincronizacaoLocal(usuario.id, localParaSalvar);
   }
 
   async function restaurarEstadoCompleto(
