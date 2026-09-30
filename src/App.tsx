@@ -52,6 +52,7 @@ const HistoricoSessoes = lazy(() => import("./pages/HistoricoSessoes/HistoricoSe
 const SimuladosGateway = lazy(() => import("./pages/Simulados/SimuladosGateway"));
 const SimuladosOficiais = lazy(() => import("./pages/SimuladosOficiais/SimuladosOficiais"));
 const SimuladoOficial = lazy(() => import("./pages/SimuladoOficial/SimuladoOficial"));
+const SimuladoPdf = lazy(() => import("./pages/SimuladoPdf/SimuladoPdf"));
 const Backup = lazy(() => import("./pages/Backup/Backup"));
 const CentralQuestoes = lazy(() => import("./pages/CentralQuestoes/CentralQuestoes"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes/Configuracoes"));
@@ -178,6 +179,7 @@ function LayoutProtegido() {
                         <Route path="/simulados" element={<SimuladosGateway />} />
                         <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
                         <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
+                        <Route path="/simulado-pdf" element={<SimuladoPdf />} />
                         <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
                         <Route path="/caderno-questoes" element={<MeusSimuladosIA />} />
                         <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
