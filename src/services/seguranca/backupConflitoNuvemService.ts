@@ -4,6 +4,24 @@ import {
   listarBackupsAutomaticosLocais,
 } from "./backupAutomaticoService";
 
+const TIMEOUT_BACKUP_CONFLITO_MS = 12000;
+
+function comTimeout<T>(
+  promessa: PromiseLike<T>,
+  milissegundos: number,
+  mensagem: string
+): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promessa),
+    new Promise<T>((_, rejeitar) => {
+      window.setTimeout(
+        () => rejeitar(new Error(mensagem)),
+        milissegundos
+      );
+    }),
+  ]);
+}
+
 export type BackupConflitoNuvem = {
   tipo: "conflito_sincronizacao";
   criadoEm: string;
@@ -34,14 +52,18 @@ export async function registrarBackupConflitoNaNuvem(params: {
     estadoNuvem: params.estadoNuvem,
   };
 
-  const { error } = await supabase
-    .from("backups")
-    .insert({
-      user_id: params.usuarioId,
-      nome: `Conflito de sincronização — ${criadoEm}`,
-      versao: 18,
-      dados,
-    });
+  const { error } = await comTimeout(
+    supabase
+      .from("backups")
+      .insert({
+        user_id: params.usuarioId,
+        nome: `Conflito de sincronização — ${criadoEm}`,
+        versao: 18,
+        dados,
+      }),
+    TIMEOUT_BACKUP_CONFLITO_MS,
+    "O backup de segurança no Supabase demorou demais. Tente novamente."
+  );
 
   if (error) {
     throw new Error(
