@@ -20,10 +20,6 @@ import {
   modeloGeminiIndisponivel,
 } from "./retryGemini.ts";
 import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
-import {
-  iniciarE2ESimuladoPdf,
-  obterE2ESimuladoPdf,
-} from "./e2eSimuladoPdfTemporario.ts";
 
 const portaPublica = Number(process.env.PORT || 3001);
 const portaInterna = Number(
@@ -86,74 +82,6 @@ app.use(
       callback(new Error("Origem não autorizada pelo CORS."));
     },
   })
-);
-
-app.get(
-  "/api/internal/e2e-simulado-pdf",
-  (req, res) => {
-    const tokenConfigurado =
-      process.env.E2E_SIMULADO_TOKEN?.trim() || "";
-    const tokenRecebido =
-      typeof req.query.token === "string"
-        ? req.query.token
-        : "";
-
-    if (
-      !tokenConfigurado ||
-      tokenRecebido !== tokenConfigurado
-    ) {
-      res.status(404).json({ sucesso: false });
-      return;
-    }
-
-    if (!aiEdital) {
-      res.status(503).json({
-        sucesso: false,
-        erro: "Gemini indisponível.",
-      });
-      return;
-    }
-
-    const id =
-      typeof req.query.id === "string"
-        ? req.query.id
-        : "";
-
-    if (!id) {
-      const estado = iniciarE2ESimuladoPdf(
-        aiEdital,
-        Array.from(
-          new Set(
-            [modeloEdital, modeloFallbackEdital]
-              .map((item) => item.trim())
-              .filter(Boolean)
-          )
-        )
-      );
-
-      res.status(202).json({
-        sucesso: true,
-        teste: estado,
-      });
-      return;
-    }
-
-    const estado = obterE2ESimuladoPdf(id);
-    if (!estado) {
-      res.status(404).json({
-        sucesso: false,
-        erro: "Teste E2E não encontrado nesta instância.",
-      });
-      return;
-    }
-
-    res
-      .status(estado.status === "processando" ? 202 : 200)
-      .json({
-        sucesso: estado.status !== "erro",
-        teste: estado,
-      });
-  }
 );
 
 app.use("/api", validarTamanhoDaRequisicao);
