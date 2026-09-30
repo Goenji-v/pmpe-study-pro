@@ -7,6 +7,7 @@ import { criarCodigoCapturadorCurso } from "../../utils/capturadorCurso";
 import type { CategoriaCursoMateria, CursoImportado, ConfiguracoesComCursos } from "../../types/cursos";
 import {
   aplicarCursosAtivosNasMaterias,
+  capturaDeHtml,
   capturaDeTexto,
   extrairCursoDeArquivo,
   encontrarCursoExistente,
@@ -70,6 +71,66 @@ export default function Cursos() {
       setMensagem("Texto organizado. Confira a estrutura antes de importar.");
     } catch (erro) {
       setMensagem(erro instanceof Error ? erro.message : "Não foi possível organizar o texto.");
+    }
+  }
+
+
+  async function analisarAreaTransferencia() {
+    setProcessando(true);
+    setEditandoId(null);
+    setMensagem("Lendo o que você copiou da plataforma do curso...");
+
+    try {
+      let html = "";
+      let texto = "";
+
+      if (navigator.clipboard?.read) {
+        const itens = await navigator.clipboard.read();
+
+        for (const item of itens) {
+          if (!html && item.types.includes("text/html")) {
+            html = await (await item.getType("text/html")).text();
+          }
+
+          if (!texto && item.types.includes("text/plain")) {
+            texto = await (await item.getType("text/plain")).text();
+          }
+        }
+      } else if (navigator.clipboard?.readText) {
+        texto = await navigator.clipboard.readText();
+      } else {
+        throw new Error("Este navegador não permite ler a área de transferência automaticamente.");
+      }
+
+      if (!html.trim() && !texto.trim()) {
+        throw new Error("Nada foi encontrado na área de transferência. Abra o curso, use Ctrl+A e Ctrl+C e tente novamente.");
+      }
+
+      const nome = nomeManual.trim() || "Curso importado";
+      const captura = html.trim()
+        ? capturaDeHtml(html, undefined, nome)
+        : capturaDeTexto(texto, nome);
+      const curso = organizarCapturaCurso(captura, nome);
+
+      if (curso.materias.length === 0) {
+        throw new Error("O conteúdo foi copiado, mas o Study Pro não conseguiu identificar matérias e aulas. Tente copiar somente a área da grade do curso ou use uma opção avançada.");
+      }
+
+      setPreview(curso);
+      setMensagem(
+        html.trim()
+          ? "Curso lido da área de transferência. Confira matérias, módulos, aulas e links antes de importar."
+          : "Texto do curso lido da área de transferência. Confira a estrutura antes de importar."
+      );
+    } catch (erro) {
+      setPreview(null);
+      setMensagem(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível ler o curso da área de transferência."
+      );
+    } finally {
+      setProcessando(false);
     }
   }
 
@@ -162,10 +223,45 @@ export default function Cursos() {
       </header>
 
       <section className="cursos-importador">
-        <div className="cursos-tabs">
-          <button type="button" className={aba === "arquivo" ? "ativo" : ""} onClick={() => setAba("arquivo")}>Importar arquivo</button>
-          <button type="button" className={aba === "capturador" ? "ativo" : ""} onClick={() => setAba("capturador")}>Capturador do navegador</button>
+        <div className="cursos-importacao-facil">
+          <div>
+            <span>RECOMENDADO</span>
+            <h2>Trazer curso sem arquivo ou código</h2>
+            <p>
+              Abra a plataforma do seu curso, pressione <strong>Ctrl+A</strong> e depois <strong>Ctrl+C</strong>.
+              Volte ao Study Pro e clique no botão abaixo. Se o navegador copiar os links da página, eles também serão preservados.
+            </p>
+          </div>
+
+          <div className="cursos-importacao-facil-acoes">
+            <input
+              value={nomeManual}
+              onChange={(e) => setNomeManual(e.target.value)}
+              placeholder="Nome do curso (opcional)"
+              aria-label="Nome do curso para importação rápida"
+            />
+            <button
+              type="button"
+              className="cursos-colar-curso"
+              onClick={() => void analisarAreaTransferencia()}
+              disabled={processando}
+            >
+              {processando ? "Lendo curso..." : "Colar curso"}
+            </button>
+          </div>
+
+          <small>
+            Funciona melhor no Chrome, Edge e Brave. O Study Pro não pede sua senha da plataforma.
+          </small>
         </div>
+
+        <details className="cursos-metodos-avancados">
+          <summary>Outras formas de importar</summary>
+
+          <div className="cursos-tabs">
+            <button type="button" className={aba === "arquivo" ? "ativo" : ""} onClick={() => setAba("arquivo")}>Arquivo ou texto</button>
+            <button type="button" className={aba === "capturador" ? "ativo" : ""} onClick={() => setAba("capturador")}>Capturador avançado</button>
+          </div>
 
         {aba === "arquivo" ? (
           <div className="cursos-importar-grid">
@@ -211,6 +307,7 @@ export default function Cursos() {
             <textarea readOnly value={criarCodigoCapturadorCurso()} aria-label="Código do capturador" />
           </div>
         )}
+        </details>
 
         {mensagem && <div className="cursos-mensagem">{mensagem}</div>}
       </section>
