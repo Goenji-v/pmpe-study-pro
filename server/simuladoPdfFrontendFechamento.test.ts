@@ -132,3 +132,15 @@ test("atividade semanal abre a sala dedicada do Simulado PDF", async () => {
     /<Route path="\/simulado-pdf" element={<SimuladoPdf \/>}/
   );
 });
+
+
+test("simulado PDF oficial não exibe rótulos de prévia", async () => {
+  const codigo = await readFile(
+    "src/pages/SimuladoPdf/SimuladoPdf.tsx",
+    "utf8"
+  );
+
+  assert.doesNotMatch(codigo, /PRÉVIA/);
+  assert.doesNotMatch(codigo, /preview-pdf/);
+  assert.match(codigo, /SIMULADO DE DOMINGO/);
+});
