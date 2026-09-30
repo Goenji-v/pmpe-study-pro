@@ -18,6 +18,7 @@ import { useApp } from "../../context/AppContext";
 import {
   listarAnalisesSimulados,
   salvarAnaliseSimulado,
+  salvarAnaliseSimuladoLocal,
   type OrigemAnaliseSimulado,
 } from "../../services/analisesSimuladosService";
 import {
@@ -49,6 +50,9 @@ export default function AnaliseSimuladoStudyPro({
   questoes,
   respostas,
   marcacoes,
+  persistir = true,
+  agendarAutomaticamente = true,
+  somenteLeitura = false,
 }: {
   origem: OrigemAnaliseSimulado;
   tentativaId: string;
@@ -58,6 +62,9 @@ export default function AnaliseSimuladoStudyPro({
   questoes: QuestaoAnaliseSimulado[];
   respostas: Record<string, string | undefined>;
   marcacoes: Record<string, MarcacaoQuestaoSimulado | undefined>;
+  persistir?: boolean;
+  agendarAutomaticamente?: boolean;
+  somenteLeitura?: boolean;
 }) {
   const navigate = useNavigate();
   const { materias, revisoes, setRevisoes } = useApp();
@@ -69,7 +76,9 @@ export default function AnaliseSimuladoStudyPro({
   const [cadernoAberto, setCadernoAberto] = useState(false);
   const [correcaoAberta, setCorrecaoAberta] = useState(false);
   const [evolucaoAberta, setEvolucaoAberta] = useState(false);
+  const [todosAssuntosAbertos, setTodosAssuntosAbertos] = useState(false);
   const [mensagem, setMensagem] = useState("");
+  const [avisoPersistencia, setAvisoPersistencia] = useState("");
   const revisaoAutomaticaRef = useRef("");
 
   useEffect(() => {
@@ -143,21 +152,53 @@ export default function AnaliseSimuladoStudyPro({
   );
 
   useEffect(() => {
-    if (!historicoCarregado) return;
+    if (!persistir) return;
 
-    const timeout = window.setTimeout(() => {
-      void salvarAnaliseSimulado({
-        origem,
-        tentativaId,
-        simuladoId,
-        nome,
-        analise,
-      }).catch(() => {
-        // A análise continua disponível na tela mesmo se a sincronização falhar.
+    // O backup local acontece imediatamente, sem esperar rede nem histórico.
+    // Assim, sair da tela logo após finalizar não perde o diagnóstico.
+    salvarAnaliseSimuladoLocal({
+      origem,
+      tentativaId,
+      simuladoId,
+      nome,
+      analise,
+    });
+  }, [
+    analise,
+    nome,
+    origem,
+    persistir,
+    simuladoId,
+    tentativaId,
+  ]);
+
+  useEffect(() => {
+    if (!historicoCarregado || !persistir) return;
+
+    let ativo = true;
+
+    setAvisoPersistencia("");
+
+    void salvarAnaliseSimulado({
+      origem,
+      tentativaId,
+      simuladoId,
+      nome,
+      analise,
+    })
+      .then(() => {
+        if (ativo) setAvisoPersistencia("");
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setAvisoPersistencia(
+          "Resultado protegido neste aparelho. A sincronização online será tentada novamente ao abrir o diagnóstico."
+        );
       });
-    }, 250);
 
-    return () => window.clearTimeout(timeout);
+    return () => {
+      ativo = false;
+    };
   }, [
     analise,
     historicoCarregado,
@@ -165,6 +206,7 @@ export default function AnaliseSimuladoStudyPro({
     origem,
     simuladoId,
     tentativaId,
+    persistir,
   ]);
 
   const assinaturaPlanoRevisao = useMemo(
@@ -179,7 +221,11 @@ export default function AnaliseSimuladoStudyPro({
   );
 
   useEffect(() => {
-    if (!historicoCarregado || analise.planoRevisao.length === 0) return;
+    if (
+      !historicoCarregado ||
+      !agendarAutomaticamente ||
+      analise.planoRevisao.length === 0
+    ) return;
 
     const chaveExecucao = `${tentativaId}:${assinaturaPlanoRevisao}`;
     if (revisaoAutomaticaRef.current === chaveExecucao) return;
@@ -199,9 +245,15 @@ export default function AnaliseSimuladoStudyPro({
     materias,
     setRevisoes,
     tentativaId,
+    agendarAutomaticamente,
   ]);
 
   function adicionarARevisao() {
+    if (somenteLeitura) {
+      setMensagem("Prévia de teste: nenhuma revisão da sua conta foi alterada.");
+      return;
+    }
+
     const resultado = adicionarErrosSimuladoARevisao({
       revisoes,
       materias,
@@ -239,9 +291,10 @@ export default function AnaliseSimuladoStudyPro({
     }));
   }
 
-  const prioridades = analise.assuntos.filter(
-    (item) => item.prioridade !== "baixa"
-  );
+  const prioridades = analise.planoRevisao;
+  const assuntosVisiveis = todosAssuntosAbertos
+    ? analise.assuntos
+    : analise.assuntos.slice(0, 12);
   const acertosPorChute = analise.correcao.filter(
     (item) => item.status === "acerto_chute"
   );
@@ -272,6 +325,24 @@ export default function AnaliseSimuladoStudyPro({
         <div className="analise-simulado-study__mensagem">{mensagem}</div>
       )}
 
+      {avisoPersistencia && (
+        <div className="analise-simulado-study__mensagem">
+          {avisoPersistencia}
+        </div>
+      )}
+
+      {questoes.length === 0 && (
+        <div className="analise-simulado-study__mensagem">
+          O resultado foi preservado, mas nenhuma questão chegou ao diagnóstico. Reabra o simulado para recuperar os dados antes de iniciar outro.
+        </div>
+      )}
+
+      {questoes.length > 0 && analise.resumo.totalValidas === 0 && (
+        <div className="analise-simulado-study__mensagem">
+          Suas respostas foram preservadas, mas ainda não existe gabarito confiável suficiente para calcular o diagnóstico. Nenhuma questão será usada para reduzir seu desempenho até a correção ficar válida.
+        </div>
+      )}
+
       <div className="analise-simulado-study__cards">
         <article>
           <Target size={20} aria-hidden="true" />
@@ -293,12 +364,12 @@ export default function AnaliseSimuladoStudyPro({
         </article>
         <article>
           <AlertTriangle size={20} aria-hidden="true" />
-          <span>Assuntos com mais erros</span>
+          <span>Prioridades principais</span>
           <strong>{prioridades.length}</strong>
           <small>
             {prioridades[0]
-              ? `Prioridade: ${prioridades[0].assuntoEspecifico}`
-              : "Nenhuma prioridade alta/média"}
+              ? `Primeira: ${prioridades[0].assuntoEspecifico}`
+              : "Nenhum reforço extraordinário"}
           </small>
         </article>
         <article>
@@ -315,9 +386,9 @@ export default function AnaliseSimuladoStudyPro({
         </article>
         <article>
           <Sparkles size={20} aria-hidden="true" />
-          <span>Prioridades de revisão</span>
+          <span>Plano de revisão</span>
           <strong>{analise.planoRevisao.length}</strong>
-          <small>Ciclo 1 · 5 · 7 · 14 · 30 dias.</small>
+          <small>Até 8 focos · ciclo 1 · 5 · 7 · 14 · 30 dias.</small>
         </article>
       </div>
 
@@ -413,10 +484,14 @@ export default function AnaliseSimuladoStudyPro({
             <span>ANÁLISE POR ASSUNTO</span>
             <h3>Domínio e prioridade automática</h3>
           </div>
+          <small>
+            Subassuntos semelhantes são consolidados. A correção questão a questão
+            continua completa mais abaixo.
+          </small>
         </div>
 
         <div className="analise-simulado-study__assuntos">
-          {analise.assuntos.map((item) => (
+          {assuntosVisiveis.map((item) => (
             <article
               key={item.chave}
               className={`prioridade-${item.prioridade}`}
@@ -453,6 +528,20 @@ export default function AnaliseSimuladoStudyPro({
             </article>
           ))}
         </div>
+
+        {analise.assuntos.length > 12 && (
+          <button
+            type="button"
+            className="analise-simulado-study__mostrar-assuntos"
+            onClick={() =>
+              setTodosAssuntosAbertos((valor) => !valor)
+            }
+          >
+            {todosAssuntosAbertos
+              ? "Mostrar só os 12 mais relevantes"
+              : `Ver todos os ${analise.assuntos.length} assuntos`}
+          </button>
+        )}
       </section>
 
       {acertosPorChute.length > 0 && (
@@ -500,8 +589,12 @@ export default function AnaliseSimuladoStudyPro({
         <div className="analise-simulado-study__titulo">
           <div>
             <span>PLANO DE REVISÃO</span>
-            <h3>Corrigir o que está fraco sem parar o edital</h3>
+            <h3>Top prioridades para corrigir sem parar o edital</h3>
           </div>
+          <small>
+            O Study Pro seleciona no máximo 8 focos, evitando transformar cada
+            questão errada em uma revisão diferente.
+          </small>
         </div>
 
         {analise.planoRevisao.length === 0 ? (
@@ -510,7 +603,7 @@ export default function AnaliseSimuladoStudyPro({
           </div>
         ) : (
           <div className="analise-simulado-study__plano">
-            {analise.planoRevisao.slice(0, 8).map((item, indice) => (
+            {analise.planoRevisao.map((item, indice) => (
               <article key={item.chave}>
                 <span>{indice + 1}</span>
                 <div>
@@ -562,7 +655,13 @@ export default function AnaliseSimuladoStudyPro({
           type="button"
           className="primario"
           onClick={() =>
-            navigate(origem === "ia" ? "/gerar-simulado-ia" : "/simulados")
+            navigate(
+              origem === "ia"
+                ? "/gerar-simulado-ia"
+                : origem === "pdf"
+                  ? "/plano"
+                  : "/simulados"
+            )
           }
         >
           <Sparkles size={18} aria-hidden="true" />
