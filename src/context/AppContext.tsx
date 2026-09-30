@@ -1011,6 +1011,14 @@ function EstadoDaConta({
   const revisaoBaseRef = useRef(0);
   const conflitoRef = useRef(false);
 
+  // A importação do histórico de questões IA deve acontecer apenas uma vez
+  // quando a conta entra no estado sincronizado. Antes ela era disparada
+  // novamente após cada autosave bem-sucedido (salvando -> sincronizado) e,
+  // ao reconciliar o histórico, podia alterar o estado outra vez e iniciar um
+  // novo autosave em sequência.
+  const importacaoInicialResultadosIARef =
+    useRef<string | null>(null);
+
   // Todas as operações de sincronização desta aba passam pela mesma fila.
   // Isso impede dois autosaves (ou um autosave + sincronização manual) de
   // lerem a mesma revisão e tentarem gravar simultaneamente.
@@ -1127,7 +1135,13 @@ function EstadoDaConta({
       void importarTentativasIA();
     }
 
-    void importarTentativasIA();
+    if (
+      importacaoInicialResultadosIARef.current !== userId
+    ) {
+      importacaoInicialResultadosIARef.current = userId;
+      void importarTentativasIA();
+    }
+
     window.addEventListener(
       "pmpe-resultado-questoes-ia-salvo",
       aoSalvarResultadoIA
@@ -1259,6 +1273,7 @@ function EstadoDaConta({
       ultimoEstadoSalvoRef.current = "";
       revisaoBaseRef.current = 0;
       conflitoRef.current = false;
+      importacaoInicialResultadosIARef.current = null;
       setErroNuvem("");
       setAlteracoesPendentes(0);
       setUltimaSincronizacao(null);
