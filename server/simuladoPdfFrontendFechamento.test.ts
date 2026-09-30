@@ -117,3 +117,18 @@ test("frontend não aceita diagnóstico PDF com questões sem gabarito confiáve
     /resumo\.totalValidas >= minimoConfiavel/
   );
 });
+
+
+test("atividade semanal abre a sala dedicada do Simulado PDF", async () => {
+  const [plano, app] = await Promise.all([
+    readFile("src/pages/PlanoEstudos/PlanoEstudos.tsx", "utf8"),
+    readFile("src/App.tsx", "utf8"),
+  ]);
+
+  assert.match(plano, /guardarRascunhoSimuladoPdf/);
+  assert.match(plano, /navigate\("\/simulado-pdf"\)/);
+  assert.match(
+    app,
+    /<Route path="\/simulado-pdf" element={<SimuladoPdf \/>}/
+  );
+});
