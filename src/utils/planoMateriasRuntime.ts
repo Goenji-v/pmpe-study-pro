@@ -115,7 +115,25 @@ export function criarPlanoMateriasRuntime(
       }
     }
 
-    dias.push({ numero: 7, missoes: [] });
+    dias.push({
+      numero: 7,
+      missoes: [
+        {
+          id: "runtime-s" + semana + "-d7-redacao",
+          numero: 1,
+          materia: "Redação",
+          assunto: "Redação semanal",
+          tipo: "redacao",
+        },
+        {
+          id: "runtime-s" + semana + "-d7-simulado",
+          numero: 2,
+          materia: "Simulado",
+          assunto: "Simulado semanal",
+          tipo: "simulado",
+        },
+      ],
+    });
     semanas.push({
       numero: semana,
       nome: `Semana ${String(semana).padStart(2, "0")}`,

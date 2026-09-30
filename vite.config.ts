@@ -9,7 +9,27 @@ const versaoApp = commit
   : "local";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: "study-pro-version-file",
+      generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "version.json",
+          source: JSON.stringify(
+            {
+              version: versaoApp,
+              commit: commitCompleto || null,
+              ref: referencia || null,
+            },
+            null,
+            2
+          ),
+        });
+      },
+    },
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(versaoApp),
     __SENTRY_RELEASE__: JSON.stringify(commitCompleto || "local"),

@@ -931,3 +931,23 @@
     grid-column: auto;
   }
 }
+
+
+.analise-simulado-study__mostrar-assuntos {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 12px;
+  padding: 9px 13px;
+  color: #b9d8f5;
+  background: rgba(16, 42, 69, .72);
+  border: 1px solid rgba(67, 140, 213, .34);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.analise-simulado-study__mostrar-assuntos:hover {
+  border-color: rgba(91, 166, 241, .7);
+}

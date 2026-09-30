@@ -20,9 +20,61 @@ import "./components/Sidebar/SidebarPremiumVisual.css";
 import "./pages/Dashboard/DashboardHeroPremium.css";
 import "./styles/premium-polish-final.css";
 
+declare const __APP_VERSION__: string;
+
 iniciarSentryFrontend();
 
 const CHAVE_RECUPERACAO_ASSET = "study-pro:asset-reload";
+const CHAVE_RECARGA_VERSAO = "study-pro:version-reload";
+const INTERVALO_VERIFICACAO_VERSAO_MS = 60_000;
+
+async function verificarNovaVersao() {
+  if (!import.meta.env.PROD || __APP_VERSION__ === "local") return;
+
+  try {
+    const resposta = await fetch(
+      `/version.json?t=${Date.now()}`,
+      {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      }
+    );
+
+    if (!resposta.ok) return;
+
+    const dados = (await resposta.json()) as {
+      version?: unknown;
+    };
+    const publicada =
+      typeof dados.version === "string"
+        ? dados.version
+        : "";
+
+    if (!publicada || publicada === __APP_VERSION__) {
+      sessionStorage.removeItem(CHAVE_RECARGA_VERSAO);
+      return;
+    }
+
+    const assinatura =
+      `${__APP_VERSION__}->${publicada}`;
+    if (
+      sessionStorage.getItem(CHAVE_RECARGA_VERSAO) ===
+      assinatura
+    ) {
+      return;
+    }
+
+    sessionStorage.setItem(
+      CHAVE_RECARGA_VERSAO,
+      assinatura
+    );
+    window.location.reload();
+  } catch {
+    // Sem conexão ou endpoint indisponível: mantém a versão atual.
+  }
+}
 
 function mensagemDoErro(valor: unknown) {
   if (valor instanceof Error) return `${valor.message} ${valor.stack || ""}`;
@@ -73,6 +125,24 @@ window.setTimeout(() => {
   sessionStorage.removeItem(CHAVE_RECUPERACAO_ASSET);
 }, 10_000);
 
+
+if (import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    void verificarNovaVersao();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      void verificarNovaVersao();
+    }
+  });
+
+  window.setInterval(() => {
+    if (document.visibilityState === "visible") {
+      void verificarNovaVersao();
+    }
+  }, INTERVALO_VERIFICACAO_VERSAO_MS);
+}
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
