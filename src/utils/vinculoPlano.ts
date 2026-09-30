@@ -81,5 +81,9 @@ export function obterMateriaEfetivaDaSessao(
     return "Simulados";
   }
 
+  if (tipo === "redacao" && !valor) {
+    return "Redação";
+  }
+
   return valor;
 }
