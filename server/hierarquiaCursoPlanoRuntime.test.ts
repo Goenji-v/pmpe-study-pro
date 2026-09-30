@@ -137,13 +137,20 @@ test("conta sem plano padrão cria cronograma com os conteúdos importados", () 
   const missoes = plano.flatMap((semana) =>
     semana.dias.flatMap((dia) => dia.missoes)
   );
-  assert.equal(missoes.length, 2);
+  const conteudos = missoes.filter((missao) => missao.tipo === "conteudo");
+  const domingo = plano[0]?.dias.find((dia) => dia.numero === 7);
+
+  assert.equal(conteudos.length, 2);
   assert.deepEqual(
-    missoes.map((missao) => [missao.materia, missao.assunto]),
+    conteudos.map((missao) => [missao.materia, missao.assunto]),
     [
       ["Direito Constitucional", "Direitos Políticos"],
       ["Direito Constitucional", "Direitos Sociais"],
     ]
   );
-  assert.ok(missoes.every((missao) => missao.conteudo?.assuntoId));
+  assert.ok(conteudos.every((missao) => missao.conteudo?.assuntoId));
+  assert.deepEqual(
+    domingo?.missoes.map((missao) => missao.tipo),
+    ["redacao", "simulado"]
+  );
 });
