@@ -22,5 +22,7 @@ services:
         value: gemini-3.6-flash
       - key: SUPABASE_URL
         value: https://kibnmdwabpiwyprkrhvq.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
       - key: FRONTEND_URL
         sync: false

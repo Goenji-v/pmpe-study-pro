@@ -1,5 +1,6 @@
 import "dotenv/config";
 import cors from "cors";
+import { randomBytes } from "node:crypto";
 import express, {
   type NextFunction,
   type Request,
@@ -34,6 +35,10 @@ const supabaseUrl =
   "https://kibnmdwabpiwyprkrhvq.supabase.co";
 const anonKeyServidor =
   process.env.SUPABASE_ANON_KEY?.trim() || "";
+const segredoProxyInterno =
+  process.env.INTERNAL_PROXY_SECRET?.trim() ||
+  randomBytes(32).toString("hex");
+process.env.INTERNAL_PROXY_SECRET = segredoProxyInterno;
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "";
 const { modelo: modeloEdital, modeloFallback: modeloFallbackEdital } = resolverModelosGemini(process.env);
 const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
@@ -57,6 +62,15 @@ const acessos = new Map<string, number[]>();
 const app = express();
 
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
+
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 app.post(
   "/api/sentry-tunnel",
@@ -112,9 +126,11 @@ app.use((req, res) => {
       headers: {
         ...req.headers,
         host: `127.0.0.1:${portaInterna}`,
-        // Sobrescrito após validar o JWT: a API interna não confia em um
-        // identificador de usuário enviado diretamente pelo cliente.
+        // Sobrescritos no proxy: a API interna não confia em identidade
+        // nem em chave Supabase recebidas diretamente do navegador.
         "x-study-user-id": String(res.locals.userId || ""),
+        "x-supabase-anon-key": anonKeyServidor,
+        "x-study-internal-secret": segredoProxyInterno,
       },
     },
     (respostaInterna) => {
@@ -548,9 +564,7 @@ async function autenticarEControlarUso(
 
   try {
     const autorizacao = req.header("authorization") ?? "";
-    const anonKey =
-      req.header("x-supabase-anon-key")?.trim() ||
-      anonKeyServidor;
+    const anonKey = anonKeyServidor;
 
     if (!autorizacao.startsWith("Bearer ") || anonKey.length < 20) {
       res.status(401).json({

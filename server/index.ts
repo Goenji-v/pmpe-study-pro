@@ -1,6 +1,5 @@
 import "dotenv/config";
-import cors from "cors";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import express, {
   type NextFunction,
   type Request,
@@ -54,9 +53,27 @@ const supabaseUrl =
   process.env.SUPABASE_URL ||
   "https://kibnmdwabpiwyprkrhvq.supabase.co";
 
+const internalProxySecret =
+  process.env.INTERNAL_PROXY_SECRET?.trim() || "";
+
+const supabaseServerKey =
+  process.env.SUPABASE_ANON_KEY?.trim() || "";
+
 if (!apiKey) {
   throw new Error(
     "GEMINI_API_KEY não foi configurada no arquivo .env."
+  );
+}
+
+if (!internalProxySecret) {
+  throw new Error(
+    "INTERNAL_PROXY_SECRET não foi inicializado pelo proxy seguro."
+  );
+}
+
+if (supabaseServerKey.length < 20) {
+  throw new Error(
+    "SUPABASE_ANON_KEY não foi configurada no servidor."
   );
 }
 
@@ -64,12 +81,30 @@ const ai = new GoogleGenAI({
   apiKey,
 });
 
-app.use(
-  cors({
-    origin: true,
-    credentials: false,
-  })
-);
+app.disable("x-powered-by");
+
+app.use((req, res, next) => {
+  const recebido = String(
+    req.header("x-study-internal-secret") || ""
+  );
+  const esperado = internalProxySecret;
+
+  const recebidoBytes = Buffer.from(recebido);
+  const esperadoBytes = Buffer.from(esperado);
+  const valido =
+    recebidoBytes.length === esperadoBytes.length &&
+    timingSafeEqual(recebidoBytes, esperadoBytes);
+
+  if (!valido) {
+    res.status(403).json({
+      sucesso: false,
+      erro: "Acesso direto à API interna não é permitido.",
+    });
+    return;
+  }
+
+  next();
+});
 
 app.use(
   express.json({
@@ -82,16 +117,13 @@ app.get(
   (_req, res) => {
     res.json({
       ok: true,
-      modelo,
-      modeloFallback,
-      chaveCarregada:
-        Boolean(apiKey),
     });
   }
 );
 
 app.get(
   "/api/modelos",
+  exigirAdministrador,
   async (_req, res) => {
     try {
       const pagina =
@@ -771,11 +803,7 @@ function obterContextoSupabaseJob(
   const authorization = String(
     req.header("authorization") || ""
   ).trim();
-  const anonKey = String(
-    req.header("x-supabase-anon-key") ||
-    process.env.SUPABASE_ANON_KEY ||
-    ""
-  ).trim();
+  const anonKey = supabaseServerKey;
 
   if (
     !userId ||
@@ -1293,7 +1321,7 @@ app.post(
 
 app.listen(
   PORT,
-  "0.0.0.0",
+  "127.0.0.1",
   () => {
     console.log(
       `API Gemini online na porta ${PORT}`
@@ -1363,7 +1391,7 @@ async function exigirAdministrador(
 ) {
   try {
     const autorizacao = req.header("authorization") ?? "";
-    const chavePublica = req.header("x-supabase-anon-key") ?? "";
+    const chavePublica = supabaseServerKey;
 
     if (!autorizacao.startsWith("Bearer ") || chavePublica.length < 20) {
       res.status(401).json({
