@@ -32,6 +32,11 @@
   background: rgba(245, 158, 11, .13);
 }
 
+.beta-monitor-status.resolvendo {
+  color: #93c5fd;
+  background: rgba(37, 99, 235, .15);
+}
+
 .beta-monitor-status.resolvido {
   color: #86efac;
   background: rgba(22, 163, 74, .15);
@@ -39,6 +44,10 @@
 
 .beta-monitor-erro-card.aberto {
   border-color: rgba(245, 158, 11, .28) !important;
+}
+
+.beta-monitor-erro-card.resolvendo {
+  border-color: rgba(59, 130, 246, .3) !important;
 }
 
 .beta-monitor-erro-card.resolvido {
