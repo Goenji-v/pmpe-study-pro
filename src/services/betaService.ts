@@ -3,7 +3,7 @@ import { obterVersaoApp } from "../utils/monitoramentoErro";
 
 export type CategoriaFeedbackBeta = "bug" | "visual" | "ideia" | "outro";
 export type StatusFeedbackBeta = "em_analise" | "aprovado" | "concluido" | "rejeitado";
-export type StatusErroCliente = "aberto" | "resolvido";
+export type StatusErroCliente = "aberto" | "resolvendo" | "resolvido";
 
 export type FeedbackBeta = {
   id: string;
