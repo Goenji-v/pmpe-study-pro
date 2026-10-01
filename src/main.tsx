@@ -4,6 +4,11 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { iniciarSentryFrontend } from "./lib/sentry";
+import {
+  ehErroChunkDinamico,
+  limparMarcadorRecuperacaoChunkDaUrl,
+  tentarRecarregarChunkObsoletoUmaVez,
+} from "./utils/erroChunkDinamico";
 
 import "./global.css";
 import "./styles/mobile.css";
@@ -22,9 +27,9 @@ import "./styles/premium-polish-final.css";
 
 declare const __APP_VERSION__: string;
 
+limparMarcadorRecuperacaoChunkDaUrl();
 iniciarSentryFrontend();
 
-const CHAVE_RECUPERACAO_ASSET = "study-pro:asset-reload";
 const CHAVE_RECARGA_VERSAO = "study-pro:version-reload";
 const INTERVALO_VERIFICACAO_VERSAO_MS = 60_000;
 
@@ -76,34 +81,8 @@ async function verificarNovaVersao() {
   }
 }
 
-function mensagemDoErro(valor: unknown) {
-  if (valor instanceof Error) return `${valor.message} ${valor.stack || ""}`;
-  if (typeof valor === "string") return valor;
-  if (valor && typeof valor === "object" && "message" in valor) {
-    return String((valor as { message?: unknown }).message || "");
-  }
-  return "";
-}
-
-function ehErroDeAssetAntigo(valor: unknown) {
-  const mensagem = mensagemDoErro(valor);
-  if (!mensagem) return false;
-
-  const falhaDeCarregamento = /Unable to preload CSS|Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(mensagem);
-  const referenciaAsset = /\/assets\//i.test(mensagem) || /dynamically imported module/i.test(mensagem);
-  return falhaDeCarregamento && referenciaAsset;
-}
-
 function tentarRecuperarAssetAntigo(valor: unknown) {
-  if (!ehErroDeAssetAntigo(valor)) return false;
-
-  const rotaAtual = `${window.location.pathname}${window.location.search}`;
-  const tentativaAnterior = sessionStorage.getItem(CHAVE_RECUPERACAO_ASSET);
-  if (tentativaAnterior === rotaAtual) return false;
-
-  sessionStorage.setItem(CHAVE_RECUPERACAO_ASSET, rotaAtual);
-  window.location.reload();
-  return true;
+  return ehErroChunkDinamico(valor) && tentarRecarregarChunkObsoletoUmaVez();
 }
 
 window.addEventListener(
@@ -120,11 +99,6 @@ window.addEventListener(
 window.addEventListener("unhandledrejection", (evento) => {
   if (tentarRecuperarAssetAntigo(evento.reason)) evento.preventDefault();
 });
-
-window.setTimeout(() => {
-  sessionStorage.removeItem(CHAVE_RECUPERACAO_ASSET);
-}, 10_000);
-
 
 if (import.meta.env.PROD) {
   window.addEventListener("load", () => {

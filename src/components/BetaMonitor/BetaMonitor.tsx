@@ -89,7 +89,12 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
         const aberto = ordenados.some((item) => item.status === "aberto");
-        const status: StatusErroCliente = aberto ? "aberto" : "resolvido";
+        const resolvendo = ordenados.some((item) => item.status === "resolvendo");
+        const status: StatusErroCliente = aberto
+          ? "aberto"
+          : resolvendo
+            ? "resolvendo"
+            : "resolvido";
 
         return {
           chave,
@@ -106,10 +111,12 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
       );
   }, [erros]);
 
-  const errosAbertos = gruposErros.filter((grupo) => grupo.status === "aberto").length;
+  const problemasPendentes = gruposErros.filter(
+    (grupo) => grupo.status !== "resolvido"
+  ).length;
   const gruposVisiveis = mostrarResolvidos
     ? gruposErros
-    : gruposErros.filter((grupo) => grupo.status === "aberto");
+    : gruposErros.filter((grupo) => grupo.status !== "resolvido");
 
   async function mudarStatus(item: FeedbackBeta, status: StatusFeedbackBeta) {
     try {
@@ -175,7 +182,7 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
         <article><strong>{feedbacks.length}</strong><span>feedbacks</span></article>
         <article><strong>{pendentes}</strong><span>em análise</span></article>
         <article><strong>{bugs}</strong><span>bugs relatados</span></article>
-        <article><strong>{errosAbertos}</strong><span>erros abertos</span></article>
+        <article><strong>{problemasPendentes}</strong><span>problemas pendentes</span></article>
       </div>
 
       {erro && <div className="beta-monitor-erro">{erro}</div>}
@@ -259,7 +266,7 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
 
           {gruposVisiveis.length === 0 ? (
             <div className="beta-monitor-vazio">
-              {gruposErros.length === 0 ? "Nenhuma falha capturada." : "Nenhum erro aberto."}
+              {gruposErros.length === 0 ? "Nenhuma falha capturada." : "Nenhum problema pendente."}
             </div>
           ) : (
             <div className="beta-monitor-lista">
@@ -272,7 +279,11 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
                       <div className="beta-monitor-tags">
                         <span className="beta-monitor-tag erro">{item.origem}</span>
                         <span className={`beta-monitor-status ${grupo.status}`}>
-                          {grupo.status === "aberto" ? "Aberto" : "Resolvido"}
+                          {grupo.status === "aberto"
+                            ? "Aberto"
+                            : grupo.status === "resolvendo"
+                              ? "Resolvendo"
+                              : "Resolvido"}
                         </span>
                       </div>
                       <small>{formatarData(item.created_at)}</small>
@@ -304,10 +315,45 @@ export default function BetaMonitor({ usuarios }: { usuarios: UsuarioAdmin[] }) 
                     )}
 
                     <div className="beta-monitor-acoes">
-                      {grupo.status === "aberto" ? (
-                        <button type="button" className="concluir" disabled={atualizandoId === grupo.chave} onClick={() => void mudarStatusErro(grupo, "resolvido")}>Marcar resolvido</button>
-                      ) : (
-                        <button type="button" className="aprovar" disabled={atualizandoId === grupo.chave} onClick={() => void mudarStatusErro(grupo, "aberto")}>Reabrir</button>
+                      {grupo.status === "aberto" && (
+                        <button
+                          type="button"
+                          className="aprovar"
+                          disabled={atualizandoId === grupo.chave}
+                          onClick={() => void mudarStatusErro(grupo, "resolvendo")}
+                        >
+                          Começar a resolver
+                        </button>
+                      )}
+                      {grupo.status === "resolvendo" && (
+                        <>
+                          <button
+                            type="button"
+                            className="concluir"
+                            disabled={atualizandoId === grupo.chave}
+                            onClick={() => void mudarStatusErro(grupo, "resolvido")}
+                          >
+                            Marcar resolvido
+                          </button>
+                          <button
+                            type="button"
+                            className="rejeitar"
+                            disabled={atualizandoId === grupo.chave}
+                            onClick={() => void mudarStatusErro(grupo, "aberto")}
+                          >
+                            Reabrir
+                          </button>
+                        </>
+                      )}
+                      {grupo.status === "resolvido" && (
+                        <button
+                          type="button"
+                          className="aprovar"
+                          disabled={atualizandoId === grupo.chave}
+                          onClick={() => void mudarStatusErro(grupo, "aberto")}
+                        >
+                          Reabrir
+                        </button>
                       )}
                     </div>
                   </article>
