@@ -20,6 +20,10 @@ import {
   modeloGeminiIndisponivel,
 } from "./retryGemini.ts";
 import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
+import {
+  analisarCursoPorMidia,
+  type ArquivoCursoMidia,
+} from "./cursoMidia.ts";
 
 const portaPublica = Number(process.env.PORT || 3001);
 const portaInterna = Number(
@@ -92,6 +96,12 @@ app.post(
   analisarEdital
 );
 
+app.post(
+  "/api/analisar-curso-midia",
+  express.json({ limit: "40mb" }),
+  analisarCursoMidia
+);
+
 app.use((req, res) => {
   const requisicao = http.request(
     {
@@ -139,6 +149,182 @@ app.use((req, res) => {
 
   req.pipe(requisicao);
 });
+
+async function analisarCursoMidia(req: Request, res: Response) {
+  const inicio = Date.now();
+
+  try {
+    if (!aiEdital) {
+      res.status(503).json({
+        sucesso: false,
+        erro: "A leitura inteligente do curso está temporariamente indisponível.",
+      });
+      return;
+    }
+
+    const corpo = req.body as {
+      nomeCurso?: unknown;
+      arquivos?: unknown;
+    };
+
+    const nomeCurso =
+      typeof corpo.nomeCurso === "string"
+        ? corpo.nomeCurso.trim().slice(0, 180)
+        : "";
+
+    if (!Array.isArray(corpo.arquivos) || corpo.arquivos.length < 1 || corpo.arquivos.length > 12) {
+      res.status(400).json({
+        sucesso: false,
+        erro: "Envie de 1 a 12 imagens ou um PDF da grade do curso.",
+      });
+      return;
+    }
+
+    const tiposPermitidos = new Set<ArquivoCursoMidia["mimeType"]>([
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ]);
+    const arquivos: ArquivoCursoMidia[] = [];
+    let totalBytes = 0;
+
+    for (const valor of corpo.arquivos) {
+      if (!valor || typeof valor !== "object") {
+        res.status(400).json({ sucesso: false, erro: "Um dos arquivos enviados é inválido." });
+        return;
+      }
+
+      const item = valor as Record<string, unknown>;
+      const nome =
+        typeof item.nome === "string"
+          ? item.nome.trim().slice(0, 220)
+          : "arquivo";
+      const mimeType =
+        typeof item.mimeType === "string"
+          ? item.mimeType.trim().toLowerCase()
+          : "";
+      const base64 =
+        typeof item.base64 === "string"
+          ? item.base64.trim()
+          : "";
+
+      if (!tiposPermitidos.has(mimeType as ArquivoCursoMidia["mimeType"]) || !base64) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Use somente PDF, JPG, PNG ou WEBP.",
+        });
+        return;
+      }
+
+      let bytes: Buffer;
+      try {
+        bytes = Buffer.from(base64, "base64");
+      } catch {
+        res.status(400).json({ sucesso: false, erro: "Um dos arquivos não pôde ser lido." });
+        return;
+      }
+
+      if (bytes.length < 8 || bytes.length > 12 * 1024 * 1024) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Cada arquivo deve ter no máximo 12 MB.",
+        });
+        return;
+      }
+
+      if (!arquivoMidiaValido(bytes, mimeType)) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "Um dos arquivos não corresponde ao tipo informado.",
+        });
+        return;
+      }
+
+      totalBytes += bytes.length;
+      if (totalBytes > 25 * 1024 * 1024) {
+        res.status(400).json({
+          sucesso: false,
+          erro: "As imagens/PDFs juntos devem ter no máximo 25 MB.",
+        });
+        return;
+      }
+
+      arquivos.push({
+        nome,
+        mimeType: mimeType as ArquivoCursoMidia["mimeType"],
+        base64,
+      });
+    }
+
+    const modelos = Array.from(
+      new Set([modeloEdital, modeloFallbackEdital].filter(Boolean))
+    );
+    const analise = await analisarCursoPorMidia(
+      aiEdital,
+      modelos,
+      arquivos,
+      nomeCurso
+    );
+
+    console.info("[curso-midia] análise concluída", {
+      userId: res.locals.userId,
+      duracaoMs: Date.now() - inicio,
+      arquivos: arquivos.length,
+      materias: analise.materias.length,
+      aulas: analise.materias.reduce(
+        (total, materia) =>
+          total +
+          materia.modulos.reduce(
+            (subtotal, modulo) => subtotal + modulo.aulas.length,
+            0
+          ),
+        0
+      ),
+    });
+
+    res.json({
+      sucesso: true,
+      analise,
+    });
+  } catch (erro) {
+    console.error("Erro ao analisar imagens/PDF do curso:", erro);
+    capturarErroServidor(erro, { area: "analisar-curso-midia" });
+    const status = obterStatusErro(erro);
+    res.status(status === 429 ? 429 : status === 503 ? 503 : 500).json({
+      sucesso: false,
+      erro:
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível organizar o curso agora.",
+    });
+  }
+}
+
+function arquivoMidiaValido(bytes: Buffer, mimeType: string) {
+  if (mimeType === "application/pdf") {
+    return bytes.subarray(0, 5).toString("ascii") === "%PDF-";
+  }
+
+  if (mimeType === "image/png") {
+    return bytes.subarray(0, 8).equals(
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    );
+  }
+
+  if (mimeType === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9;
+  }
+
+  if (mimeType === "image/webp") {
+    return (
+      bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+      bytes.subarray(8, 12).toString("ascii") === "WEBP"
+    );
+  }
+
+  return false;
+}
 
 async function analisarEdital(req: Request, res: Response) {
   const inicio = Date.now();
@@ -401,7 +587,9 @@ async function autenticarEControlarUso(
     }
 
     const importacao =
-      req.path === "/analisar-prova" || req.path === "/analisar-edital";
+      req.path === "/analisar-prova" ||
+      req.path === "/analisar-edital" ||
+      req.path === "/analisar-curso-midia";
     const consultaLeve =
       req.method === "GET" &&
       (
@@ -458,7 +646,9 @@ function validarTamanhoDaRequisicao(
 ) {
   const bytes = Number(req.header("content-length") || 0);
   const importacao =
-    req.path === "/analisar-prova" || req.path === "/analisar-edital";
+    req.path === "/analisar-prova" ||
+    req.path === "/analisar-edital" ||
+    req.path === "/analisar-curso-midia";
   const limite = importacao ? 40 * 1024 * 1024 : 2 * 1024 * 1024;
 
   if (Number.isFinite(bytes) && bytes > limite) {
