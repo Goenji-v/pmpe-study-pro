@@ -9,6 +9,7 @@ import "./Cursos.css";
 import "./ClassificacaoCursos.css";
 import { useApp } from "../../context/AppContext";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
+import { analisarMidiasDoCurso } from "../../services/cursoMidiaService";
 import { criarCodigoCapturadorCurso } from "../../utils/capturadorCurso";
 import type { CategoriaCursoMateria, CursoImportado, ConfiguracoesComCursos } from "../../types/cursos";
 import {
@@ -30,6 +31,7 @@ export default function Cursos() {
   const ativosIds = config.cursosAtivosIds ?? [];
 
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [midiasCurso, setMidiasCurso] = useState<File[]>([]);
   const [textoColado, setTextoColado] = useState("");
   const [nomeManual, setNomeManual] = useState("");
   const [preview, setPreview] = useState<CursoImportado | null>(null);
@@ -44,6 +46,52 @@ export default function Cursos() {
     materias: cursos.reduce((total, curso) => total + curso.materias.length, 0),
     aulas: cursos.reduce((total, curso) => total + contarAulas(curso), 0),
   };
+
+  async function analisarMidiasSelecionadas() {
+    if (midiasCurso.length === 0) {
+      setMensagem("Selecione prints, fotos ou um PDF onde a grade do curso esteja visível.");
+      return;
+    }
+
+    setProcessando(true);
+    setEditandoId(null);
+    setMensagem(
+      "Lendo as telas e montando Matéria → Módulo → Aula..."
+    );
+
+    try {
+      const curso = await analisarMidiasDoCurso(
+        midiasCurso,
+        nomeManual
+      );
+      setPreview(curso);
+      setMensagem(
+        "Trilha identificada. Confira a estrutura abaixo antes de importar."
+      );
+    } catch (erro) {
+      setPreview(null);
+      setMensagem(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível ler as imagens/PDF do curso."
+      );
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  function escolherMidias(
+    evento: ChangeEvent<HTMLInputElement>
+  ) {
+    const arquivos = Array.from(evento.target.files ?? []).slice(0, 12);
+    setMidiasCurso(arquivos);
+    setPreview(null);
+    setMensagem(
+      arquivos.length
+        ? `${arquivos.length} arquivo(s) selecionado(s). Agora clique em “Ler e montar trilha”.`
+        : ""
+    );
+  }
 
   async function analisarArquivo() {
     if (!arquivo) {
@@ -272,6 +320,7 @@ export default function Cursos() {
     setPreview(null);
     setEditandoId(null);
     setArquivo(null);
+    setMidiasCurso([]);
     setTextoColado("");
     setNomeManual("");
     setMensagem(
@@ -353,17 +402,18 @@ export default function Cursos() {
       <section className="cursos-importador">
         <div className="cursos-importacao-facil">
           <div>
-            <span>RECOMENDADO</span>
-            <h2>Trazer curso sem arquivo ou código</h2>
+            <span>RECOMENDADO · PC E CELULAR</span>
+            <h2>Enviar prints, fotos ou PDF da grade</h2>
             <p>
-              Abra a plataforma do seu curso, pressione <strong>Ctrl+A</strong> e depois <strong>Ctrl+C</strong>.
-              Volte ao Study Pro e clique no botão abaixo. Se o navegador copiar os links da página, eles também serão preservados.
+              Tire prints das telas onde aparecem as matérias, módulos e aulas do curso.
+              No computador ou no celular, selecione as imagens aqui. Se a plataforma permitir
+              imprimir/salvar a grade em PDF, você também pode enviar o PDF.
             </p>
           </div>
 
           <div className="cursos-importacao-passos" aria-label="Como importar seu curso">
-            <span><b>1</b> No curso: Ctrl+A e Ctrl+C</span>
-            <span><b>2</b> Aqui: Colar curso ou Ctrl+V</span>
+            <span><b>1</b> Abra a grade e tire os prints</span>
+            <span><b>2</b> Selecione as imagens ou PDF</span>
             <span><b>3</b> Confira e comece a trilha</span>
           </div>
 
@@ -374,30 +424,70 @@ export default function Cursos() {
               placeholder="Nome do curso (opcional)"
               aria-label="Nome do curso para importação rápida"
             />
-            <button
-              type="button"
-              className="cursos-colar-curso"
-              onClick={() => void analisarAreaTransferencia()}
-              disabled={processando}
-            >
-              {processando ? "Lendo curso..." : "Colar curso"}
-            </button>
           </div>
 
-          <div
-            className="cursos-colar-zona"
-            role="button"
-            tabIndex={0}
-            onPaste={analisarColagemManual}
-            aria-label="Clique aqui e pressione Control V para colar o curso"
+          <label className="cursos-midia-upload">
+            <input
+              type="file"
+              accept="image/*,application/pdf,.pdf"
+              multiple
+              onChange={escolherMidias}
+            />
+            <strong>
+              {midiasCurso.length
+                ? `${midiasCurso.length} arquivo(s) selecionado(s)`
+                : "Selecionar prints, fotos ou PDF"}
+            </strong>
+            <span>
+              {midiasCurso.length
+                ? midiasCurso.slice(0, 3).map((arquivo) => arquivo.name).join(" · ") +
+                  (midiasCurso.length > 3 ? ` · +${midiasCurso.length - 3}` : "")
+                : "Até 12 arquivos por análise"}
+            </span>
+          </label>
+
+          <button
+            type="button"
+            className="cursos-colar-curso"
+            onClick={() => void analisarMidiasSelecionadas()}
+            disabled={processando || midiasCurso.length === 0}
           >
-            <strong>Se o botão não conseguir ler: clique aqui e aperte Ctrl+V</strong>
-            <span>Essa forma não depende da permissão automática da área de transferência.</span>
-          </div>
+            {processando ? "Lendo grade..." : "Ler e montar trilha"}
+          </button>
 
           <small>
-            Funciona no Chrome, Edge e Brave. O Study Pro não pede sua senha da plataforma e não baixa os vídeos.
+            Não precisa copiar código nem informar sua senha. Prints montam a trilha mesmo sem links;
+            links só são adicionados quando estiverem realmente disponíveis na fonte.
           </small>
+
+          <details className="cursos-copia-opcional">
+            <summary>Já consegue copiar a grade? Tentar copiar/colar</summary>
+
+            <p>
+              Essa opção pode funcionar em algumas plataformas no computador, mas não é obrigatória.
+            </p>
+
+            <div className="cursos-importacao-facil-acoes">
+              <button
+                type="button"
+                onClick={() => void analisarAreaTransferencia()}
+                disabled={processando}
+              >
+                {processando ? "Lendo curso..." : "Ler o que copiei"}
+              </button>
+            </div>
+
+            <div
+              className="cursos-colar-zona"
+              role="button"
+              tabIndex={0}
+              onPaste={analisarColagemManual}
+              aria-label="Clique aqui e pressione Control V para colar o curso"
+            >
+              <strong>No computador: clique aqui e aperte Ctrl+V</strong>
+              <span>Se a plataforma não copiar a grade completa, use os prints acima.</span>
+            </div>
+          </details>
         </div>
 
         <details className="cursos-metodos-avancados">
@@ -415,7 +505,7 @@ export default function Cursos() {
               <p>Salve a página do curso como HTML/MHTML ou envie o JSON criado pelo Capturador.</p>
               <input value={nomeManual} onChange={(e) => setNomeManual(e.target.value)} placeholder="Nome do curso (opcional)" />
               <label className="cursos-arquivo">
-                <input type="file" accept=".html,.htm,.mhtml,.mht,.json,.txt,.zip,.pdf" onChange={escolherArquivo} />
+                <input type="file" accept=".html,.htm,.mhtml,.mht,.json,.txt" onChange={escolherArquivo} />
                 <strong>{arquivo ? arquivo.name : "Selecionar arquivo"}</strong>
                 <small>HTML · MHTML · JSON · TXT</small>
               </label>
@@ -470,7 +560,7 @@ export default function Cursos() {
 
           {preview.relatorioCaptura && (
             <div className="cursos-mensagem" role="status">
-              <p>{preview.relatorioCaptura.origensLidas}/{preview.relatorioCaptura.origensEncontradas} grades lidas integralmente no HTML · {preview.relatorioCaptura.pendencias.length} pendência(s)</p>
+              <p>{preview.relatorioCaptura.origensLidas}/{preview.relatorioCaptura.origensEncontradas} fonte(s) analisada(s) · {preview.relatorioCaptura.pendencias.length} pendência(s)</p>
               {preview.relatorioCaptura.cancelada && <p>Captura cancelada: este arquivo contém apenas o resultado obtido até a interrupção.</p>}
               {preview.relatorioCaptura.avisos.map((aviso, i) => <p key={i}>{aviso}</p>)}
               {preview.relatorioCaptura.pendencias.length > 0 && (
