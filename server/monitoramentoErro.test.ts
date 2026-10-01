@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -32,4 +33,17 @@ test("identifica ambiente Android Chrome", () => {
   );
 
   assert.equal(ambiente, "Chrome · Android");
+});
+
+
+test("erro global sem stack preserva arquivo, linha e coluna quando disponíveis", async () => {
+  const codigo = await readFile(
+    "src/components/RuntimeErrorGuard/RuntimeErrorGuard.tsx",
+    "utf8"
+  );
+
+  assert.match(codigo, /evento\.filename/);
+  assert.match(codigo, /evento\.lineno/);
+  assert.match(codigo, /evento\.colno/);
+  assert.match(codigo, /criarErroComLocalizacao/);
 });
