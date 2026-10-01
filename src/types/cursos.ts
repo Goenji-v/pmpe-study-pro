@@ -88,7 +88,7 @@ export type CursoMateria = {
 export type CursoImportado = {
   id: string;
   nome: string;
-  origem: "html" | "mhtml" | "captura-json" | "texto";
+  origem: "html" | "mhtml" | "captura-json" | "texto" | "midia-ia";
   nomeArquivo?: string;
   urlOrigem?: string;
   criadoEm: string;
