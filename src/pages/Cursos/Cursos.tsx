@@ -1,8 +1,14 @@
-import { useState, type ChangeEvent } from "react";
+import {
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+} from "react";
+import { useNavigate } from "react-router-dom";
 
 import "./Cursos.css";
 import "./ClassificacaoCursos.css";
 import { useApp } from "../../context/AppContext";
+import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { criarCodigoCapturadorCurso } from "../../utils/capturadorCurso";
 import type { CategoriaCursoMateria, CursoImportado, ConfiguracoesComCursos } from "../../types/cursos";
 import {
@@ -17,6 +23,7 @@ import {
 } from "../../utils/importacaoCurso";
 
 export default function Cursos() {
+  const navigate = useNavigate();
   const { configuracoes, setConfiguracoes, materias, setMaterias } = useApp();
   const config = configuracoes as ConfiguracoesComCursos;
   const cursos = config.cursos ?? [];
@@ -75,6 +82,37 @@ export default function Cursos() {
   }
 
 
+  function organizarConteudoCopiado(
+    html: string,
+    texto: string
+  ) {
+    if (!html.trim() && !texto.trim()) {
+      throw new Error(
+        "Nada foi encontrado. Abra o curso, use Ctrl+A e Ctrl+C e tente novamente."
+      );
+    }
+
+    const nome = nomeManual.trim() || "Curso importado";
+    const captura = html.trim()
+      ? capturaDeHtml(html, undefined, nome)
+      : capturaDeTexto(texto, nome);
+    const curso = organizarCapturaCurso(captura, nome);
+
+    if (curso.materias.length === 0) {
+      throw new Error(
+        "O conteúdo foi copiado, mas o Study Pro não conseguiu identificar matérias e aulas. Tente copiar somente a área da grade do curso ou use uma opção avançada."
+      );
+    }
+
+    setPreview(curso);
+    setEditandoId(null);
+    setMensagem(
+      html.trim()
+        ? "Curso identificado. Confira a trilha abaixo e importe."
+        : "Estrutura identificada pelo texto. Confira a trilha abaixo e importe."
+    );
+  }
+
   async function analisarAreaTransferencia() {
     setProcessando(true);
     setEditandoId(null);
@@ -99,60 +137,150 @@ export default function Cursos() {
       } else if (navigator.clipboard?.readText) {
         texto = await navigator.clipboard.readText();
       } else {
-        throw new Error("Este navegador não permite ler a área de transferência automaticamente.");
+        throw new Error(
+          "Seu navegador bloqueou a leitura automática. Use a área 'Ctrl+V' logo abaixo."
+        );
       }
 
-      if (!html.trim() && !texto.trim()) {
-        throw new Error("Nada foi encontrado na área de transferência. Abra o curso, use Ctrl+A e Ctrl+C e tente novamente.");
-      }
-
-      const nome = nomeManual.trim() || "Curso importado";
-      const captura = html.trim()
-        ? capturaDeHtml(html, undefined, nome)
-        : capturaDeTexto(texto, nome);
-      const curso = organizarCapturaCurso(captura, nome);
-
-      if (curso.materias.length === 0) {
-        throw new Error("O conteúdo foi copiado, mas o Study Pro não conseguiu identificar matérias e aulas. Tente copiar somente a área da grade do curso ou use uma opção avançada.");
-      }
-
-      setPreview(curso);
-      setMensagem(
-        html.trim()
-          ? "Curso lido da área de transferência. Confira matérias, módulos, aulas e links antes de importar."
-          : "Texto do curso lido da área de transferência. Confira a estrutura antes de importar."
-      );
+      organizarConteudoCopiado(html, texto);
     } catch (erro) {
       setPreview(null);
       setMensagem(
         erro instanceof Error
-          ? erro.message
-          : "Não foi possível ler o curso da área de transferência."
+          ? `${erro.message} Se o botão não funcionar, clique na área de colagem e aperte Ctrl+V.`
+          : "Não foi possível ler o curso. Use a área de colagem e aperte Ctrl+V."
       );
     } finally {
       setProcessando(false);
     }
   }
 
-  function confirmarImportacao() {
+  function analisarColagemManual(
+    evento: ClipboardEvent<HTMLDivElement>
+  ) {
+    evento.preventDefault();
+    setProcessando(true);
+    setMensagem("Organizando a trilha copiada...");
+
+    try {
+      const html =
+        evento.clipboardData.getData("text/html");
+      const texto =
+        evento.clipboardData.getData("text/plain");
+
+      organizarConteudoCopiado(html, texto);
+    } catch (erro) {
+      setPreview(null);
+      setMensagem(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível organizar o conteúdo colado."
+      );
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  function abrirCursoNaCentral(curso: CursoImportado) {
+    const cursoAtualizado =
+      sincronizarProgressoCursos([curso], materias)[0] ?? curso;
+    const etapa = obterProximaEtapaCurso(cursoAtualizado);
+
+    if (!etapa) {
+      setMensagem(
+        "Este curso não possui uma aula de matéria pronta para iniciar. Confira a classificação do curso."
+      );
+      return;
+    }
+
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify({
+        materia: etapa.materia.nome,
+        modulo: `${curso.nome} · ${etapa.modulo.nome}`,
+        moduloId: `curso:${curso.id}:modulo:${etapa.modulo.id}`,
+        assunto: etapa.aula.nome,
+        assuntoId: `curso:${curso.id}:aula:${etapa.aula.id}`,
+        tipo: "aula",
+        objetivo: `Estudar ${etapa.aula.nome}`,
+        urlAula: etapa.aula.url,
+      })
+    );
+
+    navigate("/central-estudos");
+  }
+
+  function continuarCurso(curso: CursoImportado) {
+    if (!ativosIds.includes(curso.id)) {
+      const cursosComProgresso =
+        sincronizarProgressoCursos(cursos, materias);
+      const novosAtivos =
+        Array.from(new Set([...ativosIds, curso.id]));
+
+      setConfiguracoes((atuais) => ({
+        ...atuais,
+        cursos: cursosComProgresso,
+        cursosAtivosIds: novosAtivos,
+      }) as ConfiguracoesComCursos);
+
+      setMaterias((atuais) =>
+        aplicarCursosAtivosNasMaterias(
+          atuais,
+          cursosComProgresso,
+          novosAtivos
+        )
+      );
+    }
+
+    abrirCursoNaCentral(curso);
+  }
+
+  function confirmarImportacao(comecarAgora = false) {
     if (!preview || preview.materias.length === 0) return;
-    const cursosComProgresso = sincronizarProgressoCursos(cursos, materias);
-    const cursoNovo = { ...(editandoId ? preview : mesclarCursoRecebido(cursosComProgresso, preview)), atualizadoEm: new Date().toISOString() };
-    const novosCursos = [...cursosComProgresso.filter((item) => item.id !== cursoNovo.id), cursoNovo];
-    const novosAtivos = Array.from(new Set([...ativosIds, cursoNovo.id]));
+
+    const cursosComProgresso =
+      sincronizarProgressoCursos(cursos, materias);
+    const cursoNovo = {
+      ...(editandoId
+        ? preview
+        : mesclarCursoRecebido(cursosComProgresso, preview)),
+      atualizadoEm: new Date().toISOString(),
+    };
+    const novosCursos = [
+      ...cursosComProgresso.filter(
+        (item) => item.id !== cursoNovo.id
+      ),
+      cursoNovo,
+    ];
+    const novosAtivos =
+      Array.from(new Set([...ativosIds, cursoNovo.id]));
 
     setConfiguracoes((atuais) => ({
       ...atuais,
       cursos: novosCursos,
       cursosAtivosIds: novosAtivos,
     }) as ConfiguracoesComCursos);
-    setMaterias((atuais) => aplicarCursosAtivosNasMaterias(atuais, novosCursos, novosAtivos));
+
+    setMaterias((atuais) =>
+      aplicarCursosAtivosNasMaterias(
+        atuais,
+        novosCursos,
+        novosAtivos
+      )
+    );
+
     setPreview(null);
     setEditandoId(null);
     setArquivo(null);
     setTextoColado("");
     setNomeManual("");
-    setMensagem(`Curso ${cursoNovo.nome} salvo. Matérias integradas aos Conteúdos; complementares e itens a confirmar ficam aqui em Meus Cursos.`);
+    setMensagem(
+      `Curso ${cursoNovo.nome} pronto. A trilha já está ativa em Conteúdos.`
+    );
+
+    if (comecarAgora) {
+      abrirCursoNaCentral(cursoNovo);
+    }
   }
 
   function alternarCurso(cursoId: string) {
@@ -212,7 +340,7 @@ export default function Cursos() {
           <span>MEUS CURSOS</span>
           <h1>Importe a estrutura do seu curso</h1>
           <p>
-            O Study Pro separa Matéria → Módulo → Aula, preserva os links originais e permite combinar mais de um curso sem misturar um dentro do outro.
+            Traga o curso, confira a estrutura e comece. O Study Pro transforma o conteúdo em uma trilha Matéria → Módulo → Aula, preserva os links e acompanha seu progresso.
           </p>
         </div>
         <div className="cursos-hero-resumo">
@@ -233,6 +361,12 @@ export default function Cursos() {
             </p>
           </div>
 
+          <div className="cursos-importacao-passos" aria-label="Como importar seu curso">
+            <span><b>1</b> No curso: Ctrl+A e Ctrl+C</span>
+            <span><b>2</b> Aqui: Colar curso ou Ctrl+V</span>
+            <span><b>3</b> Confira e comece a trilha</span>
+          </div>
+
           <div className="cursos-importacao-facil-acoes">
             <input
               value={nomeManual}
@@ -250,8 +384,19 @@ export default function Cursos() {
             </button>
           </div>
 
+          <div
+            className="cursos-colar-zona"
+            role="button"
+            tabIndex={0}
+            onPaste={analisarColagemManual}
+            aria-label="Clique aqui e pressione Control V para colar o curso"
+          >
+            <strong>Se o botão não conseguir ler: clique aqui e aperte Ctrl+V</strong>
+            <span>Essa forma não depende da permissão automática da área de transferência.</span>
+          </div>
+
           <small>
-            Funciona melhor no Chrome, Edge e Brave. O Study Pro não pede sua senha da plataforma.
+            Funciona no Chrome, Edge e Brave. O Study Pro não pede sua senha da plataforma e não baixa os vídeos.
           </small>
         </div>
 
@@ -379,7 +524,8 @@ export default function Cursos() {
 
           <div className="cursos-preview-acoes">
             <button type="button" className="secundario" onClick={() => setPreview(null)}>Cancelar</button>
-            <button type="button" onClick={confirmarImportacao}>Confirmar importação</button>
+            <button type="button" className="secundario" onClick={() => confirmarImportacao(false)}>Só importar</button>
+            <button type="button" className="principal" onClick={() => confirmarImportacao(true)}>Importar e começar</button>
           </div>
         </section>
       )}
@@ -396,6 +542,11 @@ export default function Cursos() {
           <div className="cursos-cards">
             {cursos.map((curso) => {
               const ativo = ativosIds.includes(curso.id);
+              const cursoAtualizado =
+                sincronizarProgressoCursos([curso], materias)[0] ?? curso;
+              const progresso = obterProgressoCurso(cursoAtualizado);
+              const proximaEtapa = obterProximaEtapaCurso(cursoAtualizado);
+
               return (
                 <article key={curso.id} className={ativo ? "ativo" : ""}>
                   <div className="curso-card-topo">
@@ -406,7 +557,31 @@ export default function Cursos() {
                     {curso.materias.slice(0, 8).map((materia) => <span key={materia.id}>{materia.nome}{materia.categoria === "complementar" ? " · Complementar" : materia.categoria === "pendente" ? " · A confirmar" : ""}</span>)}
                     {curso.materias.length > 8 && <span>+{curso.materias.length - 8}</span>}
                   </div>
+
+                  <div className="curso-progresso-trilha">
+                    <div>
+                      <span>Trilha do curso</span>
+                      <strong>{progresso.concluidas}/{progresso.total} aulas · {progresso.percentual}%</strong>
+                    </div>
+                    <div className="curso-progresso-barra" aria-label={`Progresso de ${progresso.percentual}%`}>
+                      <div style={{ width: `${progresso.percentual}%` }} />
+                    </div>
+                    {proximaEtapa && (
+                      <small>
+                        Próxima: {proximaEtapa.materia.nome} · {proximaEtapa.aula.nome}
+                      </small>
+                    )}
+                  </div>
+
                   <div className="curso-card-acoes">
+                    <button
+                      type="button"
+                      className="principal"
+                      onClick={() => continuarCurso(cursoAtualizado)}
+                      disabled={!proximaEtapa}
+                    >
+                      {progresso.percentual >= 100 ? "↻ Revisar curso" : progresso.concluidas > 0 ? "▶ Continuar curso" : "▶ Começar curso"}
+                    </button>
                     <button type="button" onClick={() => { setPreview(structuredClone(curso)); setEditandoId(curso.id); }}>Revisar classificação</button>
                     <button type="button" onClick={() => exportarCurso(curso)}>Exportar JSON</button>
                     <button type="button" className="perigo" onClick={() => excluirCurso(curso.id)}>Remover</button>
@@ -428,6 +603,56 @@ export default function Cursos() {
 
 function contarAulas(curso: CursoImportado) {
   return curso.materias.reduce((total, materia) => total + materia.modulos.reduce((subtotal, modulo) => subtotal + modulo.aulas.length, 0), 0);
+}
+
+function obterAulasDaTrilha(curso: CursoImportado) {
+  return curso.materias
+    .filter(
+      (materia) =>
+        !materia.categoria ||
+        materia.categoria === "disciplina"
+    )
+    .slice()
+    .sort((a, b) => a.ordem - b.ordem)
+    .flatMap((materia) =>
+      materia.modulos
+        .slice()
+        .sort((a, b) => a.ordem - b.ordem)
+        .flatMap((modulo) =>
+          modulo.aulas
+            .slice()
+            .sort((a, b) => a.ordem - b.ordem)
+            .map((aula) => ({
+              materia,
+              modulo,
+              aula,
+            }))
+        )
+    );
+}
+
+function obterProgressoCurso(curso: CursoImportado) {
+  const aulas = obterAulasDaTrilha(curso);
+  const concluidas =
+    aulas.filter(({ aula }) => aula.concluida).length;
+  const total = aulas.length;
+
+  return {
+    concluidas,
+    total,
+    percentual:
+      total > 0
+        ? Math.round((concluidas / total) * 100)
+        : 0,
+  };
+}
+
+function obterProximaEtapaCurso(curso: CursoImportado) {
+  const aulas = obterAulasDaTrilha(curso);
+  return (
+    aulas.find(({ aula }) => !aula.concluida) ??
+    aulas[0]
+  );
 }
 
 function atualizarPreviewMateria(preview: CursoImportado, setPreview: (curso: CursoImportado | null) => void, indiceMateria: number, nome: string) {
