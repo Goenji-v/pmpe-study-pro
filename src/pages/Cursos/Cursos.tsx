@@ -396,7 +396,7 @@ export default function Cursos() {
           </div>
 
           <small>
-            Funciona no Chrome, Edge e Brave. O Study Pro não pede sua senha e não baixa os vídeos da plataforma.
+            Funciona no Chrome, Edge e Brave. O Study Pro não pede sua senha da plataforma e não baixa os vídeos.
           </small>
         </div>
 
