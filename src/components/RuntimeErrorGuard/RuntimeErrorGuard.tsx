@@ -8,6 +8,22 @@ import {
 } from "../../utils/erroChunkDinamico";
 import PerformanceMonitor from "../PerformanceMonitor/PerformanceMonitor";
 
+
+function criarErroComLocalizacao(evento: ErrorEvent) {
+  const mensagem = evento.message || "Erro de execução";
+  const partes = [
+    evento.filename || "",
+    evento.lineno > 0 ? `linha ${evento.lineno}` : "",
+    evento.colno > 0 ? `coluna ${evento.colno}` : "",
+  ].filter(Boolean);
+
+  return new Error(
+    partes.length
+      ? `${mensagem} — ${partes.join(":")}`
+      : mensagem
+  );
+}
+
 export default function RuntimeErrorGuard() {
   const { showToast } = useToast();
   const ultimoAvisoRef = useRef(0);
@@ -29,7 +45,10 @@ export default function RuntimeErrorGuard() {
     }
 
     function aoErro(evento: ErrorEvent) {
-      const erro = evento.error ?? evento.message ?? "Erro de execução";
+      const erro =
+        evento.error ??
+        criarErroComLocalizacao(evento);
+
       if (tentarRecuperarChunk(erro)) return;
 
       registrarErroRuntime(erro, "window-error");
