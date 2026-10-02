@@ -91,8 +91,13 @@ export type PlanoEdital = {
 
 export type EditalAtivo = {
   id: string;
+  /** ID do edital global quando a origem é o catálogo administrado. */
+  catalogoId?: string;
   nomeArquivo: string;
+  /** Pode ficar vazio quando o catálogo usa apenas uma fonte oficial externa. */
   storagePath: string;
+  /** Fonte oficial do edital pré-definido, quando disponível. */
+  fonteUrl?: string;
   analise: AnaliseEdital;
   plano?: PlanoEdital;
   confirmadoEm?: string;

@@ -209,6 +209,172 @@
   font-size: 0.86rem;
 }
 
+.edital-catalogo {
+  display: grid;
+  gap: 20px;
+}
+
+.edital-catalogo-carregando {
+  color: #93c5fd;
+}
+
+.edital-catalogo-grupo {
+  display: grid;
+  gap: 12px;
+}
+
+.edital-catalogo-grupo + .edital-catalogo-grupo {
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.edital-catalogo-grupo-topo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.edital-catalogo-grupo-topo h3 {
+  margin: 0 0 4px;
+  font-size: 1.02rem;
+}
+
+.edital-catalogo-grupo-topo p {
+  font-size: 0.82rem;
+}
+
+.edital-catalogo-grupo-topo > span {
+  flex: 0 0 auto;
+  color: #7f8ca2;
+  font-size: 0.75rem;
+}
+
+.edital-catalogo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.edital-catalogo-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.17);
+  background: rgba(7, 15, 28, 0.34);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.edital-catalogo-card.selecionado {
+  border-color: rgba(96, 165, 250, 0.78);
+  background: rgba(37, 99, 235, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.12);
+}
+
+.edital-catalogo-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.42);
+}
+
+.edital-catalogo-card-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.edital-catalogo-card-topo > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edital-catalogo-sigla,
+.edital-catalogo-uf,
+.edital-admin-etiqueta {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.edital-catalogo-sigla {
+  color: #dbeafe;
+  background: rgba(37, 99, 235, 0.2);
+}
+
+.edital-catalogo-uf {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.edital-admin-etiqueta {
+  margin-bottom: 6px;
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.edital-catalogo-card h4 {
+  margin: 0;
+  font-size: 1.06rem;
+}
+
+.edital-catalogo-card > small {
+  color: #93c5fd;
+}
+
+.edital-catalogo-card > p {
+  font-size: 0.8rem;
+}
+
+.edital-catalogo-opcao {
+  display: grid;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.edital-catalogo-opcao span {
+  color: #93c5fd;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.edital-catalogo-opcao select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(8, 16, 30, 0.72);
+  color: #e5edf8;
+  padding: 9px 10px;
+  font: inherit;
+}
+
+.edital-catalogo-acoes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.edital-cargo-fixo {
+  display: grid;
+  gap: 3px;
+  align-self: center;
+  justify-items: end;
+}
+
+.edital-cargo-fixo small {
+  color: #8fa0b8;
+}
+
 .edital-materias {
   display: grid;
   gap: 12px;
@@ -391,13 +557,18 @@
 }
 
 @media (max-width: 860px) {
-  .edital-upload-card {
+  .edital-upload-card,
+  .edital-catalogo-grid {
     grid-template-columns: 1fr;
   }
 
   .edital-previa-semanas,
   .edital-cargo-confirmacao {
     grid-template-columns: 1fr;
+  }
+
+  .edital-cargo-fixo {
+    justify-items: start;
   }
 }
 
@@ -419,6 +590,15 @@
 
   .edital-fluxo {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .edital-catalogo-grupo-topo {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .edital-catalogo-acoes {
+    grid-template-columns: 1fr;
   }
 
   .edital-materia-topo {

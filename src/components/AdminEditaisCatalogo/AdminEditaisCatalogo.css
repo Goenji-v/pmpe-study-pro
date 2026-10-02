@@ -1,0 +1,278 @@
+.admin-editais {
+  margin-bottom: 22px;
+  padding: 22px;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background: #1e293b;
+}
+
+.admin-editais-topo,
+.admin-editais-lista-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-editais-topo {
+  margin-bottom: 18px;
+}
+
+.admin-editais-topo > div > span {
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.admin-editais-topo h2,
+.admin-editais-lista h3,
+.admin-editais-formulario h3 {
+  margin: 5px 0 6px;
+}
+
+.admin-editais-topo p,
+.admin-editais-lista p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.admin-editais-topo > strong {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 999px;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.14);
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  font-size: 12px;
+}
+
+.admin-editais-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+}
+
+.admin-editais-formulario,
+.admin-editais-lista {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #334155;
+  border-radius: 15px;
+  background: #0f172a;
+}
+
+.admin-editais-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-editais-campos label,
+.admin-editais-upload {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-editais-campos label > span,
+.admin-editais-upload > span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.admin-editais-campos input,
+.admin-editais-campos select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: #e5edf8;
+  background: #111c2f;
+  font: inherit;
+}
+
+.admin-editais-campo-largo {
+  grid-column: 1 / -1;
+}
+
+.admin-editais-upload {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px dashed rgba(96, 165, 250, 0.5);
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.admin-editais-upload input {
+  display: none;
+}
+
+.admin-editais-upload strong {
+  color: #dbeafe;
+}
+
+.admin-editais-botao,
+.admin-edital-item-acoes button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-editais-botao {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  color: white;
+  background: #2563eb;
+  font-weight: 800;
+}
+
+.admin-editais-publicar {
+  background: #166534;
+}
+
+.admin-editais-botao:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin-editais-analise {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  border-radius: 11px;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.admin-editais-analise strong {
+  color: #bbf7d0;
+}
+
+.admin-editais-analise span,
+.admin-editais-analise small {
+  color: #94a3b8;
+}
+
+.admin-editais-erro {
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.25);
+}
+
+.admin-editais-lista-topo {
+  margin-bottom: 12px;
+}
+
+.admin-editais-lista-topo > span {
+  color: #93c5fd;
+  font-size: 12px;
+}
+
+.admin-editais-itens {
+  display: grid;
+  gap: 9px;
+}
+
+.admin-edital-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #263449;
+  border-radius: 12px;
+  background: #111c2f;
+}
+
+.admin-edital-item > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.admin-edital-item > div:first-child > span {
+  width: fit-content;
+  color: #93c5fd;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.admin-edital-item > div:first-child small {
+  color: #94a3b8;
+}
+
+.admin-edital-item-acoes {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.admin-edital-item-acoes button,
+.admin-edital-sistema {
+  padding: 7px 9px;
+  border-radius: 8px;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.12);
+  font-size: 12px;
+}
+
+.admin-edital-item-acoes button.perigo {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.admin-edital-sistema {
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.admin-editais-dica {
+  padding: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .admin-editais-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-editais {
+    padding: 15px;
+  }
+
+  .admin-editais-topo,
+  .admin-editais-lista-topo {
+    flex-direction: column;
+  }
+
+  .admin-editais-campos {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-editais-campo-largo {
+    grid-column: auto;
+  }
+
+  .admin-edital-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-edital-item-acoes {
+    justify-content: flex-start;
+  }
+}
