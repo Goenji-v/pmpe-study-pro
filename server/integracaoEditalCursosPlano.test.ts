@@ -69,6 +69,11 @@ test("Plano Tático envia a aula relacionada para a Central com o vínculo da mi
     "utf8"
   );
 
+  assert.match(
+    codigo,
+    /sincronizarProgressoCursos\(configCursos\.cursos \?\? \[\], materias\)/
+  );
+  assert.match(codigo, /cursosSincronizados/);
   assert.match(codigo, /pmpe:central-estudos:prefill/);
   assert.match(codigo, /moduloId: aula\.moduloId/);
   assert.match(codigo, /assuntoId: aula\.assuntoId/);

@@ -19,6 +19,7 @@ import {
   mesclarMateriasDoEdital,
   slugEdital,
 } from "../../utils/planoEdital";
+import { sincronizarProgressoCursos } from "../../utils/importacaoCurso";
 import {
   encontrarAulasParaMissao,
   type AulaRelacionadaAoEdital,
@@ -28,6 +29,7 @@ import PlanoEstudos from "../PlanoEstudos/PlanoEstudos";
 export default function PlanoEditalGateway() {
   const {
     configuracoes,
+    materias,
     missoesConcluidas,
     setMissoesConcluidas,
     setMaterias,
@@ -37,8 +39,11 @@ export default function PlanoEditalGateway() {
   } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const configCursos = configuracoes as ConfiguracoesComCursos;
-  const cursos = configCursos.cursos ?? [];
   const cursosAtivosIds = configCursos.cursosAtivosIds ?? [];
+  const cursosSincronizados = useMemo(
+    () => sincronizarProgressoCursos(configCursos.cursos ?? [], materias),
+    [configCursos.cursos, materias]
+  );
   const planoArmazenado = config.editalAtivo?.plano;
   const analise = config.editalAtivo?.analise;
   const [modo, setModo] = useState<"edital" | "anterior">("edital");
@@ -376,7 +381,7 @@ export default function PlanoEditalGateway() {
                   {dia.missoes.map((missao, indice) => {
                     const concluida = missoesConcluidas.includes(missao.id);
                     const aulasRelacionadas = encontrarAulasParaMissao(
-                      cursos,
+                      cursosSincronizados,
                       cursosAtivosIds,
                       missao.materia,
                       missao.assunto,
