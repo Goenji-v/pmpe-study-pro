@@ -467,6 +467,13 @@ async function analisarEdital(req: Request, res: Response) {
       analise = await analisarEditalEstruturado(contents);
     }
 
+    if (cargo) {
+      analise = {
+        ...analise,
+        cargoDetectado: cargo,
+      };
+    }
+
     console.info("[edital-inteligente] análise concluída", {
       userId: res.locals.userId,
       duracaoMs: Date.now() - inicio,
