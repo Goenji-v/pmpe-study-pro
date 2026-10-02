@@ -99,7 +99,8 @@ export default function CentralEstudos() {
   );
 
   const sessaoVinculadaAConteudo = Boolean(
-    missaoPlanoAtual?.conteudo
+    missaoPlanoAtual?.conteudo ||
+      (estado.missaoId && (estado.assuntoId || estado.aulaId))
   );
 
   const sessaoVinculadaAAula = Boolean(
