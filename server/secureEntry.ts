@@ -359,6 +359,7 @@ async function analisarEdital(req: Request, res: Response) {
       nomeArquivo?: unknown;
       concurso?: unknown;
       banca?: unknown;
+      cargo?: unknown;
     };
 
     const pdfBase64 =
@@ -374,6 +375,10 @@ async function analisarEdital(req: Request, res: Response) {
     const banca =
       typeof corpo.banca === "string"
         ? corpo.banca.trim().slice(0, 120)
+        : "";
+    const cargo =
+      typeof corpo.cargo === "string"
+        ? corpo.cargo.trim().slice(0, 180)
         : "";
 
     if (!pdfBase64 || pdfBase64.length > 36_000_000) {
@@ -408,6 +413,7 @@ async function analisarEdital(req: Request, res: Response) {
       nomeArquivo,
       concurso,
       banca,
+      cargo,
     });
 
     const contents = [
@@ -428,6 +434,7 @@ async function analisarEdital(req: Request, res: Response) {
     console.info("[edital-inteligente] análise iniciada", {
       userId: res.locals.userId,
       nomeArquivo,
+      cargoAlvo: cargo || "automatico",
       tamanhoKb: Math.round(bytesPdf.length / 1024),
     });
 
