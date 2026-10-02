@@ -324,7 +324,7 @@ export default function Cursos() {
     setTextoColado("");
     setNomeManual("");
     setMensagem(
-      `Curso ${cursoNovo.nome} pronto. A trilha já está ativa em Conteúdos.`
+      `Curso ${cursoNovo.nome} pronto. A trilha está ativa em Conteúdos e disponível no Plano Tático para os assuntos correspondentes ao edital.`
     );
 
     if (comecarAgora) {
@@ -623,7 +623,7 @@ export default function Cursos() {
       <section className="cursos-salvos">
         <header>
           <div><span>BIBLIOTECA</span><h2>Seus cursos</h2></div>
-          <small>Ative um ou mais cursos para combiná-los em Conteúdos.</small>
+          <small>Ative um ou mais cursos para usá-los em Conteúdos e como material do Plano Tático.</small>
         </header>
 
         {cursos.length === 0 ? (
