@@ -11,7 +11,6 @@ import {
   type ConfiguracoesComEdital,
   type DiaSemanaId,
   type MissaoPlanoEdital,
-  type PrioridadeEdital,
 } from "../../types/editalInteligente";
 import { calcularDiagnosticoSemanalPlano } from "../../utils/adaptacaoPlano";
 import { adaptarPlanoEditalAoDesempenho } from "../../utils/adaptacaoPlanoEdital";
@@ -480,9 +479,5 @@ export default function PlanoEditalGateway() {
       </section>
     </section>
   );
-
-function formatarPrioridade(prioridade: PrioridadeEdital) {
-  if (prioridade === "media") return "Média";
-  if (prioridade === "alta") return "Alta";
-  return "Baixa";
 }
+
