@@ -8,6 +8,7 @@ export function montarPromptAnaliseEdital(contexto: {
   nomeArquivo: string;
   concurso?: string;
   banca?: string;
+  cargo?: string;
 }) {
   return `
 Você é um analista de editais de concursos públicos brasileiros.
@@ -18,9 +19,11 @@ CONTEXTO INFORMADO PELO USUÁRIO:
 - arquivo: ${contexto.nomeArquivo}
 - concurso: ${contexto.concurso || "não informado"}
 - banca: ${contexto.banca || "não informada"}
+- cargo alvo do plano: ${contexto.cargo || "detectar automaticamente"}
 
 OBJETIVO:
 1. identificar o concurso, cargo e banca quando isso estiver explícito no PDF;
+1.1. se houver um cargo alvo informado acima, use esse cargo como FILTRO OBRIGATÓRIO da análise;
 2. localizar o conteúdo programático/conhecimentos exigidos;
 3. separar em MATÉRIAS;
 4. dentro de cada matéria, separar os ASSUNTOS cobrados;
@@ -38,6 +41,12 @@ EXEMPLO DE GRANULARIDADE:
 - se o edital disser apenas "Lei nº 10.826/2003 (Estatuto do Desarmamento)", preserve como um único assunto, pois o PDF não detalhou subtópicos.
 
 IMPORTANTE:
+- se "cargo alvo do plano" estiver preenchido, extraia SOMENTE matérias e assuntos aplicáveis a esse cargo;
+- inclua conteúdos comuns somente quando o próprio PDF indicar que também se aplicam ao cargo alvo;
+- ignore blocos exclusivos de outros cargos, especialidades ou áreas, mesmo que estejam no mesmo edital;
+- se o cargo alvo não puder ser confirmado no PDF, não misture cargos: informe a dúvida em observacao;
+- em edital PMPE com cargo alvo "Soldado PMPE", não inclua conteúdos exclusivos de Oficial, Oficial Médico ou Oficial Dentista;
+- preencha cargoDetectado com o cargo efetivamente usado como filtro;
 - a prioridade pode usar conhecimento histórico/pesquisa, mas NUNCA acrescente matéria ou assunto que não esteja no PDF;
 - não declare percentuais de cobrança sem fonte explícita;
 - se o PDF estiver incompleto, verticalizado ou ambíguo, informe isso em observacao;
