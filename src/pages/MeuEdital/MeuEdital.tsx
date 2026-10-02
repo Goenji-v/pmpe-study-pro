@@ -38,7 +38,19 @@ function cargoInicialDoEdital(
   concurso: string,
   cargoSalvo?: string
 ) {
-  if (cargoSalvo) return cargoSalvo;
+  if (cargoSalvo) {
+    const normalizado = cargoSalvo
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    if (normalizado.includes("soldado")) return "Soldado PMPE";
+    if (normalizado.includes("medico")) return "Oficial Médico PMPE";
+    if (normalizado.includes("dentista")) return "Oficial Dentista PMPE";
+    if (normalizado.includes("oficial")) return "Oficial PMPE";
+    return cargoSalvo;
+  }
+
   return /PMPE|Polícia Militar de Pernambuco/i.test(concurso)
     ? "Soldado PMPE"
     : "";
@@ -83,10 +95,7 @@ export default function MeuEdital() {
 
   const cargoDaAnalise = analise?.cargoDetectado ?? "";
   const cargoAlteradoAposAnalise = Boolean(
-    analise &&
-      cargoAlvo &&
-      cargoDaAnalise &&
-      cargoAlvo !== cargoDaAnalise
+    analise && cargoAlvo !== cargoDaAnalise
   );
 
   async function processarPdf() {
