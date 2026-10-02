@@ -667,12 +667,6 @@ function validarTamanhoDaRequisicao(
   next();
 }
 
-function aguardar(milissegundos: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(resolve, milissegundos);
-  });
-}
-
 process.env.PORT = String(portaInterna);
 
 await import("./index.ts");
