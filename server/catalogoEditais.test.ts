@@ -52,3 +52,31 @@ test("migration protege escrita do catálogo com sou_admin e RLS", async () => {
   assert.match(sql, /editais-catalogo/);
   assert.match(sql, /for insert\s+to authenticated[\s\S]*sou_admin/);
 });
+
+
+test("Meu Edital permite revisar e personalizar conteúdos antes de selecionar", async () => {
+  const codigo = await readFile("src/pages/MeuEdital/MeuEdital.tsx", "utf8");
+
+  assert.match(codigo, /Ver conteúdos/);
+  assert.match(codigo, /ConteudosEditalModal/);
+  assert.match(codigo, /Usar este edital com estas alterações/);
+  assert.match(codigo, /Restaurar original/);
+  assert.match(codigo, /\+ Adicionar matéria/);
+  assert.match(codigo, /\+ Adicionar assunto/);
+  assert.match(codigo, /Remover matéria/);
+  assert.match(codigo, /prepararAnaliseCatalogo\(edital, \{ idioma \}\)/);
+  assert.match(codigo, /analisePersonalizada \?\?/);
+});
+
+test("personalização do aluno não altera o catálogo global", async () => {
+  const codigo = await readFile("src/pages/MeuEdital/MeuEdital.tsx", "utf8");
+
+  assert.match(
+    codigo,
+    /As alterações feitas aqui valem apenas para o seu plano/
+  );
+  assert.doesNotMatch(
+    codigo,
+    /from\("editais_catalogo"\)[\s\S]{0,300}\.update\(/
+  );
+});
