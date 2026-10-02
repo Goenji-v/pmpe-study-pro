@@ -17,8 +17,8 @@ import {
   interpretarRespostaAnaliseEdital,
 } from "./editalAnaliseRobusta.ts";
 import {
+  executarComFallbackGemini,
   obterStatusErro,
-  modeloGeminiIndisponivel,
 } from "./retryGemini.ts";
 import { parametrosExtracaoGemini, resolverModelosGemini } from "./modelosGemini.ts";
 import {
@@ -477,7 +477,16 @@ async function analisarEdital(req: Request, res: Response) {
   } catch (erro) {
     console.error("Erro ao analisar edital:", erro);
     capturarErroServidor(erro, { area: "analisar-edital" });
-    res.status(500).json({
+
+    const status = obterStatusErro(erro);
+    const statusHttp =
+      status === 429
+        ? 429
+        : status === 503
+          ? 503
+          : 500;
+
+    res.status(statusHttp).json({
       sucesso: false,
       erro:
         erro instanceof Error
@@ -500,56 +509,36 @@ async function analisarEditalEstruturado(
     throw new Error("A análise de edital está temporariamente indisponível.");
   }
 
-  const modelos = Array.from(
-    new Set([modeloEdital, modeloFallbackEdital].map((item) => item.trim()).filter(Boolean))
-  );
-  let ultimoErro: unknown;
+  return executarComFallbackGemini(
+    async (modeloAtual) => {
+      const resposta = await aiEdital.models.generateContent({
+        model: modeloAtual,
+        contents,
+        config: {
+          ...parametrosExtracaoGemini(modeloAtual),
+          responseMimeType: "application/json",
+          maxOutputTokens: 32768,
+        },
+      });
 
-  for (const modeloAtual of modelos) {
-    for (let tentativa = 1; tentativa <= 2; tentativa += 1) {
-      try {
-        const resposta = await aiEdital.models.generateContent({
-          model: modeloAtual,
-          contents,
-          config: {
-            ...parametrosExtracaoGemini(modeloAtual),
-            responseMimeType: "application/json",
-            maxOutputTokens: 32768,
-          },
-        });
-
-        if (!resposta.text) {
-          throw new Error("A IA não retornou a estrutura do edital.");
-        }
-
-        return interpretarRespostaAnaliseEdital(resposta.text);
-      } catch (erro) {
-        ultimoErro = erro;
-        const status = obterStatusErro(erro);
-
-        console.warn("[edital-inteligente] tentativa estruturada falhou", {
-          modelo: modeloAtual,
-          tentativa,
-          status,
-          erro: erro instanceof Error ? erro.message : String(erro),
-        });
-
-        if (status === 429 || status === 401 || status === 403) {
-          throw erro;
-        }
-
-        if (modeloGeminiIndisponivel(erro)) break;
-
-        if (tentativa < 2) {
-          await aguardar(1200);
-        }
+      if (!resposta.text) {
+        throw new Error("A IA não retornou a estrutura do edital.");
       }
-    }
-  }
 
-  throw ultimoErro instanceof Error
-    ? ultimoErro
-    : new Error("Não foi possível concluir a leitura estruturada do edital.");
+      return interpretarRespostaAnaliseEdital(resposta.text);
+    },
+    {
+      rotulo: "análise estruturada do edital",
+      modelos: [modeloEdital, modeloFallbackEdital],
+      tentativasPorModelo: [2, 3],
+      aoTentarNovamente: (dados) => {
+        console.warn("[edital-inteligente] nova tentativa", dados);
+      },
+      aoTrocarModelo: (dados) => {
+        console.warn("[edital-inteligente] trocando modelo", dados);
+      },
+    }
+  );
 }
 
 async function autenticarEControlarUso(
