@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import AdminFinanceiroGeral from "../../components/AdminFinanceiroGeral/AdminFinanceiroGeral";
+import AdminEditaisCatalogo from "../../components/AdminEditaisCatalogo/AdminEditaisCatalogo";
 import AdminParcerias from "../../components/AdminParcerias/AdminParcerias";
 import BetaMonitor from "../../components/BetaMonitor/BetaMonitor";
 import CuradoriaQuestoes from "../../components/CuradoriaQuestoes/CuradoriaQuestoes";
@@ -79,6 +80,8 @@ export default function Admin() {
         <Card titulo="Questões" valor={resumo.questoesNoMes} detalhe="Resolvidas no mês" />
         <Card titulo="Acertos" valor={resumo.acertosNoMes} detalhe="Acertos registrados" />
       </div>
+
+      <AdminEditaisCatalogo />
 
       {PARCERIAS_VISIVEIS && (
         <>
