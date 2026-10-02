@@ -14,16 +14,18 @@ test("catálogo inicial separa PMPE 2026 em Soldado e Oficial", async () => {
   assert.match(codigo, /idiomas: \["Inglês", "Espanhol"\]/);
 });
 
-test("Meu Edital prioriza catálogo e restringe upload manual ao administrador", async () => {
+test("Meu Edital prioriza catálogo e também aceita edital pessoal do aluno", async () => {
   const codigo = await readFile("src/pages/MeuEdital/MeuEdital.tsx", "utf8");
 
   assert.match(codigo, /EDITAIS PRÉ-DEFINIDOS/);
   assert.match(codigo, /Polícia Militar — Soldado/);
   assert.match(codigo, /Polícia Militar — Oficial/);
-  assert.match(codigo, /\{administrador && \(/);
-  assert.match(codigo, /SOMENTE ADM/);
+  assert.match(codigo, /\+ Adicionar outro edital/);
+  assert.match(codigo, /EDITAL PESSOAL/);
+  assert.match(codigo, /Analisar meu edital/);
   assert.match(codigo, /selecionarEditalCatalogo/);
   assert.match(codigo, /catalogoId: editalCatalogoSelecionado\.id/);
+  assert.doesNotMatch(codigo, /\{administrador && \(/);
 });
 
 test("painel administrativo cadastra o edital uma vez para o catálogo global", async () => {
@@ -79,4 +81,26 @@ test("personalização do aluno não altera o catálogo global", async () => {
     codigo,
     /from\("editais_catalogo"\)[\s\S]{0,300}\.update\(/
   );
+});
+
+
+test("edital pessoal é analisado sem herdar concurso e banca do catálogo anterior", async () => {
+  const codigo = await readFile("src/pages/MeuEdital/MeuEdital.tsx", "utf8");
+
+  assert.match(codigo, /concurso: mostrarEditalPessoal \? "" : config\.concurso/);
+  assert.match(codigo, /banca: mostrarEditalPessoal \? "" : config\.bancaPadrao/);
+  assert.match(codigo, /placeholder="Ex\.: Agente PCPE, Guarda Municipal\.\.\."/);
+  assert.match(codigo, /Deixe em branco para o Study Pro detectar o cargo/);
+});
+
+test("PDF pessoal continua salvo no espaço do próprio usuário", async () => {
+  const codigo = await readFile(
+    "src/services/editalInteligenteService.ts",
+    "utf8"
+  );
+
+  assert.match(codigo, /supabase\.auth\.getUser\(\)/);
+  assert.match(codigo, /user\.id/);
+  assert.match(codigo, /"editais"/);
+  assert.match(codigo, /\.upload\(storagePath, arquivo/);
 });
