@@ -83,6 +83,8 @@ export default function MeuEdital() {
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
   const [catalogo, setCatalogo] = useState<EditalCatalogo[]>([]);
   const [carregandoCatalogo, setCarregandoCatalogo] = useState(true);
+  const [editalVisualizado, setEditalVisualizado] =
+    useState<EditalCatalogo | null>(null);
   const [catalogoSelecionadoId, setCatalogoSelecionadoId] = useState(
     config.editalAtivo?.catalogoId ?? ""
   );
@@ -178,12 +180,16 @@ export default function MeuEdital() {
       cargoAlvo !== cargoDaAnalise
   );
 
-  function selecionarEditalCatalogo(edital: EditalCatalogo) {
+  function selecionarEditalCatalogo(
+    edital: EditalCatalogo,
+    analisePersonalizada?: AnaliseEdital
+  ) {
     const idioma =
       idiomasCatalogo[edital.id] ??
       edital.opcoes.idiomaPadrao ??
       edital.opcoes.idiomas?.[0];
-    const resultado = prepararAnaliseCatalogo(edital, { idioma });
+    const resultado =
+      analisePersonalizada ?? prepararAnaliseCatalogo(edital, { idioma });
 
     setCatalogoSelecionadoId(edital.id);
     setAnalise(resultado);
@@ -601,6 +607,7 @@ export default function MeuEdital() {
             setIdiomasCatalogo((atuais) => ({ ...atuais, [id]: idioma }))
           }
           onSelecionar={selecionarEditalCatalogo}
+          onVerConteudos={setEditalVisualizado}
           onAbrirFonte={(edital) => void abrirFonteCatalogo(edital)}
         />
 
@@ -614,6 +621,7 @@ export default function MeuEdital() {
             setIdiomasCatalogo((atuais) => ({ ...atuais, [id]: idioma }))
           }
           onSelecionar={selecionarEditalCatalogo}
+          onVerConteudos={setEditalVisualizado}
           onAbrirFonte={(edital) => void abrirFonteCatalogo(edital)}
         />
 
@@ -628,10 +636,28 @@ export default function MeuEdital() {
               setIdiomasCatalogo((atuais) => ({ ...atuais, [id]: idioma }))
             }
             onSelecionar={selecionarEditalCatalogo}
+            onVerConteudos={setEditalVisualizado}
             onAbrirFonte={(edital) => void abrirFonteCatalogo(edital)}
           />
         )}
       </article>
+
+      {editalVisualizado && (
+        <ConteudosEditalModal
+          edital={editalVisualizado}
+          idioma={
+            idiomasCatalogo[editalVisualizado.id] ??
+            editalVisualizado.opcoes.idiomaPadrao ??
+            editalVisualizado.opcoes.idiomas?.[0] ??
+            ""
+          }
+          onFechar={() => setEditalVisualizado(null)}
+          onUsar={(edital, analisePersonalizada) => {
+            selecionarEditalCatalogo(edital, analisePersonalizada);
+            setEditalVisualizado(null);
+          }}
+        />
+      )}
 
       {administrador && (
         <article className="edital-card edital-upload-card">
@@ -1003,6 +1029,7 @@ function GrupoEditaisCatalogo({
   idiomas,
   onIdioma,
   onSelecionar,
+  onVerConteudos,
   onAbrirFonte,
 }: {
   titulo: string;
@@ -1012,6 +1039,7 @@ function GrupoEditaisCatalogo({
   idiomas: Record<string, string>;
   onIdioma: (id: string, idioma: string) => void;
   onSelecionar: (edital: EditalCatalogo) => void;
+  onVerConteudos: (edital: EditalCatalogo) => void;
   onAbrirFonte: (edital: EditalCatalogo) => void;
 }) {
   if (editais.length === 0) return null;
@@ -1085,9 +1113,16 @@ function GrupoEditaisCatalogo({
                 <button
                   type="button"
                   className="edital-botao-principal"
+                  onClick={() => onVerConteudos(edital)}
+                >
+                  Ver conteúdos
+                </button>
+                <button
+                  type="button"
+                  className="edital-botao-secundario"
                   onClick={() => onSelecionar(edital)}
                 >
-                  {selecionado ? "Selecionado ✓" : "Usar este edital"}
+                  {selecionado ? "Selecionado ✓" : "Usar direto"}
                 </button>
                 {(edital.fonteUrl || edital.pdfPath) && (
                   <button
@@ -1095,7 +1130,7 @@ function GrupoEditaisCatalogo({
                     className="edital-botao-secundario"
                     onClick={() => onAbrirFonte(edital)}
                   >
-                    Ver edital
+                    Edital oficial
                   </button>
                 )}
               </div>
@@ -1104,5 +1139,307 @@ function GrupoEditaisCatalogo({
         })}
       </div>
     </section>
+  );
+}
+
+
+function ConteudosEditalModal({
+  edital,
+  idioma,
+  onFechar,
+  onUsar,
+}: {
+  edital: EditalCatalogo;
+  idioma: string;
+  onFechar: () => void;
+  onUsar: (edital: EditalCatalogo, analise: AnaliseEdital) => void;
+}) {
+  const [rascunho, setRascunho] = useState<AnaliseEdital>(() =>
+    prepararAnaliseCatalogo(edital, { idioma })
+  );
+
+  useEffect(() => {
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function fecharComEscape(evento: KeyboardEvent) {
+      if (evento.key === "Escape") onFechar();
+    }
+
+    window.addEventListener("keydown", fecharComEscape);
+    return () => {
+      document.body.style.overflow = overflowAnterior;
+      window.removeEventListener("keydown", fecharComEscape);
+    };
+  }, [onFechar]);
+
+  const totalAssuntos = useMemo(
+    () =>
+      rascunho.materias.reduce(
+        (total, materia) => total + materia.assuntos.length,
+        0
+      ),
+    [rascunho]
+  );
+
+  function atualizarMateria(indice: number, nome: string) {
+    setRascunho((atual) => {
+      const materias = [...atual.materias];
+      materias[indice] = { ...materias[indice], nome };
+      return { ...atual, materias };
+    });
+  }
+
+  function removerMateria(indice: number) {
+    setRascunho((atual) => ({
+      ...atual,
+      materias: atual.materias.filter((_, i) => i !== indice),
+    }));
+  }
+
+  function adicionarMateria() {
+    setRascunho((atual) => ({
+      ...atual,
+      materias: [
+        ...atual.materias,
+        {
+          id: "",
+          nome: "Nova matéria",
+          incidenciaEstimada: 3,
+          assuntos: [
+            { id: "", nome: "Novo assunto", prioridade: "media" },
+          ],
+        },
+      ],
+    }));
+  }
+
+  function atualizarAssunto(
+    indiceMateria: number,
+    indiceAssunto: number,
+    campo: "nome" | "prioridade",
+    valor: string
+  ) {
+    setRascunho((atual) => {
+      const materias = [...atual.materias];
+      const materia = { ...materias[indiceMateria] };
+      const assuntos = [...materia.assuntos];
+      assuntos[indiceAssunto] = {
+        ...assuntos[indiceAssunto],
+        [campo]:
+          campo === "prioridade"
+            ? (valor as PrioridadeEdital)
+            : valor,
+      };
+      materia.assuntos = assuntos;
+      materias[indiceMateria] = materia;
+      return { ...atual, materias };
+    });
+  }
+
+  function removerAssunto(indiceMateria: number, indiceAssunto: number) {
+    setRascunho((atual) => {
+      const materias = [...atual.materias];
+      const materia = { ...materias[indiceMateria] };
+      materia.assuntos = materia.assuntos.filter(
+        (_, i) => i !== indiceAssunto
+      );
+      materias[indiceMateria] = materia;
+      return { ...atual, materias };
+    });
+  }
+
+  function adicionarAssunto(indiceMateria: number) {
+    setRascunho((atual) => {
+      const materias = [...atual.materias];
+      const materia = { ...materias[indiceMateria] };
+      materia.assuntos = [
+        ...materia.assuntos,
+        { id: "", nome: "Novo assunto", prioridade: "media" },
+      ];
+      materias[indiceMateria] = materia;
+      return { ...atual, materias };
+    });
+  }
+
+  function restaurarOriginal() {
+    setRascunho(prepararAnaliseCatalogo(edital, { idioma }));
+  }
+
+  function confirmarUso() {
+    const normalizada = normalizarAnaliseEdital(rascunho);
+    if (
+      normalizada.materias.length === 0 ||
+      normalizada.materias.every((materia) => materia.assuntos.length === 0)
+    ) {
+      return;
+    }
+    onUsar(edital, normalizada);
+  }
+
+  return (
+    <div
+      className="edital-conteudos-backdrop"
+      role="presentation"
+      onMouseDown={(evento) => {
+        if (evento.currentTarget === evento.target) onFechar();
+      }}
+    >
+      <section
+        className="edital-conteudos-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edital-conteudos-titulo"
+      >
+        <header className="edital-conteudos-cabecalho">
+          <div>
+            <span>CONTEÚDO DO EDITAL</span>
+            <h2 id="edital-conteudos-titulo">
+              {edital.organizacao} {edital.ano} · {edital.cargo}
+            </h2>
+            <p>
+              {rascunho.materias.length} matérias · {totalAssuntos} assuntos.
+              Você pode personalizar esta cópia antes de usar no seu plano.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="edital-conteudos-fechar"
+            onClick={onFechar}
+            aria-label="Fechar conteúdos do edital"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="edital-conteudos-aviso">
+          As alterações feitas aqui valem apenas para o seu plano. O edital
+          pré-definido original continua igual para os outros alunos.
+        </div>
+
+        <div className="edital-conteudos-toolbar">
+          <button
+            type="button"
+            className="edital-botao-secundario"
+            onClick={adicionarMateria}
+          >
+            + Adicionar matéria
+          </button>
+          <button
+            type="button"
+            className="edital-botao-secundario"
+            onClick={restaurarOriginal}
+          >
+            Restaurar original
+          </button>
+        </div>
+
+        <div className="edital-conteudos-lista">
+          {rascunho.materias.map((materia, indiceMateria) => (
+            <section
+              className="edital-conteudos-materia"
+              key={`${materia.id || materia.nome}-${indiceMateria}`}
+            >
+              <div className="edital-conteudos-materia-topo">
+                <input
+                  value={materia.nome}
+                  aria-label="Nome da matéria no edital"
+                  onChange={(evento) =>
+                    atualizarMateria(indiceMateria, evento.target.value)
+                  }
+                />
+                <span>
+                  {materia.assuntos.length} assunto(s)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removerMateria(indiceMateria)}
+                >
+                  Remover matéria
+                </button>
+              </div>
+
+              <div className="edital-conteudos-assuntos">
+                {materia.assuntos.map((assunto, indiceAssunto) => (
+                  <div
+                    className="edital-conteudos-assunto"
+                    key={`${assunto.id || assunto.nome}-${indiceAssunto}`}
+                  >
+                    <input
+                      value={assunto.nome}
+                      aria-label={`Assunto de ${materia.nome}`}
+                      onChange={(evento) =>
+                        atualizarAssunto(
+                          indiceMateria,
+                          indiceAssunto,
+                          "nome",
+                          evento.target.value
+                        )
+                      }
+                    />
+                    <select
+                      value={assunto.prioridade}
+                      aria-label={`Prioridade de ${assunto.nome}`}
+                      onChange={(evento) =>
+                        atualizarAssunto(
+                          indiceMateria,
+                          indiceAssunto,
+                          "prioridade",
+                          evento.target.value
+                        )
+                      }
+                    >
+                      <option value="alta">Alta</option>
+                      <option value="media">Média</option>
+                      <option value="baixa">Baixa</option>
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={`Remover ${assunto.nome}`}
+                      onClick={() =>
+                        removerAssunto(indiceMateria, indiceAssunto)
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="edital-adicionar-assunto"
+                onClick={() => adicionarAssunto(indiceMateria)}
+              >
+                + Adicionar assunto
+              </button>
+            </section>
+          ))}
+        </div>
+
+        <footer className="edital-conteudos-rodape">
+          <button
+            type="button"
+            className="edital-botao-secundario"
+            onClick={onFechar}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="edital-botao-principal"
+            disabled={
+              rascunho.materias.length === 0 ||
+              rascunho.materias.every(
+                (materia) => materia.assuntos.length === 0
+              )
+            }
+            onClick={confirmarUso}
+          >
+            Usar este edital com estas alterações
+          </button>
+        </footer>
+      </section>
+    </div>
   );
 }
