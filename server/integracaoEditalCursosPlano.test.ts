@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import type { Materia } from "../src/types/index.ts";
 import type { CursoImportado } from "../src/types/cursos.ts";
-import { encontrarAulasParaMissao } from "../src/utils/relacionarCursoEdital.ts";
+import {
+  encontrarAulasNosConteudos,
+  encontrarAulasParaMissao,
+} from "../src/utils/relacionarCursoEdital.ts";
 
 const curso: CursoImportado = {
   id: "curso-rdc",
@@ -125,7 +129,74 @@ test("missão do edital abre aula do curso quando houver correspondência", asyn
   );
 
   assert.match(codigo, /function iniciarMissaoDoPlano/);
-  assert.match(codigo, /const primeiraAula = aulasRelacionadas\[0\]/);
+  assert.match(
+    codigo,
+    /aulasRelacionadas\.find\(\(aula\) => Boolean\(aula\.url\)\)/
+  );
   assert.match(codigo, /iniciarAulaDoCurso\(missao, primeiraAula\)/);
   assert.match(codigo, /Módulo: \{aulaPrincipal\?\.modulo \?\? "Edital atual"\}/);
+});
+
+
+test("recupera link da aula pela árvore canônica de Conteúdos", () => {
+  const materias: Materia[] = [
+    {
+      id: "informatica",
+      nome: "Informática",
+      assuntos: [],
+      modulos: [
+        {
+          id: "curso:curso-rdc:modulo:internet",
+          nome: "Curso RDC · Internet e redes",
+          ordem: 1,
+          assuntos: [
+            {
+              id: "curso:curso-rdc:aula:internet-intranet-extranet",
+              nome: "Internet, intranet e extranet",
+              concluido: false,
+              prioridade: "media",
+              aula: "https://curso.test/internet-intranet-extranet",
+              aulas: [
+                {
+                  id: "curso:curso-rdc:aula:internet-intranet-extranet:link",
+                  nome: "Internet, intranet e extranet",
+                  url: "https://curso.test/internet-intranet-extranet",
+                  ordem: 1,
+                  concluida: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const aulas = encontrarAulasNosConteudos(
+    materias,
+    ["curso-rdc"],
+    "Informática",
+    "Conceitos de internet e intranet",
+    3
+  );
+
+  assert.equal(aulas.length, 1);
+  assert.equal(aulas[0].modulo, "Internet e redes");
+  assert.equal(aulas[0].aula, "Internet, intranet e extranet");
+  assert.equal(
+    aulas[0].url,
+    "https://curso.test/internet-intranet-extranet"
+  );
+});
+
+test("Plano Tático procura link no curso e também em Conteúdos", async () => {
+  const codigo = await readFile(
+    "src/pages/PlanoEdital/PlanoEditalGateway.tsx",
+    "utf8"
+  );
+
+  assert.match(codigo, /encontrarAulasNosConteudos/);
+  assert.match(codigo, /function aulasDaMissao/);
+  assert.match(codigo, /aulasRelacionadas\.find\(\(aula\) => Boolean\(aula\.url\)\)/);
+  assert.match(codigo, /urlAula: aula\.url/);
 });
