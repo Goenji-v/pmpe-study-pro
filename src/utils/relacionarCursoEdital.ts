@@ -6,7 +6,11 @@ export type AulaRelacionadaAoEdital = {
   materia: string;
   modulo: string;
   aula: string;
-  url: string;
+  url?: string;
+  moduloId: string;
+  assuntoId: string;
+  aulaId: string;
+  concluida: boolean;
   score: number;
 };
 
@@ -38,7 +42,6 @@ export function encontrarAulasParaMissao(
 
       for (const modulo of materia.modulos) {
         for (const aula of modulo.aulas) {
-          if (!aula.url) continue;
           const scoreAssunto = similaridadeAssunto(
             assuntoAlvo,
             tokensAssunto,
@@ -55,6 +58,10 @@ export function encontrarAulasParaMissao(
             modulo: modulo.nome,
             aula: aula.nome,
             url: aula.url,
+            moduloId: `curso:${curso.id}:modulo:${modulo.id}`,
+            assuntoId: `curso:${curso.id}:aula:${aula.id}`,
+            aulaId: `curso:${curso.id}:aula:${aula.id}:link`,
+            concluida: Boolean(aula.concluida),
             score: Math.round(score * 100) / 100,
           });
         }
@@ -65,7 +72,11 @@ export function encontrarAulasParaMissao(
   return resultados
     .sort((a, b) => b.score - a.score || a.curso.localeCompare(b.curso, "pt-BR"))
     .filter((item, indice, lista) =>
-      lista.findIndex((outro) => outro.url === item.url) === indice
+      lista.findIndex(
+        (outro) =>
+          outro.cursoId === item.cursoId &&
+          outro.aulaId === item.aulaId
+      ) === indice
     )
     .slice(0, Math.max(1, limite));
 }
