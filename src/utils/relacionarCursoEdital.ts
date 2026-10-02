@@ -1,3 +1,4 @@
+import type { Materia } from "../types";
 import type { CursoImportado } from "../types/cursos";
 
 export type AulaRelacionadaAoEdital = {
@@ -71,6 +72,100 @@ export function encontrarAulasParaMissao(
 
   return resultados
     .sort((a, b) => b.score - a.score || a.curso.localeCompare(b.curso, "pt-BR"))
+    .filter((item, indice, lista) =>
+      lista.findIndex(
+        (outro) =>
+          outro.cursoId === item.cursoId &&
+          outro.aulaId === item.aulaId
+      ) === indice
+    )
+    .slice(0, Math.max(1, limite));
+}
+
+
+export function encontrarAulasNosConteudos(
+  materias: Materia[],
+  ativosIds: string[],
+  materiaMissao: string,
+  assuntoMissao: string,
+  limite = 3
+): AulaRelacionadaAoEdital[] {
+  const materiaAlvo = normalizar(materiaMissao);
+  const assuntoAlvo = normalizar(assuntoMissao);
+  const tokensAssunto = tokens(assuntoMissao);
+  const resultados: AulaRelacionadaAoEdital[] = [];
+
+  for (const materia of materias) {
+    const scoreMateria = similaridadeMateria(
+      materiaAlvo,
+      normalizar(materia.nome)
+    );
+    if (scoreMateria < 0.45) continue;
+
+    for (const modulo of materia.modulos ?? []) {
+      const cursoId = modulo.id.match(/^curso:(.+?):modulo:/)?.[1];
+      if (!cursoId || !ativosIds.includes(cursoId)) continue;
+
+      const [cursoNome, ...restoModulo] = modulo.nome
+        .split(" · ")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const moduloNome = restoModulo.join(" · ") || modulo.nome;
+
+      for (const assunto of modulo.assuntos) {
+        const aulas = assunto.aulas?.length
+          ? assunto.aulas
+          : assunto.aula
+            ? [
+                {
+                  id: `${assunto.id}:link`,
+                  nome: assunto.nome,
+                  url: assunto.aula,
+                  ordem: 1,
+                  concluida: assunto.concluido,
+                  concluidaEm: assunto.concluidoEm,
+                },
+              ]
+            : [];
+
+        for (const aula of aulas) {
+          const nomeCandidato = aula.nome || assunto.nome;
+          const scoreAssunto = similaridadeAssunto(
+            assuntoAlvo,
+            tokensAssunto,
+            nomeCandidato,
+            moduloNome
+          );
+          const score = scoreMateria * 0.3 + scoreAssunto * 0.7;
+          if (score < 0.38) continue;
+
+          resultados.push({
+            cursoId,
+            curso: cursoNome || "Curso importado",
+            materia: materia.nome,
+            modulo: moduloNome,
+            aula: nomeCandidato,
+            url: aula.url,
+            moduloId: modulo.id,
+            assuntoId: assunto.id,
+            aulaId: aula.id,
+            concluida: Boolean(aula.concluida),
+            score: Math.round(score * 100) / 100,
+          });
+        }
+      }
+    }
+  }
+
+  return resultados
+    .sort((a, b) => {
+      const bonusUrlA = a.url ? 0.03 : 0;
+      const bonusUrlB = b.url ? 0.03 : 0;
+      return (
+        b.score + bonusUrlB - (a.score + bonusUrlA) ||
+        a.curso.localeCompare(b.curso, "pt-BR")
+      );
+    })
     .filter((item, indice, lista) =>
       lista.findIndex(
         (outro) =>
