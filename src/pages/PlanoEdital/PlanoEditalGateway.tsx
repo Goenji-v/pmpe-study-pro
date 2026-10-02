@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 
 import "./PlanoEdital.css";
 
+import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useApp } from "../../context/AppContext";
 import type { ConfiguracoesComCursos } from "../../types/cursos";
 import {
   type ConfiguracoesComEdital,
   type DiaSemanaId,
+  type MissaoPlanoEdital,
   type PrioridadeEdital,
 } from "../../types/editalInteligente";
 import { calcularDiagnosticoSemanalPlano } from "../../utils/adaptacaoPlano";
@@ -17,7 +19,10 @@ import {
   mesclarMateriasDoEdital,
   slugEdital,
 } from "../../utils/planoEdital";
-import { encontrarAulasParaMissao } from "../../utils/relacionarCursoEdital";
+import {
+  encontrarAulasParaMissao,
+  type AulaRelacionadaAoEdital,
+} from "../../utils/relacionarCursoEdital";
 import PlanoEstudos from "../PlanoEstudos/PlanoEstudos";
 
 export default function PlanoEditalGateway() {
@@ -169,6 +174,29 @@ export default function PlanoEditalGateway() {
         ? atuais.filter((item) => item !== id)
         : [...atuais, id]
     );
+  }
+
+  function iniciarAulaDoCurso(
+    missao: MissaoPlanoEdital,
+    aula: AulaRelacionadaAoEdital
+  ) {
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify({
+        materia: aula.materia,
+        modulo: `${aula.curso} · ${aula.modulo}`,
+        moduloId: aula.moduloId,
+        assunto: aula.aula,
+        assuntoId: aula.assuntoId,
+        aulaId: aula.aulaId,
+        tipo: "aula",
+        objetivo: `Estudar ${aula.aula} para cumprir ${missao.assunto}`,
+        missaoId: missao.id,
+        urlAula: aula.url,
+      })
+    );
+
+    navigate("/central-estudos");
   }
 
   return (
@@ -380,14 +408,20 @@ export default function PlanoEditalGateway() {
                             <span>🎥 Aulas relacionadas</span>
                             {aulasRelacionadas.map((aula) => (
                               <a
-                                key={`${aula.cursoId}-${aula.url}`}
-                                href={aula.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                key={`${aula.cursoId}-${aula.aulaId}`}
+                                href={aula.url ?? "#"}
+                                onClick={(evento) => {
+                                  evento.preventDefault();
+                                  iniciarAulaDoCurso(missao, aula);
+                                }}
                                 title={`${aula.modulo} · correspondência ${Math.round(aula.score * 100)}%`}
                               >
-                                <strong>{aula.curso}</strong>
-                                <small>{aula.aula}</small>
+                                <strong>
+                                  {aula.curso}{aula.concluida ? " · ✓" : ""}
+                                </strong>
+                                <small>
+                                  {aula.aula}{aula.url ? "" : " · sem link capturado"}
+                                </small>
                               </a>
                             ))}
                           </div>
