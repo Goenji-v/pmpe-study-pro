@@ -27,6 +27,23 @@ import {
   normalizarAnaliseEdital,
 } from "../../utils/planoEdital";
 
+const CARGOS_PMPE = [
+  "Soldado PMPE",
+  "Oficial PMPE",
+  "Oficial Médico PMPE",
+  "Oficial Dentista PMPE",
+] as const;
+
+function cargoInicialDoEdital(
+  concurso: string,
+  cargoSalvo?: string
+) {
+  if (cargoSalvo) return cargoSalvo;
+  return /PMPE|Polícia Militar de Pernambuco/i.test(concurso)
+    ? "Soldado PMPE"
+    : "";
+}
+
 export default function MeuEdital() {
   const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
@@ -44,6 +61,12 @@ export default function MeuEdital() {
   const [processando, setProcessando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
+  const [cargoAlvo, setCargoAlvo] = useState(() =>
+    cargoInicialDoEdital(
+      config.concurso,
+      config.editalAtivo?.analise.cargoDetectado
+    )
+  );
 
   const totalAssuntos = useMemo(
     () =>
@@ -57,6 +80,14 @@ export default function MeuEdital() {
   const diasAtivos: DiaSemanaId[] = config.diasEstudo?.length
     ? config.diasEstudo
     : ["seg", "ter", "qua", "qui", "sex", "sab"];
+
+  const cargoDaAnalise = analise?.cargoDetectado ?? "";
+  const cargoAlteradoAposAnalise = Boolean(
+    analise &&
+      cargoAlvo &&
+      cargoDaAnalise &&
+      cargoAlvo !== cargoDaAnalise
+  );
 
   async function processarPdf() {
     if (!arquivo) {
@@ -72,11 +103,13 @@ export default function MeuEdital() {
       const resultado = await analisarPdfEdital(arquivo, {
         concurso: config.concurso,
         banca: config.bancaPadrao,
+        cargo: cargoAlvo,
       });
 
       // A conferência deve aparecer assim que a leitura termina. O salvamento
       // do PDF é uma etapa independente e não pode apagar uma análise válida.
       setAnalise(resultado);
+      setCargoAlvo(resultado.cargoDetectado ?? cargoAlvo);
       setPlanoPrevio(null);
 
       try {
@@ -210,6 +243,15 @@ export default function MeuEdital() {
 
   function gerarPrevia() {
     if (!analise) return;
+
+    if (cargoAlteradoAposAnalise) {
+      showToast(
+        "Reanalise o edital para o cargo selecionado antes de gerar o cronograma.",
+        "warning"
+      );
+      return;
+    }
+
     const normalizada = normalizarAnaliseEdital(analise);
 
     if (normalizada.materias.length === 0) {
@@ -388,6 +430,28 @@ export default function MeuEdital() {
           </span>
         </label>
 
+        <label className="edital-cargo-seletor">
+          <span>Cargo para este plano</span>
+          <select
+            value={cargoAlvo}
+            disabled={processando}
+            onChange={(evento) => {
+              setCargoAlvo(evento.target.value);
+              setPlanoPrevio(null);
+            }}
+          >
+            <option value="">Detectar automaticamente</option>
+            {CARGOS_PMPE.map((cargo) => (
+              <option key={cargo} value={cargo}>
+                {cargo}
+              </option>
+            ))}
+          </select>
+          <small>
+            O Study Pro vai ignorar conteúdos exclusivos de outros cargos.
+          </small>
+        </label>
+
         <button
           type="button"
           className="edital-botao-principal"
@@ -427,6 +491,50 @@ export default function MeuEdital() {
               + Matéria
             </button>
           </div>
+
+          <div className="edital-cargo-confirmacao">
+            <div>
+              <span>CARGO DO PLANO</span>
+              <strong>{cargoDaAnalise || "Detectado automaticamente"}</strong>
+              <small>
+                A lista abaixo foi filtrada para este cargo antes do cronograma.
+              </small>
+            </div>
+            <select
+              aria-label="Cargo do plano"
+              value={cargoAlvo}
+              disabled={processando}
+              onChange={(evento) => {
+                setCargoAlvo(evento.target.value);
+                setPlanoPrevio(null);
+              }}
+            >
+              <option value="">Detectar automaticamente</option>
+              {CARGOS_PMPE.map((cargo) => (
+                <option key={cargo} value={cargo}>
+                  {cargo}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {cargoAlteradoAposAnalise && (
+            <div className="edital-observacao">
+              Você mudou o cargo para <strong>{cargoAlvo}</strong>. Reanalise
+              este mesmo PDF antes de gerar o cronograma para não misturar
+              conteúdos de cargos diferentes.
+              <button
+                type="button"
+                className="edital-botao-secundario edital-reanalisar-cargo"
+                disabled={!arquivo || processando}
+                onClick={() => void processarPdf()}
+              >
+                {arquivo
+                  ? "Reanalisar para este cargo"
+                  : "Selecione o PDF novamente para reanalisar"}
+              </button>
+            </div>
+          )}
 
           {analise.observacao && (
             <div className="edital-observacao">{analise.observacao}</div>
@@ -548,9 +656,12 @@ export default function MeuEdital() {
           <button
             type="button"
             className="edital-botao-principal"
+            disabled={cargoAlteradoAposAnalise || processando}
             onClick={gerarPrevia}
           >
-            Gerar prévia do cronograma
+            {cargoAlteradoAposAnalise
+              ? "Reanalise para o cargo selecionado"
+              : "Gerar prévia do cronograma"}
           </button>
         </article>
       )}
