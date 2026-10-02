@@ -750,7 +750,9 @@ export default function MeuEdital() {
           >
             {processando
               ? "Lendo edital e organizando conteúdos..."
-              : "Analisar meu edital"}
+              : erroProcessamento && !analise
+                ? "Tentar analisar novamente"
+                : "Analisar meu edital"}
           </button>
 
           {erroProcessamento && (
