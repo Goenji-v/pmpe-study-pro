@@ -55,7 +55,7 @@ export async function enviarPdfEdital(
 
 export async function analisarPdfEdital(
   arquivo: File,
-  contexto: { concurso?: string; banca?: string }
+  contexto: { concurso?: string; banca?: string; cargo?: string }
 ): Promise<AnaliseEdital> {
   await validarPdfEdital(arquivo, LIMITE_ANALISE);
   const pdfBase64 = await arquivoParaBase64(arquivo);
@@ -70,6 +70,7 @@ export async function analisarPdfEdital(
         nomeArquivo: arquivo.name,
         concurso: contexto.concurso || "",
         banca: contexto.banca || "",
+        cargo: contexto.cargo || "",
       }),
     }
   );
