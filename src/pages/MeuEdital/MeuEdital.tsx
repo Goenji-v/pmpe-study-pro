@@ -1338,7 +1338,7 @@ function ConteudosEditalModal({
           {rascunho.materias.map((materia, indiceMateria) => (
             <section
               className="edital-conteudos-materia"
-              key={`${materia.id || materia.nome}-${indiceMateria}`}
+              key={`materia-${indiceMateria}`}
             >
               <div className="edital-conteudos-materia-topo">
                 <input
@@ -1363,7 +1363,7 @@ function ConteudosEditalModal({
                 {materia.assuntos.map((assunto, indiceAssunto) => (
                   <div
                     className="edital-conteudos-assunto"
-                    key={`${assunto.id || assunto.nome}-${indiceAssunto}`}
+                    key={`assunto-${indiceMateria}-${indiceAssunto}`}
                   >
                     <input
                       value={assunto.nome}
