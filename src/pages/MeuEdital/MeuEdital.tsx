@@ -1,11 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./MeuEdital.css";
 
 import { useApp } from "../../context/AppContext";
-import { gerarMateriasDoPlano } from "../../utils/materiasDoPlano";
 import { useToast } from "../../context/ToastContext";
+import { useAdminStatus } from "../../hooks/useAdminStatus";
+import {
+  abrirFonteEditalCatalogo,
+  carregarEditaisCatalogo,
+  contarAssuntosCatalogo,
+  prepararAnaliseCatalogo,
+} from "../../services/catalogoEditaisService";
 import {
   abrirPdfEdital,
   analisarPdfEdital,
@@ -21,6 +27,7 @@ import {
   type PlanoEdital,
   type PrioridadeEdital,
 } from "../../types/editalInteligente";
+import type { EditalCatalogo } from "../../types/catalogoEditais";
 import {
   gerarPlanoEdital,
   mesclarMateriasDoEdital,
@@ -60,6 +67,7 @@ export default function MeuEdital() {
   const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const { showToast } = useToast();
+  const { administrador } = useAdminStatus();
   const navigate = useNavigate();
 
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -73,12 +81,59 @@ export default function MeuEdital() {
   const [processando, setProcessando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
+  const [catalogo, setCatalogo] = useState<EditalCatalogo[]>([]);
+  const [carregandoCatalogo, setCarregandoCatalogo] = useState(true);
+  const [catalogoSelecionadoId, setCatalogoSelecionadoId] = useState(
+    config.editalAtivo?.catalogoId ?? ""
+  );
+  const [idiomasCatalogo, setIdiomasCatalogo] = useState<Record<string, string>>(
+    {}
+  );
   const [cargoAlvo, setCargoAlvo] = useState(() =>
     cargoInicialDoEdital(
       config.concurso,
       config.editalAtivo?.analise.cargoDetectado
     )
   );
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregar() {
+      try {
+        const editais = await carregarEditaisCatalogo();
+        if (!ativo) return;
+
+        setCatalogo(editais);
+        setIdiomasCatalogo((atuais) => {
+          const proximos = { ...atuais };
+          for (const edital of editais) {
+            if (
+              edital.opcoes.idiomaPadrao &&
+              !proximos[edital.id]
+            ) {
+              proximos[edital.id] = edital.opcoes.idiomaPadrao;
+            }
+          }
+          return proximos;
+        });
+      } catch (erro) {
+        if (!ativo) return;
+        const mensagem =
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível carregar os editais pré-definidos.";
+        showToast(mensagem, "error");
+      } finally {
+        if (ativo) setCarregandoCatalogo(false);
+      }
+    }
+
+    void carregar();
+    return () => {
+      ativo = false;
+    };
+  }, [showToast]);
 
   const totalAssuntos = useMemo(
     () =>
@@ -93,10 +148,69 @@ export default function MeuEdital() {
     ? config.diasEstudo
     : ["seg", "ter", "qua", "qui", "sex", "sab"];
 
+  const editalCatalogoSelecionado = useMemo(
+    () =>
+      catalogo.find((edital) => edital.id === catalogoSelecionadoId) ?? null,
+    [catalogo, catalogoSelecionadoId]
+  );
+  const editaisPorGrupo = useMemo(
+    () => ({
+      soldado: catalogo.filter(
+        (edital) =>
+          edital.status === "publicado" && edital.grupoCargo === "soldado"
+      ),
+      oficial: catalogo.filter(
+        (edital) =>
+          edital.status === "publicado" && edital.grupoCargo === "oficial"
+      ),
+      outro: catalogo.filter(
+        (edital) =>
+          edital.status === "publicado" && edital.grupoCargo === "outro"
+      ),
+    }),
+    [catalogo]
+  );
+
   const cargoDaAnalise = analise?.cargoDetectado ?? "";
   const cargoAlteradoAposAnalise = Boolean(
-    analise && cargoAlvo !== cargoDaAnalise
+    !editalCatalogoSelecionado &&
+      analise &&
+      cargoAlvo !== cargoDaAnalise
   );
+
+  function selecionarEditalCatalogo(edital: EditalCatalogo) {
+    const idioma =
+      idiomasCatalogo[edital.id] ??
+      edital.opcoes.idiomaPadrao ??
+      edital.opcoes.idiomas?.[0];
+    const resultado = prepararAnaliseCatalogo(edital, { idioma });
+
+    setCatalogoSelecionadoId(edital.id);
+    setAnalise(resultado);
+    setCargoAlvo(edital.cargo);
+    setPlanoPrevio(null);
+    setArquivo(null);
+    setPdfNovo(null);
+    setErroProcessamento(null);
+
+    showToast(
+      `${edital.organizacao} ${edital.ano} · ${edital.cargo} selecionado. Confira e gere a prévia.`,
+      "success"
+    );
+  }
+
+  async function abrirFonteCatalogo(edital: EditalCatalogo) {
+    try {
+      await abrirFonteEditalCatalogo(edital);
+    } catch (erro) {
+      showToast(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível abrir a fonte do edital.",
+        "error"
+      );
+    }
+  }
 
   async function processarPdf() {
     if (!arquivo) {
@@ -107,6 +221,7 @@ export default function MeuEdital() {
     setProcessando(true);
     setErroProcessamento(null);
     setPdfNovo(null);
+    setCatalogoSelecionadoId("");
 
     try {
       const resultado = await analisarPdfEdital(arquivo, {
