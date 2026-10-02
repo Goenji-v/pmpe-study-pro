@@ -129,7 +129,10 @@ test("missão do edital abre aula do curso quando houver correspondência", asyn
   );
 
   assert.match(codigo, /function iniciarMissaoDoPlano/);
-  assert.match(codigo, /const primeiraAula = aulasRelacionadas\[0\]/);
+  assert.match(
+    codigo,
+    /aulasRelacionadas\.find\(\(aula\) => Boolean\(aula\.url\)\)/
+  );
   assert.match(codigo, /iniciarAulaDoCurso\(missao, primeiraAula\)/);
   assert.match(codigo, /Módulo: \{aulaPrincipal\?\.modulo \?\? "Edital atual"\}/);
 });
