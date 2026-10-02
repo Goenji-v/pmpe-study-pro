@@ -82,7 +82,12 @@ export async function analisarPdfEdital(
   }
 
   if (!resposta.ok || !corpo.sucesso || !corpo.analise) {
-    throw new Error(corpo.erro || "Não foi possível analisar o edital agora.");
+    throw new Error(
+      normalizarErroAnaliseEdital(
+        corpo.erro,
+        resposta.status
+      )
+    );
   }
 
   const analise = normalizarAnaliseEdital(corpo.analise);
@@ -91,6 +96,33 @@ export async function analisarPdfEdital(
   }
 
   return analise;
+}
+
+function normalizarErroAnaliseEdital(
+  mensagem: string | undefined,
+  status: number
+) {
+  const detalhe = String(mensagem || "").trim();
+
+  if (
+    status === 503 ||
+    /high demand|temporarily unavailable|\bUNAVAILABLE\b|"code"\s*:\s*503/i.test(detalhe)
+  ) {
+    return "A IA está com alta demanda agora. O Study Pro tentou novamente e também testou o modelo reserva, mas o serviço ainda não respondeu. Seu PDF continua selecionado: tente novamente em alguns minutos.";
+  }
+
+  if (
+    status === 429 ||
+    /quota|rate limit|too many requests|limite de uso|"code"\s*:\s*429/i.test(detalhe)
+  ) {
+    return "O limite temporário da IA foi atingido. Seu PDF continua selecionado; aguarde alguns minutos e tente novamente.";
+  }
+
+  if (/^\s*\{.*\}\s*$/s.test(detalhe)) {
+    return "A IA não conseguiu concluir a leitura do edital agora. Seu PDF continua selecionado para uma nova tentativa.";
+  }
+
+  return detalhe || "Não foi possível analisar o edital agora.";
 }
 
 export async function abrirPdfEdital(storagePath: string): Promise<void> {
