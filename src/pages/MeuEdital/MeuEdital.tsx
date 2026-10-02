@@ -193,6 +193,7 @@ export default function MeuEdital() {
       analisePersonalizada ?? prepararAnaliseCatalogo(edital, { idioma });
 
     setCatalogoSelecionadoId(edital.id);
+    setMostrarEditalPessoal(false);
     setAnalise(resultado);
     setCargoAlvo(edital.cargo);
     setPlanoPrevio(null);
@@ -232,8 +233,8 @@ export default function MeuEdital() {
 
     try {
       const resultado = await analisarPdfEdital(arquivo, {
-        concurso: config.concurso,
-        banca: config.bancaPadrao,
+        concurso: mostrarEditalPessoal ? "" : config.concurso,
+        banca: mostrarEditalPessoal ? "" : config.bancaPadrao,
         cargo: cargoAlvo,
       });
 
@@ -487,6 +488,8 @@ export default function MeuEdital() {
 
       const novasConfiguracoes: ConfiguracoesComEdital = {
         ...config,
+        concurso: analise.concursoDetectado || config.concurso,
+        bancaPadrao: analise.bancaDetectada || config.bancaPadrao,
         editalOnboardingVisto: true,
         editalAtivo: {
           id,
