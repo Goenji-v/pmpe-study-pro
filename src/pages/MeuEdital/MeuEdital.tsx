@@ -527,14 +527,6 @@ export default function MeuEdital() {
     navigate("/");
   }
 
-  function usarModeloPMPE() {
-    if (materias.length || config.editalAtivo) return;
-    setMaterias(gerarMateriasDoPlano());
-    const novasConfiguracoes: ConfiguracoesComEdital = { ...config, planoPadraoAtivo: true, concurso: "PMPE", bancaPadrao: "AOCP", editalOnboardingVisto: true };
-    setConfiguracoes(novasConfiguracoes);
-    navigate("/plano");
-  }
-
   return (
     <section className="meu-edital-page">
       <header className="meu-edital-hero">
@@ -741,22 +733,32 @@ export default function MeuEdital() {
                 A lista abaixo foi filtrada para este cargo antes do cronograma.
               </small>
             </div>
-            <select
-              aria-label="Cargo do plano"
-              value={cargoAlvo}
-              disabled={processando}
-              onChange={(evento) => {
-                setCargoAlvo(evento.target.value);
-                setPlanoPrevio(null);
-              }}
-            >
-              <option value="">Detectar automaticamente</option>
-              {CARGOS_PMPE.map((cargo) => (
-                <option key={cargo} value={cargo}>
-                  {cargo}
-                </option>
-              ))}
-            </select>
+            {editalCatalogoSelecionado ? (
+              <div className="edital-cargo-fixo">
+                <strong>
+                  {editalCatalogoSelecionado.organizacao}{" "}
+                  {editalCatalogoSelecionado.ano}
+                </strong>
+                <small>Edital pré-definido do catálogo</small>
+              </div>
+            ) : (
+              <select
+                aria-label="Cargo do plano"
+                value={cargoAlvo}
+                disabled={processando}
+                onChange={(evento) => {
+                  setCargoAlvo(evento.target.value);
+                  setPlanoPrevio(null);
+                }}
+              >
+                <option value="">Detectar automaticamente</option>
+                {CARGOS_PMPE.map((cargo) => (
+                  <option key={cargo} value={cargo}>
+                    {cargo}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {cargoAlteradoAposAnalise && (
@@ -968,13 +970,15 @@ export default function MeuEdital() {
       {!materias.length && !config.editalAtivo && (
         <article className="edital-previa-card">
           <h2>Comece do seu jeito</h2>
-          <p>Sua conta está vazia. Você pode importar um edital acima, importar um curso ou cadastrar seus assuntos manualmente.</p>
+          <p>
+            Sua conta está vazia. Escolha um edital pré-definido acima ou
+            comece importando seu curso.
+          </p>
           <button type="button" className="edital-pular" onClick={() => {
             const novasConfiguracoes: ConfiguracoesComEdital = { ...config, editalOnboardingVisto: true };
             setConfiguracoes(novasConfiguracoes);
             navigate("/cursos");
           }}>Importar meu curso</button>
-          <button type="button" className="edital-pular" onClick={usarModeloPMPE}>Usar modelo PMPE (opcional)</button>
         </article>
       )}
 
@@ -987,6 +991,118 @@ export default function MeuEdital() {
           Configurar depois e continuar no Study Pro
         </button>
       )}
+    </section>
+  );
+}
+
+function GrupoEditaisCatalogo({
+  titulo,
+  descricao,
+  editais,
+  selecionadoId,
+  idiomas,
+  onIdioma,
+  onSelecionar,
+  onAbrirFonte,
+}: {
+  titulo: string;
+  descricao: string;
+  editais: EditalCatalogo[];
+  selecionadoId: string;
+  idiomas: Record<string, string>;
+  onIdioma: (id: string, idioma: string) => void;
+  onSelecionar: (edital: EditalCatalogo) => void;
+  onAbrirFonte: (edital: EditalCatalogo) => void;
+}) {
+  if (editais.length === 0) return null;
+
+  return (
+    <section className="edital-catalogo-grupo">
+      <div className="edital-catalogo-grupo-topo">
+        <div>
+          <h3>{titulo}</h3>
+          <p>{descricao}</p>
+        </div>
+        <span>{editais.length} edital(is)</span>
+      </div>
+
+      <div className="edital-catalogo-grid">
+        {editais.map((edital) => {
+          const selecionado = edital.id === selecionadoId;
+          const idiomasDisponiveis = edital.opcoes.idiomas ?? [];
+          const idioma =
+            idiomas[edital.id] ??
+            edital.opcoes.idiomaPadrao ??
+            idiomasDisponiveis[0] ??
+            "";
+
+          return (
+            <article
+              key={edital.id}
+              className={
+                selecionado
+                  ? "edital-catalogo-card selecionado"
+                  : "edital-catalogo-card"
+              }
+            >
+              <div className="edital-catalogo-card-topo">
+                <div>
+                  <span className="edital-catalogo-sigla">
+                    {edital.organizacao}
+                  </span>
+                  <strong>{edital.ano}</strong>
+                </div>
+                <span className="edital-catalogo-uf">{edital.uf}</span>
+              </div>
+
+              <h4>{edital.cargo}</h4>
+              {edital.codigoCargo && <small>{edital.codigoCargo}</small>}
+              <p>
+                {edital.banca ?? "Banca não informada"} ·{" "}
+                {edital.analise.materias.length} matérias ·{" "}
+                {contarAssuntosCatalogo(edital)} assuntos
+              </p>
+
+              {idiomasDisponiveis.length > 0 && (
+                <label className="edital-catalogo-opcao">
+                  <span>Língua estrangeira</span>
+                  <select
+                    value={idioma}
+                    onChange={(evento) =>
+                      onIdioma(edital.id, evento.target.value)
+                    }
+                  >
+                    {idiomasDisponiveis.map((opcao) => (
+                      <option key={opcao} value={opcao}>
+                        {opcao}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <div className="edital-catalogo-acoes">
+                <button
+                  type="button"
+                  className="edital-botao-principal"
+                  onClick={() => onSelecionar(edital)}
+                >
+                  {selecionado ? "Selecionado ✓" : "Usar este edital"}
+                </button>
+                {(edital.fonteUrl || edital.pdfPath) && (
+                  <button
+                    type="button"
+                    className="edital-botao-secundario"
+                    onClick={() => onAbrirFonte(edital)}
+                  >
+                    Ver edital
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
