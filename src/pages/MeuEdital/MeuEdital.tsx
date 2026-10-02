@@ -401,22 +401,61 @@ export default function MeuEdital() {
       return;
     }
 
-    let pdf =
-      pdfNovo ??
-      (config.editalAtivo
-        ? {
-            storagePath: config.editalAtivo.storagePath,
-            nomeArquivo: config.editalAtivo.nomeArquivo,
-          }
-        : null);
-    let pdfEnviadoAgora = false;
-
     setAplicando(true);
     setErroProcessamento(null);
 
     try {
-      // Se a análise funcionou mas o upload falhou, recupera o salvamento aqui
-      // sem obrigar o usuário a gastar outra chamada de IA.
+      const editalAnterior = config.editalAtivo;
+      const agora = new Date().toISOString();
+
+      if (editalCatalogoSelecionado) {
+        setMaterias((atuais) => mesclarMateriasDoEdital(atuais, analise));
+
+        const novasConfiguracoes: ConfiguracoesComEdital = {
+          ...config,
+          concurso: editalCatalogoSelecionado.organizacao,
+          bancaPadrao:
+            editalCatalogoSelecionado.banca ?? config.bancaPadrao,
+          editalOnboardingVisto: true,
+          editalAtivo: {
+            id: editalCatalogoSelecionado.id,
+            catalogoId: editalCatalogoSelecionado.id,
+            nomeArquivo:
+              `${editalCatalogoSelecionado.organizacao} ${editalCatalogoSelecionado.ano} — ${editalCatalogoSelecionado.cargo}`,
+            storagePath: editalCatalogoSelecionado.pdfPath ?? "",
+            fonteUrl: editalCatalogoSelecionado.fonteUrl,
+            analise,
+            plano: planoPrevio,
+            confirmadoEm: agora,
+          },
+        };
+        setConfiguracoes(novasConfiguracoes);
+
+        if (
+          editalAnterior?.storagePath &&
+          !editalAnterior.catalogoId
+        ) {
+          void removerPdfEdital(editalAnterior.storagePath);
+        }
+
+        showToast(
+          `${editalCatalogoSelecionado.organizacao} ${editalCatalogoSelecionado.ano} · ${editalCatalogoSelecionado.cargo} aplicado ao Plano Tático.`,
+          "success"
+        );
+        navigate("/plano");
+        return;
+      }
+
+      let pdf =
+        pdfNovo ??
+        (editalAnterior && !editalAnterior.catalogoId
+          ? {
+              storagePath: editalAnterior.storagePath,
+              nomeArquivo: editalAnterior.nomeArquivo,
+            }
+          : null);
+      let pdfEnviadoAgora = false;
+
       if (!pdf && arquivo) {
         pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
         setPdfNovo(pdf);
@@ -429,11 +468,11 @@ export default function MeuEdital() {
         );
       }
 
-      const editalAnterior = config.editalAtivo;
-      const agora = new Date().toISOString();
       const usaNovoPdf = Boolean(pdfNovo || pdfEnviadoAgora);
       const id =
-        editalAnterior?.id && !usaNovoPdf
+        editalAnterior?.id &&
+        !editalAnterior.catalogoId &&
+        !usaNovoPdf
           ? editalAnterior.id
           : crypto.randomUUID();
 
@@ -456,6 +495,7 @@ export default function MeuEdital() {
       if (
         usaNovoPdf &&
         editalAnterior?.storagePath &&
+        !editalAnterior.catalogoId &&
         editalAnterior.storagePath !== pdf.storagePath
       ) {
         void removerPdfEdital(editalAnterior.storagePath);
@@ -507,13 +547,28 @@ export default function MeuEdital() {
           </p>
         </div>
 
-        {config.editalAtivo?.storagePath && (
+        {(config.editalAtivo?.storagePath ||
+          config.editalAtivo?.fonteUrl) && (
           <button
             type="button"
             className="edital-botao-secundario"
-            onClick={() =>
-              void abrirPdfEdital(config.editalAtivo!.storagePath)
-            }
+            onClick={() => {
+              const atual = config.editalAtivo;
+              if (!atual) return;
+
+              if (atual.fonteUrl) {
+                window.open(
+                  atual.fonteUrl,
+                  "_blank",
+                  "noopener,noreferrer"
+                );
+                return;
+              }
+
+              if (atual.storagePath) {
+                void abrirPdfEdital(atual.storagePath);
+              }
+            }}
           >
             Abrir edital atual
           </button>
@@ -521,7 +576,7 @@ export default function MeuEdital() {
       </header>
 
       <div className="edital-fluxo">
-        <span className="ativo">1. PDF</span>
+        <span className="ativo">1. Edital</span>
         <span className={analise ? "ativo" : ""}>2. Conferir</span>
         <span className={planoPrevio ? "ativo" : ""}>3. Prévia</span>
         <span className={config.editalAtivo?.confirmadoEm ? "ativo" : ""}>
@@ -529,70 +584,132 @@ export default function MeuEdital() {
         </span>
       </div>
 
-      <article className="edital-card edital-upload-card">
-        <div>
-          <h2>Adicionar ou trocar edital</h2>
-          <p>
-            PDF completo ou verticalizado. Para análise automática, até 25 MB.
-          </p>
+      <article className="edital-card edital-catalogo">
+        <div className="edital-card-cabecalho">
+          <div>
+            <span>EDITAIS PRÉ-DEFINIDOS</span>
+            <h2>Escolha seu concurso e cargo</h2>
+            <p>
+              O conteúdo já foi separado por cargo. Escolha um edital pronto e
+              o Study Pro usa essa grade para montar o Plano Tático.
+            </p>
+          </div>
+          {carregandoCatalogo && (
+            <small className="edital-catalogo-carregando">Carregando...</small>
+          )}
         </div>
 
-        <label className="edital-upload">
-          <input
-            type="file"
-            accept="application/pdf,.pdf"
-            onChange={(evento) => {
-              setArquivo(evento.target.files?.[0] ?? null);
-              setErroProcessamento(null);
-            }}
+        <GrupoEditaisCatalogo
+          titulo="Polícia Militar — Soldado"
+          descricao="Editais destinados à carreira de Praça/Soldado."
+          editais={editaisPorGrupo.soldado}
+          selecionadoId={catalogoSelecionadoId}
+          idiomas={idiomasCatalogo}
+          onIdioma={(id, idioma) =>
+            setIdiomasCatalogo((atuais) => ({ ...atuais, [id]: idioma }))
+          }
+          onSelecionar={selecionarEditalCatalogo}
+          onAbrirFonte={(edital) => void abrirFonteCatalogo(edital)}
+        />
+
+        <GrupoEditaisCatalogo
+          titulo="Polícia Militar — Oficial"
+          descricao="Editais destinados ao quadro de Oficiais."
+          editais={editaisPorGrupo.oficial}
+          selecionadoId={catalogoSelecionadoId}
+          idiomas={idiomasCatalogo}
+          onIdioma={(id, idioma) =>
+            setIdiomasCatalogo((atuais) => ({ ...atuais, [id]: idioma }))
+          }
+          onSelecionar={selecionarEditalCatalogo}
+          onAbrirFonte={(edital) => void abrirFonteCatalogo(edital)}
+        />
+
+        {editaisPorGrupo.outro.length > 0 && (
+          <GrupoEditaisCatalogo
+            titulo="Outros editais"
+            descricao="Outros cargos publicados pela administração."
+            editais={editaisPorGrupo.outro}
+            selecionadoId={catalogoSelecionadoId}
+            idiomas={idiomasCatalogo}
+            onIdioma={(id, idioma) =>
+              setIdiomasCatalogo((atuais) => ({ ...atuais, [id]: idioma }))
+            }
+            onSelecionar={selecionarEditalCatalogo}
+            onAbrirFonte={(edital) => void abrirFonteCatalogo(edital)}
           />
-          <strong>{arquivo?.name ?? "Selecionar PDF"}</strong>
-          <span>
-            {arquivo
-              ? `${(arquivo.size / 1024 / 1024).toFixed(1)} MB`
-              : "Clique para escolher o edital"}
-          </span>
-        </label>
-
-        <label className="edital-cargo-seletor">
-          <span>Cargo para este plano</span>
-          <select
-            value={cargoAlvo}
-            disabled={processando}
-            onChange={(evento) => {
-              setCargoAlvo(evento.target.value);
-              setPlanoPrevio(null);
-            }}
-          >
-            <option value="">Detectar automaticamente</option>
-            {CARGOS_PMPE.map((cargo) => (
-              <option key={cargo} value={cargo}>
-                {cargo}
-              </option>
-            ))}
-          </select>
-          <small>
-            O Study Pro vai ignorar conteúdos exclusivos de outros cargos.
-          </small>
-        </label>
-
-        <button
-          type="button"
-          className="edital-botao-principal"
-          disabled={!arquivo || processando}
-          onClick={() => void processarPdf()}
-        >
-          {processando
-            ? "Lendo edital e organizando conteúdos..."
-            : erroProcessamento && !analise
-              ? "Tentar analisar novamente"
-              : "Analisar edital"}
-        </button>
-
-        {erroProcessamento && (
-          <div className="edital-observacao">{erroProcessamento}</div>
         )}
       </article>
+
+      {administrador && (
+        <article className="edital-card edital-upload-card">
+          <div>
+            <span className="edital-admin-etiqueta">SOMENTE ADM</span>
+            <h2>Testar edital manualmente</h2>
+            <p>
+              Use esta área para analisar um PDF antes de publicá-lo no
+              catálogo administrativo.
+            </p>
+          </div>
+
+          <label className="edital-upload">
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(evento) => {
+                setArquivo(evento.target.files?.[0] ?? null);
+                setErroProcessamento(null);
+                setCatalogoSelecionadoId("");
+              }}
+            />
+            <strong>{arquivo?.name ?? "Selecionar PDF"}</strong>
+            <span>
+              {arquivo
+                ? `${(arquivo.size / 1024 / 1024).toFixed(1)} MB`
+                : "Clique para escolher o edital"}
+            </span>
+          </label>
+
+          <label className="edital-cargo-seletor">
+            <span>Cargo para este plano</span>
+            <select
+              value={cargoAlvo}
+              disabled={processando}
+              onChange={(evento) => {
+                setCargoAlvo(evento.target.value);
+                setPlanoPrevio(null);
+              }}
+            >
+              <option value="">Detectar automaticamente</option>
+              {CARGOS_PMPE.map((cargo) => (
+                <option key={cargo} value={cargo}>
+                  {cargo}
+                </option>
+              ))}
+            </select>
+            <small>
+              O Study Pro vai ignorar conteúdos exclusivos de outros cargos.
+            </small>
+          </label>
+
+          <button
+            type="button"
+            className="edital-botao-principal"
+            disabled={!arquivo || processando}
+            onClick={() => void processarPdf()}
+          >
+            {processando
+              ? "Lendo edital e organizando conteúdos..."
+              : erroProcessamento && !analise
+                ? "Tentar analisar novamente"
+                : "Analisar edital"}
+          </button>
+
+          {erroProcessamento && (
+            <div className="edital-observacao">{erroProcessamento}</div>
+          )}
+        </article>
+      )}
 
       {analise && (
         <article className="edital-card">
