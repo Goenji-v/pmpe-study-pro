@@ -116,6 +116,7 @@
 }
 
 .edital-cargo-seletor select,
+.edital-cargo-seletor input,
 .edital-cargo-confirmacao select {
   width: 100%;
   border-radius: 10px;
@@ -373,6 +374,32 @@
 
 .edital-cargo-fixo small {
   color: #8fa0b8;
+}
+
+.edital-outro-edital {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background:
+    radial-gradient(circle at left center, rgba(14, 165, 233, 0.08), transparent 38%),
+    var(--card-bg, #182235);
+}
+
+.edital-outro-edital > div > span,
+.edital-pessoal-etiqueta {
+  color: #67e8f9;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.edital-outro-edital h2 {
+  margin: 5px 0 7px;
+}
+
+.edital-upload-pessoal {
+  border-color: rgba(34, 211, 238, 0.22);
 }
 
 .edital-materias {
@@ -807,8 +834,10 @@
   }
 
   .meu-edital-hero,
-  .edital-card-cabecalho {
+  .edital-card-cabecalho,
+  .edital-outro-edital {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .edital-fluxo {
