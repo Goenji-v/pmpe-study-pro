@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./AdminEditaisCatalogo.css";
 
@@ -54,7 +54,7 @@ export default function AdminEditaisCatalogo() {
   const [formulario, setFormulario] =
     useState<FormularioEdital>(formularioInicial);
 
-  async function recarregar() {
+  const recarregar = useCallback(async () => {
     try {
       setCarregando(true);
       setErro("");
@@ -68,11 +68,11 @@ export default function AdminEditaisCatalogo() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void recarregar();
-  }, []);
+  }, [recarregar]);
 
   const editaisAdmin = useMemo(
     () => editais.filter((edital) => edital.origem === "admin"),
