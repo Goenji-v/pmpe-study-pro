@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./PlanoEdital.css";
+import "../PlanoEstudos/PlanoEstudos.css";
 
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useApp } from "../../context/AppContext";
@@ -10,7 +11,6 @@ import {
   type ConfiguracoesComEdital,
   type DiaSemanaId,
   type MissaoPlanoEdital,
-  type PrioridadeEdital,
 } from "../../types/editalInteligente";
 import { calcularDiagnosticoSemanalPlano } from "../../utils/adaptacaoPlano";
 import { adaptarPlanoEditalAoDesempenho } from "../../utils/adaptacaoPlanoEdital";
@@ -204,274 +204,280 @@ export default function PlanoEditalGateway() {
     navigate("/central-estudos");
   }
 
+
+  function iniciarMissaoDoPlano(missao: MissaoPlanoEdital) {
+    const aulasRelacionadas = encontrarAulasParaMissao(
+      cursosSincronizados,
+      cursosAtivosIds,
+      missao.materia,
+      missao.assunto,
+      3
+    );
+
+    const primeiraAula = aulasRelacionadas[0];
+    if (primeiraAula) {
+      iniciarAulaDoCurso(missao, primeiraAula);
+      return;
+    }
+
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify({
+        materia: missao.materia,
+        materiaId: missao.materiaId,
+        modulo: "Edital atual",
+        assunto: missao.assunto,
+        assuntoId: missao.assuntoId,
+        tipo: "aula",
+        objetivo: `Estudar ${missao.assunto}`,
+        missaoId: missao.id,
+      })
+    );
+
+    navigate("/central-estudos");
+  }
+
   return (
-    <section className="plano-edital-page">
+    <section className="plano-edital-wrapper">
       <div className="plano-edital-switch">
         <button
           type="button"
           className="ativo"
           onClick={() => setModo("edital")}
         >
-          Plano do edital
+          Plano atual
         </button>
         <button type="button" onClick={() => setModo("anterior")}>
           Plano anterior
         </button>
       </div>
 
-      <header className="plano-edital-hero">
-        <div>
-          <span>PLANO PERSONALIZADO</span>
-          <h1>{plano.titulo}</h1>
-          <p>
-            As duas primeiras semanas equilibram matérias básicas e específicas.
-            A partir da semana 3, o Study Pro reorganiza as próximas missões pelo
-            seu desempenho recente, sem mexer no que já foi concluído.
-          </p>
-        </div>
-        <button type="button" onClick={() => navigate("/meu-edital")}>
-          Editar edital
-        </button>
-      </header>
-
-      {cursosAtivosIds.length > 0 && (
-        <div className="plano-edital-cursos-ativos">
+      <section className="plano-container plano-unificado">
+        <div className="plano-cabecalho">
           <div>
-            <span>CURSOS CONECTADOS</span>
-            <strong>{cursosAtivosIds.length} curso(s) ativo(s) procurando aulas para cada missão</strong>
+            <h1>📅 Plano Tático</h1>
+            <p>
+              {plano.totalSemanas} semanas no seu ritmo atual. Selecione a
+              semana, depois o dia, e execute as missões na ordem.
+            </p>
           </div>
-          <button type="button" onClick={() => navigate("/cursos")}>Gerenciar cursos</button>
-        </div>
-      )}
 
-      {diagnostico.possuiDados && plano.totalSemanas > 2 && (
-        <div className="plano-edital-adaptativo">
-          <div>
-            <span>ADAPTAÇÃO ATIVA</span>
-            <strong>
-              {diagnostico.materiaPrioritaria
-                ? `${diagnostico.materiaPrioritaria} está recebendo mais prioridade`
-                : "Cronograma ajustado pelo desempenho recente"}
-            </strong>
+          <div className="plano-progresso-geral">
+            <span>Progresso geral</span>
+            <strong>{progresso}%</strong>
           </div>
-          <small>
-            Janela de {diagnostico.janelaDias} dias · confiança {diagnostico.confianca}%
-          </small>
         </div>
-      )}
 
-      <div className="plano-edital-resumo">
-        <div><span>Blocos de estudo</span><strong>{idsPlano.size}</strong></div>
-        <div><span>Semanas</span><strong>{plano.totalSemanas}</strong></div>
-        <div><span>Tempo/dia</span><strong>{plano.minutosPorDia} min</strong></div>
-        <div><span>Matérias/dia</span><strong>{plano.materiasPorDia}</strong></div>
-        <div><span>Revisões/dia</span><strong>{plano.revisoesPorDia}</strong></div>
-        <div><span>Progresso</span><strong>{progresso}%</strong></div>
-      </div>
-
-      <div className="plano-edital-progresso" aria-label={`Progresso ${progresso}%`}>
-        <span style={{ width: `${progresso}%` }} />
-      </div>
-
-      <div className="plano-edital-semanas-nav">
-        {plano.semanas.map((itemSemana) => {
-          const ids = itemSemana.dias.flatMap((itemDia) =>
-            itemDia.missoes.map((missao) => missao.id)
-          );
-          const feitas = ids.filter((id) => missoesConcluidas.includes(id)).length;
-          const percentual = ids.length > 0
-            ? Math.round((feitas / ids.length) * 100)
-            : 0;
-
-          return (
-            <button
-              key={itemSemana.numero}
-              type="button"
-              className={
-                semanaSelecionada === itemSemana.numero ? "ativo" : ""
-              }
-              onClick={() => {
-                setSemanaSelecionada(itemSemana.numero);
-                const primeiroDiaAtivo = itemSemana.dias.find((itemDia) =>
-                  plano.diasEstudo.includes(itemDia.diaSemana)
-                );
-                setDiaSelecionado(primeiroDiaAtivo?.diaSemana ?? "seg");
-              }}
-            >
-              <span>Semana {String(itemSemana.numero).padStart(2, "0")}</span>
-              <strong>{percentual}%</strong>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="plano-edital-resumo-semana">
-        <div>
-          <span>SEMANA {String(semana?.numero ?? 1).padStart(2, "0")}</span>
-          <h2>
-            {semana && semana.numero > 2 && diagnostico.possuiDados
-              ? "Semana adaptada ao seu desempenho"
-              : "Escolha o dia e siga as missões na ordem"}
-          </h2>
-        </div>
-        <strong>{progressoSemana}%</strong>
-      </div>
-
-      <div className="plano-edital-dias-nav">
-        {semana?.dias.map((itemDia) => {
-          const feitas = itemDia.missoes.filter((missao) =>
-            missoesConcluidas.includes(missao.id)
-          ).length;
-          const ativoNoPerfil = plano.diasEstudo.includes(itemDia.diaSemana);
-
-          return (
-            <button
-              key={itemDia.id}
-              type="button"
-              className={[
-                diaSelecionado === itemDia.diaSemana ? "ativo" : "",
-                !ativoNoPerfil ? "dia-livre" : "",
-              ].filter(Boolean).join(" ")}
-              onClick={() => setDiaSelecionado(itemDia.diaSemana)}
-            >
-              <span>{itemDia.nomeDia}</span>
-              <small>
-                {ativoNoPerfil
-                  ? `${feitas}/${itemDia.missoes.length}`
-                  : "Livre"}
-              </small>
-            </button>
-          );
-        })}
-      </div>
-
-      {dia && (
-        <section className="plano-edital-conteudo-dia">
-          <header className="plano-edital-titulo-dia">
+        {cursosAtivosIds.length > 0 && (
+          <div className="plano-edital-cursos-ativos plano-unificado-cursos">
             <div>
-              <span>SEMANA {semana?.numero} · {dia.nomeDia.toUpperCase()}</span>
-              <h2>{dia.nomeDia}</h2>
-              <p>
-                {diaAtivo
-                  ? `${dia.minutosDisponiveis} min disponíveis · ${dia.revisoesPlanejadas} revisão(ões) planejada(s)`
-                  : "Dia não marcado para estudo no seu perfil."}
-              </p>
-            </div>
-            {diaAtivo && (
+              <span>CURSO CONECTADO AO PLANO</span>
               <strong>
-                {dia.missoes.filter((missao) =>
-                  missoesConcluidas.includes(missao.id)
-                ).length}/{dia.missoes.length} concluídas
+                {cursosAtivosIds.length} curso(s) ativo(s). O Study Pro tenta
+                abrir a aula correspondente à missão.
               </strong>
-            )}
-          </header>
+            </div>
+            <button type="button" onClick={() => navigate("/cursos")}>
+              Gerenciar cursos
+            </button>
+          </div>
+        )}
 
-          {!diaAtivo ? (
-            <div className="plano-edital-dia-vazio">
-              <strong>Dia livre</strong>
+        <div className="plano-semanas">
+          {plano.semanas.map((itemSemana) => {
+            const ids = itemSemana.dias.flatMap((itemDia) =>
+              itemDia.missoes.map((missao) => missao.id)
+            );
+            const feitas = ids.filter((id) =>
+              missoesConcluidas.includes(id)
+            ).length;
+            const percentual =
+              ids.length > 0 ? Math.round((feitas / ids.length) * 100) : 0;
+
+            return (
+              <button
+                key={itemSemana.numero}
+                type="button"
+                className={`plano-semana-botao ${
+                  semanaSelecionada === itemSemana.numero
+                    ? "plano-semana-ativa"
+                    : ""
+                }`}
+                onClick={() => {
+                  setSemanaSelecionada(itemSemana.numero);
+                  const primeiroDiaAtivo = itemSemana.dias.find((itemDia) =>
+                    plano.diasEstudo.includes(itemDia.diaSemana)
+                  );
+                  setDiaSelecionado(primeiroDiaAtivo?.diaSemana ?? "seg");
+                }}
+              >
+                <span>
+                  Semana {String(itemSemana.numero).padStart(2, "0")}
+                </span>
+                <strong>{percentual}%</strong>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="plano-resumo-semana">
+          <div>
+            <h2>
+              Semana {String(semana?.numero ?? 1).padStart(2, "0")}
+            </h2>
+            <p>Selecione o dia e execute as missões na ordem.</p>
+          </div>
+          <strong>{progressoSemana}%</strong>
+        </div>
+
+        <div className="plano-dias">
+          {semana?.dias.map((itemDia) => {
+            const feitas = itemDia.missoes.filter((missao) =>
+              missoesConcluidas.includes(missao.id)
+            ).length;
+            const ativoNoPerfil = plano.diasEstudo.includes(
+              itemDia.diaSemana
+            );
+
+            return (
+              <button
+                key={itemDia.id}
+                type="button"
+                className={`plano-dia-botao ${
+                  diaSelecionado === itemDia.diaSemana
+                    ? "plano-dia-ativo"
+                    : ""
+                }`}
+                onClick={() => setDiaSelecionado(itemDia.diaSemana)}
+              >
+                <span>{itemDia.nomeDia}</span>
+                <small>
+                  {ativoNoPerfil
+                    ? `${feitas}/${itemDia.missoes.length}`
+                    : "Livre"}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+
+        {dia && (
+          <div className="plano-conteudo-dia">
+            <div className="plano-titulo-dia">
+              <h2>
+                Semana {semana?.numero} — {dia.nomeDia}
+              </h2>
               <span>
-                Nenhuma matéria foi colocada aqui porque esse dia não está
-                selecionado no perfil. Você pode ativá-lo em Configurações.
+                {
+                  dia.missoes.filter((missao) =>
+                    missoesConcluidas.includes(missao.id)
+                  ).length
+                }
+                /{dia.missoes.length} concluídas
               </span>
             </div>
-          ) : (
-            <>
-              {dia.missoes.length > 0 ? (
-                <div className="plano-edital-missoes-detalhadas">
-                  {dia.missoes.map((missao, indice) => {
-                    const concluida = missoesConcluidas.includes(missao.id);
-                    const aulasRelacionadas = encontrarAulasParaMissao(
-                      cursosSincronizados,
-                      cursosAtivosIds,
-                      missao.materia,
-                      missao.assunto,
-                      3
-                    );
 
-                    return (
-                      <article
-                        key={missao.id}
-                        className={concluida ? "concluida" : ""}
-                      >
-                        <div className="plano-edital-missao-topo">
-                          <span>Missão {indice + 1}</span>
-                          <span className={`plano-edital-prioridade-texto prioridade-${missao.prioridade}`}>
-                            Prioridade {formatarPrioridade(missao.prioridade)}
-                          </span>
-                        </div>
-                        <h3>{missao.materia}</h3>
-                        <p>{missao.assunto}</p>
-                        <small>
-                          {missao.duracaoMinutos} min
-                          {missao.metaQuestoes > 0
-                            ? ` · ${missao.metaQuestoes} questões`
-                            : ""}
+            {!diaAtivo ? (
+              <div className="plano-edital-dia-vazio">
+                <strong>Dia livre</strong>
+                <span>
+                  Esse dia não está marcado para estudo no seu perfil.
+                </span>
+              </div>
+            ) : dia.missoes.length > 0 ? (
+              <div className="plano-missoes-grid">
+                {dia.missoes.map((missao, indice) => {
+                  const concluida = missoesConcluidas.includes(missao.id);
+                  const aulasRelacionadas = encontrarAulasParaMissao(
+                    cursosSincronizados,
+                    cursosAtivosIds,
+                    missao.materia,
+                    missao.assunto,
+                    3
+                  );
+                  const aulaPrincipal = aulasRelacionadas[0];
+
+                  return (
+                    <article
+                      key={missao.id}
+                      className={`plano-missao-card ${
+                        concluida ? "plano-missao-concluida" : ""
+                      }`}
+                    >
+                      <div className="plano-missao-topo">
+                        <span>Missão {indice + 1}</span>
+                        <span className="plano-tipo">Conteúdo</span>
+                      </div>
+
+                      <h3>{missao.materia}</h3>
+
+                      <small className="plano-modulo">
+                        Módulo: {aulaPrincipal?.modulo ?? "Edital atual"}
+                      </small>
+
+                      <p>{missao.assunto}</p>
+
+                      {aulaPrincipal && (
+                        <small className="plano-unificado-aula">
+                          {aulaPrincipal.curso} · {aulaPrincipal.aula}
+                          {aulaPrincipal.concluida ? " · ✓" : ""}
                         </small>
+                      )}
 
-                        {aulasRelacionadas.length > 0 && (
-                          <div className="plano-edital-aulas-curso">
-                            <span>🎥 Aulas relacionadas</span>
-                            {aulasRelacionadas.map((aula) => (
-                              <a
-                                key={`${aula.cursoId}-${aula.aulaId}`}
-                                href={aula.url ?? "#"}
-                                onClick={(evento) => {
-                                  evento.preventDefault();
-                                  iniciarAulaDoCurso(missao, aula);
-                                }}
-                                title={`${aula.modulo} · correspondência ${Math.round(aula.score * 100)}%`}
-                              >
-                                <strong>
-                                  {aula.curso}{aula.concluida ? " · ✓" : ""}
-                                </strong>
-                                <small>
-                                  {aula.aula}{aula.url ? "" : " · sem link capturado"}
-                                </small>
-                              </a>
-                            ))}
-                          </div>
-                        )}
+                      <div className="plano-missao-acoes">
+                        <button
+                          type="button"
+                          className="plano-estudar"
+                          onClick={() => iniciarMissaoDoPlano(missao)}
+                        >
+                          ⏱ Estudar
+                        </button>
 
                         <button
                           type="button"
-                          className={concluida ? "concluida" : ""}
+                          className={
+                            concluida ? "plano-desmarcar" : "plano-concluir"
+                          }
                           onClick={() => alternarMissao(missao.id)}
                         >
-                          {concluida ? "↩ Desmarcar" : "✓ Concluir missão"}
+                          {concluida ? "↩ Desmarcar" : "✓ Concluir"}
                         </button>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="plano-edital-dia-vazio">
-                  <strong>Sem conteúdo novo neste dia</strong>
-                  <span>
-                    Use o tempo reservado para limpar a fila de revisões e reforçar
-                    os pontos fracos da semana.
-                  </span>
-                </div>
-              )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="plano-edital-dia-vazio">
+                <strong>Sem conteúdo novo neste dia</strong>
+                <span>
+                  Use o tempo para revisar conteúdos ou resolver questões.
+                </span>
+              </div>
+            )}
 
-              {dia.revisoesPlanejadas > 0 && (
-                <div className="plano-edital-revisoes-dia">
-                  <strong>🔁 Revisões do dia</strong>
+            {diaAtivo && dia.revisoesPlanejadas > 0 && (
+              <div className="plano-extras">
+                <div>
+                  <strong>🔁 Revisões</strong>
                   <span>
-                    Execute até {dia.revisoesPlanejadas} revisão(ões) pendente(s),
-                    priorizando as urgentes e antecipadas pelo desempenho.
+                    Faça até {dia.revisoesPlanejadas} revisão(ões) pendente(s)
+                    neste dia.
                   </span>
                 </div>
-              )}
-            </>
-          )}
-        </section>
-      )}
+                <div>
+                  <strong>📌 Ritmo do dia</strong>
+                  <span>
+                    {dia.minutosDisponiveis} min disponíveis ·{" "}
+                    {dia.missoes.length} missão(ões)
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
     </section>
   );
 }
 
-function formatarPrioridade(prioridade: PrioridadeEdital) {
-  if (prioridade === "media") return "Média";
-  if (prioridade === "alta") return "Alta";
-  return "Baixa";
-}
