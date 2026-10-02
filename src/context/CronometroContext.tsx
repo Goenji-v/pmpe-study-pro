@@ -821,6 +821,62 @@ export function CronometroProvider({
           : anteriores.filter((id) => id !== sessaoAtiva.missaoId)
       );
     } else if (sessaoAtiva.missaoId) {
+      // Missões dinâmicas do edital podem apontar para uma aula importada de
+      // Meus Cursos. Nesse caso, concluir a sessão precisa atualizar também o
+      // conteúdo canônico que alimenta o progresso do curso.
+      const materiaVinculada =
+        materias.find((item) => item.id === sessaoAtiva.materiaId) ??
+        materias.find((item) => mesmoTexto(item.nome, sessaoAtiva.materia));
+      const moduloVinculado = materiaVinculada
+        ? listarModulosDaMateria(materiaVinculada).find(
+            (item) =>
+              item.id === sessaoAtiva.moduloId ||
+              mesmoTexto(item.nome, sessaoAtiva.modulo ?? "")
+          )
+        : undefined;
+      const assuntoVinculado = moduloVinculado?.assuntos.find(
+        (item) =>
+          item.id === sessaoAtiva.assuntoId ||
+          mesmoTexto(item.nome, sessaoAtiva.assunto)
+      );
+      const aulaVinculada =
+        sessaoAtiva.aulaId && assuntoVinculado
+          ? assuntoVinculado.aulas?.find(
+              (item) => item.id === sessaoAtiva.aulaId
+            )
+          : undefined;
+
+      if (materiaVinculada && moduloVinculado && assuntoVinculado) {
+        if (aulaVinculada && sessaoAtiva.aulaId) {
+          const vaiConcluirAssunto = Boolean(
+            !assuntoVinculado.concluido &&
+            (assuntoVinculado.aulas ?? []).length > 0 &&
+            (assuntoVinculado.aulas ?? []).every(
+              (aula) =>
+                aula.id === sessaoAtiva.aulaId ||
+                aula.concluida
+            )
+          );
+
+          definirConclusaoAula(
+            materiaVinculada.id,
+            assuntoVinculado.id,
+            sessaoAtiva.aulaId,
+            true,
+            moduloVinculado.id
+          );
+          revisaoCriada = vaiConcluirAssunto;
+        } else if (sessaoAtiva.assuntoId) {
+          definirConclusaoAssunto(
+            materiaVinculada.id,
+            assuntoVinculado.id,
+            true,
+            moduloVinculado.id
+          );
+          revisaoCriada = !assuntoVinculado.concluido;
+        }
+      }
+
       setMissoesConcluidas((anteriores) =>
         Array.from(new Set([...anteriores, sessaoAtiva.missaoId as string]))
       );
