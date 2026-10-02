@@ -21,6 +21,7 @@ import {
 } from "../../utils/planoEdital";
 import { sincronizarProgressoCursos } from "../../utils/importacaoCurso";
 import {
+  encontrarAulasNosConteudos,
   encontrarAulasParaMissao,
   type AulaRelacionadaAoEdital,
 } from "../../utils/relacionarCursoEdital";
@@ -205,16 +206,46 @@ export default function PlanoEditalGateway() {
   }
 
 
-  function iniciarMissaoDoPlano(missao: MissaoPlanoEdital) {
-    const aulasRelacionadas = encontrarAulasParaMissao(
+  function aulasDaMissao(missao: MissaoPlanoEdital) {
+    const doCurso = encontrarAulasParaMissao(
       cursosSincronizados,
       cursosAtivosIds,
       missao.materia,
       missao.assunto,
       3
     );
+    const dosConteudos = encontrarAulasNosConteudos(
+      materias,
+      cursosAtivosIds,
+      missao.materia,
+      missao.assunto,
+      3
+    );
 
-    const primeiraAula = aulasRelacionadas[0];
+    const combinadas = [...doCurso, ...dosConteudos]
+      .filter(
+        (item, indice, lista) =>
+          lista.findIndex(
+            (outro) =>
+              outro.cursoId === item.cursoId &&
+              outro.aulaId === item.aulaId
+          ) === indice
+      )
+      .sort((a, b) => {
+        const bonusUrlA = a.url ? 0.03 : 0;
+        const bonusUrlB = b.url ? 0.03 : 0;
+        return b.score + bonusUrlB - (a.score + bonusUrlA);
+      });
+
+    return combinadas.slice(0, 3);
+  }
+
+  function iniciarMissaoDoPlano(missao: MissaoPlanoEdital) {
+    const aulasRelacionadas = aulasDaMissao(missao);
+
+    const primeiraAula =
+      aulasRelacionadas.find((aula) => Boolean(aula.url)) ??
+      aulasRelacionadas[0];
     if (primeiraAula) {
       iniciarAulaDoCurso(missao, primeiraAula);
       return;
@@ -388,14 +419,10 @@ export default function PlanoEditalGateway() {
               <div className="plano-missoes-grid">
                 {dia.missoes.map((missao, indice) => {
                   const concluida = missoesConcluidas.includes(missao.id);
-                  const aulasRelacionadas = encontrarAulasParaMissao(
-                    cursosSincronizados,
-                    cursosAtivosIds,
-                    missao.materia,
-                    missao.assunto,
-                    3
-                  );
-                  const aulaPrincipal = aulasRelacionadas[0];
+                  const aulasRelacionadas = aulasDaMissao(missao);
+                  const aulaPrincipal =
+                    aulasRelacionadas.find((aula) => Boolean(aula.url)) ??
+                    aulasRelacionadas[0];
 
                   return (
                     <article
