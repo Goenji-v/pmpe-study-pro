@@ -5,7 +5,6 @@ import "./MeuEdital.css";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
-import { useAdminStatus } from "../../hooks/useAdminStatus";
 import {
   abrirFonteEditalCatalogo,
   carregarEditaisCatalogo,
@@ -67,7 +66,6 @@ export default function MeuEdital() {
   const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const { showToast } = useToast();
-  const { administrador } = useAdminStatus();
   const navigate = useNavigate();
 
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -83,6 +81,9 @@ export default function MeuEdital() {
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
   const [catalogo, setCatalogo] = useState<EditalCatalogo[]>([]);
   const [carregandoCatalogo, setCarregandoCatalogo] = useState(true);
+  const [mostrarEditalPessoal, setMostrarEditalPessoal] = useState(
+    Boolean(config.editalAtivo && !config.editalAtivo.catalogoId)
+  );
   const [editalVisualizado, setEditalVisualizado] =
     useState<EditalCatalogo | null>(null);
   const [catalogoSelecionadoId, setCatalogoSelecionadoId] = useState(
@@ -642,6 +643,33 @@ export default function MeuEdital() {
         )}
       </article>
 
+      <article className="edital-card edital-outro-edital">
+        <div>
+          <span>OUTRO CONCURSO</span>
+          <h2>Não encontrou seu edital?</h2>
+          <p>
+            Adicione um PDF próprio. Ele fica somente na sua conta e não entra
+            no catálogo público de editais pré-definidos.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="edital-botao-secundario"
+          onClick={() => {
+            setMostrarEditalPessoal((atual) => {
+              const proximo = !atual;
+              if (proximo) {
+                setCargoAlvo("");
+                setCatalogoSelecionadoId("");
+              }
+              return proximo;
+            });
+          }}
+        >
+          {mostrarEditalPessoal ? "Fechar" : "+ Adicionar outro edital"}
+        </button>
+      </article>
+
       {editalVisualizado && (
         <ConteudosEditalModal
           edital={editalVisualizado}
@@ -659,14 +687,14 @@ export default function MeuEdital() {
         />
       )}
 
-      {administrador && (
-        <article className="edital-card edital-upload-card">
+      {mostrarEditalPessoal && (
+        <article className="edital-card edital-upload-card edital-upload-pessoal">
           <div>
-            <span className="edital-admin-etiqueta">SOMENTE ADM</span>
-            <h2>Testar edital manualmente</h2>
+            <span className="edital-pessoal-etiqueta">EDITAL PESSOAL</span>
+            <h2>Adicionar outro edital</h2>
             <p>
-              Use esta área para analisar um PDF antes de publicá-lo no
-              catálogo administrativo.
+              Envie qualquer edital em PDF. O Study Pro lê as matérias e
+              assuntos, você confere e edita, e depois aplica só na sua conta.
             </p>
           </div>
 
@@ -675,38 +703,39 @@ export default function MeuEdital() {
               type="file"
               accept="application/pdf,.pdf"
               onChange={(evento) => {
-                setArquivo(evento.target.files?.[0] ?? null);
+                const novoArquivo = evento.target.files?.[0] ?? null;
+                setArquivo(novoArquivo);
                 setErroProcessamento(null);
                 setCatalogoSelecionadoId("");
+                if (novoArquivo) {
+                  setAnalise(null);
+                  setPlanoPrevio(null);
+                  setPdfNovo(null);
+                }
               }}
             />
             <strong>{arquivo?.name ?? "Selecionar PDF"}</strong>
             <span>
               {arquivo
                 ? `${(arquivo.size / 1024 / 1024).toFixed(1)} MB`
-                : "Clique para escolher o edital"}
+                : "PDF completo ou verticalizado, até 25 MB"}
             </span>
           </label>
 
           <label className="edital-cargo-seletor">
-            <span>Cargo para este plano</span>
-            <select
+            <span>Cargo do seu edital</span>
+            <input
               value={cargoAlvo}
               disabled={processando}
               onChange={(evento) => {
                 setCargoAlvo(evento.target.value);
                 setPlanoPrevio(null);
               }}
-            >
-              <option value="">Detectar automaticamente</option>
-              {CARGOS_PMPE.map((cargo) => (
-                <option key={cargo} value={cargo}>
-                  {cargo}
-                </option>
-              ))}
-            </select>
+              placeholder="Ex.: Agente PCPE, Guarda Municipal..."
+            />
             <small>
-              O Study Pro vai ignorar conteúdos exclusivos de outros cargos.
+              Opcional. Deixe em branco para o Study Pro detectar o cargo pelo
+              próprio PDF.
             </small>
           </label>
 
@@ -718,9 +747,7 @@ export default function MeuEdital() {
           >
             {processando
               ? "Lendo edital e organizando conteúdos..."
-              : erroProcessamento && !analise
-                ? "Tentar analisar novamente"
-                : "Analisar edital"}
+              : "Analisar meu edital"}
           </button>
 
           {erroProcessamento && (
