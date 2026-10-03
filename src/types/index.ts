@@ -27,6 +27,27 @@ export type MaterialAssunto = {
   criadoEm: string;
 };
 
+export type OrigemAulaCurso = {
+  cursoId: string;
+  cursoNome: string;
+  materiaCursoId: string;
+  materiaCursoNome: string;
+  moduloCursoId: string;
+  moduloCursoNome: string;
+  aulaCursoId: string;
+};
+
+export type CandidatoVinculoCurso = {
+  assuntoId: string;
+  nome: string;
+  score: number;
+};
+
+export type VinculoCursoAula = {
+  status: "automatico" | "manual" | "ambiguo" | "complementar";
+  candidatos?: CandidatoVinculoCurso[];
+};
+
 export type AulaAssunto = {
   id: string;
   nome: string;
@@ -34,6 +55,10 @@ export type AulaAssunto = {
   ordem: number;
   concluida: boolean;
   concluidaEm?: string;
+  /** Origem preservada para reimportar/sincronizar sem duplicar a aula. */
+  origemCurso?: OrigemAulaCurso;
+  /** Resultado da associação curso -> assunto canônico. */
+  vinculoCurso?: VinculoCursoAula;
 };
 
 export type TipoTarefaAssunto =
@@ -58,6 +83,19 @@ export type Assunto = {
   nome: string;
   concluido: boolean;
   prioridade: Prioridade;
+  /** Marca o assunto oficial que deu origem a este conteúdo canônico. */
+  origemEditalId?: string;
+  /** IDs anteriores aceitos para preservar histórico após uma fusão. */
+  idsLegados?: string[];
+  /** Origem lógica do conteúdo, sem criar separação visual por fonte. */
+  origemConteudo?: "edital" | "curso" | "mesclado" | "manual";
+  /** Conteúdo trazido pelo curso que não faz parte do edital importado. */
+  complementarAoEdital?: boolean;
+  /** Associação incerta preservada para revisão manual posterior. */
+  vinculoCurso?: {
+    status: "confirmado" | "ambiguo" | "complementar";
+    candidatos?: CandidatoVinculoCurso[];
+  };
   /** Partes internas do assunto. Não contam isoladamente no edital. */
   aulas?: AulaAssunto[];
   /** Atividades de apoio. Não contam como conteúdo concluído do edital. */
@@ -84,6 +122,8 @@ export type Modulo = {
 export type Materia = {
   id: string;
   nome: string;
+  /** IDs de matérias antigas aceitos para remapear histórico sem apagar dados. */
+  idsLegados?: string[];
   /** Estrutura canônica a partir da versão 2. */
   modulos?: Modulo[];
   /**

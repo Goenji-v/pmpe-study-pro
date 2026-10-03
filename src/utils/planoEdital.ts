@@ -1,4 +1,5 @@
 import type { Assunto, Materia } from "../types/index";
+import { criarAnalisePlanejamentoUnificada, materiasEquivalentes } from "./uniaoGradeEstudos";
 import {
   DIAS_SEMANA,
   type AnaliseEdital,
@@ -181,9 +182,13 @@ export function destrincharAssuntoParaPlano(nomeOriginal: string): string[] {
 
 export function gerarPlanoEdital(
   analiseOriginal: AnaliseEdital,
-  configuracoes: ConfiguracoesComEdital
+  configuracoes: ConfiguracoesComEdital,
+  materiasUnificadas?: Materia[]
 ): PlanoEdital {
-  const analise = normalizarAnaliseEdital(analiseOriginal);
+  const analiseNormalizada = normalizarAnaliseEdital(analiseOriginal);
+  const analise = materiasUnificadas
+    ? criarAnalisePlanejamentoUnificada(analiseNormalizada, materiasUnificadas)
+    : analiseNormalizada;
   const diasEstudo = normalizarDias(configuracoes.diasEstudo);
   const materiasPorDia = Math.max(
     1,
@@ -226,7 +231,7 @@ export function gerarPlanoEdital(
       const missoes = Array.from({ length: quantidadeMissoes }, () => {
         const item = sequencia[ponteiro++];
         const missao = {
-          id: `edital-s${semana}-${diaSemana}-m${ordemGlobal}`,
+          id: `edital-conteudo-${slugEdital(item.materia.id)}-${slugEdital(item.assuntoId)}`,
           ordem: ordemGlobal,
           materiaId: item.materia.id,
           materia: item.materia.nome,
@@ -255,7 +260,7 @@ export function gerarPlanoEdital(
   }
 
   return {
-    versao: 3,
+    versao: 4,
     id: `plano-edital-${analise.analisadoEm}`,
     titulo: `Plano do edital - ${analise.concursoDetectado}`,
     geradoEm: new Date().toISOString(),
@@ -314,7 +319,7 @@ export function mesclarMateriasDoEdital(
 
   analise.materias.forEach((materiaEdital) => {
     const indiceMateria = resultado.findIndex(
-      (materia) => slugEdital(materia.nome) === slugEdital(materiaEdital.nome)
+      (materia) => materiasEquivalentes(materia.nome, materiaEdital.nome)
     );
 
     const assuntosNovos = materiaEdital.assuntos.map((assunto) =>
@@ -365,6 +370,50 @@ export function mesclarMateriasDoEdital(
   });
 
   return resultado.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+export function preservarIdsPlanoAnterior(
+  novo: PlanoEdital,
+  anterior?: PlanoEdital
+): PlanoEdital {
+  if (!anterior) return novo;
+
+  const antigas = anterior.semanas.flatMap((semana) =>
+    semana.dias.flatMap((dia) => dia.missoes)
+  );
+  const porIds = new Map(
+    antigas.map((missao) => [
+      `${missao.materiaId}::${missao.assuntoId}`,
+      missao.id,
+    ])
+  );
+  const porNomes = new Map(
+    antigas.map((missao) => [
+      `${slugEdital(missao.materia)}::${slugEdital(missao.assunto)}`,
+      missao.id,
+    ])
+  );
+  const usados = new Set<string>();
+
+  const semanas = novo.semanas.map((semana) => ({
+    ...semana,
+    dias: semana.dias.map((dia) => ({
+      ...dia,
+      missoes: dia.missoes.map((missao) => {
+        const idAntigo =
+          porIds.get(`${missao.materiaId}::${missao.assuntoId}`) ??
+          porNomes.get(
+            `${slugEdital(missao.materia)}::${slugEdital(missao.assunto)}`
+          );
+
+        if (!idAntigo || usados.has(idAntigo)) return missao;
+        usados.add(idAntigo);
+        return { ...missao, id: idAntigo };
+      }),
+    })),
+  }));
+
+  return { ...novo, semanas };
 }
 
 function criarFilas(analise: AnaliseEdital): FilaMateria[] {

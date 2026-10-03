@@ -17,9 +17,20 @@ import { adaptarPlanoEditalAoDesempenho } from "../../utils/adaptacaoPlanoEdital
 import {
   gerarPlanoEdital,
   mesclarMateriasDoEdital,
+  preservarIdsPlanoAnterior,
   slugEdital,
 } from "../../utils/planoEdital";
-import { sincronizarProgressoCursos } from "../../utils/importacaoCurso";
+import {
+  aplicarCursosAtivosNasMaterias,
+  sincronizarProgressoCursos,
+} from "../../utils/importacaoCurso";
+import {
+  listarModulosDaMateria,
+} from "../../services/conteudos/navegarConteudos";
+import {
+  materiasEquivalentes,
+  scoreAssociacaoAssunto,
+} from "../../utils/uniaoGradeEstudos";
 import {
   encontrarAulasNosConteudos,
   encontrarAulasParaMissao,
@@ -40,7 +51,10 @@ export default function PlanoEditalGateway() {
   } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const configCursos = configuracoes as ConfiguracoesComCursos;
-  const cursosAtivosIds = configCursos.cursosAtivosIds ?? [];
+  const cursosAtivosIds = useMemo(
+    () => configCursos.cursosAtivosIds ?? [],
+    [configCursos.cursosAtivosIds]
+  );
   const cursosSincronizados = useMemo(
     () => sincronizarProgressoCursos(configCursos.cursos ?? [], materias),
     [configCursos.cursos, materias]
@@ -53,24 +67,47 @@ export default function PlanoEditalGateway() {
   useEffect(() => {
     if (!analise) return;
 
-    setMaterias((atuais) => mesclarMateriasDoEdital(atuais, analise));
-  }, [analise, setMaterias]);
+    setMaterias((atuais) =>
+      aplicarCursosAtivosNasMaterias(
+        mesclarMateriasDoEdital(atuais, analise),
+        configCursos.cursos ?? [],
+        cursosAtivosIds,
+        analise
+      )
+    );
+  }, [
+    analise,
+    configCursos.cursos,
+    cursosAtivosIds,
+    setMaterias,
+  ]);
 
   const planoBase = useMemo(() => {
     if (!analise) return planoArmazenado;
 
-    const estruturaAtualizada =
-      planoArmazenado?.versao === 3 &&
-      planoArmazenado.semanas.every((semana) => semana.dias.length === 7);
+    const gerado = gerarPlanoEdital(
+      analise,
+      config,
+      materias
+    );
 
-    return estruturaAtualizada
-      ? planoArmazenado
-      : gerarPlanoEdital(analise, config);
-  }, [analise, config, planoArmazenado]);
+    return preservarIdsPlanoAnterior(
+      gerado,
+      planoArmazenado
+    );
+  }, [analise, config, materias, planoArmazenado]);
 
   const materiasDoEdital = useMemo(
-    () => new Set((analise?.materias ?? []).map((materia) => slugEdital(materia.nome))),
-    [analise]
+    () =>
+      new Set(
+        planoBase?.semanas.flatMap((semana) =>
+          semana.dias.flatMap((dia) =>
+            dia.missoes.map((missao) => slugEdital(missao.materia))
+          )
+        ) ??
+          (analise?.materias ?? []).map((materia) => slugEdital(materia.nome))
+      ),
+    [analise, planoBase]
   );
 
   const diagnostico = useMemo(() => {
@@ -206,6 +243,99 @@ export default function PlanoEditalGateway() {
   }
 
 
+  function localizarMissaoNaGrade(missao: MissaoPlanoEdital) {
+    const materia =
+      materias.find(
+        (item) =>
+          item.id === missao.materiaId ||
+          item.idsLegados?.includes(missao.materiaId)
+      ) ??
+      materias.find((item) =>
+        materiasEquivalentes(item.nome, missao.materia)
+      );
+
+    if (!materia) return null;
+
+    const candidatos = listarModulosDaMateria(materia).flatMap(
+      (modulo) =>
+        modulo.assuntos.map((assunto) => ({
+          modulo,
+          assunto,
+        }))
+    );
+
+    const encontrado =
+      candidatos.find(
+        ({ assunto }) =>
+          assunto.id === missao.assuntoId ||
+          assunto.origemEditalId === missao.assuntoId ||
+          assunto.idsLegados?.includes(missao.assuntoId)
+      ) ??
+      candidatos
+        .map((item) => ({
+          ...item,
+          score: scoreAssociacaoAssunto(
+            item.assunto.nome,
+            missao.assunto
+          ),
+        }))
+        .sort((a, b) => b.score - a.score)[0];
+
+    if (
+      !encontrado ||
+      (
+        "score" in encontrado &&
+        typeof encontrado.score === "number" &&
+        encontrado.score < 0.86
+      )
+    ) {
+      return null;
+    }
+
+    return {
+      materia,
+      modulo: encontrado.modulo,
+      assunto: encontrado.assunto,
+    };
+  }
+
+  function abrirMissaoCanonica(missao: MissaoPlanoEdital) {
+    const localizacao = localizarMissaoNaGrade(missao);
+    if (!localizacao) return false;
+
+    const aulas = (localizacao.assunto.aulas ?? [])
+      .slice()
+      .sort((a, b) => a.ordem - b.ordem);
+    const aula =
+      aulas.find((item) => !item.concluida && item.url) ??
+      aulas.find((item) => item.url) ??
+      aulas.find((item) => !item.concluida) ??
+      aulas[0];
+
+    sessionStorage.setItem(
+      "pmpe:central-estudos:prefill",
+      JSON.stringify({
+        materia: localizacao.materia.nome,
+        materiaId: localizacao.materia.id,
+        modulo: localizacao.modulo.nome,
+        moduloId: localizacao.modulo.id,
+        assunto: localizacao.assunto.nome,
+        assuntoId: localizacao.assunto.id,
+        aulaId: aula?.id,
+        tipo: "aula",
+        objetivo: aula
+          ? `Estudar ${localizacao.assunto.nome} · ${aula.nome}`
+          : `Estudar ${localizacao.assunto.nome}`,
+        missaoId: missao.id,
+        urlAula: aula?.url ?? localizacao.assunto.aula,
+        urlQuestoes: localizacao.assunto.questoes,
+      })
+    );
+
+    navigate("/central-estudos");
+    return true;
+  }
+
   function aulasDaMissao(missao: MissaoPlanoEdital) {
     const doCurso = encontrarAulasParaMissao(
       cursosSincronizados,
@@ -241,6 +371,10 @@ export default function PlanoEditalGateway() {
   }
 
   function iniciarMissaoDoPlano(missao: MissaoPlanoEdital) {
+    if (abrirMissaoCanonica(missao)) {
+      return;
+    }
+
     const aulasRelacionadas = aulasDaMissao(missao);
 
     const primeiraAula =
@@ -256,7 +390,7 @@ export default function PlanoEditalGateway() {
       JSON.stringify({
         materia: missao.materia,
         materiaId: missao.materiaId,
-        modulo: "Edital atual",
+        modulo: "Geral",
         assunto: missao.assunto,
         assuntoId: missao.assuntoId,
         tipo: "aula",

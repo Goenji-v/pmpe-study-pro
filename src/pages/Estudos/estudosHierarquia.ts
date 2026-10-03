@@ -18,7 +18,11 @@ export function moduloGerenciadoPorCurso(modulo: Pick<Modulo, "id">) {
 }
 
 export function materiaTemCursoImportado(materia: Materia) {
-  return (materia.modulos ?? []).some((modulo) =>
-    moduloGerenciadoPorCurso(modulo)
+  return (materia.modulos ?? []).some(
+    (modulo) =>
+      moduloGerenciadoPorCurso(modulo) ||
+      modulo.assuntos.some((assunto) =>
+        (assunto.aulas ?? []).some((aula) => Boolean(aula.origemCurso))
+      )
   );
 }

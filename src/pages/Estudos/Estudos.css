@@ -494,3 +494,34 @@
   .conteudos-editor-adicionar,
   .conteudos-editor-adicionar-tarefa { grid-template-columns:1fr; }
 }
+
+
+.conteudos-origem-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.08);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.conteudos-revisar-vinculo {
+  border: 0;
+  padding: 4px 7px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.1);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .conteudos-revisar-vinculo {
+    width: fit-content;
+  }
+}

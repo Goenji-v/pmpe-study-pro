@@ -9,6 +9,10 @@ import type {
   TipoSessao,
 } from "../../types";
 import { listarModulosDaMateria } from "./navegarConteudos";
+import {
+  materiasEquivalentes,
+  scoreAssociacaoAssunto,
+} from "../../utils/uniaoGradeEstudos";
 import { localizarConteudoDaMissao } from "./localizarConteudo";
 
 export type ReferenciaCanonica = {
@@ -57,10 +61,17 @@ export function localizarReferenciaCanonica(
 
   const materia = materias.find(
     (item) =>
-      Boolean(entrada.materiaId && item.id === entrada.materiaId) ||
+      Boolean(
+        entrada.materiaId &&
+          (item.id === entrada.materiaId ||
+            item.idsLegados?.includes(entrada.materiaId))
+      ) ||
       Boolean(
         entrada.materia &&
-          normalizar(item.nome) === normalizar(entrada.materia)
+          (
+            normalizar(item.nome) === normalizar(entrada.materia) ||
+            materiasEquivalentes(item.nome, entrada.materia)
+          )
       )
   );
 
@@ -225,18 +236,26 @@ function localizarPorIds(
 ): ReferenciaCanonica | null {
   if (!entrada.materiaId || !entrada.assuntoId) return null;
 
-  const materia = materias.find((item) => item.id === entrada.materiaId);
+  const materia = materias.find(
+    (item) =>
+      item.id === entrada.materiaId ||
+      item.idsLegados?.includes(entrada.materiaId as string)
+  );
   if (!materia) return null;
 
   const modulos = listarModulosDaMateria(materia);
-  const modulo = entrada.moduloId
+  const assuntoAceitaId = (assunto: Assunto) =>
+    assunto.id === entrada.assuntoId ||
+    assunto.idsLegados?.includes(entrada.assuntoId as string);
+
+  const moduloPreferido = entrada.moduloId
     ? modulos.find((item) => item.id === entrada.moduloId)
-    : modulos.find((item) =>
-        item.assuntos.some((assunto) => assunto.id === entrada.assuntoId)
-      );
-  const assunto = modulo?.assuntos.find(
-    (item) => item.id === entrada.assuntoId
-  );
+    : undefined;
+  const modulo =
+    moduloPreferido?.assuntos.some(assuntoAceitaId)
+      ? moduloPreferido
+      : modulos.find((item) => item.assuntos.some(assuntoAceitaId));
+  const assunto = modulo?.assuntos.find(assuntoAceitaId);
 
   return modulo && assunto
     ? { materia, modulo, assunto }
@@ -259,10 +278,19 @@ function localizarDentroDaMateria(
   for (const modulo of candidatos.length > 0 ? candidatos : modulos) {
     const assunto = modulo.assuntos.find(
       (item) =>
-        Boolean(entrada.assuntoId && item.id === entrada.assuntoId) ||
+        Boolean(
+          entrada.assuntoId &&
+            (
+              item.id === entrada.assuntoId ||
+              item.idsLegados?.includes(entrada.assuntoId)
+            )
+        ) ||
         Boolean(
           entrada.assunto &&
-            normalizar(item.nome) === normalizar(entrada.assunto)
+            (
+              normalizar(item.nome) === normalizar(entrada.assunto) ||
+              scoreAssociacaoAssunto(item.nome, entrada.assunto) >= 0.92
+            )
         )
     );
 
