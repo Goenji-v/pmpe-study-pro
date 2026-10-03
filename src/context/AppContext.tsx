@@ -152,6 +152,10 @@ type AppContextType = {
     preferencia: "nuvem" | "local"
   ) => Promise<void>;
   restaurarEstadoCompleto: (estado: EstadoAppNuvem) => Promise<void>;
+  aplicarEstadoEstruturalSeguro: (
+    estado: EstadoAppNuvem,
+    motivo?: "antes_migracao_edital" | "antes_reconciliacao_estrutural"
+  ) => Promise<void>;
 
   definirConclusaoAssunto: (
     materiaId: string,
@@ -1929,6 +1933,64 @@ function EstadoDaConta({
     );
   }
 
+  async function aplicarEstadoEstruturalSeguro(
+    estado: EstadoAppNuvem,
+    motivo:
+      | "antes_migracao_edital"
+      | "antes_reconciliacao_estrutural" =
+        "antes_reconciliacao_estrutural"
+  ) {
+    validarIntegridadeEstado(estado);
+
+    if (!usuario) {
+      aplicarEstadoDaNuvem(estado);
+      return;
+    }
+
+    await executarOperacaoNuvemSerializada(async () => {
+      const estadoNuvem =
+        await carregarEstadoDaNuvem(usuario.id);
+      const revisaoNuvem =
+        obterRevisaoSincronizacao(estadoNuvem);
+
+      if (
+        estadoNuvem &&
+        revisaoNuvem !== revisaoBaseRef.current
+      ) {
+        throw new ConflitoSincronizacaoError(
+          revisaoNuvem,
+          revisaoBaseRef.current
+        );
+      }
+
+      const anterior =
+        estadoNuvem ??
+        montarEstadoNuvem(dadosAtuaisRef.current);
+      const agora = new Date().toISOString();
+      const proximo: EstadoAppNuvem = {
+        ...estado,
+        syncRevision: revisaoNuvem + 1,
+        atualizadoEm: agora,
+        salvoEm: agora,
+      };
+
+      validarIntegridadeEstado(proximo);
+
+      await salvarEstadoEstruturalComSeguranca(
+        usuario.id,
+        anterior,
+        proximo,
+        motivo
+      );
+
+      aplicarEstadoDaNuvem(proximo);
+      confirmarSincronizacaoLocal(
+        usuario.id,
+        proximo
+      );
+    });
+  }
+
   async function restaurarEstadoCompleto(
     estado: EstadoAppNuvem
   ) {
@@ -2490,6 +2552,7 @@ function EstadoDaConta({
         sincronizarAgora,
         resolverConflitoSincronizacao,
         restaurarEstadoCompleto,
+        aplicarEstadoEstruturalSeguro,
         definirConclusaoAssunto,
         definirConclusaoAula,
         importarProgressoMateria,
