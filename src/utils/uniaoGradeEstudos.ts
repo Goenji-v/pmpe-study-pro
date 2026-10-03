@@ -783,7 +783,12 @@ function anexarAula({
   }
 
   for (const material of aulaCurso.materiais ?? []) {
-    anexarMaterialCurso(alvo, curso.id, material);
+    anexarMaterialCurso(
+      alvo,
+      curso.id,
+      material,
+      curso.criadoEm
+    );
   }
 }
 
@@ -808,7 +813,8 @@ function preservarDadosAssunto(alvo: Assunto, anterior?: Assunto) {
 function anexarMaterialCurso(
   assunto: Assunto,
   cursoId: string,
-  material: { id: string; nome: string; tipo: string; url: string }
+  material: { id: string; nome: string; tipo: string; url: string },
+  criadoEm: string
 ) {
   const url = normalizarUrl(material.url);
   if (!url) return;
@@ -824,7 +830,7 @@ function anexarMaterialCurso(
       nome: material.nome,
       tipo,
       url,
-      criadoEm: new Date().toISOString(),
+      criadoEm,
     },
   ];
 }
