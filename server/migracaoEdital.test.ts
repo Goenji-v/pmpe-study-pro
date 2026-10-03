@@ -379,6 +379,26 @@ test("IDs de missões antigas são preservados quando o conteúdo canônico cont
   assert.equal(missaoTeoriaNova.id, missaoTeoriaAntiga.id);
 });
 
+test("migração aplicada marca geração estrutural para invalidar cache antigo", async () => {
+  const [pagina, contexto] = await Promise.all([
+    readFile("src/pages/MeuEdital/MeuEdital.tsx", "utf8"),
+    readFile("src/context/AppContext.tsx", "utf8"),
+  ]);
+
+  assert.match(
+    pagina,
+    /migracaoEstruturalEm:\s*agora/
+  );
+  assert.match(
+    contexto,
+    /houveMigracaoEstruturalDaConta/
+  );
+  assert.match(
+    contexto,
+    /registrarBackupConflitoNaNuvem\([\s\S]*estadoLocalAntesDaMigracao/
+  );
+});
+
 test("fluxo de aplicação exige backup pré-migração e gravação estrutural segura", async () => {
   const [pagina, contexto, backup] = await Promise.all([
     readFile("src/pages/MeuEdital/MeuEdital.tsx", "utf8"),
