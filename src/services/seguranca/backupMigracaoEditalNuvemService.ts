@@ -85,9 +85,8 @@ export async function listarBackupsMigracaoEditalNaNuvem(
     .from("backups")
     .select("id, nome, created_at, dados")
     .eq("user_id", usuarioId)
-    .eq("dados->>tipo", "antes_migracao_edital")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(50);
 
   if (error) {
     throw new Error(
@@ -95,19 +94,25 @@ export async function listarBackupsMigracaoEditalNaNuvem(
     );
   }
 
-  return (data ?? []).flatMap((linhaBruta) => {
-    const linha = linhaBruta as LinhaBackup;
-    const estado = linha.dados?.estadoAnterior as EstadoAppNuvem | undefined;
-    const relatorio = linha.dados?.relatorio as RelatorioMigracaoEdital | undefined;
+  return (data ?? [])
+    .flatMap((linhaBruta) => {
+      const linha = linhaBruta as LinhaBackup;
+      if (linha.dados?.tipo !== "antes_migracao_edital") return [];
 
-    if (!estado || !relatorio) return [];
+      const estado =
+        linha.dados?.estadoAnterior as EstadoAppNuvem | undefined;
+      const relatorio =
+        linha.dados?.relatorio as RelatorioMigracaoEdital | undefined;
 
-    return [{
-      id: linha.id,
-      nome: linha.nome,
-      criadoEm: linha.created_at,
-      estado,
-      relatorio,
-    }];
-  });
+      if (!estado || !relatorio) return [];
+
+      return [{
+        id: linha.id,
+        nome: linha.nome,
+        criadoEm: linha.created_at,
+        estado,
+        relatorio,
+      }];
+    })
+    .slice(0, 10);
 }
