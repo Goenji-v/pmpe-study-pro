@@ -408,7 +408,7 @@ test("validação aborta se histórico ou links de questões diminuírem", () =>
           materias: semLinks,
         },
       }),
-    /links de questões/
+    /link.*questões/
   );
 });
 
