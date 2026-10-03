@@ -20,6 +20,12 @@ import {
 import {
   preservarIdsPlanoAnterior,
 } from "../src/utils/planoEdital.ts";
+import {
+  EDITAIS_PREDEFINIDOS_SISTEMA,
+} from "../src/data/editaisPredefinidos.ts";
+import {
+  gerarMateriasDoPlano,
+} from "../src/utils/materiasDoPlano.ts";
 
 const AGORA = "2026-10-03T09:00:00.000Z";
 
@@ -789,4 +795,74 @@ test("divisão de um assunto antigo não replica conclusão para os novos recort
   assert.notEqual(executivo.id, "organizacao-poderes");
   assert.equal(executivo.concluido, false);
   assert.equal(geral.questoes, "https://questoes.test/poderes");
+});
+
+
+test("prévia real PMPE 2024 para PMPE 2026 preserva os links de questões do plano antigo", () => {
+  const edital2026 = EDITAIS_PREDEFINIDOS_SISTEMA.find(
+    (item) => item.slug === "pmpe-2026-soldado"
+  );
+  assert.ok(edital2026?.analise);
+
+  const antigas = gerarMateriasDoPlano();
+  const anterior = criarEditalAnteriorSintetico({
+    materias: antigas,
+    concurso: "PMPE 2024",
+    banca: "Instituto AOCP",
+  });
+
+  const resultado = prepararMigracaoEditalSegura({
+    materiasAtuais: antigas,
+    editalAnterior: anterior,
+    editalNovoId: edital2026.id,
+    editalNovoNome: `${edital2026.organizacao} ${edital2026.ano} — ${edital2026.cargo}`,
+    analiseNova: edital2026.analise,
+    cursos: [],
+    cursosAtivosIds: [],
+    contagens: {
+      questoes: 0,
+      sessoes: 0,
+      revisoes: 0,
+      simulados: 0,
+      bancoQuestoes: 0,
+      simuladosGerados: 0,
+      missoesConcluidas: 0,
+    },
+  });
+
+  assert.deepEqual(resultado.relatorio.bloqueios, []);
+  assert.ok(resultado.relatorio.preservacao.linksQuestoes > 0);
+  assert.ok(resultado.relatorio.resumo.totalNovo > 0);
+
+  validarPreservacaoMigracao({
+    antes: {
+      materias: antigas,
+      questoes: [],
+      sessoes: [],
+      revisoes: [],
+      simulados: [],
+      bancoQuestoes: [],
+      simuladosGerados: [],
+      missoesConcluidas: [],
+    },
+    depois: {
+      materias: resultado.materiasMigradas,
+      questoes: [],
+      sessoes: [],
+      revisoes: [],
+      simulados: [],
+      bancoQuestoes: [],
+      simuladosGerados: [],
+      missoesConcluidas: [],
+    },
+  });
+
+  const portugues = resultado.materiasMigradas.filter((materia) =>
+    /portugu/i.test(
+      materia.nome
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+    )
+  );
+  assert.equal(portugues.length, 1);
 });
