@@ -36,6 +36,7 @@ import {
   preservarIdsPlanoAnterior,
 } from "../../utils/planoEdital";
 import {
+  criarEditalAnteriorSintetico,
   prepararMigracaoEditalSegura,
   type ResultadoPreparacaoMigracaoEdital,
 } from "../../utils/migracaoEditalSegura";
@@ -429,7 +430,27 @@ export default function MeuEdital() {
       return;
     }
 
-    if (config.editalAtivo) {
+    const possuiDadosExistentes =
+      materias.length > 0 ||
+      questoes.length > 0 ||
+      sessoes.length > 0 ||
+      revisoes.length > 0 ||
+      simulados.length > 0 ||
+      bancoQuestoes.length > 0 ||
+      simuladosGerados.length > 0 ||
+      missoesConcluidas.length > 0;
+
+    const editalAnteriorParaMigracao =
+      config.editalAtivo ??
+      (possuiDadosExistentes
+        ? criarEditalAnteriorSintetico({
+            materias,
+            concurso: config.concurso,
+            banca: config.bancaPadrao,
+          })
+        : undefined);
+
+    if (editalAnteriorParaMigracao) {
       const editalNovoId =
         editalCatalogoSelecionado?.id ??
         crypto.randomUUID();
@@ -440,7 +461,7 @@ export default function MeuEdital() {
 
       const migracao = prepararMigracaoEditalSegura({
         materiasAtuais: materias,
-        editalAnterior: config.editalAtivo,
+        editalAnterior: editalAnteriorParaMigracao,
         editalNovoId,
         editalNovoNome,
         analiseNova: normalizada,
@@ -463,7 +484,7 @@ export default function MeuEdital() {
           config,
           migracao.materiasMigradas
         ),
-        config.editalAtivo.plano
+        editalAnteriorParaMigracao.plano
       );
 
       setAnalise(normalizada);
@@ -509,7 +530,7 @@ export default function MeuEdital() {
       const editalAnterior = config.editalAtivo;
       const agora = new Date().toISOString();
 
-      if (editalAnterior && migracaoPrevia) {
+      if (migracaoPrevia) {
         if (migracaoPrevia.relatorio.bloqueios.length > 0) {
           throw new Error(
             `Migração bloqueada por segurança: ${migracaoPrevia.relatorio.bloqueios.join(" ")}`
