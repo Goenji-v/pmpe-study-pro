@@ -74,7 +74,7 @@ test("cronograma mostra os sete dias e usa missões apenas nos dias escolhidos",
   const plano = gerarPlanoEdital(analise, configuracoes);
   const dias = plano.semanas[0].dias;
 
-  assert.equal(plano.versao, 3);
+  assert.equal(plano.versao, 4);
   assert.equal(plano.totalAssuntos, 6);
   assert.equal(plano.totalSemanas, 1);
   assert.equal(dias.length, 7);
