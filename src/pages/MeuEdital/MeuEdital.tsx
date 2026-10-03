@@ -1291,7 +1291,8 @@ export default function MeuEdital() {
               <div className="edital-migracao-garantias">
                 <span>✓ backup local antes da troca</span>
                 <span>✓ backup completo no Supabase</span>
-                <span>✓ rollback automático se a gravação falhar</span>
+                <span>✓ gravação atômica contra outro aparelho</span>
+                <span>✓ restauração disponível pelo backup</span>
                 <span>✓ IDs equivalentes preservados</span>
                 <span>✓ aulas novas sem apagar links de questões</span>
               </div>
