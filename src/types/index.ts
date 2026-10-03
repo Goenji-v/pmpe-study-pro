@@ -37,6 +37,15 @@ export type OrigemAulaCurso = {
   aulaCursoId: string;
 };
 
+export type VinculoEditalConteudo = {
+  editalId: string;
+  materiaEditalId?: string;
+  assuntoEditalId: string;
+  nomeNoEdital: string;
+  ativo: boolean;
+  vinculadoEm: string;
+};
+
 export type CandidatoVinculoCurso = {
   assuntoId: string;
   nome: string;
@@ -87,6 +96,8 @@ export type Assunto = {
   origemEditalId?: string;
   /** IDs anteriores aceitos para preservar histórico após uma fusão. */
   idsLegados?: string[];
+  /** Histórico de quais editais apontaram para este conteúdo canônico. */
+  vinculosEdital?: VinculoEditalConteudo[];
   /** Origem lógica do conteúdo, sem criar separação visual por fonte. */
   origemConteudo?: "edital" | "curso" | "mesclado" | "manual";
   /** Conteúdo trazido pelo curso que não faz parte do edital importado. */
@@ -124,6 +135,14 @@ export type Materia = {
   nome: string;
   /** IDs de matérias antigas aceitos para remapear histórico sem apagar dados. */
   idsLegados?: string[];
+  /** Histórico dos editais que usaram esta matéria canônica. */
+  vinculosEdital?: Array<{
+    editalId: string;
+    materiaEditalId: string;
+    nomeNoEdital: string;
+    ativo: boolean;
+    vinculadoEm: string;
+  }>;
   /** Estrutura canônica a partir da versão 2. */
   modulos?: Modulo[];
   /**
