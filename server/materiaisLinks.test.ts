@@ -54,7 +54,7 @@ test("arquivos nunca viram atalhos rápidos por causa do nome", () => {
 });
 
 
-test("Aula e Questões viram atalhos principais e não ficam em materiais vinculados", () => {
+test("primeiro Aula e Questões viram atalhos; links extras continuam visíveis", () => {
   const materiais = [
     {
       id: "aula-nova",
@@ -78,6 +78,13 @@ test("Aula e Questões viram atalhos principais e não ficam em materiais vincul
       url: "https://exemplo.com/questoes",
     },
     {
+      id: "questoes-extra",
+      tipo: "link" as const,
+      nome: "Questões complementares",
+      categoriaLink: "questoes" as const,
+      url: "https://exemplo.com/questoes-extra",
+    },
+    {
       id: "pdf",
       tipo: "arquivo" as const,
       nome: "Resumo em PDF",
@@ -97,6 +104,6 @@ test("Aula e Questões viram atalhos principais e não ficam em materiais vincul
   assert.equal(separados.questoes?.id, "questoes");
   assert.deepEqual(
     separados.vinculados.map((item) => item.id),
-    ["pdf", "site"]
+    ["aula-antiga", "questoes-extra", "pdf", "site"]
   );
 });
