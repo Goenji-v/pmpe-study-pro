@@ -499,18 +499,22 @@ export default function MeuEdital() {
     try {
       const editalAnterior = config.editalAtivo;
       const agora = new Date().toISOString();
-
-      if (editalCatalogoSelecionado) {
-        setMaterias((atuais) =>
-          aplicarCursosAtivosNasMaterias(
-            mesclarMateriasDoEdital(atuais, analise),
-            configCursos.cursos ?? [],
-            configCursos.cursosAtivosIds ?? [],
-            analise
-          )
+      const analiseFinal =
+        migracaoPrevia?.analiseMigrada ?? analise;
+      const materiasNovas =
+        migracaoPrevia?.materiasMigradas ??
+        aplicarCursosAtivosNasMaterias(
+          mesclarMateriasDoEdital(materias, analiseFinal),
+          configCursos.cursos ?? [],
+          configCursos.cursosAtivosIds ?? [],
+          analiseFinal
         );
 
-        const novasConfiguracoes: ConfiguracoesComEdital = {
+      let novasConfiguracoes: ConfiguracoesComEdital;
+      let pdfAntigoParaRemover: string | undefined;
+
+      if (editalCatalogoSelecionado) {
+        novasConfiguracoes = {
           ...config,
           concurso: editalCatalogoSelecionado.organizacao,
           bancaPadrao:
@@ -523,96 +527,169 @@ export default function MeuEdital() {
               `${editalCatalogoSelecionado.organizacao} ${editalCatalogoSelecionado.ano} — ${editalCatalogoSelecionado.cargo}`,
             storagePath: editalCatalogoSelecionado.pdfPath ?? "",
             fonteUrl: editalCatalogoSelecionado.fonteUrl,
-            analise,
+            analise: analiseFinal,
             plano: planoPrevio,
             confirmadoEm: agora,
           },
         };
-        setConfiguracoes(novasConfiguracoes);
 
         if (
           editalAnterior?.storagePath &&
           !editalAnterior.catalogoId
         ) {
-          void removerPdfEdital(editalAnterior.storagePath);
+          pdfAntigoParaRemover = editalAnterior.storagePath;
+        }
+      } else {
+        let pdf =
+          pdfNovo ??
+          (editalAnterior && !editalAnterior.catalogoId
+            ? {
+                storagePath: editalAnterior.storagePath,
+                nomeArquivo: editalAnterior.nomeArquivo,
+              }
+            : null);
+        let pdfEnviadoAgora = false;
+
+        if (!pdf && arquivo) {
+          pdf = await enviarPdfEdital(
+            arquivo,
+            crypto.randomUUID()
+          );
+          setPdfNovo(pdf);
+          pdfEnviadoAgora = true;
         }
 
+        if (!pdf) {
+          throw new Error(
+            "O PDF ainda não foi salvo. Selecione novamente o arquivo e tente aplicar o plano."
+          );
+        }
+
+        const usaNovoPdf = Boolean(
+          pdfNovo || pdfEnviadoAgora
+        );
+        const id =
+          editalAnterior?.id &&
+          !editalAnterior.catalogoId &&
+          !usaNovoPdf
+            ? editalAnterior.id
+            : crypto.randomUUID();
+
+        novasConfiguracoes = {
+          ...config,
+          concurso:
+            analiseFinal.concursoDetectado ||
+            config.concurso,
+          bancaPadrao:
+            analiseFinal.bancaDetectada ||
+            config.bancaPadrao,
+          editalOnboardingVisto: true,
+          editalAtivo: {
+            id,
+            nomeArquivo: pdf.nomeArquivo,
+            storagePath: pdf.storagePath,
+            analise: analiseFinal,
+            plano: planoPrevio,
+            confirmadoEm: agora,
+          },
+        };
+
+        if (
+          usaNovoPdf &&
+          editalAnterior?.storagePath &&
+          !editalAnterior.catalogoId &&
+          editalAnterior.storagePath !== pdf.storagePath
+        ) {
+          pdfAntigoParaRemover =
+            editalAnterior.storagePath;
+        }
+      }
+
+      const estadoAnterior = montarEstadoNuvem({
+        materias,
+        questoes,
+        sessoes,
+        revisoes,
+        simulados,
+        bancoQuestoes,
+        simuladosGerados,
+        configuracoes,
+        missoesConcluidas,
+      });
+
+      const sessoesMigradas =
+        reconciliarSessoesComConteudos(
+          materiasNovas,
+          sessoes
+        );
+      const questoesMigradas =
+        reconciliarQuestoesComConteudos(
+          materiasNovas,
+          questoes
+        );
+      const revisoesMigradas =
+        reconciliarRevisoesComConteudos(
+          materiasNovas,
+          revisoes
+        );
+
+      const estadoNovo = montarEstadoNuvem({
+        materias: materiasNovas,
+        questoes: questoesMigradas,
+        sessoes: sessoesMigradas,
+        revisoes: revisoesMigradas,
+        simulados,
+        bancoQuestoes,
+        simuladosGerados,
+        configuracoes: novasConfiguracoes,
+        missoesConcluidas,
+      });
+
+      if (editalAnterior) {
+        const idBackupLocal =
+          usuario?.id ?? "sem-usuario";
+
+        criarBackupAutomaticoLocal(
+          idBackupLocal,
+          estadoAnterior,
+          "antes_migracao_edital"
+        );
+
+        if (usuario) {
+          await registrarBackupMigracaoEditalNaNuvem({
+            usuarioId: usuario.id,
+            estadoAnterior,
+            editalAnteriorId: editalAnterior.id,
+            editalNovoId:
+              novasConfiguracoes.editalAtivo?.id,
+          });
+        }
+      }
+
+      await aplicarEstadoEstruturalSeguro(
+        estadoNovo,
+        editalAnterior
+          ? "antes_migracao_edital"
+          : "antes_reconciliacao_estrutural"
+      );
+
+      if (pdfAntigoParaRemover) {
+        void removerPdfEdital(pdfAntigoParaRemover);
+      }
+
+      if (migracaoPrevia) {
+        const r = migracaoPrevia.relatorio;
         showToast(
-          `${editalCatalogoSelecionado.organizacao} ${editalCatalogoSelecionado.ano} · ${editalCatalogoSelecionado.cargo} aplicado ao Plano Tático.`,
+          `Migração aplicada com backup: ${r.mantidos + r.renomeados} conteúdos reaproveitados, ${r.novos} novos e ${r.removidos} preservados fora do edital.`,
           "success"
         );
-        navigate("/plano");
-        return;
-      }
-
-      let pdf =
-        pdfNovo ??
-        (editalAnterior && !editalAnterior.catalogoId
-          ? {
-              storagePath: editalAnterior.storagePath,
-              nomeArquivo: editalAnterior.nomeArquivo,
-            }
-          : null);
-      let pdfEnviadoAgora = false;
-
-      if (!pdf && arquivo) {
-        pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
-        setPdfNovo(pdf);
-        pdfEnviadoAgora = true;
-      }
-
-      if (!pdf) {
-        throw new Error(
-          "O PDF ainda não foi salvo. Selecione novamente o arquivo e tente aplicar o plano."
+      } else {
+        showToast(
+          "Edital confirmado e plano de estudos aplicado.",
+          "success"
         );
       }
 
-      const usaNovoPdf = Boolean(pdfNovo || pdfEnviadoAgora);
-      const id =
-        editalAnterior?.id &&
-        !editalAnterior.catalogoId &&
-        !usaNovoPdf
-          ? editalAnterior.id
-          : crypto.randomUUID();
-
-      setMaterias((atuais) =>
-          aplicarCursosAtivosNasMaterias(
-            mesclarMateriasDoEdital(atuais, analise),
-            configCursos.cursos ?? [],
-            configCursos.cursosAtivosIds ?? [],
-            analise
-          )
-        );
-
-      const novasConfiguracoes: ConfiguracoesComEdital = {
-        ...config,
-        concurso: analise.concursoDetectado || config.concurso,
-        bancaPadrao: analise.bancaDetectada || config.bancaPadrao,
-        editalOnboardingVisto: true,
-        editalAtivo: {
-          id,
-          nomeArquivo: pdf.nomeArquivo,
-          storagePath: pdf.storagePath,
-          analise,
-          plano: planoPrevio,
-          confirmadoEm: agora,
-        },
-      };
-      setConfiguracoes(novasConfiguracoes);
-
-      if (
-        usaNovoPdf &&
-        editalAnterior?.storagePath &&
-        !editalAnterior.catalogoId &&
-        editalAnterior.storagePath !== pdf.storagePath
-      ) {
-        void removerPdfEdital(editalAnterior.storagePath);
-      }
-
-      showToast(
-        "Edital confirmado e plano de estudos aplicado.",
-        "success"
-      );
       navigate("/plano");
     } catch (erro) {
       const mensagem =
