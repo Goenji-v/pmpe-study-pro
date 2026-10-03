@@ -348,6 +348,8 @@ export type ConfiguracoesApp = {
   armazenamentoPorConta?: boolean;
   /** Invalida cópias locais anteriores a uma limpeza confirmada pelo titular. */
   dadosReiniciadosEm?: string;
+  /** Faz uma migração estrutural confirmada da nuvem prevalecer sobre caches locais antigos. */
+  migracaoEstruturalEm?: string;
   nomeUsuario: string;
   concurso: string;
   bancaPadrao: string;
