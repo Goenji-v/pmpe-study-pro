@@ -391,7 +391,7 @@ const [
 
   const formatoRevisao = estado.formatoRevisao ?? "teoria";
   const revisaoPorQuestoes = estado.tipo === "revisao" && formatoRevisao === "questoes";
-  const urlAulaPrincipal = atalhosMateriais.aula ?? estado.urlAula;
+  const urlAulaPrincipal = estado.urlAula ?? atalhosMateriais.aula;
   const urlQuestoesPrincipal = atalhosMateriais.questoes ?? estado.urlQuestoes;
   const finalizacaoComQuestoes = sessaoExigeResultadoQuestoes(
     estado.tipo,
