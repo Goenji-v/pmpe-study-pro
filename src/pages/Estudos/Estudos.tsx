@@ -22,6 +22,10 @@ import type {
   TipoTarefaAssunto,
 } from "../../types";
 
+import type { ConfiguracoesComCursos } from "../../types/cursos";
+import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
+import { aplicarCursosAtivosNasMaterias } from "../../utils/importacaoCurso";
+
 import "./Estudos.css";
 
 type EditorAssunto = {
@@ -40,6 +44,8 @@ export default function Estudos() {
     questoes,
     sessoes,
     revisoes,
+    configuracoes,
+    setConfiguracoes,
   } = useApp();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -372,6 +378,110 @@ export default function Estudos() {
     );
   }
 
+  function revisarVinculoCurso(
+    materia: Materia,
+    assunto: Assunto
+  ) {
+    const candidatos =
+      assunto.vinculoCurso?.candidatos?.filter(
+        (item) => item.assuntoId !== assunto.id
+      ) ?? [];
+
+    const origens = (assunto.aulas ?? [])
+      .map((aula) => aula.origemCurso)
+      .filter((origem): origem is NonNullable<typeof origem> => Boolean(origem));
+
+    if (origens.length === 0) {
+      showToast("Este conteúdo não possui aula importada para revisar.", "warning");
+      return;
+    }
+
+    const opcoes = candidatos.length
+      ? candidatos
+          .map(
+            (item, indice) =>
+              `${indice + 1}. ${item.nome} (${Math.round(item.score * 100)}%)`
+          )
+          .join("\n")
+      : "Nenhum candidato automático seguro.";
+
+    const resposta = window.prompt(
+      `Revisar vínculo de "${assunto.nome}"\n\n${opcoes}\n\nDigite o número do assunto correto. Digite 0 para manter como complemento.`
+    );
+
+    if (resposta === null) return;
+
+    const numero = Number(resposta.trim());
+    if (!Number.isInteger(numero) || numero < 0 || numero > candidatos.length) {
+      showToast("Escolha um número válido da lista.", "warning");
+      return;
+    }
+
+    const alvoId = numero > 0 ? candidatos[numero - 1]?.assuntoId : undefined;
+    const configCursos = configuracoes as ConfiguracoesComCursos;
+    const configEdital = configuracoes as ConfiguracoesComEdital;
+    const chaves = new Set(
+      origens.map((origem) => `${origem.cursoId}::${origem.aulaCursoId}`)
+    );
+    const agora = new Date().toISOString();
+
+    const cursosAtualizados = (configCursos.cursos ?? []).map((curso) => ({
+      ...curso,
+      materias: curso.materias.map((materiaCurso) => ({
+        ...materiaCurso,
+        modulos: materiaCurso.modulos.map((modulo) => ({
+          ...modulo,
+          aulas: modulo.aulas.map((aula) => {
+            if (!chaves.has(`${curso.id}::${aula.id}`)) return aula;
+
+            return alvoId
+              ? {
+                  ...aula,
+                  vinculoMateriaId: materia.id,
+                  vinculoAssuntoId: alvoId,
+                  manterComoComplementar: false,
+                  vinculoRevisadoEm: agora,
+                }
+              : {
+                  ...aula,
+                  vinculoMateriaId: undefined,
+                  vinculoAssuntoId: undefined,
+                  manterComoComplementar: true,
+                  vinculoRevisadoEm: agora,
+                };
+          }),
+        })),
+      })),
+    }));
+
+    const analiseEdital =
+      configEdital.editalAtivo?.analise &&
+      (configEdital.editalAtivo.plano?.versao ?? 0) >= 3
+        ? configEdital.editalAtivo.analise
+        : undefined;
+
+    setConfiguracoes((atuais) => ({
+      ...atuais,
+      cursos: cursosAtualizados,
+    }) as ConfiguracoesComCursos);
+
+    setMaterias((atuais) =>
+      aplicarCursosAtivosNasMaterias(
+        atuais,
+        cursosAtualizados,
+        configCursos.cursosAtivosIds ?? [],
+        analiseEdital
+      )
+    );
+
+    showToast(
+      alvoId
+        ? "A associação foi atualizada e a aula foi movida para o assunto escolhido."
+        : "O conteúdo foi mantido como complementar ao edital.",
+      "success"
+    );
+  }
+
   return (
     <section className="conteudos-container">
       <header className="conteudos-cabecalho">
@@ -508,6 +618,22 @@ export default function Estudos() {
                             <div className="conteudos-assunto-titulo-linha">
                               <strong className={assunto.concluido ? "concluido" : ""}>{assunto.nome}</strong>
                               <StatusAssunto assunto={assunto} />
+                              {assunto.complementarAoEdital && (
+                                <span className="conteudos-origem-badge">
+                                  {assunto.vinculoCurso?.status === "ambiguo"
+                                    ? "Vínculo a revisar"
+                                    : "Complementar ao edital"}
+                                </span>
+                              )}
+                              {assunto.vinculoCurso?.status === "ambiguo" && (
+                                <button
+                                  type="button"
+                                  className="conteudos-revisar-vinculo"
+                                  onClick={() => revisarVinculoCurso(materia, assunto)}
+                                >
+                                  Revisar associação
+                                </button>
+                              )}
                             </div>
                             {(() => {
                               const totalAulas = assunto.aulas?.length ?? 0;
