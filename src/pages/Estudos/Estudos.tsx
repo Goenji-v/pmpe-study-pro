@@ -389,7 +389,10 @@ export default function Estudos() {
 
     const origens = (assunto.aulas ?? [])
       .map((aula) => aula.origemCurso)
-      .filter((origem): origem is NonNullable<typeof origem> => Boolean(origem));
+      .filter(
+        (origem): origem is NonNullable<AulaAssunto["origemCurso"]> =>
+          Boolean(origem)
+      );
 
     if (origens.length === 0) {
       showToast("Este conteúdo não possui aula importada para revisar.", "warning");
