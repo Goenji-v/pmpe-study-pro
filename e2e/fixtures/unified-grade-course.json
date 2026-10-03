@@ -1,0 +1,85 @@
+{
+  "id": "e2e-grade-unificada-rdc",
+  "nome": "E2E Resumo do Concurseiro — PMPE",
+  "origem": "captura-json",
+  "urlOrigem": "https://example.com/e2e-rdc-pmpe",
+  "criadoEm": "2026-10-02T20:00:00.000Z",
+  "atualizadoEm": "2026-10-02T20:00:00.000Z",
+  "materias": [
+    {
+      "id": "e2e-info",
+      "nome": "Informática",
+      "ordem": 1,
+      "categoria": "disciplina",
+      "modulos": [
+        {
+          "id": "e2e-internet",
+          "nome": "Internet e intranet",
+          "ordem": 1,
+          "aulas": [
+            {
+              "id": "e2e-internet-1",
+              "nome": "Conceitos de internet e intranet",
+              "url": "https://example.com/study-pro-e2e/internet",
+              "ordem": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e2e-const",
+      "nome": "Direito Constitucional",
+      "ordem": 2,
+      "categoria": "disciplina",
+      "modulos": [
+        {
+          "id": "e2e-poderes",
+          "nome": "Organização dos Poderes",
+          "ordem": 1,
+          "aulas": [
+            {
+              "id": "e2e-executivo",
+              "nome": "Poder Executivo",
+              "url": "https://example.com/study-pro-e2e/executivo",
+              "ordem": 1
+            },
+            {
+              "id": "e2e-legislativo",
+              "nome": "Poder Legislativo",
+              "url": "https://example.com/study-pro-e2e/legislativo",
+              "ordem": 2
+            },
+            {
+              "id": "e2e-judiciario",
+              "nome": "Poder Judiciário",
+              "url": "https://example.com/study-pro-e2e/judiciario",
+              "ordem": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e2e-adm",
+      "nome": "Direito Administrativo",
+      "ordem": 3,
+      "categoria": "disciplina",
+      "modulos": [
+        {
+          "id": "e2e-atos",
+          "nome": "Atos Administrativos",
+          "ordem": 1,
+          "aulas": [
+            {
+              "id": "e2e-atos-1",
+              "nome": "Atos Administrativos",
+              "url": "https://example.com/study-pro-e2e/atos-administrativos",
+              "ordem": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
