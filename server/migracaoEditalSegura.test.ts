@@ -7,11 +7,16 @@ import type {
 import type {
   AnaliseEdital,
   EditalAtivo,
+  PlanoEdital,
 } from "../src/types/editalInteligente.ts";
+import type { CursoImportado } from "../src/types/cursos.ts";
 import {
   prepararMigracaoEditalSegura,
   validarPreservacaoMigracao,
 } from "../src/utils/migracaoEditalSegura.ts";
+import {
+  preservarIdsPlanoAnterior,
+} from "../src/utils/planoEdital.ts";
 
 const AGORA = "2026-10-03T09:00:00.000Z";
 
@@ -403,5 +408,162 @@ test("validação aborta se histórico ou links de questões diminuírem", () =>
         },
       }),
     /links de questões/
+  );
+});
+
+
+test("curso novo substitui aula importada antiga sem apagar link de questões", () => {
+  const materias = materiasAtuais();
+  const teoria = materias[0].assuntos.find((item) => item.id === "dh-teoria");
+  assert.ok(teoria);
+
+  teoria.aulas = [
+    {
+      id: "curso:rdc:aula:teoria:link",
+      nome: "Teoria Geral — aula antiga",
+      url: "https://curso.test/antiga",
+      ordem: 1,
+      concluida: true,
+      origemCurso: {
+        cursoId: "rdc",
+        cursoNome: "Resumo do Concurseiro — PMPE",
+        materiaCursoId: "rdc-dh",
+        materiaCursoNome: "Direitos Humanos",
+        moduloCursoId: "rdc-teoria",
+        moduloCursoNome: "Teoria geral dos Direitos Humanos",
+        aulaCursoId: "teoria",
+      },
+    },
+  ];
+  materias[0].modulos![0].assuntos = materias[0].assuntos;
+
+  const cursoNovo: CursoImportado = {
+    id: "rdc",
+    nome: "Resumo do Concurseiro — PMPE",
+    origem: "captura-json",
+    criadoEm: AGORA,
+    atualizadoEm: AGORA,
+    materias: [
+      {
+        id: "rdc-dh",
+        nome: "Direitos Humanos",
+        ordem: 1,
+        categoria: "disciplina",
+        modulos: [
+          {
+            id: "rdc-teoria",
+            nome: "Teoria geral dos Direitos Humanos",
+            ordem: 1,
+            aulas: [
+              {
+                id: "teoria",
+                nome: "Teoria Geral — aula atualizada",
+                url: "https://curso.test/nova",
+                ordem: 1,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const resultado = prepararMigracaoEditalSegura({
+    materiasAtuais: materias,
+    editalAnterior: editalAnterior(),
+    editalNovoId: "edital-2026",
+    editalNovoNome: "PMPE 2026",
+    analiseNova: novoEdital(),
+    cursos: [cursoNovo],
+    cursosAtivosIds: [cursoNovo.id],
+    contagens: contagens(),
+  });
+
+  const materia = resultado.materiasMigradas.find(
+    (item) => item.id === "materia-dh-canonica"
+  );
+  assert.ok(materia);
+  const migrada = materia.assuntos.find((item) => item.id === "dh-teoria");
+  assert.ok(migrada);
+
+  assert.equal(migrada.questoes, "https://questoes.test/dh/teoria");
+  assert.ok(
+    migrada.aulas?.some((aula) => aula.url === "https://curso.test/nova")
+  );
+  assert.ok(
+    !migrada.aulas?.some((aula) => aula.url === "https://curso.test/antiga")
+  );
+});
+
+test("plano novo preserva ID da missão equivalente já existente", () => {
+  const anterior: PlanoEdital = {
+    versao: 4,
+    id: "plano-antigo",
+    titulo: "Plano antigo",
+    geradoEm: AGORA,
+    totalAssuntos: 1,
+    totalSemanas: 1,
+    diasEstudo: ["seg"],
+    materiasPorDia: 1,
+    minutosPorDia: 60,
+    revisoesPorDia: 0,
+    semanas: [
+      {
+        numero: 1,
+        dias: [
+          {
+            id: "dia-antigo",
+            semana: 1,
+            diaSemana: "seg",
+            nomeDia: "Segunda",
+            minutosDisponiveis: 60,
+            revisoesPlanejadas: 0,
+            missoes: [
+              {
+                id: "missao-concluida-2024",
+                ordem: 1,
+                materiaId: "materia-dh-canonica",
+                materia: "Direitos Humanos",
+                assuntoId: "dh-dudh",
+                assunto: "Declaração Universal dos Direitos Humanos",
+                prioridade: "alta",
+                duracaoMinutos: 60,
+                metaQuestoes: 10,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const novo: PlanoEdital = {
+    ...anterior,
+    id: "plano-novo",
+    titulo: "Plano novo",
+    semanas: [
+      {
+        numero: 1,
+        dias: [
+          {
+            ...anterior.semanas[0].dias[0],
+            id: "dia-novo",
+            missoes: [
+              {
+                ...anterior.semanas[0].dias[0].missoes[0],
+                id: "id-gerado-pelo-plano-novo",
+                assunto: "Declaração Universal dos Direitos Humanos",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const preservado = preservarIdsPlanoAnterior(novo, anterior);
+  assert.equal(
+    preservado.semanas[0].dias[0].missoes[0].id,
+    "missao-concluida-2024"
   );
 });
