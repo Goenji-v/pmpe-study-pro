@@ -428,17 +428,34 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
       todos = modulos.flatMap((modulo) => modulo.assuntos);
     }
 
+    const criadaPeloCurso =
+      materia.id.startsWith("curso-materia-") ||
+      materia.id.startsWith("curso-materia-unificada-");
+    const idCanonico = criadaPeloCurso
+      ? materiaEdital.id
+      : materia.id;
+    const modulosCanonicos = modulos.map((modulo) =>
+      normalizar(modulo.nome) === "geral" &&
+      modulo.id.startsWith("modulo-geral-")
+        ? {
+            ...modulo,
+            id: `modulo-geral-${idCanonico}`,
+          }
+        : modulo
+    );
+
     resultado[indiceMateria] = {
       ...materia,
-      nome:
-        materia.id.startsWith("curso-materia-") ? materiaEdital.nome : materia.nome,
+      id: idCanonico,
+      nome: criadaPeloCurso ? materiaEdital.nome : materia.nome,
       idsLegados: unicos([
         ...(materia.idsLegados ?? []),
-        ...(materia.id !== materiaEdital.id ? [materiaEdital.id] : []),
+        ...(materia.id !== idCanonico ? [materia.id] : []),
+        ...(idCanonico !== materiaEdital.id ? [materiaEdital.id] : []),
       ]),
-      modulos,
+      modulos: modulosCanonicos,
       assuntos: deduplicarAssuntosPorId(
-        modulos.flatMap((modulo) => modulo.assuntos)
+        modulosCanonicos.flatMap((modulo) => modulo.assuntos)
       ),
     };
   }
