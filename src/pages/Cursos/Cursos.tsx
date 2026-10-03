@@ -28,8 +28,12 @@ export default function Cursos() {
   const navigate = useNavigate();
   const { configuracoes, setConfiguracoes, materias, setMaterias } = useApp();
   const config = configuracoes as ConfiguracoesComCursos;
+  const configEdital = configuracoes as ConfiguracoesComEdital;
   const analiseEdital =
-    (configuracoes as ConfiguracoesComEdital).editalAtivo?.analise;
+    configEdital.editalAtivo?.analise &&
+    (configEdital.editalAtivo.plano?.versao ?? 0) >= 3
+      ? configEdital.editalAtivo.analise
+      : undefined;
   const cursos = config.cursos ?? [];
   const ativosIds = config.cursosAtivosIds ?? [];
 
