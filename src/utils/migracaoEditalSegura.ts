@@ -45,6 +45,7 @@ export type ResultadoPreparacaoMigracaoEdital = {
   analiseCanonica: AnaliseEdital;
   materiasMigradas: Materia[];
   relatorio: RelatorioMigracaoEdital;
+  assinaturaOrigem: string;
 };
 
 type MatchAssunto = {
@@ -57,6 +58,61 @@ type MatchAssunto = {
     score: number;
   }>;
 };
+
+export function criarAssinaturaMateriasMigracao(
+  materias: Materia[]
+) {
+  return JSON.stringify(
+    materias.map((materia) => ({
+      id: materia.id,
+      nome: materia.nome,
+      idsLegados: materia.idsLegados ?? [],
+      modulos: (materia.modulos ?? []).map((modulo) => ({
+        id: modulo.id,
+        nome: modulo.nome,
+        ordem: modulo.ordem,
+        assuntos: modulo.assuntos.map((assunto) => ({
+          id: assunto.id,
+          nome: assunto.nome,
+          concluido: assunto.concluido,
+          concluidoEm: assunto.concluidoEm,
+          prioridade: assunto.prioridade,
+          aula: assunto.aula,
+          questoes: assunto.questoes,
+          pdf: assunto.pdf,
+          resumo: assunto.resumo,
+          anotacoes: assunto.anotacoes,
+          materiais: assunto.materiais ?? [],
+          tarefas: assunto.tarefas ?? [],
+          aulas: assunto.aulas ?? [],
+          idsLegados: assunto.idsLegados ?? [],
+          origemEditalId: assunto.origemEditalId,
+          complementarAoEdital: assunto.complementarAoEdital,
+        })),
+      })),
+      assuntos: materia.modulos?.length
+        ? []
+        : (materia.assuntos ?? []).map((assunto) => ({
+            id: assunto.id,
+            nome: assunto.nome,
+            concluido: assunto.concluido,
+            concluidoEm: assunto.concluidoEm,
+            prioridade: assunto.prioridade,
+            aula: assunto.aula,
+            questoes: assunto.questoes,
+            pdf: assunto.pdf,
+            resumo: assunto.resumo,
+            anotacoes: assunto.anotacoes,
+            materiais: assunto.materiais ?? [],
+            tarefas: assunto.tarefas ?? [],
+            aulas: assunto.aulas ?? [],
+            idsLegados: assunto.idsLegados ?? [],
+            origemEditalId: assunto.origemEditalId,
+            complementarAoEdital: assunto.complementarAoEdital,
+          })),
+    }))
+  );
+}
 
 export function remapearMissoesConcluidasPorConteudo(params: {
   planoNovo: PlanoEdital;
@@ -312,6 +368,8 @@ export function prepararMigracaoEditalSegura({
     analiseCanonica,
     materiasMigradas,
     relatorio,
+    assinaturaOrigem:
+      criarAssinaturaMateriasMigracao(materiasAtuais),
   };
 }
 
