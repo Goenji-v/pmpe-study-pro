@@ -72,6 +72,16 @@ import {
   sincronizarBackupsConflitoLocaisNaNuvem,
 } from "../services/seguranca/backupConflitoNuvemService";
 import {
+  registrarBackupMigracaoEditalNaNuvem,
+} from "../services/seguranca/backupMigracaoEditalNuvemService";
+import {
+  validarPreservacaoMigracao,
+} from "../utils/migracaoEditalSegura";
+import type {
+  ConfiguracoesComEdital,
+  RelatorioMigracaoEdital,
+} from "../types/editalInteligente";
+import {
   assinaturaConteudoSincronizacao,
   estadosEquivalentesParaSincronizacao,
 } from "../utils/sincronizacaoConflito";
@@ -152,6 +162,11 @@ type AppContextType = {
     preferencia: "nuvem" | "local"
   ) => Promise<void>;
   restaurarEstadoCompleto: (estado: EstadoAppNuvem) => Promise<void>;
+  aplicarMigracaoEditalSegura: (params: {
+    materias: Materia[];
+    configuracoes: ConfiguracoesApp;
+    relatorio: RelatorioMigracaoEdital;
+  }) => Promise<{ backupNuvemId: string }>;
 
   definirConclusaoAssunto: (
     materiaId: string,
