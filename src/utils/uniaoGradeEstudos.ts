@@ -437,8 +437,10 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
           0.86
         )?.assunto;
 
+      let canonico: Assunto;
+
       if (candidato) {
-        const atualizado: Assunto = {
+        canonico = {
           ...candidato,
           nome: assuntoEdital.nome,
           origemEditalId: assuntoEdital.id,
@@ -453,9 +455,9 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
             ...(candidato.id !== assuntoEdital.id ? [assuntoEdital.id] : []),
           ]),
         };
-        substituirAssunto(modulos, candidato.id, atualizado);
+        substituirAssunto(modulos, candidato.id, canonico);
       } else {
-        const novo: Assunto = {
+        canonico = {
           id: assuntoEdital.id,
           nome: assuntoEdital.nome,
           concluido: false,
@@ -465,8 +467,14 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
           complementarAoEdital: false,
           aulas: [],
         };
-        obterModuloGeral(modulos, materia.id).assuntos.push(novo);
+        obterModuloGeral(modulos, materia.id).assuntos.push(canonico);
       }
+
+      absorverAssuntosLegadosEquivalentes(
+        modulos,
+        canonico,
+        assuntoEdital.nome
+      );
       todos = modulos.flatMap((modulo) => modulo.assuntos);
     }
 
@@ -503,6 +511,115 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
   }
 
   return resultado;
+}
+
+function absorverAssuntosLegadosEquivalentes(
+  modulos: Modulo[],
+  canonico: Assunto,
+  nomeEdital: string
+) {
+  for (const modulo of modulos) {
+    const mantidos: Assunto[] = [];
+
+    for (const candidato of modulo.assuntos) {
+      if (candidato.id === canonico.id) {
+        mantidos.push(candidato);
+        continue;
+      }
+
+      if (
+        candidato.origemEditalId &&
+        candidato.origemEditalId !== canonico.origemEditalId
+      ) {
+        mantidos.push(candidato);
+        continue;
+      }
+
+      if (!assuntosLegadosEquivalentes(nomeEdital, candidato.nome)) {
+        mantidos.push(candidato);
+        continue;
+      }
+
+      preservarDadosAssunto(canonico, candidato);
+      canonico.aulas = deduplicarAulas([
+        ...(canonico.aulas ?? []),
+        ...(candidato.aulas ?? []),
+      ]);
+      canonico.aula =
+        canonico.aulas.find((aula) => aula.url)?.url ??
+        canonico.aula ??
+        candidato.aula;
+
+      const tarefas = [
+        ...(canonico.tarefas ?? []),
+        ...(candidato.tarefas ?? []),
+      ];
+      canonico.tarefas = tarefas.length
+        ? tarefas.filter(
+            (tarefa, indice, lista) =>
+              lista.findIndex(
+                (item) =>
+                  item.id === tarefa.id ||
+                  (
+                    item.tipo === tarefa.tipo &&
+                    normalizar(item.nome) === normalizar(tarefa.nome)
+                  )
+              ) === indice
+          )
+        : undefined;
+
+      if (candidato.concluido && !canonico.concluido) {
+        canonico.concluido = true;
+        canonico.concluidoEm = candidato.concluidoEm;
+        canonico.conclusaoOrigem =
+          candidato.conclusaoOrigem ?? canonico.conclusaoOrigem;
+      } else if (!canonico.concluidoEm && candidato.concluidoEm) {
+        canonico.concluidoEm = candidato.concluidoEm;
+      }
+
+      if (
+        candidato.aula ||
+        (candidato.aulas ?? []).some((aula) => Boolean(aula.url))
+      ) {
+        canonico.origemConteudo = "mesclado";
+      }
+    }
+
+    modulo.assuntos = mantidos;
+  }
+}
+
+function assuntosLegadosEquivalentes(a: string, b: string) {
+  const na = normalizarAssuntoLegado(a);
+  const nb = normalizarAssuntoLegado(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+
+  if (na.includes(nb) || nb.includes(na)) {
+    const menor = Math.min(na.length, nb.length);
+    const maior = Math.max(na.length, nb.length);
+    if (menor >= 12 && menor / maior >= 0.65) return true;
+  }
+
+  if (ehIncorporacaoInternacionalBrasil(na, nb)) return true;
+
+  return scoreTexto(na, nb) >= 0.94;
+}
+
+function normalizarAssuntoLegado(texto: string) {
+  return normalizarExpandido(texto)
+    .replace(/^em producao\s+/, "")
+    .replace(/^\d+\s+/, "")
+    .trim();
+}
+
+function ehIncorporacaoInternacionalBrasil(a: string, b: string) {
+  const ehTema = (texto: string) =>
+    /\bincorporacao\b/.test(texto) &&
+    /\binternacion/.test(texto) &&
+    /\b(brasil|brasileir|interno|ordenamento)/.test(texto);
+
+  return ehTema(a) && ehTema(b) && scoreTokens(a, b) >= 0.45;
 }
 
 function aplicarCursoNaGrade(
