@@ -265,6 +265,15 @@ function limparGradeAnterior(materias: Materia[]): Materia[] {
 }
 
 function limparAssuntoAnterior(assunto: Assunto): Assunto | null {
+  // Formato legado: cada aula importada era um assunto separado. O estado é
+  // capturado antes desta limpeza e reaplicado à aula canônica pelo ID/URL.
+  if (
+    assunto.id.startsWith("curso:") &&
+    !assunto.origemEditalId
+  ) {
+    return null;
+  }
+
   const aulas = (assunto.aulas ?? []).filter(
     (aula) => !ehAulaCurso(aula)
   );
