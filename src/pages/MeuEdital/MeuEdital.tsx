@@ -27,6 +27,8 @@ import {
   type PrioridadeEdital,
 } from "../../types/editalInteligente";
 import type { EditalCatalogo } from "../../types/catalogoEditais";
+import type { ConfiguracoesComCursos } from "../../types/cursos";
+import { aplicarCursosAtivosNasMaterias } from "../../utils/importacaoCurso";
 import {
   gerarPlanoEdital,
   mesclarMateriasDoEdital,
@@ -65,6 +67,7 @@ function cargoInicialDoEdital(
 export default function MeuEdital() {
   const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
+  const configCursos = configuracoes as ConfiguracoesComCursos;
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -394,7 +397,13 @@ export default function MeuEdital() {
       return;
     }
 
-    const plano = gerarPlanoEdital(normalizada, config);
+    const gradePrevia = aplicarCursosAtivosNasMaterias(
+      mesclarMateriasDoEdital(materias, normalizada),
+      configCursos.cursos ?? [],
+      configCursos.cursosAtivosIds ?? [],
+      normalizada
+    );
+    const plano = gerarPlanoEdital(normalizada, config, gradePrevia);
     setAnalise(normalizada);
     setPlanoPrevio(plano);
     showToast("Prévia criada com as regras do seu perfil.", "success");
@@ -417,7 +426,14 @@ export default function MeuEdital() {
       const agora = new Date().toISOString();
 
       if (editalCatalogoSelecionado) {
-        setMaterias((atuais) => mesclarMateriasDoEdital(atuais, analise));
+        setMaterias((atuais) =>
+          aplicarCursosAtivosNasMaterias(
+            mesclarMateriasDoEdital(atuais, analise),
+            configCursos.cursos ?? [],
+            configCursos.cursosAtivosIds ?? [],
+            analise
+          )
+        );
 
         const novasConfiguracoes: ConfiguracoesComEdital = {
           ...config,
@@ -484,7 +500,14 @@ export default function MeuEdital() {
           ? editalAnterior.id
           : crypto.randomUUID();
 
-      setMaterias((atuais) => mesclarMateriasDoEdital(atuais, analise));
+      setMaterias((atuais) =>
+          aplicarCursosAtivosNasMaterias(
+            mesclarMateriasDoEdital(atuais, analise),
+            configCursos.cursos ?? [],
+            configCursos.cursosAtivosIds ?? [],
+            analise
+          )
+        );
 
       const novasConfiguracoes: ConfiguracoesComEdital = {
         ...config,
