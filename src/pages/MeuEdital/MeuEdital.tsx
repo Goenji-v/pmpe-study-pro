@@ -519,6 +519,7 @@ export default function MeuEdital() {
           bancaPadrao:
             editalCatalogoSelecionado.banca ?? config.bancaPadrao,
           editalOnboardingVisto: true,
+          migracaoEstruturalEm: agora,
           editalAtivo: {
             id: editalCatalogoSelecionado.id,
             catalogoId: editalCatalogoSelecionado.id,
@@ -583,6 +584,7 @@ export default function MeuEdital() {
             analiseFinal.bancaDetectada ||
             config.bancaPadrao,
           editalOnboardingVisto: true,
+          migracaoEstruturalEm: agora,
           editalAtivo: {
             id,
             nomeArquivo: pdf.nomeArquivo,

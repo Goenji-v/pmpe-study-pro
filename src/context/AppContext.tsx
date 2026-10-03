@@ -26,7 +26,7 @@ import {
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao } from "../utils/revisoes";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
-import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
+import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveMigracaoEstruturalDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
 import ArmazenamentoConta from "../components/ArmazenamentoConta/ArmazenamentoConta";
 import { chaveArmazenamentoConta, criarEscopoArmazenamento } from "../services/armazenamentoConta";
 
@@ -1340,6 +1340,48 @@ function EstadoDaConta({
           pendenteLocal?.estado.configuracoes ?? dadosAtuaisRef.current.configuracoes,
           estadoNuvem.configuracoes
         )) {
+          aplicarEstadoDaNuvem(estadoNuvem);
+          confirmarSincronizacaoLocal(idDaConta, estadoNuvem);
+          nuvemInicializadaRef.current = true;
+          return;
+        }
+
+        // Uma migração estrutural confirmada (ex.: edital novo) também precisa
+        // prevalecer sobre um cache antigo. Antes de substituir o aparelho,
+        // preservamos a cópia local no Supabase para que nenhum progresso
+        // offline fique irrecuperável.
+        const estadoLocalAntesDaMigracao =
+          pendenteLocal?.estado ??
+          montarEstadoNuvem(dadosAtuaisRef.current);
+
+        if (
+          estadoNuvem &&
+          houveMigracaoEstruturalDaConta(
+            estadoLocalAntesDaMigracao.configuracoes,
+            estadoNuvem.configuracoes
+          )
+        ) {
+          try {
+            criarBackupAutomaticoLocal(
+              idDaConta,
+              estadoLocalAntesDaMigracao,
+              "antes_resolucao_conflito"
+            );
+          } catch (erroBackupLocal) {
+            console.warn(
+              "Backup local pré-hidratação da migração indisponível; preservando no Supabase:",
+              erroBackupLocal
+            );
+          }
+
+          await registrarBackupConflitoNaNuvem({
+            usuarioId: idDaConta,
+            estadoLocal: estadoLocalAntesDaMigracao,
+            estadoNuvem,
+          });
+
+          if (!ativo) return;
+
           aplicarEstadoDaNuvem(estadoNuvem);
           confirmarSincronizacaoLocal(idDaConta, estadoNuvem);
           nuvemInicializadaRef.current = true;

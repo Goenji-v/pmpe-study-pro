@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../src/utils/contaInicial";
+import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveMigracaoEstruturalDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../src/utils/contaInicial";
 import { criarPlanoCalendario } from "../src/utils/planoCalendario";
 import { armazenamentoLocalDaConta, armazenamentoSessaoDaConta, criarEscopoArmazenamento, definirEscopoArmazenamento, permiteMigracaoLegada } from "../src/services/armazenamentoConta";
 
@@ -30,6 +30,27 @@ test("reinício remoto vence cópia antiga, mas não confunde conflito normal co
   assert.equal(houveReinicioDaConta(remoto, {}), false);
   assert.equal(houveReinicioDaConta({}, { dadosReiniciadosEm: "inválido" }), false);
   assert.equal(houveReinicioDaConta({}, {}), false);
+});
+
+test("migração estrutural remota vence cache antigo sem confundir mesma geração", () => {
+  const remoto = { migracaoEstruturalEm: "2026-10-03T17:20:00.000Z" };
+  assert.equal(houveMigracaoEstruturalDaConta({}, remoto), true);
+  assert.equal(houveMigracaoEstruturalDaConta(remoto, remoto), false);
+  assert.equal(
+    houveMigracaoEstruturalDaConta(
+      { migracaoEstruturalEm: "2026-10-03T18:00:00.000Z" },
+      remoto
+    ),
+    false
+  );
+  assert.equal(houveMigracaoEstruturalDaConta({}, {}), false);
+  assert.equal(
+    houveMigracaoEstruturalDaConta(
+      {},
+      { migracaoEstruturalEm: "inválido" }
+    ),
+    false
+  );
 });
 
 test("restaurar backup antigo não remove a geração criada pelo reinício", () => {
