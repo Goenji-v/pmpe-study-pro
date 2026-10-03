@@ -38,6 +38,15 @@ export function houveReinicioDaConta(
   return Number.isFinite(dataRemota) && (!Number.isFinite(dataLocal) || dataRemota > dataLocal);
 }
 
+export function houveMigracaoEstruturalDaConta(
+  local: Pick<ConfiguracoesApp, "migracaoEstruturalEm">,
+  remoto: Pick<ConfiguracoesApp, "migracaoEstruturalEm">
+) {
+  const dataRemota = Date.parse(remoto.migracaoEstruturalEm ?? "");
+  const dataLocal = Date.parse(local.migracaoEstruturalEm ?? "");
+  return Number.isFinite(dataRemota) && (!Number.isFinite(dataLocal) || dataRemota > dataLocal);
+}
+
 export function preservarGeracaoDoReinicio(
   configuracoes: ConfiguracoesApp,
   configuracoesAtuais: ConfiguracoesApp
