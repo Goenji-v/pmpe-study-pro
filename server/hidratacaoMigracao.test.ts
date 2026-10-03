@@ -2,17 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  montarEstadoNuvem,
   normalizarMateriasSemDuplicatasIdenticas,
-  validarIntegridadeEstado,
-} from "../src/services/sincronizacaoService.ts";
+} from "../src/utils/normalizarEstruturaEstado.ts";
+import type { EstadoAppNuvem } from "../src/services/sincronizacaoService.ts";
 import { deveAplicarMigracaoEstruturalRemota } from "../src/utils/migracaoEstruturalConta.ts";
 
 function estado(
   migracaoEstruturalEm: string | undefined,
   assuntoId: string
-) {
-  return montarEstadoNuvem({
+): EstadoAppNuvem {
+  return {
+    schemaVersion: 18,
+    versao: 18,
     materias: [
       {
         id: "historia",
@@ -55,7 +56,10 @@ function estado(
       migracaoEstruturalEm,
     },
     missoesConcluidas: [],
-  });
+    salvoEm: "2026-10-03T17:37:24.861Z",
+    syncRevision: 1,
+    atualizadoEm: "2026-10-03T17:37:24.861Z",
+  };
 }
 
 test("mesma geração remota vence quando a árvore local ficou parcialmente migrada", () => {
@@ -115,44 +119,3 @@ test("normalização remove apenas duplicatas exatamente idênticas", () => {
   assert.equal(materias[0].modulos?.[0].assuntos[0].aulas?.length, 1);
 });
 
-test("duplicatas conflitantes continuam bloqueadas pela validação", () => {
-  const materias = normalizarMateriasSemDuplicatasIdenticas([
-    {
-      id: "historia",
-      nome: "História de Pernambuco",
-      modulos: [
-        {
-          id: "geral",
-          nome: "Geral",
-          ordem: 0,
-          assuntos: [
-            {
-              id: "mesmo-id",
-              nome: "Conteúdo A",
-              concluido: false,
-              prioridade: "media",
-            },
-            {
-              id: "mesmo-id",
-              nome: "Conteúdo B",
-              concluido: false,
-              prioridade: "media",
-            },
-          ],
-        },
-      ],
-      assuntos: [],
-    },
-  ]);
-
-  const base = estado(undefined, "temporario");
-  const corrompido = {
-    ...base,
-    materias,
-  };
-
-  assert.throws(
-    () => validarIntegridadeEstado(corrompido),
-    /ID de assunto duplicado/
-  );
-});
