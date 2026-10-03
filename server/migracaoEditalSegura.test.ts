@@ -685,3 +685,103 @@ test("assinatura da prévia muda se progresso ou anotação forem alterados depo
   const assinaturaDepois = criarAssinaturaMateriasMigracao(depois);
   assert.notEqual(assinaturaDepois, assinaturaAntes);
 });
+
+
+test("divisão de um assunto antigo não replica conclusão para os novos recortes", () => {
+  const materias: Materia[] = [
+    {
+      id: "const",
+      nome: "Direito Constitucional",
+      modulos: [
+        {
+          id: "geral-const",
+          nome: "Geral",
+          ordem: 0,
+          assuntos: [
+            {
+              id: "organizacao-poderes",
+              nome: "Organização dos Poderes",
+              concluido: true,
+              concluidoEm: AGORA,
+              prioridade: "alta",
+              questoes: "https://questoes.test/poderes",
+              aulas: [],
+            },
+          ],
+        },
+      ],
+      assuntos: [],
+    },
+  ].map((materia) => ({
+    ...materia,
+    assuntos: materia.modulos!.flatMap((modulo) => modulo.assuntos),
+  }));
+
+  const anterior = criarEditalAnteriorSintetico({
+    materias,
+    concurso: "PMPE",
+    banca: "AOCP",
+  });
+
+  const nova: AnaliseEdital = {
+    concursoDetectado: "PMPE 2026",
+    bancaDetectada: "AOCP",
+    analisadoEm: AGORA,
+    materias: [
+      {
+        id: "novo-const",
+        nome: "Direito Constitucional",
+        incidenciaEstimada: 5,
+        assuntos: [
+          {
+            id: "novo-organizacao",
+            nome: "Organização dos Poderes",
+            prioridade: "alta",
+          },
+          {
+            id: "novo-executivo",
+            nome: "Organização dos Poderes - Poder Executivo",
+            prioridade: "alta",
+          },
+        ],
+      },
+    ],
+  };
+
+  const resultado = prepararMigracaoEditalSegura({
+    materiasAtuais: materias,
+    editalAnterior: anterior,
+    editalNovoId: "novo-edital",
+    editalNovoNome: "PMPE 2026",
+    analiseNova: nova,
+    cursos: [],
+    cursosAtivosIds: [],
+    contagens: {
+      questoes: 0,
+      sessoes: 0,
+      revisoes: 0,
+      simulados: 0,
+      bancoQuestoes: 0,
+      simuladosGerados: 0,
+      missoesConcluidas: 0,
+    },
+  });
+
+  const materia = resultado.materiasMigradas.find((item) => item.id === "const");
+  assert.ok(materia);
+
+  const geral = materia.assuntos.find(
+    (item) => item.nome === "Organização dos Poderes"
+  );
+  const executivo = materia.assuntos.find(
+    (item) => item.nome === "Organização dos Poderes - Poder Executivo"
+  );
+
+  assert.ok(geral);
+  assert.ok(executivo);
+  assert.equal(geral.id, "organizacao-poderes");
+  assert.equal(geral.concluido, true);
+  assert.notEqual(executivo.id, "organizacao-poderes");
+  assert.equal(executivo.concluido, false);
+  assert.equal(geral.questoes, "https://questoes.test/poderes");
+});
