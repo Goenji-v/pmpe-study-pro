@@ -327,14 +327,6 @@ const [
       [materias, estado.materia, estado.materiaId]
     );
 
-  const modulosDisponiveis = useMemo(
-    () =>
-      materiaSelecionada
-        ? listarModulosDaMateria(materiaSelecionada)
-        : [],
-    [materiaSelecionada]
-  );
-
   const assuntosComModulo = useMemo(
     () =>
       materiaSelecionada
