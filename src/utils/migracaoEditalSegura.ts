@@ -57,6 +57,38 @@ type MatchAssunto = {
   }>;
 };
 
+export function criarEditalAnteriorSintetico(params: {
+  materias: Materia[];
+  concurso: string;
+  banca?: string;
+}): EditalAtivo {
+  const analisadoEm = new Date().toISOString();
+
+  return {
+    id: "estado-anterior-study-pro",
+    nomeArquivo: "Estado anterior do Study Pro",
+    storagePath: "",
+    confirmadoEm: analisadoEm,
+    analise: {
+      concursoDetectado: params.concurso || "Concurso atual",
+      bancaDetectada: params.banca,
+      analisadoEm,
+      materias: params.materias
+        .map((materia) => ({
+          id: materia.id,
+          nome: materia.nome,
+          incidenciaEstimada: 1,
+          assuntos: listarAssuntosBrutos(materia).map((assunto) => ({
+            id: assunto.id,
+            nome: assunto.nome,
+            prioridade: assunto.prioridade,
+          })),
+        }))
+        .filter((materia) => materia.assuntos.length > 0),
+    },
+  };
+}
+
 export function prepararMigracaoEditalSegura({
   materiasAtuais,
   editalAnterior,
