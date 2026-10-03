@@ -422,8 +422,8 @@ test("curso novo substitui aula importada antiga sem apagar link de questões", 
 
   teoria.aulas = [
     {
-      id: "curso:rdc:aula:teoria:link",
-      nome: "Teoria Geral — aula antiga",
+      id: "curso:rdc:aula:teoria-antiga:link",
+      nome: "Teoria Geral — aula atualizada",
       url: "https://curso.test/antiga",
       ordem: 1,
       concluida: true,
@@ -434,7 +434,7 @@ test("curso novo substitui aula importada antiga sem apagar link de questões", 
         materiaCursoNome: "Direitos Humanos",
         moduloCursoId: "rdc-teoria",
         moduloCursoNome: "Teoria geral dos Direitos Humanos",
-        aulaCursoId: "teoria",
+        aulaCursoId: "teoria-antiga",
       },
     },
   ];
@@ -495,6 +495,11 @@ test("curso novo substitui aula importada antiga sem apagar link de questões", 
   );
   assert.ok(
     !migrada.aulas?.some((aula) => aula.url === "https://curso.test/antiga")
+  );
+  assert.equal(
+    migrada.aulas?.find((aula) => aula.url === "https://curso.test/nova")
+      ?.concluida,
+    true
   );
 });
 
