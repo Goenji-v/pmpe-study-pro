@@ -120,7 +120,8 @@ export function criarAnalisePlanejamentoUnificada(
       idsUsados.add(canonico.id);
       return {
         ...assuntoEdital,
-        id: canonico.id,
+        id: assuntoEdital.id,
+        conteudoCanonicoId: canonico.id,
         nome: canonico.nome,
       };
     });
@@ -143,7 +144,7 @@ export function criarAnalisePlanejamentoUnificada(
 
     return {
       ...materiaEdital,
-      id: materiaCanonica.id,
+      conteudoCanonicoId: materiaCanonica.id,
       nome: materiaCanonica.nome,
       assuntos,
     };
@@ -401,14 +402,25 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
   const resultado = clonar(materias);
 
   for (const materiaEdital of analise.materias) {
-    let indiceMateria = indiceMelhorMateria(resultado, materiaEdital.nome);
+    let indiceMateria = materiaEdital.conteudoCanonicoId
+      ? resultado.findIndex(
+          (materia) =>
+            materia.id === materiaEdital.conteudoCanonicoId ||
+            materia.idsLegados?.includes(materiaEdital.conteudoCanonicoId as string)
+        )
+      : -1;
     if (indiceMateria < 0) {
+      indiceMateria = indiceMelhorMateria(resultado, materiaEdital.nome);
+    }
+    if (indiceMateria < 0) {
+      const materiaCanonicaId =
+        materiaEdital.conteudoCanonicoId ?? materiaEdital.id;
       resultado.push({
-        id: materiaEdital.id,
+        id: materiaCanonicaId,
         nome: materiaEdital.nome,
         modulos: [
           {
-            id: `modulo-geral-${materiaEdital.id}`,
+            id: `modulo-geral-${materiaCanonicaId}`,
             nome: "Geral",
             ordem: 0,
             assuntos: [],
@@ -426,6 +438,10 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
     for (const assuntoEdital of materiaEdital.assuntos) {
       const porOrigem = todos.find(
         (assunto) =>
+          assunto.id === assuntoEdital.conteudoCanonicoId ||
+          assunto.idsLegados?.includes(
+            assuntoEdital.conteudoCanonicoId ?? ""
+          ) ||
           assunto.id === assuntoEdital.id ||
           assunto.origemEditalId === assuntoEdital.id
       );
@@ -444,6 +460,12 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
           ...candidato,
           nome: assuntoEdital.nome,
           origemEditalId: assuntoEdital.id,
+          referenciasEdital: unicos([
+            ...(candidato.referenciasEdital ?? []),
+            ...(candidato.origemEditalId ? [candidato.origemEditalId] : []),
+            assuntoEdital.id,
+          ]),
+          foraDoEditalAtual: false,
           origemConteudo:
             (candidato.aulas ?? []).some(ehAulaCurso)
               ? "mesclado"
@@ -458,11 +480,13 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
         substituirAssunto(modulos, candidato.id, canonico);
       } else {
         canonico = {
-          id: assuntoEdital.id,
+          id: assuntoEdital.conteudoCanonicoId ?? assuntoEdital.id,
           nome: assuntoEdital.nome,
           concluido: false,
           prioridade: assuntoEdital.prioridade,
           origemEditalId: assuntoEdital.id,
+          referenciasEdital: [assuntoEdital.id],
+          foraDoEditalAtual: false,
           origemConteudo: "edital",
           complementarAoEdital: false,
           aulas: [],
@@ -481,9 +505,9 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
     const criadaPeloCurso =
       materia.id.startsWith("curso-materia-") ||
       materia.id.startsWith("curso-materia-unificada-");
-    const idCanonico = criadaPeloCurso
-      ? materiaEdital.id
-      : materia.id;
+    const idCanonico =
+      materiaEdital.conteudoCanonicoId ??
+      (criadaPeloCurso ? materiaEdital.id : materia.id);
     const modulosCanonicos = modulos.map((modulo) =>
       normalizar(modulo.nome) === "geral" &&
       modulo.id.startsWith("modulo-geral-")
