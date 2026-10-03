@@ -166,6 +166,7 @@ type AppContextType = {
     materias: Materia[];
     configuracoes: ConfiguracoesApp;
     relatorio: RelatorioMigracaoEdital;
+    missoesConcluidas?: string[];
   }) => Promise<{ backupNuvemId: string }>;
 
   definirConclusaoAssunto: (
@@ -1948,6 +1949,7 @@ function EstadoDaConta({
     materias: Materia[];
     configuracoes: ConfiguracoesApp;
     relatorio: RelatorioMigracaoEdital;
+    missoesConcluidas?: string[];
   }): Promise<{ backupNuvemId: string }> {
     if (!usuario) {
       throw new Error(
@@ -1993,6 +1995,9 @@ function EstadoDaConta({
         ...estadoLocalAnterior,
         materias: params.materias,
         configuracoes: params.configuracoes,
+        missoesConcluidas:
+          params.missoesConcluidas ??
+          estadoLocalAnterior.missoesConcluidas,
         syncRevision: revisaoNuvem + 1,
         atualizadoEm: agora,
         salvoEm: agora,
