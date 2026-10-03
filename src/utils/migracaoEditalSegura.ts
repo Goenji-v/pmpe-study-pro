@@ -155,12 +155,19 @@ export function prepararMigracaoEditalSegura({
 
     const assuntos = materiaNova.assuntos.map((assuntoNovo) => {
       const match = escolherAssunto(
-        candidatos.filter((assunto) => !usados.has(assunto.id)),
+        candidatos.filter(
+          (assunto) =>
+            !usados.has(
+              chaveCanonica(idMateriaCanonica, assunto.id)
+            )
+        ),
         assuntoNovo.nome
       );
 
       if (match.assunto && !match.ambiguo) {
-        usados.add(match.assunto.id);
+        usados.add(
+          chaveCanonica(idMateriaCanonica, match.assunto.id)
+        );
         fontePorCanonico.set(
           chaveCanonica(idMateriaCanonica, match.assunto.id),
           {
@@ -502,9 +509,14 @@ function localizarAssuntosRemovidos(
         ) ??
         escolherAssunto(assuntosAtuais, assuntoAnterior.nome).assunto;
 
-      if (!atual || usados.has(atual.id)) continue;
+      if (
+        !atual ||
+        usados.has(chaveCanonica(materiaAtual.id, atual.id))
+      ) {
+        continue;
+      }
 
-      usados.add(atual.id);
+      usados.add(chaveCanonica(materiaAtual.id, atual.id));
       removidos.push({
         materiaId: materiaAtual.id,
         assunto: atual,
