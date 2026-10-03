@@ -43,19 +43,49 @@ export function listarModulosDaMateria(
   ];
 }
 
+export type AssuntoComModulo = {
+  modulo: Modulo;
+  assunto: Assunto;
+};
+
+export function listarAssuntosUnificadosComModulo(
+  materia: Materia
+): AssuntoComModulo[] {
+  const modulos = listarModulosDaMateria(materia);
+  const resultado: AssuntoComModulo[] = [];
+
+  for (const modulo of modulos) {
+    for (const assunto of modulo.assuntos) {
+      const indice = resultado.findIndex(({ assunto: existente }) =>
+        existente.id === assunto.id ||
+        assuntosEquivalentesParaNavegacao(existente.nome, assunto.nome)
+      );
+
+      if (indice < 0) {
+        resultado.push({ modulo, assunto });
+        continue;
+      }
+
+      const atual = resultado[indice];
+      resultado[indice] = {
+        modulo: atual.modulo,
+        assunto: mesclarAssuntosParaNavegacao(atual.assunto, assunto),
+      };
+    }
+  }
+
+  return resultado;
+}
+
 export function listarAssuntosDaMateria(
   materia: Materia
 ): Assunto[] {
-  const assuntosDosModulos =
-    listarModulosDaMateria(materia).flatMap(
-      (modulo) => modulo.assuntos
-    );
+  const unificados = listarAssuntosUnificadosComModulo(materia);
+  if (unificados.length > 0) {
+    return unificados.map(({ assunto }) => assunto);
+  }
 
-  return deduplicarAssuntos(
-    assuntosDosModulos.length > 0
-      ? assuntosDosModulos
-      : materia.assuntos
-  );
+  return deduplicarAssuntos(materia.assuntos);
 }
 
 export function listarTodosAssuntos(
@@ -341,6 +371,169 @@ function decodificar(valor: string) {
   } catch {
     return valor;
   }
+}
+
+function mesclarAssuntosParaNavegacao(
+  base: Assunto,
+  extra: Assunto
+): Assunto {
+  const aulas = deduplicarAulasParaNavegacao([
+    ...(base.aulas ?? []),
+    ...(extra.aulas ?? []),
+  ]);
+  const materiais = deduplicarMateriaisParaNavegacao([
+    ...(base.materiais ?? []),
+    ...(extra.materiais ?? []),
+  ]);
+  const tarefas = [
+    ...(base.tarefas ?? []),
+    ...(extra.tarefas ?? []),
+  ].filter(
+    (tarefa, indice, lista) =>
+      lista.findIndex(
+        (item) =>
+          item.id === tarefa.id ||
+          (
+            item.tipo === tarefa.tipo &&
+            normalizarNomeAssunto(item.nome) === normalizarNomeAssunto(tarefa.nome)
+          )
+      ) === indice
+  );
+
+  const temOrigemCurso =
+    Boolean(extra.origemConteudo === "curso" || extra.origemConteudo === "mesclado") ||
+    aulas.some((aula) => Boolean(aula.origemCurso) || ehAulaVisaoCurso(aula.id));
+
+  return {
+    ...base,
+    idsLegados: Array.from(
+      new Set([
+        ...(base.idsLegados ?? []),
+        ...(extra.idsLegados ?? []),
+        ...(extra.id !== base.id ? [extra.id] : []),
+      ])
+    ),
+    aulas,
+    aula:
+      aulas.find((aula) => aula.url)?.url ??
+      base.aula ??
+      extra.aula,
+    questoes: base.questoes ?? extra.questoes,
+    pdf: base.pdf ?? extra.pdf,
+    resumo: base.resumo ?? extra.resumo,
+    anotacoes: juntarTextoNavegacao(base.anotacoes, extra.anotacoes),
+    materiais: materiais.length > 0 ? materiais : undefined,
+    tarefas: tarefas.length > 0 ? tarefas : undefined,
+    concluido: Boolean(base.concluido || extra.concluido),
+    concluidoEm: base.concluidoEm ?? extra.concluidoEm,
+    conclusaoOrigem: base.conclusaoOrigem ?? extra.conclusaoOrigem,
+    origemConteudo:
+      base.origemEditalId && temOrigemCurso
+        ? "mesclado"
+        : base.origemConteudo ?? extra.origemConteudo,
+    complementarAoEdital:
+      base.origemEditalId
+        ? false
+        : Boolean(base.complementarAoEdital && extra.complementarAoEdital),
+  };
+}
+
+function assuntosEquivalentesParaNavegacao(a: string, b: string) {
+  const na = normalizarNomeAssunto(a);
+  const nb = normalizarNomeAssunto(b);
+
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+
+  const menor = na.length <= nb.length ? na : nb;
+  const maior = na.length > nb.length ? na : nb;
+  if (
+    menor.length >= 12 &&
+    maior.includes(menor) &&
+    menor.length / maior.length >= 0.72
+  ) {
+    return true;
+  }
+
+  return temaIncorporacaoDireitosHumanos(na) &&
+    temaIncorporacaoDireitosHumanos(nb);
+}
+
+function normalizarNomeAssunto(texto: string) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/^\s*em\s+producao\s*[-–—:]?\s*/i, "")
+    .replace(/^\s*\d+\s*[.\-–—:)]\s*/i, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function temaIncorporacaoDireitosHumanos(texto: string) {
+  return (
+    texto.includes("incorporacao") &&
+    texto.includes("internacion") &&
+    (
+      texto.includes("brasileir") ||
+      texto.includes("brasil") ||
+      texto.includes("ordenamento") ||
+      texto.includes("direito interno")
+    )
+  );
+}
+
+function deduplicarAulasParaNavegacao(aulas: AulaAssunto[]) {
+  const ids = new Set<string>();
+  const urls = new Set<string>();
+
+  return aulas.filter((aula) => {
+    const url = normalizarUrlNavegacao(aula.url);
+    if (ids.has(aula.id)) return false;
+    if (url && urls.has(url)) return false;
+
+    ids.add(aula.id);
+    if (url) urls.add(url);
+    return true;
+  });
+}
+
+function deduplicarMateriaisParaNavegacao(
+  materiais: NonNullable<Assunto["materiais"]>
+) {
+  const ids = new Set<string>();
+  const urls = new Set<string>();
+
+  return materiais.filter((material) => {
+    const url = normalizarUrlNavegacao(material.url);
+    if (ids.has(material.id)) return false;
+    if (url && urls.has(url)) return false;
+
+    ids.add(material.id);
+    if (url) urls.add(url);
+    return true;
+  });
+}
+
+function normalizarUrlNavegacao(url?: string) {
+  if (!url) return "";
+  try {
+    const objeto = new URL(url);
+    objeto.hash = "";
+    return objeto.href;
+  } catch {
+    return url.trim();
+  }
+}
+
+function juntarTextoNavegacao(a?: string, b?: string) {
+  const partes = [a?.trim(), b?.trim()].filter(Boolean) as string[];
+  return Array.from(new Set(partes)).join("\n\n") || undefined;
+}
+
+function ehAulaVisaoCurso(aulaId: string) {
+  return aulaId.startsWith(PREFIXO_AULA_CURSO_VISAO);
 }
 
 function deduplicarAssuntos(
