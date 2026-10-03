@@ -29,6 +29,7 @@ import {
   scoreAssociacaoAssunto,
   unificarGradeEditalCursos,
 } from "../src/utils/uniaoGradeEstudos.ts";
+import { EDITAIS_PREDEFINIDOS_SISTEMA } from "../src/data/editaisPredefinidos.ts";
 import {
   reconciliarQuestoesComConteudos,
   reconciliarRevisoesComConteudos,
@@ -729,4 +730,133 @@ test("migração automática da grade fica restrita a plano dinâmico, preservan
 
   assert.match(importacao, /plano\?\.versao \?\? 0\) >= 3/);
   assert.match(cursos, /plano\?\.versao \?\? 0\) >= 3/);
+});
+
+
+test("nomes reais do PMPE 2026 recebem aulas equivalentes do curso", () => {
+  const editalSoldado = EDITAIS_PREDEFINIDOS_SISTEMA.find(
+    (edital) => edital.slug === "pmpe-2026-soldado"
+  );
+  assert.ok(editalSoldado);
+
+  const cursoReal: CursoImportado = {
+    id: "rdc-pmpe",
+    nome: "Resumo do Concurseiro — PMPE",
+    origem: "captura-json",
+    criadoEm: AGORA,
+    atualizadoEm: AGORA,
+    materias: [
+      {
+        id: "rdc-info",
+        nome: "Informática",
+        ordem: 1,
+        categoria: "disciplina",
+        modulos: [
+          {
+            id: "rdc-internet",
+            nome: "Internet e intranet",
+            ordem: 1,
+            aulas: [
+              {
+                id: "rdc-internet-1",
+                nome: "Conceitos de internet e intranet",
+                url: "https://curso.test/rdc/internet",
+                ordem: 1,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "rdc-const",
+        nome: "Direito Constitucional",
+        ordem: 2,
+        categoria: "disciplina",
+        modulos: [
+          {
+            id: "rdc-poderes",
+            nome: "Organização dos Poderes",
+            ordem: 1,
+            aulas: [
+              {
+                id: "rdc-executivo",
+                nome: "Poder Executivo",
+                url: "https://curso.test/rdc/executivo",
+                ordem: 1,
+              },
+              {
+                id: "rdc-legislativo",
+                nome: "Poder Legislativo",
+                url: "https://curso.test/rdc/legislativo",
+                ordem: 2,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "rdc-leg",
+        nome: "Legislação Extravagante",
+        ordem: 3,
+        categoria: "disciplina",
+        modulos: [
+          {
+            id: "rdc-abuso",
+            nome: "Abuso de Autoridade",
+            ordem: 1,
+            aulas: [
+              {
+                id: "rdc-abuso-1",
+                nome: "Lei de Abuso de Autoridade",
+                url: "https://curso.test/rdc/abuso",
+                ordem: 1,
+              },
+            ],
+          },
+          {
+            id: "rdc-ambientais",
+            nome: "Lei de Crimes Ambientais",
+            ordem: 2,
+            aulas: [
+              {
+                id: "rdc-ambientais-1",
+                nome: "Crimes Ambientais",
+                url: "https://curso.test/rdc/ambientais",
+                ordem: 1,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const grade = unificarGradeEditalCursos({
+    materiasAtuais: [],
+    analiseEdital: editalSoldado.analise,
+    cursos: [cursoReal],
+    cursosAtivosIds: [cursoReal.id],
+  });
+
+  const internet = assunto(materia(grade, "Informática"), "Internet e intranet");
+  assert.equal(internet.aulas?.[0]?.url, "https://curso.test/rdc/internet");
+
+  const poderes = assunto(
+    materia(grade, "Direito Constitucional"),
+    "Organização dos Poderes e Funções Essenciais à Justiça"
+  );
+  assert.deepEqual(
+    poderes.aulas?.map((aula) => aula.nome),
+    ["Poder Executivo", "Poder Legislativo"]
+  );
+
+  const legislacao = materia(grade, "Direitos Humanos e Legislação Extravagante");
+  const abuso = assuntos(legislacao).find((item) =>
+    item.nome.includes("Abuso de Autoridade")
+  );
+  const ambientais = assuntos(legislacao).find((item) =>
+    item.nome.includes("Crimes Ambientais")
+  );
+  assert.equal(abuso?.aulas?.[0]?.url, "https://curso.test/rdc/abuso");
+  assert.equal(ambientais?.aulas?.[0]?.url, "https://curso.test/rdc/ambientais");
 });
