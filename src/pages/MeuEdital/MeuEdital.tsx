@@ -612,6 +612,8 @@ export default function MeuEdital() {
             materias: migracaoPrevia.materiasMigradas,
             configuracoes: novasConfiguracoes,
             relatorio: migracaoPrevia.relatorio,
+            assinaturaOrigem:
+              migracaoPrevia.assinaturaOrigem,
             missoesConcluidas:
               migracaoPrevia.missoesConcluidasMigradas,
           });
