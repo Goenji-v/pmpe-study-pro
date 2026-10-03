@@ -391,7 +391,7 @@ test("migração aplicada marca geração estrutural para invalidar cache antigo
   );
   assert.match(
     contexto,
-    /houveMigracaoEstruturalDaConta/
+    /deveAplicarMigracaoEstruturalRemota/
   );
   assert.match(
     contexto,
