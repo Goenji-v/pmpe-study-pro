@@ -900,7 +900,14 @@ function anexarAula({
   const url = normalizarUrl(aulaCurso.url);
   const anterior =
     estadoAnterior.get(`id:${idAula}`) ??
-    (url ? estadoAnterior.get(`url:${url}`) : undefined);
+    (url ? estadoAnterior.get(`url:${url}`) : undefined) ??
+    estadoAnterior.get(
+      chaveSemanticaAulaCurso(
+        materiaCurso.nome,
+        moduloCurso.nome,
+        aulaCurso.nome
+      )
+    );
   const registro = aulaCurso.registroEstudo ?? anterior?.assunto;
 
   preservarDadosAssunto(alvo, registro);
@@ -1101,6 +1108,17 @@ function mapearEstadoAnterior(materias: Materia[]) {
           mapa.set(`id:${aula.id}`, { assunto, aula });
           const url = normalizarUrl(aula.url);
           if (url) mapa.set(`url:${url}`, { assunto, aula });
+
+          if (aula.origemCurso) {
+            mapa.set(
+              chaveSemanticaAulaCurso(
+                aula.origemCurso.materiaCursoNome,
+                aula.origemCurso.moduloCursoNome,
+                aula.nome
+              ),
+              { assunto, aula }
+            );
+          }
         }
 
         if (assunto.id.startsWith("curso:") && assunto.aula) {
@@ -1114,6 +1132,14 @@ function mapearEstadoAnterior(materias: Materia[]) {
   }
 
   return mapa;
+}
+
+function chaveSemanticaAulaCurso(
+  materia: string,
+  modulo: string,
+  aula: string
+) {
+  return `semantica:${normalizar(materia)}::${normalizar(modulo)}::${normalizar(aula)}`;
 }
 
 function melhorMateria(materias: Materia[], nome: string) {
