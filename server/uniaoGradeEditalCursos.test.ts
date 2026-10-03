@@ -486,6 +486,155 @@ test("nomes equivalentes unem, mas nome genérico e ambíguo não são fundidos 
   assert.notEqual(direitosGenerico.vinculoCurso?.status, "confirmado");
 });
 
+test("conta antiga absorve duplicatas numeradas e 'Em produção' sem perder dados", () => {
+  const edital: AnaliseEdital = {
+    concursoDetectado: "PMPE",
+    bancaDetectada: "Instituto AOCP",
+    analisadoEm: AGORA,
+    materias: [
+      {
+        id: "ed-dh",
+        nome: "Direitos Humanos",
+        incidenciaEstimada: 5,
+        assuntos: [
+          {
+            id: "ed-dh-teoria",
+            nome: "Teoria geral dos Direitos Humanos (conceito, terminologia, estrutura normativa, fundamento, classificação, especificidades)",
+            prioridade: "alta",
+          },
+          {
+            id: "ed-dh-evolucao",
+            nome: "Evolução histórica e gerações de direitos humanos",
+            prioridade: "alta",
+          },
+          {
+            id: "ed-dh-incorporacao",
+            nome: "Natureza jurídica da incorporação de normas internacionais ao direito interno brasileiro",
+            prioridade: "media",
+          },
+          {
+            id: "ed-dh-dudh",
+            nome: "Declaração Universal dos Direitos Humanos (ONU - 1948)",
+            prioridade: "alta",
+          },
+        ],
+      },
+    ],
+  };
+
+  const canonicos: Assunto[] = edital.materias[0].assuntos.map((item) => ({
+    id: item.id,
+    nome: item.nome,
+    concluido: false,
+    prioridade: item.prioridade,
+    origemEditalId: item.id,
+    origemConteudo: "edital",
+    aulas: [],
+  }));
+
+  const legados: Assunto[] = [
+    {
+      id: "legacy-dh-1",
+      nome: "1. Teoria geral dos Direitos Humanos: conceito; terminologia; estrutura normativa; fundamento; classificação; especificidades",
+      concluido: true,
+      concluidoEm: AGORA,
+      prioridade: "media",
+      anotacoes: "anotação que precisa sobreviver à fusão",
+      aulas: [
+        {
+          id: "legacy-dh-1-aula",
+          nome: "Teoria geral dos Direitos Humanos",
+          url: "https://curso.test/dh/teoria",
+          ordem: 1,
+          concluida: true,
+          concluidaEm: AGORA,
+        },
+      ],
+    },
+    {
+      id: "legacy-dh-2",
+      nome: "2. Evolução histórica e gerações de direitos humanos",
+      concluido: false,
+      prioridade: "media",
+      aulas: [],
+    },
+    {
+      id: "legacy-dh-3",
+      nome: "3. Incorporação dos tratados internacionais de Direitos Humanos ao ordenamento jurídico brasileiro: Constituição Federal, art. 5º, §§ 2º e 3º; hierarquia normativa dos tratados de Direitos Humanos.",
+      concluido: false,
+      prioridade: "media",
+      aulas: [],
+    },
+    {
+      id: "legacy-dh-4",
+      nome: "Em produção 4. Declaração Universal dos Direitos Humanos (ONU - 1948)",
+      concluido: false,
+      prioridade: "media",
+      aulas: [],
+    },
+    {
+      id: "legacy-dh-5",
+      nome: "Em produção - 5. Convenção Americana sobre Direitos Humanos – Pacto de San José da Costa Rica",
+      concluido: false,
+      prioridade: "baixa",
+      aulas: [],
+    },
+  ];
+
+  const materiaAntiga: Materia = {
+    id: "ed-dh",
+    nome: "Direitos Humanos",
+    modulos: [
+      {
+        id: "modulo-geral-ed-dh",
+        nome: "Geral",
+        ordem: 0,
+        assuntos: [...canonicos, ...legados],
+      },
+    ],
+    assuntos: [...canonicos, ...legados],
+  };
+
+  const grade = unificarGradeEditalCursos({
+    materiasAtuais: [materiaAntiga],
+    analiseEdital: edital,
+    cursos: [],
+    cursosAtivosIds: [],
+  });
+
+  const lista = assuntos(materia(grade, "Direitos Humanos"));
+  assert.equal(lista.length, 5);
+  assert.equal(
+    lista.filter((item) => item.nome.includes("Teoria geral dos Direitos Humanos")).length,
+    1
+  );
+  assert.equal(
+    lista.filter((item) => item.nome.includes("Evolução histórica e gerações")).length,
+    1
+  );
+  assert.equal(
+    lista.filter((item) => /incorpora[cç][aã]o/i.test(item.nome)).length,
+    1
+  );
+  assert.equal(
+    lista.filter((item) => item.nome.includes("Declaração Universal")).length,
+    1
+  );
+
+  const teoria = assunto(
+    materia(grade, "Direitos Humanos"),
+    "Teoria geral dos Direitos Humanos (conceito, terminologia, estrutura normativa, fundamento, classificação, especificidades)"
+  );
+  assert.equal(teoria.concluido, true);
+  assert.equal(teoria.anotacoes, "anotação que precisa sobreviver à fusão");
+  assert.equal(teoria.aulas?.[0]?.url, "https://curso.test/dh/teoria");
+  assert.ok(teoria.idsLegados?.includes("legacy-dh-1"));
+
+  assert.ok(
+    lista.some((item) => item.nome.includes("Convenção Americana sobre Direitos Humanos"))
+  );
+});
+
 test("reimportar e reconciliar novamente não duplica assuntos, aulas ou materiais", () => {
   const edital = criarEdital();
   const curso = criarCurso();
