@@ -209,16 +209,43 @@ export function prepararMigracaoEditalSegura({
       ? listarAssuntosBrutos(materiaAtual)
       : [];
 
-    const assuntos = materiaNova.assuntos.map((assuntoNovo) => {
-      const match = escolherAssunto(
-        candidatos.filter(
-          (assunto) =>
-            !usados.has(
-              chaveCanonica(idMateriaCanonica, assunto.id)
-            )
-        ),
-        assuntoNovo.nome
+    const matchesIniciais = new Map(
+      materiaNova.assuntos.map((assuntoNovo) => [
+        chaveAssuntoNovo(materiaNova.id, assuntoNovo.id),
+        escolherAssunto(candidatos, assuntoNovo.nome),
+      ])
+    );
+    const associacoesAutomaticasBloqueadas =
+      detectarDivisoesAmbiguas(
+        materiaNova,
+        matchesIniciais
       );
+
+    const assuntos = materiaNova.assuntos.map((assuntoNovo) => {
+      const chaveNovo =
+        chaveAssuntoNovo(materiaNova.id, assuntoNovo.id);
+      const matchInicial =
+        matchesIniciais.get(chaveNovo) ??
+        escolherAssunto(candidatos, assuntoNovo.nome);
+      const candidatoJaUsado =
+        matchInicial.assunto
+          ? usados.has(
+              chaveCanonica(
+                idMateriaCanonica,
+                matchInicial.assunto.id
+              )
+            )
+          : false;
+      const bloquearAssociacao =
+        associacoesAutomaticasBloqueadas.has(chaveNovo) ||
+        candidatoJaUsado;
+      const match: MatchAssunto = bloquearAssociacao
+        ? {
+            ...matchInicial,
+            assunto: undefined,
+            ambiguo: true,
+          }
+        : matchInicial;
 
       if (match.assunto && !match.ambiguo) {
         usados.add(
@@ -478,6 +505,59 @@ function listarAssuntosBrutos(materia: Materia) {
     ids.add(assunto.id);
     return true;
   });
+}
+
+function detectarDivisoesAmbiguas(
+  materiaNova: AnaliseEdital["materias"][number],
+  matches: Map<string, MatchAssunto>
+) {
+  const porAssuntoAntigo = new Map<
+    string,
+    Array<{ chaveNova: string; score: number }>
+  >();
+
+  for (const assuntoNovo of materiaNova.assuntos) {
+    const chaveNova =
+      chaveAssuntoNovo(materiaNova.id, assuntoNovo.id);
+    const match = matches.get(chaveNova);
+    if (!match?.assunto || match.ambiguo) continue;
+
+    const atuais =
+      porAssuntoAntigo.get(match.assunto.id) ?? [];
+    atuais.push({
+      chaveNova,
+      score: match.score,
+    });
+    porAssuntoAntigo.set(match.assunto.id, atuais);
+  }
+
+  const bloqueadas = new Set<string>();
+
+  for (const disputas of porAssuntoAntigo.values()) {
+    if (disputas.length < 2) continue;
+
+    const ordenadas = [...disputas].sort(
+      (a, b) => b.score - a.score
+    );
+    const melhor = ordenadas[0];
+    const segunda = ordenadas[1];
+
+    if (
+      melhor.score >= 0.94 &&
+      melhor.score - segunda.score >= 0.12
+    ) {
+      ordenadas.slice(1).forEach((item) =>
+        bloqueadas.add(item.chaveNova)
+      );
+      continue;
+    }
+
+    ordenadas.forEach((item) =>
+      bloqueadas.add(item.chaveNova)
+    );
+  }
+
+  return bloqueadas;
 }
 
 function escolherAssunto(
@@ -917,6 +997,13 @@ function deduplicarPorId(assuntos: Assunto[]) {
     ids.add(assunto.id);
     return true;
   });
+}
+
+function chaveAssuntoNovo(
+  materiaEditalId: string,
+  assuntoEditalId: string
+) {
+  return `${materiaEditalId}::${assuntoEditalId}`;
 }
 
 function chaveCanonica(materiaId: string, assuntoId: string) {
