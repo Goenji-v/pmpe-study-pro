@@ -509,6 +509,87 @@ export default function MeuEdital() {
       const editalAnterior = config.editalAtivo;
       const agora = new Date().toISOString();
 
+      if (editalAnterior && migracaoPrevia) {
+        if (migracaoPrevia.relatorio.bloqueios.length > 0) {
+          throw new Error(
+            `Migração bloqueada por segurança: ${migracaoPrevia.relatorio.bloqueios.join(" ")}`
+          );
+        }
+
+        let novasConfiguracoes: ConfiguracoesComEdital;
+
+        if (editalCatalogoSelecionado) {
+          novasConfiguracoes = {
+            ...config,
+            planoPadraoAtivo: false,
+            concurso: editalCatalogoSelecionado.organizacao,
+            bancaPadrao:
+              editalCatalogoSelecionado.banca ?? config.bancaPadrao,
+            editalOnboardingVisto: true,
+            editalAtivo: {
+              id: migracaoPrevia.editalNovoId,
+              catalogoId: editalCatalogoSelecionado.id,
+              nomeArquivo: migracaoPrevia.editalNovoNome,
+              storagePath: editalCatalogoSelecionado.pdfPath ?? "",
+              fonteUrl: editalCatalogoSelecionado.fonteUrl,
+              analise: migracaoPrevia.analiseCanonica,
+              plano: planoPrevio,
+              confirmadoEm: agora,
+            },
+          };
+        } else {
+          let pdf = pdfNovo;
+
+          if (!pdf && arquivo) {
+            pdf = await enviarPdfEdital(
+              arquivo,
+              crypto.randomUUID()
+            );
+            setPdfNovo(pdf);
+          }
+
+          if (!pdf) {
+            throw new Error(
+              "O novo PDF ainda não foi salvo. Selecione novamente o arquivo antes de aplicar a migração."
+            );
+          }
+
+          novasConfiguracoes = {
+            ...config,
+            planoPadraoAtivo: false,
+            concurso:
+              migracaoPrevia.analiseCanonica.concursoDetectado ||
+              config.concurso,
+            bancaPadrao:
+              migracaoPrevia.analiseCanonica.bancaDetectada ||
+              config.bancaPadrao,
+            editalOnboardingVisto: true,
+            editalAtivo: {
+              id: migracaoPrevia.editalNovoId,
+              nomeArquivo: pdf.nomeArquivo,
+              storagePath: pdf.storagePath,
+              analise: migracaoPrevia.analiseCanonica,
+              plano: planoPrevio,
+              confirmadoEm: agora,
+            },
+          };
+        }
+
+        const { backupNuvemId } =
+          await aplicarMigracaoEditalSegura({
+            materias: migracaoPrevia.materiasMigradas,
+            configuracoes: novasConfiguracoes,
+            relatorio: migracaoPrevia.relatorio,
+          });
+
+        showToast(
+          `Novo edital aplicado com segurança. Backup pré-migração preservado: ${backupNuvemId.slice(0, 8)}…`,
+          "success"
+        );
+        navigate("/plano");
+        return;
+      }
+
       if (editalCatalogoSelecionado) {
         setMaterias((atuais) =>
           aplicarCursosAtivosNasMaterias(
