@@ -522,14 +522,23 @@ function marcarVinculosDoNovoEdital(
           ativo: vinculo.editalId === editalNovoId,
         }));
 
-        if (editalAnterior && vinculos.length === 0 && assunto.origemEditalId) {
+        const origemAnterior =
+          editalAnterior
+            ? localizarOrigemNoEditalAnterior(
+                editalAnterior,
+                materia.nome,
+                assunto
+              )
+            : undefined;
+
+        if (origemAnterior && vinculos.length === 0) {
           vinculos.push({
-            editalId: editalAnterior.id,
-            materiaEditalId: materia.id,
-            assuntoEditalId: assunto.origemEditalId,
-            nomeNoEdital: assunto.nome,
+            editalId: editalAnterior!.id,
+            materiaEditalId: origemAnterior.materiaId,
+            assuntoEditalId: origemAnterior.assuntoId,
+            nomeNoEdital: origemAnterior.nome,
             ativo: false,
-            vinculadoEm: editalAnterior.confirmadoEm ?? vinculadoEm,
+            vinculadoEm: editalAnterior!.confirmadoEm ?? vinculadoEm,
           });
         }
 
@@ -632,6 +641,48 @@ function preservarRemovidosComoComplementares(
         : materia.assuntos,
     };
   });
+}
+
+function localizarOrigemNoEditalAnterior(
+  editalAnterior: EditalAtivo,
+  materiaNome: string,
+  assunto: Assunto
+) {
+  const materia = editalAnterior.analise.materias.find(
+    (item) => materiasEquivalentes(item.nome, materiaNome)
+  );
+  if (!materia) return undefined;
+
+  const origem = materia.assuntos.find(
+    (item) =>
+      item.id === assunto.origemEditalId ||
+      item.id === assunto.id ||
+      assunto.idsLegados?.includes(item.id)
+  );
+
+  if (origem) {
+    return {
+      materiaId: materia.id,
+      assuntoId: origem.id,
+      nome: origem.nome,
+    };
+  }
+
+  const candidatos = materia.assuntos
+    .map((item) => ({
+      item,
+      score: scoreAssociacaoAssunto(item.nome, assunto.nome),
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const top = candidatos[0];
+  if (!top || top.score < 0.94) return undefined;
+
+  return {
+    materiaId: materia.id,
+    assuntoId: top.item.id,
+    nome: top.item.nome,
+  };
 }
 
 function fonteMateriaOriginal(
