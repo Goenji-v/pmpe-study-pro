@@ -1145,6 +1145,69 @@ export default function MeuEdital() {
         </article>
       )}
 
+      {migracaoPrevia && (
+        <article className="edital-card edital-previa">
+          <div className="edital-card-cabecalho">
+            <div>
+              <span>MIGRAÇÃO SEGURA</span>
+              <h2>Prévia da troca de edital</h2>
+              <p>
+                Nenhum dado foi alterado. Esta comparação mostra como o Study
+                Pro reaproveitará o histórico antes de aplicar o novo edital.
+              </p>
+            </div>
+          </div>
+
+          <div className="edital-perfil-resumo">
+            <strong>
+              {migracaoPrevia.relatorio.mantidos} mantidos ·{" "}
+              {migracaoPrevia.relatorio.renomeados} renomeados ·{" "}
+              {migracaoPrevia.relatorio.novos} novos ·{" "}
+              {migracaoPrevia.relatorio.removidos} preservados fora do edital ·{" "}
+              {migracaoPrevia.relatorio.ambiguos} ambíguos
+            </strong>
+            <p>
+              Conteúdos equivalentes mantêm o mesmo ID canônico. Questões,
+              revisões, sessões, anotações, materiais e links existentes
+              continuam vinculados ao conteúdo original.
+            </p>
+            {migracaoPrevia.relatorio.avisos.map((aviso) => (
+              <p key={aviso}>{aviso}</p>
+            ))}
+          </div>
+
+          {migracaoPrevia.relatorio.itens.some(
+            (item) => item.status === "ambiguo"
+          ) && (
+            <div className="edital-previa-semanas">
+              <section>
+                <h3>Associações para revisar</h3>
+                {migracaoPrevia.relatorio.itens
+                  .filter((item) => item.status === "ambiguo")
+                  .map((item) => (
+                    <div
+                      className="edital-previa-dia"
+                      key={`${item.materiaNova}::${item.editalNovoId}`}
+                    >
+                      <strong>{item.materiaNova}</strong>
+                      <div>
+                        <span>{item.assuntoNovo}</span>
+                        <small>
+                          Preservado como novo até confirmação. Candidato mais
+                          próximo: {item.assuntoAnterior ?? "não identificado"}
+                          {typeof item.score === "number"
+                            ? ` · ${Math.round(item.score * 100)}%`
+                            : ""}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+              </section>
+            </div>
+          )}
+        </article>
+      )}
+
       {planoPrevio && (
         <article className="edital-card edital-previa">
           <div className="edital-card-cabecalho">
@@ -1198,7 +1261,11 @@ export default function MeuEdital() {
             disabled={aplicando}
             onClick={() => void aplicarPlano()}
           >
-            {aplicando ? "Aplicando..." : "Aplicar edital e cronograma"}
+            {aplicando
+              ? "Aplicando..."
+              : migracaoPrevia
+                ? "Aplicar migração e novo cronograma"
+                : "Aplicar edital e cronograma"}
           </button>
         </article>
       )}
