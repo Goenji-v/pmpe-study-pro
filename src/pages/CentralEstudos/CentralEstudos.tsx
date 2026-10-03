@@ -39,6 +39,7 @@ import type {
 } from "../../context/CronometroContext";
 
 import {
+  listarAssuntosUnificadosComModulo,
   listarModulosDaMateria,
 } from "../../services/conteudos/navegarConteudos";
 import { localizarProximaAula } from "../../services/conteudos/localizarConteudo";
@@ -334,17 +335,13 @@ const [
     [materiaSelecionada]
   );
 
-  const assuntosComModulo = useMemo(() => {
-    const vistos = new Set<string>();
-
-    return modulosDisponiveis.flatMap((modulo) =>
-      modulo.assuntos.flatMap((assunto) => {
-        if (vistos.has(assunto.id)) return [];
-        vistos.add(assunto.id);
-        return [{ modulo, assunto }];
-      })
-    );
-  }, [modulosDisponiveis]);
+  const assuntosComModulo = useMemo(
+    () =>
+      materiaSelecionada
+        ? listarAssuntosUnificadosComModulo(materiaSelecionada)
+        : [],
+    [materiaSelecionada]
+  );
 
   const assuntosDisponiveis = useMemo(
     () => assuntosComModulo.map(({ assunto }) => assunto),
@@ -356,6 +353,10 @@ const [
       assuntosComModulo.find(
         ({ assunto }) =>
           assunto.id === estado.assuntoId ||
+          Boolean(
+            estado.assuntoId &&
+            assunto.idsLegados?.includes(estado.assuntoId)
+          ) ||
           assunto.nome === estado.assunto
       ),
     [assuntosComModulo, estado.assunto, estado.assuntoId]
