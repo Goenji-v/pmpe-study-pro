@@ -1179,3 +1179,46 @@ test("nomes reais do PMPE 2026 recebem aulas equivalentes do curso", () => {
   assert.equal(abuso?.aulas?.[0]?.url, "https://curso.test/rdc/abuso");
   assert.equal(ambientais?.aulas?.[0]?.url, "https://curso.test/rdc/ambientais");
 });
+
+
+test("complemento legado com link de questões não é descartado na reconciliação", () => {
+  const materiaLegada: Materia = {
+    id: "rlm",
+    nome: "Raciocínio Lógico",
+    assuntos: [],
+    modulos: [
+      {
+        id: "modulo-geral-rlm",
+        nome: "Geral",
+        ordem: 0,
+        assuntos: [
+          {
+            id: "rlm-operacoes-basicas",
+            nome: "Operações básicas da matemática",
+            concluido: true,
+            prioridade: "baixa",
+            complementarAoEdital: true,
+            foraDoEditalAtual: true,
+            origemConteudo: "manual",
+            questoes: "https://questoes.test/operacoes",
+            aulas: [],
+          },
+        ],
+      },
+    ],
+  };
+  materiaLegada.assuntos = materiaLegada.modulos![0].assuntos;
+
+  const grade = unificarGradeEditalCursos({
+    materiasAtuais: [materiaLegada],
+    cursos: [],
+    cursosAtivosIds: [],
+  });
+
+  const preservado = assuntos(materia(grade, "Raciocínio Lógico")).find(
+    (item) => item.id === "rlm-operacoes-basicas"
+  );
+  assert.ok(preservado);
+  assert.equal(preservado.questoes, "https://questoes.test/operacoes");
+  assert.equal(preservado.complementarAoEdital, true);
+});
