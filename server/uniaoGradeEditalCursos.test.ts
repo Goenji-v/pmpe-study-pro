@@ -34,6 +34,9 @@ import {
   reconciliarRevisoesComConteudos,
   reconciliarSessoesComConteudos,
 } from "../src/services/conteudos/sincronizacaoCanonica.ts";
+import {
+  listarAssuntosUnificadosComModulo,
+} from "../src/services/conteudos/navegarConteudos.ts";
 
 const AGORA = "2026-10-02T12:00:00.000Z";
 
@@ -864,6 +867,174 @@ test("Plano abre a referência canônica e a aula real antes do fallback por nom
   assert.match(codigo, /aulaId: aula\?\.id/);
   assert.match(codigo, /urlAula: aula\?\.url \?\? localizacao\.assunto\.aula/);
   assert.match(codigo, /if \(abrirMissaoCanonica\(missao\)\)/);
+});
+
+test("Central unifica duplicatas de Direitos Humanos em plano legado sem migrar o plano", () => {
+  const materiaLegada: Materia = {
+    id: "dh-legado",
+    nome: "Direitos Humanos",
+    modulos: [
+      {
+        id: "modulo-geral-dh-legado",
+        nome: "Geral",
+        ordem: 0,
+        assuntos: [
+          {
+            id: "dh-teoria",
+            nome: "Teoria geral dos Direitos Humanos (conceito, terminologia, estrutura normativa, fundamento, classificação, especificidades)",
+            concluido: false,
+            prioridade: "alta",
+            aulas: [],
+          },
+          {
+            id: "dh-evolucao",
+            nome: "Evolução histórica e gerações de direitos humanos",
+            concluido: false,
+            prioridade: "alta",
+            aulas: [],
+          },
+          {
+            id: "dh-incorporacao",
+            nome: "Natureza jurídica da incorporação de normas internacionais ao direito interno brasileiro",
+            concluido: false,
+            prioridade: "media",
+            aulas: [],
+          },
+          {
+            id: "dh-dudh",
+            nome: "Declaração Universal dos Direitos Humanos (ONU - 1948)",
+            concluido: false,
+            prioridade: "alta",
+            aulas: [],
+          },
+        ],
+      },
+    ],
+    assuntos: [],
+  };
+  materiaLegada.assuntos = materiaLegada.modulos![0].assuntos;
+
+  const curso: CursoImportado = {
+    id: "curso-dh-legado",
+    nome: "Resumo do Concurseiro — PMPE",
+    origem: "captura-json",
+    criadoEm: AGORA,
+    atualizadoEm: AGORA,
+    materias: [
+      {
+        id: "curso-dh-materia",
+        nome: "Direitos Humanos",
+        ordem: 1,
+        categoria: "disciplina",
+        modulos: [
+          {
+            id: "curso-dh-teoria",
+            nome: "1. Teoria geral dos Direitos Humanos: conceito; terminologia; estrutura normativa; fundamento; classificação; especificidades",
+            ordem: 1,
+            aulas: [
+              {
+                id: "curso-dh-teoria-aula",
+                nome: "Teoria geral dos Direitos Humanos",
+                url: "https://curso.test/dh/teoria",
+                ordem: 1,
+              },
+            ],
+          },
+          {
+            id: "curso-dh-evolucao",
+            nome: "2. Evolução histórica e gerações de direitos humanos",
+            ordem: 2,
+            aulas: [
+              {
+                id: "curso-dh-evolucao-aula",
+                nome: "Evolução histórica e gerações",
+                url: "https://curso.test/dh/evolucao",
+                ordem: 1,
+              },
+            ],
+          },
+          {
+            id: "curso-dh-incorporacao",
+            nome: "3. Incorporação dos tratados internacionais de Direitos Humanos ao ordenamento jurídico brasileiro: Constituição Federal, art. 5º, §§ 2º e 3º; hierarquia normativa dos tratados de Direitos Humanos.",
+            ordem: 3,
+            aulas: [
+              {
+                id: "curso-dh-incorporacao-aula",
+                nome: "Incorporação dos tratados internacionais",
+                url: "https://curso.test/dh/incorporacao",
+                ordem: 1,
+              },
+            ],
+          },
+          {
+            id: "curso-dh-dudh",
+            nome: "Em produção 4. Declaração Universal dos Direitos Humanos (ONU - 1948)",
+            ordem: 4,
+            aulas: [
+              {
+                id: "curso-dh-dudh-aula",
+                nome: "Declaração Universal dos Direitos Humanos",
+                url: "https://curso.test/dh/dudh",
+                ordem: 1,
+              },
+            ],
+          },
+          {
+            id: "curso-dh-convencao",
+            nome: "Em produção - 5. Convenção Americana sobre Direitos Humanos – Pacto de San José da Costa Rica (Decreto nº 678/1992).",
+            ordem: 5,
+            aulas: [
+              {
+                id: "curso-dh-convencao-aula",
+                nome: "Convenção Americana sobre Direitos Humanos",
+                url: "https://curso.test/dh/convencao",
+                ordem: 1,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const gradeLegada = aplicarCursosAtivosNasMaterias(
+    [materiaLegada],
+    [curso],
+    [curso.id]
+  );
+  const dh = materia(gradeLegada, "Direitos Humanos");
+  const unificados = listarAssuntosUnificadosComModulo(dh);
+  const nomes = unificados.map(({ assunto }) => assunto.nome);
+
+  assert.equal(unificados.length, 5);
+  assert.equal(
+    nomes.filter((nome) => nome.includes("Teoria geral dos Direitos Humanos")).length,
+    1
+  );
+  assert.equal(
+    nomes.filter((nome) => nome.includes("Evolução histórica e gerações")).length,
+    1
+  );
+  assert.equal(
+    nomes.filter((nome) => /incorpora[cç][aã]o/i.test(nome)).length,
+    1
+  );
+  assert.equal(
+    nomes.filter((nome) => nome.includes("Declaração Universal")).length,
+    1
+  );
+  assert.ok(
+    nomes.some((nome) => nome.includes("Convenção Americana sobre Direitos Humanos"))
+  );
+
+  const teoria = unificados.find(({ assunto }) =>
+    assunto.nome.includes("Teoria geral dos Direitos Humanos")
+  )?.assunto;
+  assert.equal(teoria?.id, "dh-teoria");
+  assert.equal(teoria?.aulas?.[0]?.url, "https://curso.test/dh/teoria");
+  assert.ok(
+    teoria?.idsLegados?.some((id) => id.startsWith("curso-visao-assunto:"))
+  );
 });
 
 test("migração automática da grade fica restrita a plano dinâmico, preservando o plano legado", async () => {
