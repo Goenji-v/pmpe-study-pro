@@ -8,6 +8,7 @@ import type {
   CorrespondenciaMigracaoEdital,
   EditalAtivo,
   RelatorioMigracaoEdital,
+  PlanoEdital,
 } from "../types/editalInteligente";
 import { aplicarCursosAtivosNasMaterias } from "./importacaoCurso";
 import {
@@ -56,6 +57,37 @@ type MatchAssunto = {
     score: number;
   }>;
 };
+
+export function remapearMissoesConcluidasPorConteudo(params: {
+  planoNovo: PlanoEdital;
+  concluidasAtuais: string[];
+  referenciasLegadas: Array<{
+    missaoId: string;
+    materiaId: string;
+    assuntoId: string;
+  }>;
+}) {
+  const concluidas = new Set(params.concluidasAtuais);
+  const referenciasConcluidas = new Set(
+    params.referenciasLegadas
+      .filter((item) => concluidas.has(item.missaoId))
+      .map((item) => `${item.materiaId}::${item.assuntoId}`)
+  );
+
+  for (const semana of params.planoNovo.semanas) {
+    for (const dia of semana.dias) {
+      for (const missao of dia.missoes) {
+        const chave =
+          `${missao.materiaId}::${missao.assuntoId}`;
+        if (referenciasConcluidas.has(chave)) {
+          concluidas.add(missao.id);
+        }
+      }
+    }
+  }
+
+  return Array.from(concluidas);
+}
 
 export function criarEditalAnteriorSintetico(params: {
   materias: Materia[];
