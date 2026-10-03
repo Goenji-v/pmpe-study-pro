@@ -12,6 +12,7 @@ import type {
 import type { CursoImportado } from "../src/types/cursos.ts";
 import {
   prepararMigracaoEditalSegura,
+  remapearMissoesConcluidasPorConteudo,
   validarPreservacaoMigracao,
 } from "../src/utils/migracaoEditalSegura.ts";
 import {
@@ -566,4 +567,75 @@ test("plano novo preserva ID da missão equivalente já existente", () => {
     preservado.semanas[0].dias[0].missoes[0].id,
     "missao-concluida-2024"
   );
+});
+
+
+test("remapeia conclusão do plano legado só quando matéria e assunto canônicos coincidem", () => {
+  const planoNovo: PlanoEdital = {
+    versao: 4,
+    id: "plano-2026",
+    titulo: "Plano 2026",
+    geradoEm: AGORA,
+    totalAssuntos: 2,
+    totalSemanas: 1,
+    diasEstudo: ["seg"],
+    materiasPorDia: 2,
+    minutosPorDia: 120,
+    revisoesPorDia: 0,
+    semanas: [
+      {
+        numero: 1,
+        dias: [
+          {
+            id: "novo-dia",
+            semana: 1,
+            diaSemana: "seg",
+            nomeDia: "Segunda",
+            minutosDisponiveis: 120,
+            revisoesPlanejadas: 0,
+            missoes: [
+              {
+                id: "nova-missao-equivalente",
+                ordem: 1,
+                materiaId: "direitos-humanos",
+                materia: "Direitos Humanos",
+                assuntoId: "direitos-humanos-dudh",
+                assunto: "Declaração Universal dos Direitos Humanos",
+                prioridade: "alta",
+                duracaoMinutos: 60,
+                metaQuestoes: 10,
+              },
+              {
+                id: "nova-missao-dividida",
+                ordem: 2,
+                materiaId: "direitos-humanos",
+                materia: "Direitos Humanos",
+                assuntoId: "direitos-humanos-dudh-parte-2",
+                assunto: "DUDH — parte nova",
+                prioridade: "alta",
+                duracaoMinutos: 60,
+                metaQuestoes: 10,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const resultado = remapearMissoesConcluidasPorConteudo({
+    planoNovo,
+    concluidasAtuais: ["s1-d1-m1"],
+    referenciasLegadas: [
+      {
+        missaoId: "s1-d1-m1",
+        materiaId: "direitos-humanos",
+        assuntoId: "direitos-humanos-dudh",
+      },
+    ],
+  });
+
+  assert.ok(resultado.includes("s1-d1-m1"));
+  assert.ok(resultado.includes("nova-missao-equivalente"));
+  assert.ok(!resultado.includes("nova-missao-dividida"));
 });
