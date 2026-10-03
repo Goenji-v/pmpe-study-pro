@@ -281,7 +281,14 @@ export default function PlanoEditalGateway() {
         }))
         .sort((a, b) => b.score - a.score)[0];
 
-    if (!encontrado || ("score" in encontrado && encontrado.score < 0.86)) {
+    if (
+      !encontrado ||
+      (
+        "score" in encontrado &&
+        typeof encontrado.score === "number" &&
+        encontrado.score < 0.86
+      )
+    ) {
       return null;
     }
 
