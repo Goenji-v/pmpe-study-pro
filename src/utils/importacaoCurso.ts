@@ -253,18 +253,23 @@ export function mesclarCursoRecebido(cursos: CursoImportado[], recebido: CursoIm
 type ExtrasCursos = {
   cursos?: CursoImportado[];
   cursosAtivosIds?: string[];
-  editalAtivo?: { analise?: AnaliseEdital };
+  editalAtivo?: { analise?: AnaliseEdital; plano?: { versao?: number } };
 };
 export function reconciliarCursosImportados<T extends { materias: Materia[]; configuracoes: object }>(estado: T): T {
   const config = estado.configuracoes as ExtrasCursos;
   const antigos = config.cursos;
   if (!antigos?.length) return estado;
   let cursos = sincronizarProgressoCursos(antigos, estado.materias).map(normalizarClassificacaoCurso);
+  const analiseUnificavel =
+    config.editalAtivo?.analise &&
+    (config.editalAtivo.plano?.versao ?? 0) >= 3
+      ? config.editalAtivo.analise
+      : undefined;
   const materias = aplicarCursosAtivosNasMaterias(
     estado.materias,
     cursos,
     config.cursosAtivosIds ?? [],
-    config.editalAtivo?.analise
+    analiseUnificavel
   );
   cursos = sincronizarProgressoCursos(cursos, materias);
   if (JSON.stringify(cursos) === JSON.stringify(antigos) && JSON.stringify(materias) === JSON.stringify(estado.materias)) return estado;
