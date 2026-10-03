@@ -88,7 +88,6 @@ export default function MeuEdital() {
   const {
     configuracoes,
     setConfiguracoes,
-    setMaterias,
     materias,
     questoes,
     sessoes,
