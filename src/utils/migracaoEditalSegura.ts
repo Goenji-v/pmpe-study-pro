@@ -293,27 +293,37 @@ export function validarPreservacaoMigracao(params: {
     );
   }
 
-  const linksAntes = contarLinksQuestoes(params.antes.materias);
-  const linksDepois = contarLinksQuestoes(params.depois.materias);
-  if (linksDepois < linksAntes) {
+  const linksAntes = listarLinksQuestoes(params.antes.materias);
+  const linksDepois = new Set(listarLinksQuestoes(params.depois.materias));
+  const linksPerdidos = linksAntes.filter((url) => !linksDepois.has(url));
+  if (linksPerdidos.length > 0) {
     throw new Error(
-      `Migração interrompida: links de questões seriam reduzidos de ${linksAntes} para ${linksDepois}.`
+      `Migração interrompida: ${linksPerdidos.length} link(s) de questões deixariam de existir.`
     );
   }
 
-  const anotacoesAntes = contarAnotacoes(params.antes.materias);
-  const anotacoesDepois = contarAnotacoes(params.depois.materias);
-  if (anotacoesDepois < anotacoesAntes) {
+  const anotacoesAntes = listarAnotacoes(params.antes.materias);
+  const anotacoesDepois = listarAnotacoes(params.depois.materias);
+  const anotacoesPerdidas = anotacoesAntes.filter(
+    (anotacao) =>
+      !anotacoesDepois.some((atual) => atual.includes(anotacao))
+  );
+  if (anotacoesPerdidas.length > 0) {
     throw new Error(
-      `Migração interrompida: anotações seriam reduzidas de ${anotacoesAntes} para ${anotacoesDepois}.`
+      `Migração interrompida: ${anotacoesPerdidas.length} anotação(ões) deixariam de existir.`
     );
   }
 
-  const materiaisAntes = contarMateriais(params.antes.materias);
-  const materiaisDepois = contarMateriais(params.depois.materias);
-  if (materiaisDepois < materiaisAntes) {
+  const materiaisAntes = listarUrlsMateriais(params.antes.materias);
+  const materiaisDepois = new Set(
+    listarUrlsMateriais(params.depois.materias)
+  );
+  const materiaisPerdidos = materiaisAntes.filter(
+    (url) => !materiaisDepois.has(url)
+  );
+  if (materiaisPerdidos.length > 0) {
     throw new Error(
-      `Migração interrompida: materiais seriam reduzidos de ${materiaisAntes} para ${materiaisDepois}.`
+      `Migração interrompida: ${materiaisPerdidos.length} material(is) deixariam de existir.`
     );
   }
 }
@@ -702,6 +712,37 @@ function fonteMateriaOriginal(
     }
   }
   return undefined;
+}
+
+function listarLinksQuestoes(materias: Materia[]) {
+  return Array.from(
+    new Set(
+      listarTodosAssuntos(materias)
+        .map((assunto) => assunto.questoes?.trim())
+        .filter((url): url is string => Boolean(url))
+    )
+  );
+}
+
+function listarAnotacoes(materias: Materia[]) {
+  return Array.from(
+    new Set(
+      listarTodosAssuntos(materias)
+        .map((assunto) => assunto.anotacoes?.trim())
+        .filter((texto): texto is string => Boolean(texto))
+    )
+  );
+}
+
+function listarUrlsMateriais(materias: Materia[]) {
+  return Array.from(
+    new Set(
+      listarTodosAssuntos(materias)
+        .flatMap((assunto) => assunto.materiais ?? [])
+        .map((material) => material.url?.trim())
+        .filter((url): url is string => Boolean(url))
+    )
+  );
 }
 
 function contarLinksQuestoes(materias: Materia[]) {
