@@ -64,6 +64,12 @@ export type CursoAula = {
   concluidoEm?: string;
   /** Preserva anotações, materiais e progresso ao mover conteúdos de categoria. */
   registroEstudo?: Assunto;
+  /** Associação manual persistente com a grade canônica. */
+  vinculoMateriaId?: string;
+  vinculoAssuntoId?: string;
+  /** Força a aula a permanecer como complemento mesmo quando houver candidatos. */
+  manterComoComplementar?: boolean;
+  vinculoRevisadoEm?: string;
 };
 
 export type CursoModulo = {
