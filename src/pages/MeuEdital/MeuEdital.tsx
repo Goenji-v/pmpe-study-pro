@@ -33,7 +33,12 @@ import {
   gerarPlanoEdital,
   mesclarMateriasDoEdital,
   normalizarAnaliseEdital,
+  preservarIdsPlanoAnterior,
 } from "../../utils/planoEdital";
+import {
+  prepararMigracaoEditalSegura,
+  type ResultadoPreparacaoMigracaoEdital,
+} from "../../utils/migracaoEditalSegura";
 
 const CARGOS_PMPE = [
   "Soldado PMPE",
@@ -65,7 +70,20 @@ function cargoInicialDoEdital(
 }
 
 export default function MeuEdital() {
-  const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
+  const {
+    configuracoes,
+    setConfiguracoes,
+    setMaterias,
+    materias,
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    bancoQuestoes,
+    simuladosGerados,
+    missoesConcluidas,
+    aplicarMigracaoEditalSegura,
+  } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const configCursos = configuracoes as ConfiguracoesComCursos;
   const { showToast } = useToast();
@@ -79,6 +97,12 @@ export default function MeuEdital() {
   const [planoPrevio, setPlanoPrevio] = useState<PlanoEdital | null>(
     config.editalAtivo?.plano ?? null
   );
+  const [migracaoPrevia, setMigracaoPrevia] = useState<
+    (ResultadoPreparacaoMigracaoEdital & {
+      editalNovoId: string;
+      editalNovoNome: string;
+    }) | null
+  >(null);
   const [processando, setProcessando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
@@ -200,6 +224,7 @@ export default function MeuEdital() {
     setAnalise(resultado);
     setCargoAlvo(edital.cargo);
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
     setArquivo(null);
     setPdfNovo(null);
     setErroProcessamento(null);
@@ -246,6 +271,7 @@ export default function MeuEdital() {
       setAnalise(resultado);
       setCargoAlvo(resultado.cargoDetectado ?? cargoAlvo);
       setPlanoPrevio(null);
+    setMigracaoPrevia(null);
 
       try {
         const pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
@@ -284,6 +310,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function removerMateria(indice: number) {
@@ -296,6 +323,7 @@ export default function MeuEdital() {
         : atual
     );
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function adicionarMateria() {
@@ -322,6 +350,7 @@ export default function MeuEdital() {
       };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function atualizarAssunto(
@@ -345,6 +374,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function removerAssunto(indiceMateria: number, indiceAssunto: number) {
@@ -359,6 +389,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function adicionarAssunto(indiceMateria: number) {
@@ -374,6 +405,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function gerarPrevia() {
@@ -397,6 +429,57 @@ export default function MeuEdital() {
       return;
     }
 
+    if (config.editalAtivo) {
+      const editalNovoId =
+        editalCatalogoSelecionado?.id ??
+        crypto.randomUUID();
+      const editalNovoNome =
+        editalCatalogoSelecionado
+          ? `${editalCatalogoSelecionado.organizacao} ${editalCatalogoSelecionado.ano} — ${editalCatalogoSelecionado.cargo}`
+          : pdfNovo?.nomeArquivo ?? arquivo?.name ?? normalizada.concursoDetectado;
+
+      const migracao = prepararMigracaoEditalSegura({
+        materiasAtuais: materias,
+        editalAnterior: config.editalAtivo,
+        editalNovoId,
+        editalNovoNome,
+        analiseNova: normalizada,
+        cursos: configCursos.cursos ?? [],
+        cursosAtivosIds: configCursos.cursosAtivosIds ?? [],
+        contagens: {
+          questoes: questoes.length,
+          sessoes: sessoes.length,
+          revisoes: revisoes.length,
+          simulados: simulados.length,
+          bancoQuestoes: bancoQuestoes.length,
+          simuladosGerados: simuladosGerados.length,
+          missoesConcluidas: missoesConcluidas.length,
+        },
+      });
+
+      const plano = preservarIdsPlanoAnterior(
+        gerarPlanoEdital(
+          migracao.analiseCanonica,
+          config,
+          migracao.materiasMigradas
+        ),
+        config.editalAtivo.plano
+      );
+
+      setAnalise(normalizada);
+      setMigracaoPrevia({
+        ...migracao,
+        editalNovoId,
+        editalNovoNome,
+      });
+      setPlanoPrevio(plano);
+      showToast(
+        "Prévia de migração criada. Nenhum dado da sua conta foi alterado.",
+        "success"
+      );
+      return;
+    }
+
     const gradePrevia = aplicarCursosAtivosNasMaterias(
       mesclarMateriasDoEdital(materias, normalizada),
       configCursos.cursos ?? [],
@@ -405,6 +488,7 @@ export default function MeuEdital() {
     );
     const plano = gerarPlanoEdital(normalizada, config, gradePrevia);
     setAnalise(normalizada);
+    setMigracaoPrevia(null);
     setPlanoPrevio(plano);
     showToast("Prévia criada com as regras do seu perfil.", "success");
   }
@@ -736,6 +820,7 @@ export default function MeuEdital() {
                 if (novoArquivo) {
                   setAnalise(null);
                   setPlanoPrevio(null);
+    setMigracaoPrevia(null);
                   setPdfNovo(null);
                 }
               }}
@@ -756,6 +841,7 @@ export default function MeuEdital() {
               onChange={(evento) => {
                 setCargoAlvo(evento.target.value);
                 setPlanoPrevio(null);
+    setMigracaoPrevia(null);
               }}
               placeholder="Ex.: Agente PCPE, Guarda Municipal..."
             />
@@ -830,6 +916,7 @@ export default function MeuEdital() {
                 onChange={(evento) => {
                   setCargoAlvo(evento.target.value);
                   setPlanoPrevio(null);
+    setMigracaoPrevia(null);
                 }}
               >
                 <option value="">Detectar automaticamente</option>
