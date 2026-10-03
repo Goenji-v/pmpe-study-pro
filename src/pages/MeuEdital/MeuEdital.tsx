@@ -30,9 +30,29 @@ import type { EditalCatalogo } from "../../types/catalogoEditais";
 import type { ConfiguracoesComCursos } from "../../types/cursos";
 import { aplicarCursosAtivosNasMaterias } from "../../utils/importacaoCurso";
 import {
+  planejarMigracaoEdital,
+  type PlanoMigracaoEdital,
+} from "../../utils/migracaoEdital";
+import {
+  reconciliarQuestoesComConteudos,
+  reconciliarRevisoesComConteudos,
+  reconciliarSessoesComConteudos,
+} from "../../services/conteudos/sincronizacaoCanonica";
+import {
+  montarEstadoNuvem,
+} from "../../services/sincronizacaoService";
+import {
+  criarBackupAutomaticoLocal,
+} from "../../services/seguranca/backupAutomaticoService";
+import {
+  registrarBackupMigracaoEditalNaNuvem,
+} from "../../services/seguranca/backupMigracaoEditalService";
+import { useAuth } from "../../context/AuthContext";
+import {
   gerarPlanoEdital,
   mesclarMateriasDoEdital,
   normalizarAnaliseEdital,
+  preservarIdsPlanoAnterior,
 } from "../../utils/planoEdital";
 
 const CARGOS_PMPE = [
@@ -65,7 +85,21 @@ function cargoInicialDoEdital(
 }
 
 export default function MeuEdital() {
-  const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
+  const {
+    configuracoes,
+    setConfiguracoes,
+    setMaterias,
+    materias,
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    bancoQuestoes,
+    simuladosGerados,
+    missoesConcluidas,
+    aplicarEstadoEstruturalSeguro,
+  } = useApp();
+  const { usuario } = useAuth();
   const config = configuracoes as ConfiguracoesComEdital;
   const configCursos = configuracoes as ConfiguracoesComCursos;
   const { showToast } = useToast();
@@ -79,6 +113,8 @@ export default function MeuEdital() {
   const [planoPrevio, setPlanoPrevio] = useState<PlanoEdital | null>(
     config.editalAtivo?.plano ?? null
   );
+  const [migracaoPrevia, setMigracaoPrevia] =
+    useState<PlanoMigracaoEdital | null>(null);
   const [processando, setProcessando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
@@ -200,6 +236,7 @@ export default function MeuEdital() {
     setAnalise(resultado);
     setCargoAlvo(edital.cargo);
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
     setArquivo(null);
     setPdfNovo(null);
     setErroProcessamento(null);
@@ -246,6 +283,7 @@ export default function MeuEdital() {
       setAnalise(resultado);
       setCargoAlvo(resultado.cargoDetectado ?? cargoAlvo);
       setPlanoPrevio(null);
+    setMigracaoPrevia(null);
 
       try {
         const pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
@@ -284,6 +322,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function removerMateria(indice: number) {
@@ -296,6 +335,7 @@ export default function MeuEdital() {
         : atual
     );
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function adicionarMateria() {
@@ -322,6 +362,7 @@ export default function MeuEdital() {
       };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function atualizarAssunto(
@@ -345,6 +386,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function removerAssunto(indiceMateria: number, indiceAssunto: number) {
@@ -359,6 +401,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function adicionarAssunto(indiceMateria: number) {
@@ -374,6 +417,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function gerarPrevia() {
@@ -397,16 +441,47 @@ export default function MeuEdital() {
       return;
     }
 
-    const gradePrevia = aplicarCursosAtivosNasMaterias(
-      mesclarMateriasDoEdital(materias, normalizada),
-      configCursos.cursos ?? [],
-      configCursos.cursosAtivosIds ?? [],
-      normalizada
+    const migracao = config.editalAtivo
+      ? planejarMigracaoEdital({
+          materiasAtuais: materias,
+          editalAnterior: config.editalAtivo.analise,
+          novoEdital: normalizada,
+          cursos: configCursos.cursos ?? [],
+          cursosAtivosIds: configCursos.cursosAtivosIds ?? [],
+        })
+      : null;
+
+    const analisePlano = migracao?.analiseMigrada ?? normalizada;
+    const gradePrevia = migracao?.materiasMigradas ??
+      aplicarCursosAtivosNasMaterias(
+        mesclarMateriasDoEdital(materias, normalizada),
+        configCursos.cursos ?? [],
+        configCursos.cursosAtivosIds ?? [],
+        normalizada
+      );
+    const planoBase = gerarPlanoEdital(
+      analisePlano,
+      config,
+      gradePrevia
     );
-    const plano = gerarPlanoEdital(normalizada, config, gradePrevia);
-    setAnalise(normalizada);
+    const plano = preservarIdsPlanoAnterior(
+      planoBase,
+      config.editalAtivo?.plano
+    );
+
+    setAnalise(analisePlano);
+    setMigracaoPrevia(migracao);
     setPlanoPrevio(plano);
-    showToast("Prévia criada com as regras do seu perfil.", "success");
+
+    if (migracao) {
+      const r = migracao.relatorio;
+      showToast(
+        `Prévia segura: ${r.mantidos} mantidos, ${r.renomeados} renomeados, ${r.novos} novos, ${r.removidos} preservados fora do edital e ${r.ambiguos} ambíguos.`,
+        r.ambiguos > 0 ? "warning" : "success"
+      );
+    } else {
+      showToast("Prévia criada com as regras do seu perfil.", "success");
+    }
   }
 
   async function aplicarPlano() {
@@ -736,6 +811,7 @@ export default function MeuEdital() {
                 if (novoArquivo) {
                   setAnalise(null);
                   setPlanoPrevio(null);
+    setMigracaoPrevia(null);
                   setPdfNovo(null);
                 }
               }}
@@ -756,6 +832,7 @@ export default function MeuEdital() {
               onChange={(evento) => {
                 setCargoAlvo(evento.target.value);
                 setPlanoPrevio(null);
+    setMigracaoPrevia(null);
               }}
               placeholder="Ex.: Agente PCPE, Guarda Municipal..."
             />
@@ -830,6 +907,7 @@ export default function MeuEdital() {
                 onChange={(evento) => {
                   setCargoAlvo(evento.target.value);
                   setPlanoPrevio(null);
+    setMigracaoPrevia(null);
                 }}
               >
                 <option value="">Detectar automaticamente</option>
