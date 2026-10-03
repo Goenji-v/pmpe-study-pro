@@ -418,26 +418,41 @@ export function preservarIdsPlanoAnterior(
 
 function criarFilas(analise: AnaliseEdital): FilaMateria[] {
   return analise.materias
-    .map((materia) => ({
-      materia,
-      base: ehMateriaBase(materia.nome),
-      conteudos: [...materia.assuntos]
-        .sort((a, b) => {
-          const prioridade = ORDEM_PRIORIDADE[b.prioridade] - ORDEM_PRIORIDADE[a.prioridade];
-          return prioridade || a.nome.localeCompare(b.nome, "pt-BR");
-        })
-        .flatMap((assunto) => {
-          const partes = destrincharAssuntoParaPlano(assunto.nome);
-          return partes.map((nomePlano, indice) => ({
-            assunto,
-            nomePlano,
-            assuntoId:
-              partes.length > 1
-                ? `${assunto.id}-parte-${indice + 1}`
-                : assunto.id,
-          }));
-        }),
-    }))
+    .map((materiaOriginal) => {
+      const materia = {
+        ...materiaOriginal,
+        id:
+          materiaOriginal.conteudoCanonicoId ??
+          materiaOriginal.id,
+      };
+
+      return {
+        materia,
+        base: ehMateriaBase(materia.nome),
+        conteudos: [...materia.assuntos]
+          .sort((a, b) => {
+            const prioridade = ORDEM_PRIORIDADE[b.prioridade] - ORDEM_PRIORIDADE[a.prioridade];
+            return prioridade || a.nome.localeCompare(b.nome, "pt-BR");
+          })
+          .flatMap((assuntoOriginal) => {
+            const assunto = {
+              ...assuntoOriginal,
+              id:
+                assuntoOriginal.conteudoCanonicoId ??
+                assuntoOriginal.id,
+            };
+            const partes = destrincharAssuntoParaPlano(assunto.nome);
+            return partes.map((nomePlano, indice) => ({
+              assunto,
+              nomePlano,
+              assuntoId:
+                partes.length > 1
+                  ? `${assunto.id}-parte-${indice + 1}`
+                  : assunto.id,
+            }));
+          }),
+      };
+    })
     .sort((a, b) => {
       if (a.base !== b.base) return a.base ? -1 : 1;
       const incidencia = b.materia.incidenciaEstimada - a.materia.incidenciaEstimada;

@@ -83,8 +83,12 @@ export type Assunto = {
   nome: string;
   concluido: boolean;
   prioridade: Prioridade;
-  /** Marca o assunto oficial que deu origem a este conteúdo canônico. */
+  /** Marca o assunto oficial ativo que referencia este conteúdo canônico. */
   origemEditalId?: string;
+  /** Histórico de IDs de editais que já apontaram para este mesmo conteúdo. */
+  referenciasEdital?: string[];
+  /** Conteúdo preservado por histórico/curso, mas fora do edital atualmente ativo. */
+  foraDoEditalAtual?: boolean;
   /** IDs anteriores aceitos para preservar histórico após uma fusão. */
   idsLegados?: string[];
   /** Origem lógica do conteúdo, sem criar separação visual por fonte. */

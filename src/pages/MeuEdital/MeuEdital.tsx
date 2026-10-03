@@ -30,9 +30,29 @@ import type { EditalCatalogo } from "../../types/catalogoEditais";
 import type { ConfiguracoesComCursos } from "../../types/cursos";
 import { aplicarCursosAtivosNasMaterias } from "../../utils/importacaoCurso";
 import {
+  planejarMigracaoEdital,
+  type PlanoMigracaoEdital,
+} from "../../utils/migracaoEdital";
+import {
+  reconciliarQuestoesComConteudos,
+  reconciliarRevisoesComConteudos,
+  reconciliarSessoesComConteudos,
+} from "../../services/conteudos/sincronizacaoCanonica";
+import {
+  montarEstadoNuvem,
+} from "../../services/sincronizacaoService";
+import {
+  criarBackupAutomaticoLocal,
+} from "../../services/seguranca/backupAutomaticoService";
+import {
+  registrarBackupMigracaoEditalNaNuvem,
+} from "../../services/seguranca/backupMigracaoEditalService";
+import { useAuth } from "../../context/AuthContext";
+import {
   gerarPlanoEdital,
   mesclarMateriasDoEdital,
   normalizarAnaliseEdital,
+  preservarIdsPlanoAnterior,
 } from "../../utils/planoEdital";
 
 const CARGOS_PMPE = [
@@ -65,7 +85,20 @@ function cargoInicialDoEdital(
 }
 
 export default function MeuEdital() {
-  const { configuracoes, setConfiguracoes, setMaterias, materias } = useApp();
+  const {
+    configuracoes,
+    setConfiguracoes,
+    materias,
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+    bancoQuestoes,
+    simuladosGerados,
+    missoesConcluidas,
+    aplicarEstadoEstruturalSeguro,
+  } = useApp();
+  const { usuario } = useAuth();
   const config = configuracoes as ConfiguracoesComEdital;
   const configCursos = configuracoes as ConfiguracoesComCursos;
   const { showToast } = useToast();
@@ -79,6 +112,8 @@ export default function MeuEdital() {
   const [planoPrevio, setPlanoPrevio] = useState<PlanoEdital | null>(
     config.editalAtivo?.plano ?? null
   );
+  const [migracaoPrevia, setMigracaoPrevia] =
+    useState<PlanoMigracaoEdital | null>(null);
   const [processando, setProcessando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
@@ -200,6 +235,7 @@ export default function MeuEdital() {
     setAnalise(resultado);
     setCargoAlvo(edital.cargo);
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
     setArquivo(null);
     setPdfNovo(null);
     setErroProcessamento(null);
@@ -246,6 +282,7 @@ export default function MeuEdital() {
       setAnalise(resultado);
       setCargoAlvo(resultado.cargoDetectado ?? cargoAlvo);
       setPlanoPrevio(null);
+    setMigracaoPrevia(null);
 
       try {
         const pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
@@ -284,6 +321,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function removerMateria(indice: number) {
@@ -296,6 +334,7 @@ export default function MeuEdital() {
         : atual
     );
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function adicionarMateria() {
@@ -322,6 +361,7 @@ export default function MeuEdital() {
       };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function atualizarAssunto(
@@ -345,6 +385,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function removerAssunto(indiceMateria: number, indiceAssunto: number) {
@@ -359,6 +400,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function adicionarAssunto(indiceMateria: number) {
@@ -374,6 +416,7 @@ export default function MeuEdital() {
       return { ...atual, materias };
     });
     setPlanoPrevio(null);
+    setMigracaoPrevia(null);
   }
 
   function gerarPrevia() {
@@ -397,16 +440,47 @@ export default function MeuEdital() {
       return;
     }
 
-    const gradePrevia = aplicarCursosAtivosNasMaterias(
-      mesclarMateriasDoEdital(materias, normalizada),
-      configCursos.cursos ?? [],
-      configCursos.cursosAtivosIds ?? [],
-      normalizada
+    const migracao = config.editalAtivo
+      ? planejarMigracaoEdital({
+          materiasAtuais: materias,
+          editalAnterior: config.editalAtivo.analise,
+          novoEdital: normalizada,
+          cursos: configCursos.cursos ?? [],
+          cursosAtivosIds: configCursos.cursosAtivosIds ?? [],
+        })
+      : null;
+
+    const analisePlano = migracao?.analiseMigrada ?? normalizada;
+    const gradePrevia = migracao?.materiasMigradas ??
+      aplicarCursosAtivosNasMaterias(
+        mesclarMateriasDoEdital(materias, normalizada),
+        configCursos.cursos ?? [],
+        configCursos.cursosAtivosIds ?? [],
+        normalizada
+      );
+    const planoBase = gerarPlanoEdital(
+      analisePlano,
+      config,
+      gradePrevia
     );
-    const plano = gerarPlanoEdital(normalizada, config, gradePrevia);
-    setAnalise(normalizada);
+    const plano = preservarIdsPlanoAnterior(
+      planoBase,
+      config.editalAtivo?.plano
+    );
+
+    setAnalise(analisePlano);
+    setMigracaoPrevia(migracao);
     setPlanoPrevio(plano);
-    showToast("Prévia criada com as regras do seu perfil.", "success");
+
+    if (migracao) {
+      const r = migracao.relatorio;
+      showToast(
+        `Prévia segura: ${r.mantidos} mantidos, ${r.renomeados} renomeados, ${r.novos} novos, ${r.removidos} preservados fora do edital e ${r.ambiguos} ambíguos.`,
+        r.ambiguos > 0 ? "warning" : "success"
+      );
+    } else {
+      showToast("Prévia criada com as regras do seu perfil.", "success");
+    }
   }
 
   async function aplicarPlano() {
@@ -424,18 +498,22 @@ export default function MeuEdital() {
     try {
       const editalAnterior = config.editalAtivo;
       const agora = new Date().toISOString();
-
-      if (editalCatalogoSelecionado) {
-        setMaterias((atuais) =>
-          aplicarCursosAtivosNasMaterias(
-            mesclarMateriasDoEdital(atuais, analise),
-            configCursos.cursos ?? [],
-            configCursos.cursosAtivosIds ?? [],
-            analise
-          )
+      const analiseFinal =
+        migracaoPrevia?.analiseMigrada ?? analise;
+      const materiasNovas =
+        migracaoPrevia?.materiasMigradas ??
+        aplicarCursosAtivosNasMaterias(
+          mesclarMateriasDoEdital(materias, analiseFinal),
+          configCursos.cursos ?? [],
+          configCursos.cursosAtivosIds ?? [],
+          analiseFinal
         );
 
-        const novasConfiguracoes: ConfiguracoesComEdital = {
+      let novasConfiguracoes: ConfiguracoesComEdital;
+      let pdfAntigoParaRemover: string | undefined;
+
+      if (editalCatalogoSelecionado) {
+        novasConfiguracoes = {
           ...config,
           concurso: editalCatalogoSelecionado.organizacao,
           bancaPadrao:
@@ -448,96 +526,169 @@ export default function MeuEdital() {
               `${editalCatalogoSelecionado.organizacao} ${editalCatalogoSelecionado.ano} — ${editalCatalogoSelecionado.cargo}`,
             storagePath: editalCatalogoSelecionado.pdfPath ?? "",
             fonteUrl: editalCatalogoSelecionado.fonteUrl,
-            analise,
+            analise: analiseFinal,
             plano: planoPrevio,
             confirmadoEm: agora,
           },
         };
-        setConfiguracoes(novasConfiguracoes);
 
         if (
           editalAnterior?.storagePath &&
           !editalAnterior.catalogoId
         ) {
-          void removerPdfEdital(editalAnterior.storagePath);
+          pdfAntigoParaRemover = editalAnterior.storagePath;
+        }
+      } else {
+        let pdf =
+          pdfNovo ??
+          (editalAnterior && !editalAnterior.catalogoId
+            ? {
+                storagePath: editalAnterior.storagePath,
+                nomeArquivo: editalAnterior.nomeArquivo,
+              }
+            : null);
+        let pdfEnviadoAgora = false;
+
+        if (!pdf && arquivo) {
+          pdf = await enviarPdfEdital(
+            arquivo,
+            crypto.randomUUID()
+          );
+          setPdfNovo(pdf);
+          pdfEnviadoAgora = true;
         }
 
+        if (!pdf) {
+          throw new Error(
+            "O PDF ainda não foi salvo. Selecione novamente o arquivo e tente aplicar o plano."
+          );
+        }
+
+        const usaNovoPdf = Boolean(
+          pdfNovo || pdfEnviadoAgora
+        );
+        const id =
+          editalAnterior?.id &&
+          !editalAnterior.catalogoId &&
+          !usaNovoPdf
+            ? editalAnterior.id
+            : crypto.randomUUID();
+
+        novasConfiguracoes = {
+          ...config,
+          concurso:
+            analiseFinal.concursoDetectado ||
+            config.concurso,
+          bancaPadrao:
+            analiseFinal.bancaDetectada ||
+            config.bancaPadrao,
+          editalOnboardingVisto: true,
+          editalAtivo: {
+            id,
+            nomeArquivo: pdf.nomeArquivo,
+            storagePath: pdf.storagePath,
+            analise: analiseFinal,
+            plano: planoPrevio,
+            confirmadoEm: agora,
+          },
+        };
+
+        if (
+          usaNovoPdf &&
+          editalAnterior?.storagePath &&
+          !editalAnterior.catalogoId &&
+          editalAnterior.storagePath !== pdf.storagePath
+        ) {
+          pdfAntigoParaRemover =
+            editalAnterior.storagePath;
+        }
+      }
+
+      const estadoAnterior = montarEstadoNuvem({
+        materias,
+        questoes,
+        sessoes,
+        revisoes,
+        simulados,
+        bancoQuestoes,
+        simuladosGerados,
+        configuracoes,
+        missoesConcluidas,
+      });
+
+      const sessoesMigradas =
+        reconciliarSessoesComConteudos(
+          materiasNovas,
+          sessoes
+        );
+      const questoesMigradas =
+        reconciliarQuestoesComConteudos(
+          materiasNovas,
+          questoes
+        );
+      const revisoesMigradas =
+        reconciliarRevisoesComConteudos(
+          materiasNovas,
+          revisoes
+        );
+
+      const estadoNovo = montarEstadoNuvem({
+        materias: materiasNovas,
+        questoes: questoesMigradas,
+        sessoes: sessoesMigradas,
+        revisoes: revisoesMigradas,
+        simulados,
+        bancoQuestoes,
+        simuladosGerados,
+        configuracoes: novasConfiguracoes,
+        missoesConcluidas,
+      });
+
+      if (editalAnterior) {
+        const idBackupLocal =
+          usuario?.id ?? "sem-usuario";
+
+        criarBackupAutomaticoLocal(
+          idBackupLocal,
+          estadoAnterior,
+          "antes_migracao_edital"
+        );
+
+        if (usuario) {
+          await registrarBackupMigracaoEditalNaNuvem({
+            usuarioId: usuario.id,
+            estadoAnterior,
+            editalAnteriorId: editalAnterior.id,
+            editalNovoId:
+              novasConfiguracoes.editalAtivo?.id,
+          });
+        }
+      }
+
+      await aplicarEstadoEstruturalSeguro(
+        estadoNovo,
+        editalAnterior
+          ? "antes_migracao_edital"
+          : "antes_reconciliacao_estrutural"
+      );
+
+      if (pdfAntigoParaRemover) {
+        void removerPdfEdital(pdfAntigoParaRemover);
+      }
+
+      if (migracaoPrevia) {
+        const r = migracaoPrevia.relatorio;
         showToast(
-          `${editalCatalogoSelecionado.organizacao} ${editalCatalogoSelecionado.ano} · ${editalCatalogoSelecionado.cargo} aplicado ao Plano Tático.`,
+          `Migração aplicada com backup: ${r.mantidos + r.renomeados} conteúdos reaproveitados, ${r.novos} novos e ${r.removidos} preservados fora do edital.`,
           "success"
         );
-        navigate("/plano");
-        return;
-      }
-
-      let pdf =
-        pdfNovo ??
-        (editalAnterior && !editalAnterior.catalogoId
-          ? {
-              storagePath: editalAnterior.storagePath,
-              nomeArquivo: editalAnterior.nomeArquivo,
-            }
-          : null);
-      let pdfEnviadoAgora = false;
-
-      if (!pdf && arquivo) {
-        pdf = await enviarPdfEdital(arquivo, crypto.randomUUID());
-        setPdfNovo(pdf);
-        pdfEnviadoAgora = true;
-      }
-
-      if (!pdf) {
-        throw new Error(
-          "O PDF ainda não foi salvo. Selecione novamente o arquivo e tente aplicar o plano."
+      } else {
+        showToast(
+          "Edital confirmado e plano de estudos aplicado.",
+          "success"
         );
       }
 
-      const usaNovoPdf = Boolean(pdfNovo || pdfEnviadoAgora);
-      const id =
-        editalAnterior?.id &&
-        !editalAnterior.catalogoId &&
-        !usaNovoPdf
-          ? editalAnterior.id
-          : crypto.randomUUID();
-
-      setMaterias((atuais) =>
-          aplicarCursosAtivosNasMaterias(
-            mesclarMateriasDoEdital(atuais, analise),
-            configCursos.cursos ?? [],
-            configCursos.cursosAtivosIds ?? [],
-            analise
-          )
-        );
-
-      const novasConfiguracoes: ConfiguracoesComEdital = {
-        ...config,
-        concurso: analise.concursoDetectado || config.concurso,
-        bancaPadrao: analise.bancaDetectada || config.bancaPadrao,
-        editalOnboardingVisto: true,
-        editalAtivo: {
-          id,
-          nomeArquivo: pdf.nomeArquivo,
-          storagePath: pdf.storagePath,
-          analise,
-          plano: planoPrevio,
-          confirmadoEm: agora,
-        },
-      };
-      setConfiguracoes(novasConfiguracoes);
-
-      if (
-        usaNovoPdf &&
-        editalAnterior?.storagePath &&
-        !editalAnterior.catalogoId &&
-        editalAnterior.storagePath !== pdf.storagePath
-      ) {
-        void removerPdfEdital(editalAnterior.storagePath);
-      }
-
-      showToast(
-        "Edital confirmado e plano de estudos aplicado.",
-        "success"
-      );
       navigate("/plano");
     } catch (erro) {
       const mensagem =
@@ -736,6 +887,7 @@ export default function MeuEdital() {
                 if (novoArquivo) {
                   setAnalise(null);
                   setPlanoPrevio(null);
+    setMigracaoPrevia(null);
                   setPdfNovo(null);
                 }
               }}
@@ -756,6 +908,7 @@ export default function MeuEdital() {
               onChange={(evento) => {
                 setCargoAlvo(evento.target.value);
                 setPlanoPrevio(null);
+    setMigracaoPrevia(null);
               }}
               placeholder="Ex.: Agente PCPE, Guarda Municipal..."
             />
@@ -830,6 +983,7 @@ export default function MeuEdital() {
                 onChange={(evento) => {
                   setCargoAlvo(evento.target.value);
                   setPlanoPrevio(null);
+    setMigracaoPrevia(null);
                 }}
               >
                 <option value="">Detectar automaticamente</option>
@@ -990,6 +1144,69 @@ export default function MeuEdital() {
         </article>
       )}
 
+      {migracaoPrevia && (
+        <article className="edital-card edital-previa">
+          <div className="edital-card-cabecalho">
+            <div>
+              <span>MIGRAÇÃO SEGURA</span>
+              <h2>Prévia da troca de edital</h2>
+              <p>
+                Nenhum dado foi alterado. Esta comparação mostra como o Study
+                Pro reaproveitará o histórico antes de aplicar o novo edital.
+              </p>
+            </div>
+          </div>
+
+          <div className="edital-perfil-resumo">
+            <strong>
+              {migracaoPrevia.relatorio.mantidos} mantidos ·{" "}
+              {migracaoPrevia.relatorio.renomeados} renomeados ·{" "}
+              {migracaoPrevia.relatorio.novos} novos ·{" "}
+              {migracaoPrevia.relatorio.removidos} preservados fora do edital ·{" "}
+              {migracaoPrevia.relatorio.ambiguos} ambíguos
+            </strong>
+            <p>
+              Conteúdos equivalentes mantêm o mesmo ID canônico. Questões,
+              revisões, sessões, anotações, materiais e links existentes
+              continuam vinculados ao conteúdo original.
+            </p>
+            {migracaoPrevia.relatorio.avisos.map((aviso) => (
+              <p key={aviso}>{aviso}</p>
+            ))}
+          </div>
+
+          {migracaoPrevia.relatorio.itens.some(
+            (item) => item.status === "ambiguo"
+          ) && (
+            <div className="edital-previa-semanas">
+              <section>
+                <h3>Associações para revisar</h3>
+                {migracaoPrevia.relatorio.itens
+                  .filter((item) => item.status === "ambiguo")
+                  .map((item) => (
+                    <div
+                      className="edital-previa-dia"
+                      key={`${item.materiaNova}::${item.editalNovoId}`}
+                    >
+                      <strong>{item.materiaNova}</strong>
+                      <div>
+                        <span>{item.assuntoNovo}</span>
+                        <small>
+                          Preservado como novo até confirmação. Candidato mais
+                          próximo: {item.assuntoAnterior ?? "não identificado"}
+                          {typeof item.score === "number"
+                            ? ` · ${Math.round(item.score * 100)}%`
+                            : ""}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+              </section>
+            </div>
+          )}
+        </article>
+      )}
+
       {planoPrevio && (
         <article className="edital-card edital-previa">
           <div className="edital-card-cabecalho">
@@ -1043,7 +1260,11 @@ export default function MeuEdital() {
             disabled={aplicando}
             onClick={() => void aplicarPlano()}
           >
-            {aplicando ? "Aplicando..." : "Aplicar edital e cronograma"}
+            {aplicando
+              ? "Aplicando..."
+              : migracaoPrevia
+                ? "Aplicar migração e novo cronograma"
+                : "Aplicar edital e cronograma"}
           </button>
         </article>
       )}

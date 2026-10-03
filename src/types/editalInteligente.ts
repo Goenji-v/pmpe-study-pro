@@ -27,6 +27,8 @@ export type PrioridadeEdital = "alta" | "media" | "baixa";
 
 export type AssuntoEdital = {
   id: string;
+  /** ID estável do conteúdo no Study Pro. Pode sobreviver a vários editais. */
+  conteudoCanonicoId?: string;
   nome: string;
   prioridade: PrioridadeEdital;
   justificativaPrioridade?: string;
@@ -34,6 +36,8 @@ export type AssuntoEdital = {
 
 export type MateriaEdital = {
   id: string;
+  /** ID estável da matéria no Study Pro, independente da versão do edital. */
+  conteudoCanonicoId?: string;
   nome: string;
   incidenciaEstimada: number;
   assuntos: AssuntoEdital[];
