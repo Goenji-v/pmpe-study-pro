@@ -2001,8 +2001,11 @@ function EstadoDaConta({
         );
       }
 
+      // O ponto de restauração precisa refletir exatamente o que está
+      // neste aparelho no instante da migração. A nuvem é usada acima apenas
+      // para validar a revisão e impedir sobrescrita concorrente.
       const estadoAnterior =
-        estadoNuvem ?? estadoLocalAnterior;
+        estadoLocalAnterior;
       const agora = new Date().toISOString();
 
       let candidato: EstadoAppNuvem = {
