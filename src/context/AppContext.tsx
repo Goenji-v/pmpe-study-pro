@@ -56,6 +56,7 @@ import {
   carregarEstadoDaNuvem,
   montarEstadoNuvem,
   obterRevisaoSincronizacao,
+  salvarEstadoComCasAtomico,
   salvarEstadoComControleDeRevisao,
   salvarEstadoEstruturalComSeguranca,
   salvarEstadoNaNuvem,
@@ -2092,40 +2093,42 @@ function EstadoDaConta({
       });
       validarIntegridadeEstado(estadoFinal);
 
+      const backupLocal =
+        criarBackupAutomaticoLocal(
+          usuario.id,
+          estadoAnterior,
+          "antes_migracao_edital"
+        );
+
+      let estadoSalvo: EstadoAppNuvem;
+
       try {
-        if (estadoNuvem) {
-          await salvarEstadoEstruturalComSeguranca(
-            usuario.id,
-            estadoAnterior,
+        estadoSalvo =
+          await salvarEstadoComCasAtomico(
             estadoFinal,
-            "antes_migracao_edital"
+            revisaoNuvem
           );
-        } else {
-          criarBackupAutomaticoLocal(
-            usuario.id,
-            estadoAnterior,
-            "antes_migracao_edital"
-          );
-          await salvarEstadoNaNuvem(
-            usuario.id,
-            estadoFinal
-          );
-        }
       } catch (erro) {
-        setStatusNuvem("erro");
-        setErroNuvem(
+        const detalhe =
           obterMensagemErro(
             erro,
-            "A migração foi cancelada. O backup anterior permanece preservado."
-          )
+            "A gravação atômica foi recusada."
+          );
+        setStatusNuvem(
+          erro instanceof ConflitoSincronizacaoError
+            ? "conflito"
+            : "erro"
+        );
+        setErroNuvem(
+          `Migração cancelada. Nenhum estado concorrente foi sobrescrito. Backup local ${backupLocal.id} e backup na nuvem ${backupNuvemId} permanecem preservados. ${detalhe}`
         );
         throw erro;
       }
 
-      aplicarEstadoDaNuvem(estadoFinal);
+      aplicarEstadoDaNuvem(estadoSalvo);
       confirmarSincronizacaoLocal(
         usuario.id,
-        estadoFinal
+        estadoSalvo
       );
 
       return { backupNuvemId };
