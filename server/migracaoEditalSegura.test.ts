@@ -11,6 +11,7 @@ import type {
 } from "../src/types/editalInteligente.ts";
 import type { CursoImportado } from "../src/types/cursos.ts";
 import {
+  criarEditalAnteriorSintetico,
   prepararMigracaoEditalSegura,
   remapearMissoesConcluidasPorConteudo,
   validarPreservacaoMigracao,
@@ -638,4 +639,32 @@ test("remapeia conclusão do plano legado só quando matéria e assunto canônic
   assert.ok(resultado.includes("s1-d1-m1"));
   assert.ok(resultado.includes("nova-missao-equivalente"));
   assert.ok(!resultado.includes("nova-missao-dividida"));
+});
+
+
+test("conta legada sem edital ativo ganha origem sintética antes da migração", () => {
+  const sintetico = criarEditalAnteriorSintetico({
+    materias: materiasAtuais(),
+    concurso: "PMPE",
+    banca: "AOCP",
+  });
+
+  assert.equal(sintetico.id, "estado-anterior-study-pro");
+  assert.equal(sintetico.analise.materias.length, 1);
+  assert.equal(sintetico.analise.materias[0].id, "materia-dh-canonica");
+  assert.equal(sintetico.analise.materias[0].assuntos.length, 3);
+
+  const resultado = prepararMigracaoEditalSegura({
+    materiasAtuais: materiasAtuais(),
+    editalAnterior: sintetico,
+    editalNovoId: "edital-2026",
+    editalNovoNome: "PMPE 2026",
+    analiseNova: novoEdital(),
+    cursos: [],
+    cursosAtivosIds: [],
+    contagens: contagens(),
+  });
+
+  assert.equal(resultado.relatorio.editalAnteriorId, "estado-anterior-study-pro");
+  assert.equal(resultado.relatorio.resumo.removidosPreservados, 1);
 });
