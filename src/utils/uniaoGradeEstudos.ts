@@ -323,9 +323,12 @@ function limparAssuntoAnterior(assunto: Assunto): Assunto | null {
     assunto.complementarAoEdital &&
     !assunto.origemEditalId &&
     aulas.length === 0 &&
+    materiais.length === 0 &&
     !(assunto.tarefas?.length) &&
     !assunto.resumo &&
-    !assunto.anotacoes
+    !assunto.anotacoes &&
+    !assunto.questoes &&
+    !assunto.pdf
   ) {
     return null;
   }
