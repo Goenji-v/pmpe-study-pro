@@ -1172,6 +1172,96 @@ export default function MeuEdital() {
             </div>
           </div>
 
+          {migracaoPrevia && (
+            <div className="edital-migracao-previa">
+              <div className="edital-migracao-previa-topo">
+                <div>
+                  <span>MIGRAÇÃO SEGURA</span>
+                  <strong>
+                    {migracaoPrevia.relatorio.editalAnteriorNome ?? "Edital atual"} →{" "}
+                    {migracaoPrevia.relatorio.editalNovoNome}
+                  </strong>
+                </div>
+                <small>
+                  Nenhum dado foi alterado. Esta é somente a prévia.
+                </small>
+              </div>
+
+              <div className="edital-migracao-resumo">
+                <span>
+                  <strong>{migracaoPrevia.relatorio.resumo.mantidos}</strong>
+                  mantidos
+                </span>
+                <span>
+                  <strong>{migracaoPrevia.relatorio.resumo.renomeados}</strong>
+                  renomeados
+                </span>
+                <span>
+                  <strong>{migracaoPrevia.relatorio.resumo.novos}</strong>
+                  novos
+                </span>
+                <span>
+                  <strong>{migracaoPrevia.relatorio.resumo.removidosPreservados}</strong>
+                  fora do novo edital, mas preservados
+                </span>
+                <span>
+                  <strong>{migracaoPrevia.relatorio.resumo.ambiguos}</strong>
+                  associações para revisar
+                </span>
+              </div>
+
+              <p>
+                O histórico será preservado:{" "}
+                <strong>{migracaoPrevia.relatorio.preservacao.questoes}</strong>{" "}
+                registros de questões,{" "}
+                <strong>{migracaoPrevia.relatorio.preservacao.sessoes}</strong>{" "}
+                sessões,{" "}
+                <strong>{migracaoPrevia.relatorio.preservacao.revisoes}</strong>{" "}
+                revisões e{" "}
+                <strong>{migracaoPrevia.relatorio.preservacao.linksQuestoes}</strong>{" "}
+                links de questões existentes.
+              </p>
+
+              {migracaoPrevia.relatorio.resumo.ambiguos > 0 && (
+                <details className="edital-migracao-ambiguos">
+                  <summary>
+                    Revisar associações ambíguas antes de aplicar
+                  </summary>
+                  {migracaoPrevia.relatorio.correspondencias
+                    .filter((item) => item.status === "ambiguo")
+                    .map((item) => (
+                      <div
+                        className="edital-migracao-ambiguo"
+                        key={`${item.materiaNovaId}:${item.assuntoNovoId}`}
+                      >
+                        <strong>
+                          {item.materiaNova} → {item.assuntoNovo}
+                        </strong>
+                        <span>
+                          Não será unido automaticamente. O conteúdo antigo
+                          permanece preservado e o novo entra separado.
+                        </span>
+                        {(item.candidatos ?? []).map((candidato) => (
+                          <small key={candidato.assuntoId}>
+                            Possível correspondência: {candidato.nome} ·{" "}
+                            {Math.round(candidato.score * 100)}%
+                          </small>
+                        ))}
+                      </div>
+                    ))}
+                </details>
+              )}
+
+              <div className="edital-migracao-garantias">
+                <span>✓ backup local antes da troca</span>
+                <span>✓ backup completo no Supabase</span>
+                <span>✓ rollback automático se a gravação falhar</span>
+                <span>✓ IDs equivalentes preservados</span>
+                <span>✓ aulas novas sem apagar links de questões</span>
+              </div>
+            </div>
+          )}
+
           <div className="edital-previa-semanas">
             {planoPrevio.semanas.slice(0, 2).map((semana) => (
               <section key={semana.numero}>
@@ -1211,7 +1301,11 @@ export default function MeuEdital() {
             disabled={aplicando}
             onClick={() => void aplicarPlano()}
           >
-            {aplicando ? "Aplicando..." : "Aplicar edital e cronograma"}
+            {aplicando
+              ? "Aplicando..."
+              : migracaoPrevia
+                ? "Aplicar migração com backup"
+                : "Aplicar edital e cronograma"}
           </button>
         </article>
       )}
