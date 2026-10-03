@@ -12,6 +12,7 @@ import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/arm
 import { analisarMidiasDoCurso } from "../../services/cursoMidiaService";
 import { criarCodigoCapturadorCurso } from "../../utils/capturadorCurso";
 import type { CategoriaCursoMateria, CursoImportado, ConfiguracoesComCursos } from "../../types/cursos";
+import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
 import {
   aplicarCursosAtivosNasMaterias,
   capturaDeHtml,
@@ -27,6 +28,8 @@ export default function Cursos() {
   const navigate = useNavigate();
   const { configuracoes, setConfiguracoes, materias, setMaterias } = useApp();
   const config = configuracoes as ConfiguracoesComCursos;
+  const analiseEdital =
+    (configuracoes as ConfiguracoesComEdital).editalAtivo?.analise;
   const cursos = config.cursos ?? [];
   const ativosIds = config.cursosAtivosIds ?? [];
 
@@ -275,7 +278,8 @@ export default function Cursos() {
         aplicarCursosAtivosNasMaterias(
           atuais,
           cursosComProgresso,
-          novosAtivos
+          novosAtivos,
+          analiseEdital
         )
       );
     }
@@ -313,7 +317,8 @@ export default function Cursos() {
       aplicarCursosAtivosNasMaterias(
         atuais,
         novosCursos,
-        novosAtivos
+        novosAtivos,
+        analiseEdital
       )
     );
 
@@ -342,7 +347,14 @@ export default function Cursos() {
       cursos: cursosComProgresso,
       cursosAtivosIds: novosAtivos,
     }) as ConfiguracoesComCursos);
-    setMaterias((atuais) => aplicarCursosAtivosNasMaterias(atuais, cursosComProgresso, novosAtivos));
+    setMaterias((atuais) =>
+      aplicarCursosAtivosNasMaterias(
+        atuais,
+        cursosComProgresso,
+        novosAtivos,
+        analiseEdital
+      )
+    );
   }
 
   function excluirCurso(cursoId: string) {
@@ -354,7 +366,14 @@ export default function Cursos() {
       cursos: cursosComProgresso,
       cursosAtivosIds: novosAtivos,
     }) as ConfiguracoesComCursos);
-    setMaterias((atuais) => aplicarCursosAtivosNasMaterias(atuais, cursosComProgresso, novosAtivos));
+    setMaterias((atuais) =>
+      aplicarCursosAtivosNasMaterias(
+        atuais,
+        cursosComProgresso,
+        novosAtivos,
+        analiseEdital
+      )
+    );
   }
 
   function exportarCurso(curso: CursoImportado) {
