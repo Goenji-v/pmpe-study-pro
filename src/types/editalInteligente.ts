@@ -89,6 +89,76 @@ export type PlanoEdital = {
   semanas: SemanaPlanoEdital[];
 };
 
+export type StatusCorrespondenciaMigracaoEdital =
+  | "mantido"
+  | "renomeado"
+  | "novo"
+  | "removido_preservado"
+  | "ambiguo";
+
+export type CorrespondenciaMigracaoEdital = {
+  materiaAnteriorId?: string;
+  materiaAnterior?: string;
+  assuntoAnteriorId?: string;
+  assuntoAnterior?: string;
+  materiaNovaId: string;
+  materiaNova: string;
+  assuntoNovoId: string;
+  assuntoNovo: string;
+  status: StatusCorrespondenciaMigracaoEdital;
+  score?: number;
+  candidatos?: Array<{
+    assuntoId: string;
+    nome: string;
+    score: number;
+  }>;
+};
+
+export type RelatorioMigracaoEdital = {
+  id: string;
+  criadoEm: string;
+  editalAnteriorId?: string;
+  editalAnteriorNome?: string;
+  editalNovoId: string;
+  editalNovoNome: string;
+  correspondencias: CorrespondenciaMigracaoEdital[];
+  resumo: {
+    mantidos: number;
+    renomeados: number;
+    novos: number;
+    removidosPreservados: number;
+    ambiguos: number;
+    totalAnterior: number;
+    totalNovo: number;
+  };
+  preservacao: {
+    questoes: number;
+    sessoes: number;
+    revisoes: number;
+    simulados: number;
+    bancoQuestoes: number;
+    simuladosGerados: number;
+    missoesConcluidas: number;
+    linksQuestoes: number;
+    anotacoes: number;
+    materiais: number;
+  };
+  bloqueios: string[];
+};
+
+export type HistoricoMigracaoEdital = {
+  id: string;
+  aplicadoEm: string;
+  backupNuvemId?: string;
+  editalAnteriorId?: string;
+  editalAnteriorNome?: string;
+  editalNovoId: string;
+  editalNovoNome: string;
+  planoAnteriorId?: string;
+  planoNovoId?: string;
+  relatorio: RelatorioMigracaoEdital;
+};
+
 export type EditalAtivo = {
   id: string;
   /** ID do edital global quando a origem é o catálogo administrado. */
@@ -110,6 +180,8 @@ export type ConfiguracoesEditalExtras = {
   diaSimuladoSemanal?: DiaSemanaId;
   editalOnboardingVisto?: boolean;
   editalAtivo?: EditalAtivo;
+  /** Últimas migrações de edital aplicadas com backup e relatório. */
+  historicoMigracoesEdital?: HistoricoMigracaoEdital[];
 };
 
 export type ConfiguracoesComEdital = ConfiguracoesApp & ConfiguracoesEditalExtras;
