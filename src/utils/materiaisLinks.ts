@@ -64,12 +64,22 @@ export function separarMateriaisPorUso<
     });
 
     if (material.tipo === "link" && material.url && categoria === "aula") {
-      aula ??= material;
+      if (!aula) {
+        aula = material;
+        return;
+      }
+
+      vinculados.push(material);
       return;
     }
 
     if (material.tipo === "link" && material.url && categoria === "questoes") {
-      questoes ??= material;
+      if (!questoes) {
+        questoes = material;
+        return;
+      }
+
+      vinculados.push(material);
       return;
     }
 
