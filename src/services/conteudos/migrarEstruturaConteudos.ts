@@ -83,6 +83,9 @@ export function migrarMateriaParaModulos(
   return {
     id: materia.id,
     nome: materia.nome,
+    idsLegados: Array.isArray(materia.idsLegados)
+      ? materia.idsLegados.filter((id): id is string => typeof id === "string")
+      : undefined,
     modulos,
     // Compatibilidade temporária com telas antigas.
     assuntos,
