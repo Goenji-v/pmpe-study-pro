@@ -2049,17 +2049,19 @@ function EstadoDaConta({
         relatorio: params.relatorio,
       };
 
+      const configuracoesFinais: ConfiguracoesComEdital = {
+        ...configNova,
+        historicoMigracoesEdital: [
+          registroMigracao,
+          ...historicoAnterior.filter(
+            (item) => item.id !== registroMigracao.id
+          ),
+        ].slice(0, 10),
+      };
+
       const estadoFinal: EstadoAppNuvem = {
         ...candidato,
-        configuracoes: {
-          ...configNova,
-          historicoMigracoesEdital: [
-            registroMigracao,
-            ...historicoAnterior.filter(
-              (item) => item.id !== registroMigracao.id
-            ),
-          ].slice(0, 10),
-        },
+        configuracoes: configuracoesFinais,
       };
 
       validarPreservacaoMigracao({
