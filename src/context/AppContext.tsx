@@ -56,6 +56,7 @@ import {
   carregarEstadoDaNuvem,
   montarEstadoNuvem,
   obterRevisaoSincronizacao,
+  salvarEstadoComCasAtomico,
   salvarEstadoComControleDeRevisao,
   salvarEstadoEstruturalComSeguranca,
   salvarEstadoNaNuvem,
@@ -71,6 +72,17 @@ import {
   registrarBackupConflitoNaNuvem,
   sincronizarBackupsConflitoLocaisNaNuvem,
 } from "../services/seguranca/backupConflitoNuvemService";
+import {
+  registrarBackupMigracaoEditalNaNuvem,
+} from "../services/seguranca/backupMigracaoEditalNuvemService";
+import {
+  criarAssinaturaMateriasMigracao,
+  validarPreservacaoMigracao,
+} from "../utils/migracaoEditalSegura";
+import type {
+  ConfiguracoesComEdital,
+  RelatorioMigracaoEdital,
+} from "../types/editalInteligente";
 import {
   assinaturaConteudoSincronizacao,
   estadosEquivalentesParaSincronizacao,
@@ -152,6 +164,13 @@ type AppContextType = {
     preferencia: "nuvem" | "local"
   ) => Promise<void>;
   restaurarEstadoCompleto: (estado: EstadoAppNuvem) => Promise<void>;
+  aplicarMigracaoEditalSegura: (params: {
+    materias: Materia[];
+    configuracoes: ConfiguracoesApp;
+    relatorio: RelatorioMigracaoEdital;
+    assinaturaOrigem: string;
+    missoesConcluidas?: string[];
+  }) => Promise<{ backupNuvemId: string }>;
 
   definirConclusaoAssunto: (
     materiaId: string,
@@ -1929,6 +1948,193 @@ function EstadoDaConta({
     );
   }
 
+  async function aplicarMigracaoEditalSegura(params: {
+    materias: Materia[];
+    configuracoes: ConfiguracoesApp;
+    relatorio: RelatorioMigracaoEdital;
+    assinaturaOrigem: string;
+    missoesConcluidas?: string[];
+  }): Promise<{ backupNuvemId: string }> {
+    if (!usuario) {
+      throw new Error(
+        "Entre na sua conta antes de aplicar uma migração de edital."
+      );
+    }
+
+    if (!navegadorEstaOnline()) {
+      throw new Error(
+        "A migração de edital exige conexão para criar o backup de segurança na nuvem."
+      );
+    }
+
+    if (conflitoRef.current || statusNuvem === "conflito") {
+      throw new Error(
+        "Resolva o conflito de sincronização antes de migrar o edital. Nenhum dado foi alterado."
+      );
+    }
+
+    return executarOperacaoNuvemSerializada(async () => {
+      const estadoLocalAnterior =
+        montarEstadoNuvem(dadosAtuaisRef.current);
+
+      if (
+        criarAssinaturaMateriasMigracao(
+          estadoLocalAnterior.materias
+        ) !== params.assinaturaOrigem
+      ) {
+        throw new Error(
+          "A prévia ficou desatualizada porque seus conteúdos mudaram depois da comparação. Gere a prévia novamente; nenhuma alteração foi aplicada."
+        );
+      }
+
+      const estadoNuvem =
+        await carregarEstadoDaNuvem(usuario.id);
+      const revisaoNuvem =
+        obterRevisaoSincronizacao(estadoNuvem);
+
+      if (
+        estadoNuvem &&
+        revisaoNuvem !== revisaoBaseRef.current
+      ) {
+        throw new ConflitoSincronizacaoError(
+          revisaoNuvem,
+          revisaoBaseRef.current
+        );
+      }
+
+      // O ponto de restauração precisa refletir exatamente o que está
+      // neste aparelho no instante da migração. A nuvem é usada acima apenas
+      // para validar a revisão e impedir sobrescrita concorrente.
+      const estadoAnterior =
+        estadoLocalAnterior;
+      const agora = new Date().toISOString();
+
+      let candidato: EstadoAppNuvem = {
+        ...estadoLocalAnterior,
+        materias: params.materias,
+        configuracoes: params.configuracoes,
+        missoesConcluidas:
+          params.missoesConcluidas ??
+          estadoLocalAnterior.missoesConcluidas,
+        syncRevision: revisaoNuvem + 1,
+        atualizadoEm: agora,
+        salvoEm: agora,
+      };
+
+      candidato = reconciliarEstadoComConteudos(candidato);
+      candidato = {
+        ...candidato,
+        syncRevision: revisaoNuvem + 1,
+        atualizadoEm: agora,
+        salvoEm: agora,
+      };
+
+      validarPreservacaoMigracao({
+        antes: estadoLocalAnterior,
+        depois: candidato,
+      });
+      validarIntegridadeEstado(candidato);
+
+      setStatusNuvem("salvando");
+      setErroNuvem("");
+
+      const backupNuvemId =
+        await registrarBackupMigracaoEditalNaNuvem({
+          usuarioId: usuario.id,
+          estadoAnterior,
+          relatorio: params.relatorio,
+        });
+
+      const configAnterior =
+        estadoAnterior.configuracoes as ConfiguracoesComEdital;
+      const configNova =
+        candidato.configuracoes as ConfiguracoesComEdital;
+      const historicoAnterior =
+        configNova.historicoMigracoesEdital ??
+        configAnterior.historicoMigracoesEdital ??
+        [];
+      const registroMigracao = {
+        id: params.relatorio.id,
+        aplicadoEm: agora,
+        backupNuvemId,
+        editalAnteriorId:
+          params.relatorio.editalAnteriorId,
+        editalAnteriorNome:
+          params.relatorio.editalAnteriorNome,
+        editalNovoId:
+          params.relatorio.editalNovoId,
+        editalNovoNome:
+          params.relatorio.editalNovoNome,
+        planoAnteriorId:
+          configAnterior.editalAtivo?.plano?.id,
+        planoNovoId:
+          configNova.editalAtivo?.plano?.id,
+        relatorio: params.relatorio,
+      };
+
+      const configuracoesFinais: ConfiguracoesComEdital = {
+        ...configNova,
+        historicoMigracoesEdital: [
+          registroMigracao,
+          ...historicoAnterior.filter(
+            (item) => item.id !== registroMigracao.id
+          ),
+        ].slice(0, 10),
+      };
+
+      const estadoFinal: EstadoAppNuvem = {
+        ...candidato,
+        configuracoes: configuracoesFinais,
+      };
+
+      validarPreservacaoMigracao({
+        antes: estadoLocalAnterior,
+        depois: estadoFinal,
+      });
+      validarIntegridadeEstado(estadoFinal);
+
+      const backupLocal =
+        criarBackupAutomaticoLocal(
+          usuario.id,
+          estadoAnterior,
+          "antes_migracao_edital"
+        );
+
+      let estadoSalvo: EstadoAppNuvem;
+
+      try {
+        estadoSalvo =
+          await salvarEstadoComCasAtomico(
+            estadoFinal,
+            revisaoNuvem
+          );
+      } catch (erro) {
+        const detalhe =
+          obterMensagemErro(
+            erro,
+            "A gravação atômica foi recusada."
+          );
+        setStatusNuvem(
+          erro instanceof ConflitoSincronizacaoError
+            ? "conflito"
+            : "erro"
+        );
+        setErroNuvem(
+          `Migração cancelada. Nenhum estado concorrente foi sobrescrito. Backup local ${backupLocal.id} e backup na nuvem ${backupNuvemId} permanecem preservados. ${detalhe}`
+        );
+        throw erro;
+      }
+
+      aplicarEstadoDaNuvem(estadoSalvo);
+      confirmarSincronizacaoLocal(
+        usuario.id,
+        estadoSalvo
+      );
+
+      return { backupNuvemId };
+    });
+  }
+
   async function restaurarEstadoCompleto(
     estado: EstadoAppNuvem
   ) {
@@ -2490,6 +2696,7 @@ function EstadoDaConta({
         sincronizarAgora,
         resolverConflitoSincronizacao,
         restaurarEstadoCompleto,
+        aplicarMigracaoEditalSegura,
         definirConclusaoAssunto,
         definirConclusaoAula,
         importarProgressoMateria,

@@ -320,6 +320,66 @@ export function obterRevisaoSincronizacao(estado: EstadoAppNuvem | null) {
 }
 
 /**
+ * Gravação CAS usada em mudanças críticas, como a troca de edital.
+ * A comparação entre a revisão esperada e a revisão atual acontece dentro
+ * do próprio Postgres, no mesmo comando que atualiza o estado. Assim outro
+ * aparelho não consegue entrar na janela entre "ler" e "salvar".
+ */
+export async function salvarEstadoComCasAtomico(
+  estado: EstadoAppNuvem,
+  revisaoBase: number
+): Promise<EstadoAppNuvem> {
+  const base =
+    Math.max(0, Math.floor(revisaoBase));
+  const agora = new Date().toISOString();
+  const estadoParaSalvar =
+    normalizarEstadoParaSalvar({
+      ...estado,
+      syncRevision: base + 1,
+      atualizadoEm: agora,
+      salvoEm: agora,
+    });
+
+  validarIntegridadeEstado(estadoParaSalvar);
+
+  const { data, error } = await supabase.rpc(
+    "salvar_estado_app_cas",
+    {
+      p_expected_revision: base,
+      p_estado: estadoParaSalvar,
+    }
+  );
+
+  if (error) {
+    throw new Error(
+      `Erro ao salvar dados com trava atômica: ${error.message}`
+    );
+  }
+
+  const linha = Array.isArray(data)
+    ? data[0]
+    : data;
+  const resultado = linha as {
+    ok?: boolean;
+    revisao_atual?: number | string;
+  } | null;
+
+  if (!resultado?.ok) {
+    const revisaoAtual =
+      typeof resultado?.revisao_atual === "number"
+        ? resultado.revisao_atual
+        : Number(resultado?.revisao_atual ?? 0);
+
+    throw new ConflitoSincronizacaoError(
+      Number.isFinite(revisaoAtual) ? revisaoAtual : 0,
+      base
+    );
+  }
+
+  return estadoParaSalvar;
+}
+
+/**
  * Autosave protegido da Etapa 18.3. Antes de gravar, confirma a revisão atual
  * da nuvem. Se outro aparelho já avançou o estado, a escrita é recusada e os
  * dois lados permanecem preservados para resolução explícita.

@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -25,6 +26,10 @@ import {
   listarBackupsAutomaticosLocais,
   type BackupAutomaticoLocal,
 } from "../../services/seguranca/backupAutomaticoService";
+import {
+  listarBackupsMigracaoEditalNaNuvem,
+  type BackupMigracaoEditalNuvem,
+} from "../../services/seguranca/backupMigracaoEditalNuvemService";
 import { criarDadosIniciaisDaConta } from "../../utils/contaInicial";
 import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
 
@@ -61,6 +66,40 @@ export default function Backup() {
   );
   const [arquivoAnalisado, setArquivoAnalisado] =
     useState<ArquivoBackupStudyPro | null>(null);
+  const [backupsMigracaoNuvem, setBackupsMigracaoNuvem] =
+    useState<BackupMigracaoEditalNuvem[]>([]);
+  const [carregandoBackupsMigracao, setCarregandoBackupsMigracao] =
+    useState(false);
+
+  useEffect(() => {
+    let ativo = true;
+
+    if (!usuarioId) {
+      setBackupsMigracaoNuvem([]);
+      return () => {
+        ativo = false;
+      };
+    }
+
+    setCarregandoBackupsMigracao(true);
+    void listarBackupsMigracaoEditalNaNuvem(usuarioId)
+      .then((backups) => {
+        if (ativo) setBackupsMigracaoNuvem(backups);
+      })
+      .catch((erro) => {
+        console.error(
+          "Não foi possível carregar backups de migração de edital:",
+          erro
+        );
+      })
+      .finally(() => {
+        if (ativo) setCarregandoBackupsMigracao(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [usuarioId, statusNuvem]);
 
   const backupsAutomaticos = useMemo(
     () =>
@@ -214,6 +253,36 @@ export default function Backup() {
       console.error("Erro ao restaurar backup automático:", erro);
       showToast(
         erro instanceof Error ? erro.message : "Não foi possível restaurar o backup automático.",
+        "error"
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  async function restaurarBackupMigracaoNuvem(
+    backup: BackupMigracaoEditalNuvem
+  ) {
+    const confirmar = window.confirm(
+      `Restaurar o estado anterior à migração de edital de ${formatarDataHora(backup.criadoEm)}?\n\n` +
+        "O estado atual também será preservado em outro backup antes da restauração."
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setImportando(true);
+      await restaurarEstadoCompleto(backup.estado);
+      showToast(
+        "Estado anterior à migração restaurado com segurança.",
+        "success"
+      );
+    } catch (erro) {
+      console.error("Erro ao restaurar backup de migração:", erro);
+      showToast(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível restaurar o backup de migração.",
         "error"
       );
     } finally {
@@ -400,6 +469,52 @@ export default function Backup() {
         )}
       </div>
 
+      <div className="backup-card backup-automaticos-card">
+        <div className="backup-section-heading">
+          <div>
+            <h2>Backups de troca de edital na nuvem</h2>
+            <p>
+              Antes de substituir um edital, o Study Pro guarda o estado completo
+              no Supabase. Esses backups permitem voltar à versão anterior mesmo
+              em outro aparelho.
+            </p>
+          </div>
+          <strong>{backupsMigracaoNuvem.length}</strong>
+        </div>
+
+        {carregandoBackupsMigracao ? (
+          <div className="backup-empty">Carregando backups da nuvem...</div>
+        ) : backupsMigracaoNuvem.length === 0 ? (
+          <div className="backup-empty">
+            Nenhuma troca de edital foi aplicada com o novo modo seguro.
+          </div>
+        ) : (
+          <div className="backup-auto-lista">
+            {backupsMigracaoNuvem.map((backup) => (
+              <div className="backup-auto-item" key={backup.id}>
+                <div>
+                  <strong>{backup.nome}</strong>
+                  <span>
+                    {formatarDataHora(backup.criadoEm)} ·{" "}
+                    {backup.relatorio.resumo.mantidos +
+                      backup.relatorio.resumo.renomeados}{" "}
+                    conteúdos reaproveitados ·{" "}
+                    {backup.relatorio.resumo.novos} novos
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void restaurarBackupMigracaoNuvem(backup)}
+                  disabled={importando}
+                >
+                  Restaurar versão anterior
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="backup-grid backup-grid-inferior">
         <div className="backup-card">
           <h2>Conteúdo atual</h2>
@@ -480,6 +595,7 @@ function textoStatus(status: string) {
 function rotuloMotivo(motivo: string) {
   const rotulos: Record<string, string> = {
     antes_migracao_schema: "Antes de migração do schema",
+    antes_migracao_edital: "Antes de trocar o edital",
     antes_reconciliacao_estrutural: "Antes de ajuste estrutural",
     antes_rollback: "Antes de rollback",
     antes_restauracao_manual: "Antes de restauração",
