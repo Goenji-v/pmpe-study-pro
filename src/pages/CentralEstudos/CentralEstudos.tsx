@@ -361,16 +361,6 @@ const [
     [assuntosComModulo, estado.assunto, estado.assuntoId]
   );
 
-  const moduloSelecionado = useMemo(
-    () =>
-      selecaoAssunto?.modulo ??
-      modulosDisponiveis.find(
-        (modulo) => modulo.id === estado.moduloId
-      ) ??
-      modulosDisponiveis[0],
-    [modulosDisponiveis, selecaoAssunto, estado.moduloId]
-  );
-
   const assuntoSelecionado = selecaoAssunto?.assunto;
 
   const aulasDisponiveis = useMemo(
@@ -485,28 +475,6 @@ const [
       materiaId: materia?.id,
       modulo: primeiroModulo?.nome,
       moduloId: primeiroModulo?.id,
-      assunto: "",
-      assuntoId: undefined,
-      aulaId: undefined,
-      urlAula: undefined,
-      urlQuestoes: undefined,
-    });
-  }
-
-  function selecionarModulo(
-    moduloId: string
-  ) {
-    if (cronometroAtivo) {
-      return;
-    }
-
-    const modulo = modulosDisponiveis.find(
-      (item) => item.id === moduloId
-    );
-
-    atualizarDados({
-      modulo: modulo?.nome,
-      moduloId: modulo?.id,
       assunto: "",
       assuntoId: undefined,
       aulaId: undefined,
