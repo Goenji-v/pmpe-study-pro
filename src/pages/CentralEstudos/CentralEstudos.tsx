@@ -53,6 +53,7 @@ type EstadoNavegacaoCentral = {
 
 const TIPOS_ATIVIDADE_CENTRAL = [
   { tipo: "aula", icone: "🎥", texto: "Aula" },
+  { tipo: "questoes", icone: "📝", texto: "Questões" },
   { tipo: "revisao", icone: "🔁", texto: "Revisão" },
 ] as const;
 
@@ -333,28 +334,44 @@ const [
     [materiaSelecionada]
   );
 
-  const moduloSelecionado = useMemo(
-    () =>
-      modulosDisponiveis.find(
-        (modulo) => modulo.id === estado.moduloId
-      ) ?? modulosDisponiveis[0],
-    [modulosDisponiveis, estado.moduloId]
-  );
+  const assuntosComModulo = useMemo(() => {
+    const vistos = new Set<string>();
+
+    return modulosDisponiveis.flatMap((modulo) =>
+      modulo.assuntos.flatMap((assunto) => {
+        if (vistos.has(assunto.id)) return [];
+        vistos.add(assunto.id);
+        return [{ modulo, assunto }];
+      })
+    );
+  }, [modulosDisponiveis]);
 
   const assuntosDisponiveis = useMemo(
-    () => moduloSelecionado?.assuntos ?? [],
-    [moduloSelecionado]
+    () => assuntosComModulo.map(({ assunto }) => assunto),
+    [assuntosComModulo]
   );
 
-  const assuntoSelecionado = useMemo(
+  const selecaoAssunto = useMemo(
     () =>
-      assuntosDisponiveis.find(
-        (assunto) =>
+      assuntosComModulo.find(
+        ({ assunto }) =>
           assunto.id === estado.assuntoId ||
           assunto.nome === estado.assunto
       ),
-    [assuntosDisponiveis, estado.assunto, estado.assuntoId]
+    [assuntosComModulo, estado.assunto, estado.assuntoId]
   );
+
+  const moduloSelecionado = useMemo(
+    () =>
+      selecaoAssunto?.modulo ??
+      modulosDisponiveis.find(
+        (modulo) => modulo.id === estado.moduloId
+      ) ??
+      modulosDisponiveis[0],
+    [modulosDisponiveis, selecaoAssunto, estado.moduloId]
+  );
+
+  const assuntoSelecionado = selecaoAssunto?.assunto;
 
   const aulasDisponiveis = useMemo(
     () =>
@@ -501,15 +518,21 @@ const [
   function selecionarAssunto(
     assuntoId: string
   ) {
-    const assunto = assuntosDisponiveis.find(
-      (item) => item.id === assuntoId
+    const selecao = assuntosComModulo.find(
+      ({ assunto }) => assunto.id === assuntoId
     );
+    const assunto = selecao?.assunto;
+    const proximaAula = assunto
+      ? localizarProximaAula(assunto)
+      : undefined;
 
     atualizarDados({
+      modulo: selecao?.modulo.nome,
+      moduloId: selecao?.modulo.id,
       assunto: assunto?.nome ?? "",
       assuntoId: assunto?.id,
-      aulaId: assunto ? localizarProximaAula(assunto)?.id : undefined,
-      urlAula: assunto ? (localizarProximaAula(assunto)?.url ?? assunto.aula) : undefined,
+      aulaId: proximaAula?.id,
+      urlAula: proximaAula?.url ?? assunto?.aula,
       urlQuestoes: assunto?.questoes,
     });
   }
@@ -1000,32 +1023,6 @@ const [
                 )}
               </select>
             </div>
-
-            {!assuntoLivre && (
-              <div className="central-estudos-campo">
-                <label>Módulo</label>
-
-                <select
-                  value={moduloSelecionado?.id ?? ""}
-                  onChange={(evento) =>
-                    selecionarModulo(evento.target.value)
-                  }
-                  disabled={estado.ativo || !materiaSelecionada}
-                >
-                  <option value="">
-                    {materiaSelecionada
-                      ? "Selecione o módulo"
-                      : "Selecione primeiro a matéria"}
-                  </option>
-
-                  {modulosDisponiveis.map((modulo) => (
-                    <option key={modulo.id} value={modulo.id}>
-                      {modulo.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             <div className="central-estudos-campo">
               <label>
