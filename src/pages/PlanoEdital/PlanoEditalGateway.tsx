@@ -51,7 +51,10 @@ export default function PlanoEditalGateway() {
   } = useApp();
   const config = configuracoes as ConfiguracoesComEdital;
   const configCursos = configuracoes as ConfiguracoesComCursos;
-  const cursosAtivosIds = configCursos.cursosAtivosIds ?? [];
+  const cursosAtivosIds = useMemo(
+    () => configCursos.cursosAtivosIds ?? [],
+    [configCursos.cursosAtivosIds]
+  );
   const cursosSincronizados = useMemo(
     () => sincronizarProgressoCursos(configCursos.cursos ?? [], materias),
     [configCursos.cursos, materias]
