@@ -220,5 +220,7 @@ async function main() {
 main().catch(async (erro) => {
   console.error("[sentry] Falha no upload de source maps:", erro);
   await limparSourceMapsDoDeploy();
-  process.exitCode = 1;
+  console.warn(
+    "[sentry] O deploy continuará sem source maps. Falhas de observabilidade não devem bloquear uma aplicação já compilada."
+  );
 });
