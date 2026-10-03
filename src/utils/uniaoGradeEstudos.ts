@@ -464,7 +464,10 @@ function aplicarCursoNaGrade(
       resultado.push({
         id: `curso-materia-unificada-${slug(materiaCurso.nome)}`,
         nome: materiaCurso.nome,
-        idsLegados: [materiaCurso.id],
+        idsLegados: [
+          materiaCurso.id,
+          `curso-materia-${slug(materiaCurso.nome)}`,
+        ],
         modulos: [
           {
             id: `modulo-geral-curso-${slug(materiaCurso.nome)}`,
@@ -569,6 +572,7 @@ function aplicarCursoNaGrade(
       idsLegados: unicos([
         ...(materia.idsLegados ?? []),
         ...(materia.id !== materiaCurso.id ? [materiaCurso.id] : []),
+        `curso-materia-${slug(materiaCurso.nome)}`,
       ]),
       modulos,
       assuntos: deduplicarAssuntosPorId(
