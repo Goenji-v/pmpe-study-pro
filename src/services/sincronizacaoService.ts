@@ -5,6 +5,9 @@ import {
 import {
   migrarMateriasParaModulos,
 } from "./conteudos/migrarEstruturaConteudos";
+import {
+  normalizarMateriasSemDuplicatasIdenticas,
+} from "../utils/normalizarEstruturaEstado";
 
 import {
   criarBackupAutomaticoLocal,
@@ -411,8 +414,10 @@ export function validarEMigrarEstado(
     return null;
   }
 
-  const materias = migrarMateriasParaModulos(
-    estado.materias
+  const materias = normalizarMateriasSemDuplicatasIdenticas(
+    migrarMateriasParaModulos(
+      estado.materias
+    )
   );
 
   const missoesConcluidas =
@@ -622,8 +627,10 @@ function normalizarEstadoParaSalvar(
     ...estado,
     schemaVersion: SCHEMA_VERSION_ATUAL,
     versao: VERSAO_ESTADO_APP,
-    materias: migrarMateriasParaModulos(
-      estado.materias
+    materias: normalizarMateriasSemDuplicatasIdenticas(
+      migrarMateriasParaModulos(
+        estado.materias
+      )
     ),
     configuracoes: normalizarConfiguracoesApp(estado.configuracoes),
     salvoEm:

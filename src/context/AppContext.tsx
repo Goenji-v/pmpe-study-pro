@@ -26,7 +26,8 @@ import {
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao } from "../utils/revisoes";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
-import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveMigracaoEstruturalDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
+import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
+import { deveAplicarMigracaoEstruturalRemota } from "../utils/migracaoEstruturalConta";
 import ArmazenamentoConta from "../components/ArmazenamentoConta/ArmazenamentoConta";
 import { chaveArmazenamentoConta, criarEscopoArmazenamento } from "../services/armazenamentoConta";
 
@@ -1356,9 +1357,9 @@ function EstadoDaConta({
 
         if (
           estadoNuvem &&
-          houveMigracaoEstruturalDaConta(
-            estadoLocalAntesDaMigracao.configuracoes,
-            estadoNuvem.configuracoes
+          deveAplicarMigracaoEstruturalRemota(
+            estadoLocalAntesDaMigracao,
+            estadoNuvem
           )
         ) {
           try {
