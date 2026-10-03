@@ -75,6 +75,7 @@ import {
   registrarBackupMigracaoEditalNaNuvem,
 } from "../services/seguranca/backupMigracaoEditalNuvemService";
 import {
+  criarAssinaturaMateriasMigracao,
   validarPreservacaoMigracao,
 } from "../utils/migracaoEditalSegura";
 import type {
@@ -166,6 +167,7 @@ type AppContextType = {
     materias: Materia[];
     configuracoes: ConfiguracoesApp;
     relatorio: RelatorioMigracaoEdital;
+    assinaturaOrigem: string;
     missoesConcluidas?: string[];
   }) => Promise<{ backupNuvemId: string }>;
 
@@ -1949,6 +1951,7 @@ function EstadoDaConta({
     materias: Materia[];
     configuracoes: ConfiguracoesApp;
     relatorio: RelatorioMigracaoEdital;
+    assinaturaOrigem: string;
     missoesConcluidas?: string[];
   }): Promise<{ backupNuvemId: string }> {
     if (!usuario) {
@@ -1972,6 +1975,17 @@ function EstadoDaConta({
     return executarOperacaoNuvemSerializada(async () => {
       const estadoLocalAnterior =
         montarEstadoNuvem(dadosAtuaisRef.current);
+
+      if (
+        criarAssinaturaMateriasMigracao(
+          estadoLocalAnterior.materias
+        ) !== params.assinaturaOrigem
+      ) {
+        throw new Error(
+          "A prévia ficou desatualizada porque seus conteúdos mudaram depois da comparação. Gere a prévia novamente; nenhuma alteração foi aplicada."
+        );
+      }
+
       const estadoNuvem =
         await carregarEstadoDaNuvem(usuario.id);
       const revisaoNuvem =
