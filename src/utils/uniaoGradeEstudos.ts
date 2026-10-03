@@ -394,11 +394,16 @@ function injetarEdital(materias: Materia[], analise: AnaliseEdital): Materia[] {
       );
       const candidato =
         porOrigem ??
-        melhorAssunto(todos, assuntoEdital.nome, 0.86)?.assunto;
+        melhorAssunto(
+          todos.filter((assunto) => !assunto.origemEditalId),
+          assuntoEdital.nome,
+          0.86
+        )?.assunto;
 
       if (candidato) {
         const atualizado: Assunto = {
           ...candidato,
+          nome: assuntoEdital.nome,
           origemEditalId: assuntoEdital.id,
           origemConteudo:
             (candidato.aulas ?? []).some(ehAulaCurso)
