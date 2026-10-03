@@ -77,7 +77,10 @@ export function unificarGradeEditalCursos({
   materias = consolidarMateriasEquivalentes(materias);
 
   if (analiseEdital) {
-    materias = injetarEdital(materias, analiseEdital);
+    materias = injetarEdital(
+      materias,
+      garantirIdsDaAnalise(analiseEdital)
+    );
   }
 
   const ativos = cursos.filter((curso) => cursosAtivosIds.includes(curso.id));
@@ -171,6 +174,40 @@ export function criarAnalisePlanejamentoUnificada(
   return {
     ...analise,
     materias: materiasPlano.filter((materia) => materia.assuntos.length > 0),
+  };
+}
+
+function garantirIdsDaAnalise(
+  analise: AnaliseEdital
+): AnaliseEdital {
+  const idsMaterias = new Set<string>();
+
+  return {
+    ...analise,
+    materias: analise.materias.map((materia, indiceMateria) => {
+      let materiaId = materia.id?.trim();
+      if (!materiaId || idsMaterias.has(materiaId)) {
+        materiaId = `edital-materia-${slug(materia.nome)}-${indiceMateria + 1}`;
+      }
+      idsMaterias.add(materiaId);
+
+      const idsAssuntos = new Set<string>();
+      const assuntos = materia.assuntos.map((assunto, indiceAssunto) => {
+        let assuntoId = assunto.id?.trim();
+        if (!assuntoId || idsAssuntos.has(assuntoId)) {
+          assuntoId =
+            `edital-assunto-${slug(materia.nome)}-${slug(assunto.nome)}-${indiceAssunto + 1}`;
+        }
+        idsAssuntos.add(assuntoId);
+        return { ...assunto, id: assuntoId };
+      });
+
+      return {
+        ...materia,
+        id: materiaId,
+        assuntos,
+      };
+    }),
   };
 }
 
