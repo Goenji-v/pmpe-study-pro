@@ -367,6 +367,72 @@ export function montarEstadoNuvem(
   });
 }
 
+function deduplicarIdenticosPorId<T extends { id?: string }>(
+  itens: T[]
+): T[] {
+  const primeiraPorId = new Map<string, string>();
+  const resultado: T[] = [];
+
+  for (const item of itens) {
+    const id = item.id;
+    if (!id) {
+      resultado.push(item);
+      continue;
+    }
+
+    const serializado = JSON.stringify(item);
+    const primeira = primeiraPorId.get(id);
+
+    if (primeira === undefined) {
+      primeiraPorId.set(id, serializado);
+      resultado.push(item);
+      continue;
+    }
+
+    // Só repara automaticamente a duplicata quando os objetos são idênticos.
+    // Se houver o mesmo ID com conteúdos diferentes, mantemos os dois para que
+    // validarIntegridadeEstado continue bloqueando a corrupção.
+    if (primeira !== serializado) {
+      resultado.push(item);
+    }
+  }
+
+  return resultado;
+}
+
+export function normalizarMateriasSemDuplicatasIdenticas(
+  materias: Materia[]
+): Materia[] {
+  return materias.map((materia) => {
+    const modulos = (materia.modulos ?? []).map((modulo) => {
+      const assuntosComAulas = modulo.assuntos.map((assunto) => ({
+        ...assunto,
+        aulas: deduplicarIdenticosPorId(assunto.aulas ?? []),
+      }));
+
+      return {
+        ...modulo,
+        assuntos: deduplicarIdenticosPorId(assuntosComAulas),
+      };
+    });
+
+    const assuntos = modulos.length > 0
+      ? modulos.flatMap((modulo) => modulo.assuntos)
+      : deduplicarIdenticosPorId(
+          (materia.assuntos ?? []).map((assunto) => ({
+            ...assunto,
+            aulas: deduplicarIdenticosPorId(assunto.aulas ?? []),
+          }))
+        );
+
+    return {
+      ...materia,
+      modulos,
+      assuntos,
+    };
+  });
+}
+
 function normalizarConfiguracoesApp(
   configuracoes: ConfiguracoesApp
 ): ConfiguracoesApp {
@@ -411,8 +477,10 @@ export function validarEMigrarEstado(
     return null;
   }
 
-  const materias = migrarMateriasParaModulos(
-    estado.materias
+  const materias = normalizarMateriasSemDuplicatasIdenticas(
+    migrarMateriasParaModulos(
+      estado.materias
+    )
   );
 
   const missoesConcluidas =
@@ -622,8 +690,10 @@ function normalizarEstadoParaSalvar(
     ...estado,
     schemaVersion: SCHEMA_VERSION_ATUAL,
     versao: VERSAO_ESTADO_APP,
-    materias: migrarMateriasParaModulos(
-      estado.materias
+    materias: normalizarMateriasSemDuplicatasIdenticas(
+      migrarMateriasParaModulos(
+        estado.materias
+      )
     ),
     configuracoes: normalizarConfiguracoesApp(estado.configuracoes),
     salvoEm:
