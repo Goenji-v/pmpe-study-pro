@@ -42,6 +42,7 @@ import {
 import {
   criarEditalAnteriorSintetico,
   prepararMigracaoEditalSegura,
+  remapearMissoesConcluidasPorConteudo,
   type ResultadoPreparacaoMigracaoEdital,
 } from "../../utils/migracaoEditalSegura";
 
@@ -1375,38 +1376,23 @@ function remapearMissoesConcluidasDoPlanoLegado(
   planoNovo: PlanoEdital,
   concluidasAtuais: string[]
 ) {
-  const concluidas = new Set(concluidasAtuais);
-  const referenciasConcluidas = new Set<string>();
+  const referenciasLegadas = planoPMPE.flatMap((semana) =>
+    semana.dias.flatMap((dia) =>
+      dia.missoes.flatMap((missao) =>
+        obterReferenciasDaMissao(missao).map((referencia) => ({
+          missaoId: missao.id,
+          materiaId: referencia.materiaId,
+          assuntoId: referencia.assuntoId,
+        }))
+      )
+    )
+  );
 
-  for (const semana of planoPMPE) {
-    for (const dia of semana.dias) {
-      for (const missao of dia.missoes) {
-        if (!concluidas.has(missao.id)) continue;
-
-        for (const referencia of obterReferenciasDaMissao(missao)) {
-          referenciasConcluidas.add(
-            `${referencia.materiaId}::${referencia.assuntoId}`
-          );
-        }
-      }
-    }
-  }
-
-  for (const semana of planoNovo.semanas) {
-    for (const dia of semana.dias) {
-      for (const missao of dia.missoes) {
-        if (
-          referenciasConcluidas.has(
-            `${missao.materiaId}::${missao.assuntoId}`
-          )
-        ) {
-          concluidas.add(missao.id);
-        }
-      }
-    }
-  }
-
-  return Array.from(concluidas);
+  return remapearMissoesConcluidasPorConteudo({
+    planoNovo,
+    concluidasAtuais,
+    referenciasLegadas,
+  });
 }
 
 function GrupoEditaisCatalogo({
