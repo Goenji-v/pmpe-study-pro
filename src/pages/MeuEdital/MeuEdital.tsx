@@ -28,6 +28,10 @@ import {
 } from "../../types/editalInteligente";
 import type { EditalCatalogo } from "../../types/catalogoEditais";
 import type { ConfiguracoesComCursos } from "../../types/cursos";
+import {
+  obterReferenciasDaMissao,
+  planoPMPE,
+} from "../../data/planoPMPE";
 import { aplicarCursosAtivosNasMaterias } from "../../utils/importacaoCurso";
 import {
   gerarPlanoEdital,
@@ -102,6 +106,7 @@ export default function MeuEdital() {
     (ResultadoPreparacaoMigracaoEdital & {
       editalNovoId: string;
       editalNovoNome: string;
+      missoesConcluidasMigradas: string[];
     }) | null
   >(null);
   const [processando, setProcessando] = useState(false);
@@ -492,6 +497,11 @@ export default function MeuEdital() {
         ...migracao,
         editalNovoId,
         editalNovoNome,
+        missoesConcluidasMigradas:
+          remapearMissoesConcluidasDoPlanoLegado(
+            plano,
+            missoesConcluidas
+          ),
       });
       setPlanoPrevio(plano);
       showToast(
@@ -601,6 +611,8 @@ export default function MeuEdital() {
             materias: migracaoPrevia.materiasMigradas,
             configuracoes: novasConfiguracoes,
             relatorio: migracaoPrevia.relatorio,
+            missoesConcluidas:
+              migracaoPrevia.missoesConcluidasMigradas,
           });
 
         showToast(
@@ -1357,6 +1369,44 @@ export default function MeuEdital() {
       )}
     </section>
   );
+}
+
+function remapearMissoesConcluidasDoPlanoLegado(
+  planoNovo: PlanoEdital,
+  concluidasAtuais: string[]
+) {
+  const concluidas = new Set(concluidasAtuais);
+  const referenciasConcluidas = new Set<string>();
+
+  for (const semana of planoPMPE) {
+    for (const dia of semana.dias) {
+      for (const missao of dia.missoes) {
+        if (!concluidas.has(missao.id)) continue;
+
+        for (const referencia of obterReferenciasDaMissao(missao)) {
+          referenciasConcluidas.add(
+            `${referencia.materiaId}::${referencia.assuntoId}`
+          );
+        }
+      }
+    }
+  }
+
+  for (const semana of planoNovo.semanas) {
+    for (const dia of semana.dias) {
+      for (const missao of dia.missoes) {
+        if (
+          referenciasConcluidas.has(
+            `${missao.materiaId}::${missao.assuntoId}`
+          )
+        ) {
+          concluidas.add(missao.id);
+        }
+      }
+    }
+  }
+
+  return Array.from(concluidas);
 }
 
 function GrupoEditaisCatalogo({
