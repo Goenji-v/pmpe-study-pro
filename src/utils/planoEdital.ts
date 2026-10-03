@@ -231,7 +231,7 @@ export function gerarPlanoEdital(
       const missoes = Array.from({ length: quantidadeMissoes }, () => {
         const item = sequencia[ponteiro++];
         const missao = {
-          id: `edital-s${semana}-${diaSemana}-m${ordemGlobal}`,
+          id: `edital-conteudo-${slugEdital(item.materia.id)}-${slugEdital(item.assuntoId)}`,
           ordem: ordemGlobal,
           materiaId: item.materia.id,
           materia: item.materia.nome,
