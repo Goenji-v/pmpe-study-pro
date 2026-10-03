@@ -11,6 +11,7 @@ import type {
 } from "../src/types/editalInteligente.ts";
 import type { CursoImportado } from "../src/types/cursos.ts";
 import {
+  criarAssinaturaMateriasMigracao,
   criarEditalAnteriorSintetico,
   prepararMigracaoEditalSegura,
   remapearMissoesConcluidasPorConteudo,
@@ -667,4 +668,20 @@ test("conta legada sem edital ativo ganha origem sintética antes da migração"
 
   assert.equal(resultado.relatorio.editalAnteriorId, "estado-anterior-study-pro");
   assert.equal(resultado.relatorio.resumo.removidosPreservados, 1);
+});
+
+
+test("assinatura da prévia muda se progresso ou anotação forem alterados depois", () => {
+  const antes = materiasAtuais();
+  const assinaturaAntes = criarAssinaturaMateriasMigracao(antes);
+
+  const depois = structuredClone(antes);
+  const teoria = depois[0].assuntos.find((item) => item.id === "dh-teoria");
+  assert.ok(teoria);
+  teoria.anotacoes = "Anotação feita depois da prévia";
+  teoria.concluido = false;
+  depois[0].modulos![0].assuntos = depois[0].assuntos;
+
+  const assinaturaDepois = criarAssinaturaMateriasMigracao(depois);
+  assert.notEqual(assinaturaDepois, assinaturaAntes);
 });
