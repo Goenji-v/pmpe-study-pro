@@ -1,5 +1,7 @@
-import type { Assunto, Materia, Modulo } from "../types";
+import type { Assunto, AulaAssunto, Materia, Modulo } from "../types";
 import { classificarOrigemCurso, identificarDisciplina, origemDaAula } from "./classificacaoCurso";
+import type { AnaliseEdital } from "../types/editalInteligente";
+import { unificarGradeEditalCursos } from "./uniaoGradeEstudos";
 import type {
   CapturaCurso,
   CursoAula,
@@ -248,13 +250,22 @@ export function mesclarCursoRecebido(cursos: CursoImportado[], recebido: CursoIm
     materias: resultado.materias.filter(m => m.modulos.length).map((m, i) => ({ ...m, ordem: i + 1 })) };
 }
 
-type ExtrasCursos = { cursos?: CursoImportado[]; cursosAtivosIds?: string[] };
+type ExtrasCursos = {
+  cursos?: CursoImportado[];
+  cursosAtivosIds?: string[];
+  editalAtivo?: { analise?: AnaliseEdital };
+};
 export function reconciliarCursosImportados<T extends { materias: Materia[]; configuracoes: object }>(estado: T): T {
   const config = estado.configuracoes as ExtrasCursos;
   const antigos = config.cursos;
   if (!antigos?.length) return estado;
   let cursos = sincronizarProgressoCursos(antigos, estado.materias).map(normalizarClassificacaoCurso);
-  const materias = aplicarCursosAtivosNasMaterias(estado.materias, cursos, config.cursosAtivosIds ?? []);
+  const materias = aplicarCursosAtivosNasMaterias(
+    estado.materias,
+    cursos,
+    config.cursosAtivosIds ?? [],
+    config.editalAtivo?.analise
+  );
   cursos = sincronizarProgressoCursos(cursos, materias);
   if (JSON.stringify(cursos) === JSON.stringify(antigos) && JSON.stringify(materias) === JSON.stringify(estado.materias)) return estado;
   return { ...estado, materias, configuracoes: { ...estado.configuracoes, cursos } } as T;
@@ -305,7 +316,21 @@ export async function extrairCursoDeArquivo(file: File): Promise<CursoImportado>
   return { ...organizarCapturaCurso(capturaDeTexto(texto, removerExtensao(file.name))), origem: "texto", nomeArquivo: file.name };
 }
 
-export function aplicarCursosAtivosNasMaterias(materiasAtuais: Materia[], cursos: CursoImportado[], ativosIds: string[]): Materia[] {
+export function aplicarCursosAtivosNasMaterias(
+  materiasAtuais: Materia[],
+  cursos: CursoImportado[],
+  ativosIds: string[],
+  analiseEdital?: AnaliseEdital
+): Materia[] {
+  if (analiseEdital) {
+    return unificarGradeEditalCursos({
+      materiasAtuais,
+      analiseEdital,
+      cursos,
+      cursosAtivosIds: ativosIds,
+    });
+  }
+
   const progresso = mapearProgressoDosCursos(materiasAtuais);
   const base = removerModulosDeCursos(materiasAtuais);
   for (const curso of cursos.filter((c) => ativosIds.includes(c.id))) {
@@ -327,7 +352,14 @@ export function sincronizarProgressoCursos(cursos: CursoImportado[], materias: M
   const progresso = mapearProgressoDosCursos(materias);
   return cursos.map((curso) => ({ ...curso, materias: curso.materias.map((materia) => ({ ...materia, modulos: materia.modulos.map((modulo) => ({ ...modulo, aulas: modulo.aulas.map((aula) => {
     const salvo = buscarProgresso(progresso, curso.id, aula);
-    return salvo ? { ...aula, concluida: salvo.concluido, concluidaEm: salvo.concluidoEm, registroEstudo: salvo } : aula;
+    return salvo
+      ? {
+          ...aula,
+          concluida: salvo.aula?.concluida ?? salvo.assunto.concluido,
+          concluidaEm: salvo.aula?.concluidaEm ?? salvo.assunto.concluidoEm,
+          registroEstudo: salvo.assunto,
+        }
+      : aula;
   }) })) })) }));
 }
 
@@ -429,14 +461,17 @@ function tipoMaterial(texto: string, href: string): "pdf" | "download" | "materi
   return "link";
 }
 
-function converterModuloCurso(curso: CursoImportado, _materia: CursoMateria, modulo: CursoModulo, progresso: Map<string, Assunto>): Modulo {
+type ProgressoCursoSalvo = { assunto: Assunto; aula?: AulaAssunto };
+
+function converterModuloCurso(curso: CursoImportado, _materia: CursoMateria, modulo: CursoModulo, progresso: Map<string, ProgressoCursoSalvo>): Modulo {
   const assuntos: Assunto[] = modulo.aulas.map((aula) => {
-    const salvo = buscarProgresso(progresso, curso.id, aula) ?? aula.registroEstudo;
-    const concluido = salvo?.concluido ?? aula.concluida ?? false;
-    const concluidoEm = salvo?.concluidoEm ?? aula.concluidaEm ?? aula.concluidoEm;
+    const salvo = buscarProgresso(progresso, curso.id, aula);
+    const registro = salvo?.assunto ?? aula.registroEstudo;
+    const concluido = salvo?.aula?.concluida ?? registro?.concluido ?? aula.concluida ?? false;
+    const concluidoEm = salvo?.aula?.concluidaEm ?? registro?.concluidoEm ?? aula.concluidaEm ?? aula.concluidoEm;
     const id = `curso:${curso.id}:aula:${aula.id}`;
-    return { ...salvo, id, nome: salvo?.nome ?? aula.nome, concluido, concluidoEm, prioridade: salvo?.prioridade ?? "media", aula: aula.url,
-      aulas: salvo?.aulas?.length ? salvo.aulas : [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm: concluidoEm }] };
+    return { ...registro, id, nome: registro?.nome ?? aula.nome, concluido, concluidoEm, prioridade: registro?.prioridade ?? "media", aula: aula.url,
+      aulas: registro?.aulas?.length ? registro.aulas : [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm: concluidoEm }] };
   });
   return { id: `curso:${curso.id}:modulo:${modulo.id}`, nome: `${curso.nome} · ${modulo.nome}`, ordem: modulo.ordem, assuntos };
 }
@@ -451,20 +486,43 @@ function removerModulosDeCursos(materias: Materia[]): Materia[] {
 }
 
 function mapearProgressoDosCursos(materias: Materia[]) {
-  const mapa = new Map<string, Assunto>();
+  const mapa = new Map<string, ProgressoCursoSalvo>();
   for (const materia of materias) for (const modulo of materia.modulos ?? []) {
-    const cursoId = modulo.id.match(/^curso:(.+?):modulo:/)?.[1];
-    if (!cursoId) continue;
+    const cursoModuloId = modulo.id.match(/^curso:(.+?):modulo:/)?.[1];
     for (const assunto of modulo.assuntos) {
-      mapa.set(`id:${assunto.id}`, assunto);
-      for (const url of [assunto.aula, ...(assunto.aulas ?? []).map(a => a.url)]) if (url) mapa.set(`url:${cursoId}|${normalizarUrl(url)}`, assunto);
+      const assuntoCurso = assunto.id.match(/^curso:(.+?):aula:(.+)$/);
+      for (const aula of assunto.aulas ?? []) {
+        const origem = aula.origemCurso;
+        const idLegado = aula.id.match(/^curso:(.+?):aula:(.+):link$/);
+        const cursoId = origem?.cursoId ?? idLegado?.[1] ?? assuntoCurso?.[1] ?? cursoModuloId;
+        const aulaCursoId = origem?.aulaCursoId ?? idLegado?.[2] ?? assuntoCurso?.[2];
+        if (!cursoId) continue;
+
+        const salvo = { assunto, aula };
+        mapa.set(`id:${aula.id}`, salvo);
+        if (aulaCursoId) mapa.set(`orig:${cursoId}|${aulaCursoId}`, salvo);
+        const url = normalizarUrl(aula.url);
+        if (url) mapa.set(`url:${cursoId}|${url}`, salvo);
+      }
+
+      if (assuntoCurso) {
+        const salvo = { assunto };
+        mapa.set(`id:${assunto.id}`, salvo);
+        mapa.set(`orig:${assuntoCurso[1]}|${assuntoCurso[2]}`, salvo);
+        const url = normalizarUrl(assunto.aula);
+        if (url) mapa.set(`url:${assuntoCurso[1]}|${url}`, salvo);
+      }
     }
   }
   return mapa;
 }
 
-function buscarProgresso(mapa: Map<string, Assunto>, cursoId: string, aula: CursoAula) {
-  return mapa.get(`id:curso:${cursoId}:aula:${aula.id}`) ?? (aula.url ? mapa.get(`url:${cursoId}|${normalizarUrl(aula.url)}`) : undefined);
+function buscarProgresso(mapa: Map<string, ProgressoCursoSalvo>, cursoId: string, aula: CursoAula) {
+  const idCanonico = `curso:${cursoId}:aula:${aula.id}:link`;
+  return mapa.get(`orig:${cursoId}|${aula.id}`) ??
+    mapa.get(`id:${idCanonico}`) ??
+    mapa.get(`id:curso:${cursoId}:aula:${aula.id}`) ??
+    (aula.url ? mapa.get(`url:${cursoId}|${normalizarUrl(aula.url)}`) : undefined);
 }
 function pareceTituloDeMateria(texto: string, materia: string) { const a = slugCurso(texto), b = slugCurso(materia); return a === b || a.startsWith(`${b}-`) || a.length <= b.length + 24; }
 function pareceModulo(texto: string) { return /\b(m[oó]dulo|unidade|bloco|cap[ií]tulo|trilha|disciplina)\b/i.test(texto); }
