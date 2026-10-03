@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import type {
-  Assunto,
   Materia,
   RegistroQuestao,
   Revisao,
