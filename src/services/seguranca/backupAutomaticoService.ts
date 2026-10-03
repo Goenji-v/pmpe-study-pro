@@ -4,6 +4,7 @@ import {
 
 export type MotivoBackupAutomatico =
   | "antes_migracao_schema"
+  | "antes_migracao_edital"
   | "antes_reconciliacao_estrutural"
   | "antes_rollback"
   | "antes_restauracao_manual"
