@@ -1,0 +1,84 @@
+{
+  "materia": "Língua Portuguesa",
+  "topico": "Uso do sinal grave indicativo de Crase",
+  "aliases": [
+    "Crase"
+  ],
+  "questoes": [
+    {
+      "id": "port-cra-001",
+      "pergunta": "Há crase, em um dos casos mais comuns, quando ocorre a fusão de:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Preposição a + artigo feminino a/as"
+        },
+        {
+          "id": "b",
+          "texto": "Preposição de + artigo a"
+        },
+        {
+          "id": "c",
+          "texto": "Conjunção e + artigo a"
+        },
+        {
+          "id": "d",
+          "texto": "Pronome se + artigo a"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "A crase pode resultar da fusão da preposição “a” com o artigo feminino “a/as”.",
+      "dica": "a + a = à."
+    },
+    {
+      "id": "port-cra-002",
+      "pergunta": "Em qual frase o uso da crase está correto?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Entreguei o documento à Pedro."
+        },
+        {
+          "id": "b",
+          "texto": "Cheguei à escola cedo."
+        },
+        {
+          "id": "c",
+          "texto": "Começou à estudar ontem."
+        },
+        {
+          "id": "d",
+          "texto": "Fui à pé."
+        }
+      ],
+      "correta": "b",
+      "explicacao": "O verbo chegar rege preposição “a” e “escola” admite artigo feminino: a + a = à.",
+      "dica": "Quem chega, chega a algum lugar."
+    },
+    {
+      "id": "port-cra-003",
+      "pergunta": "Antes de verbo, em regra, ocorre crase?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Sim, sempre"
+        },
+        {
+          "id": "b",
+          "texto": "Não, porque verbo não admite artigo feminino"
+        },
+        {
+          "id": "c",
+          "texto": "Somente no infinitivo"
+        },
+        {
+          "id": "d",
+          "texto": "Somente no particípio"
+        }
+      ],
+      "correta": "b",
+      "explicacao": "Em regra, não há crase antes de verbo porque não existe artigo feminino diante de verbo.",
+      "dica": "Antes de verbo, normalmente não há artigo."
+    }
+  ]
+}

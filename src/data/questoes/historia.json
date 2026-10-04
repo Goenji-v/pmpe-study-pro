@@ -1,0 +1,81 @@
+{
+  "materia": "História",
+  "topico": "Confederação do Equador",
+  "questoes": [
+    {
+      "id": "hist-conf-001",
+      "pergunta": "A Confederação do Equador ocorreu em:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "1817"
+        },
+        {
+          "id": "b",
+          "texto": "1822"
+        },
+        {
+          "id": "c",
+          "texto": "1824"
+        },
+        {
+          "id": "d",
+          "texto": "1848"
+        }
+      ],
+      "correta": "c",
+      "explicacao": "A Confederação do Equador ocorreu em 1824, durante o Primeiro Reinado.",
+      "dica": "Dois anos após a Independência."
+    },
+    {
+      "id": "hist-conf-002",
+      "pergunta": "A Confederação do Equador teve forte caráter:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Republicano e federalista"
+        },
+        {
+          "id": "b",
+          "texto": "Absolutista e centralizador"
+        },
+        {
+          "id": "c",
+          "texto": "Monarquista português"
+        },
+        {
+          "id": "d",
+          "texto": "Exclusivamente religioso"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "O movimento reagiu ao centralismo imperial e defendeu ideias republicanas e federalistas.",
+      "dica": "Era oposição ao centralismo do Primeiro Reinado."
+    },
+    {
+      "id": "hist-conf-003",
+      "pergunta": "Qual personagem é fortemente associado à Confederação do Equador?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Frei Caneca"
+        },
+        {
+          "id": "b",
+          "texto": "Tiradentes"
+        },
+        {
+          "id": "c",
+          "texto": "Duque de Caxias"
+        },
+        {
+          "id": "d",
+          "texto": "Padre Anchieta"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "Frei Caneca foi um dos principais líderes e ideólogos do movimento.",
+      "dica": "Pernambuco + 1824 = Frei Caneca."
+    }
+  ]
+}

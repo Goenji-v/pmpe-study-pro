@@ -1,0 +1,251 @@
+{
+  "materia": "Raciocínio Lógico e Matemática",
+  "topicos": [
+    {
+      "topico": "Conectivos lógicos",
+      "aliases": [
+        "Exercícios - Proposições e conectivos lógicos"
+      ],
+      "questoes": [
+        {
+          "id": "rlm-con-001",
+          "pergunta": "Na condicional “Se P, então Q”, quando o resultado é falso?",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "P verdadeira e Q falsa"
+            },
+            {
+              "id": "b",
+              "texto": "P falsa e Q verdadeira"
+            },
+            {
+              "id": "c",
+              "texto": "P falsa e Q falsa"
+            },
+            {
+              "id": "d",
+              "texto": "P verdadeira e Q verdadeira"
+            }
+          ],
+          "correta": "a",
+          "explicacao": "P → Q só é falsa quando P é verdadeira e Q é falsa.",
+          "dica": "Prometeu e não cumpriu."
+        },
+        {
+          "id": "rlm-con-002",
+          "pergunta": "A conjunção P e Q é verdadeira quando:",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "P e Q são verdadeiras"
+            },
+            {
+              "id": "b",
+              "texto": "Apenas P é verdadeira"
+            },
+            {
+              "id": "c",
+              "texto": "Apenas Q é verdadeira"
+            },
+            {
+              "id": "d",
+              "texto": "P e Q são falsas"
+            }
+          ],
+          "correta": "a",
+          "explicacao": "A conjunção exige que as duas proposições sejam verdadeiras.",
+          "dica": "No E, precisa dos dois."
+        },
+        {
+          "id": "rlm-con-003",
+          "pergunta": "A disjunção inclusiva P ou Q é falsa quando:",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "P e Q são verdadeiras"
+            },
+            {
+              "id": "b",
+              "texto": "Apenas P é verdadeira"
+            },
+            {
+              "id": "c",
+              "texto": "Apenas Q é verdadeira"
+            },
+            {
+              "id": "d",
+              "texto": "P e Q são falsas"
+            }
+          ],
+          "correta": "d",
+          "explicacao": "O OU inclusivo só é falso quando ambas são falsas.",
+          "dica": "No OU, uma verdadeira já basta."
+        }
+      ]
+    },
+    {
+      "topico": "Negação de proposições",
+      "aliases": [
+        "Exercícios - Negações"
+      ],
+      "questoes": [
+        {
+          "id": "rlm-neg-001",
+          "pergunta": "A negação de “P e Q” é:",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "não P e não Q"
+            },
+            {
+              "id": "b",
+              "texto": "não P ou não Q"
+            },
+            {
+              "id": "c",
+              "texto": "P ou Q"
+            },
+            {
+              "id": "d",
+              "texto": "P se e somente se Q"
+            }
+          ],
+          "correta": "b",
+          "explicacao": "Pela lei de De Morgan, a negação de P e Q é não P ou não Q.",
+          "dica": "Nega tudo e troca E por OU."
+        },
+        {
+          "id": "rlm-neg-002",
+          "pergunta": "A negação de “P ou Q” é:",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "não P e não Q"
+            },
+            {
+              "id": "b",
+              "texto": "não P ou não Q"
+            },
+            {
+              "id": "c",
+              "texto": "P e Q"
+            },
+            {
+              "id": "d",
+              "texto": "Se P, então Q"
+            }
+          ],
+          "correta": "a",
+          "explicacao": "Pela lei de De Morgan, a negação de P ou Q é não P e não Q.",
+          "dica": "Nega tudo e troca OU por E."
+        },
+        {
+          "id": "rlm-neg-003",
+          "pergunta": "A negação de “Se P, então Q” é:",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "não P e Q"
+            },
+            {
+              "id": "b",
+              "texto": "P e não Q"
+            },
+            {
+              "id": "c",
+              "texto": "não P ou Q"
+            },
+            {
+              "id": "d",
+              "texto": "P ou não Q"
+            }
+          ],
+          "correta": "b",
+          "explicacao": "A negação da condicional P → Q é P e não Q.",
+          "dica": "Mantém P, troca por E e nega Q."
+        }
+      ]
+    },
+    {
+      "topico": "Tabela verdade",
+      "questoes": [
+        {
+          "id": "rlm-tv-001",
+          "pergunta": "Com duas proposições simples P e Q, quantas linhas tem a tabela-verdade?",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "2"
+            },
+            {
+              "id": "b",
+              "texto": "4"
+            },
+            {
+              "id": "c",
+              "texto": "6"
+            },
+            {
+              "id": "d",
+              "texto": "8"
+            }
+          ],
+          "correta": "b",
+          "explicacao": "O número de linhas é 2 elevado a n. Para duas proposições, 2² = 4.",
+          "dica": "Use 2 elevado ao número de proposições."
+        },
+        {
+          "id": "rlm-tv-002",
+          "pergunta": "Com três proposições simples P, Q e R, quantas linhas são necessárias?",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "4"
+            },
+            {
+              "id": "b",
+              "texto": "6"
+            },
+            {
+              "id": "c",
+              "texto": "8"
+            },
+            {
+              "id": "d",
+              "texto": "9"
+            }
+          ],
+          "correta": "c",
+          "explicacao": "2³ = 8 combinações possíveis.",
+          "dica": "Três letras = 8 linhas."
+        },
+        {
+          "id": "rlm-tv-003",
+          "pergunta": "Uma tautologia é uma proposição composta que:",
+          "alternativas": [
+            {
+              "id": "a",
+              "texto": "É sempre verdadeira"
+            },
+            {
+              "id": "b",
+              "texto": "É sempre falsa"
+            },
+            {
+              "id": "c",
+              "texto": "Tem metade V e metade F"
+            },
+            {
+              "id": "d",
+              "texto": "Não possui valor lógico"
+            }
+          ],
+          "correta": "a",
+          "explicacao": "Tautologia é verdadeira em todas as linhas da tabela-verdade.",
+          "dica": "Tautologia = sempre V."
+        }
+      ]
+    }
+  ]
+}

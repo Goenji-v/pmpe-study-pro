@@ -1,0 +1,85 @@
+{
+  "materia": "Legislação Extravagante",
+  "topico": "Lei de Abuso de Autoridade (Lei n°13.869/19)",
+  "aliases": [
+    "Lei de Abuso de Autoridade",
+    "Abuso de Autoridade"
+  ],
+  "questoes": [
+    {
+      "id": "leg-abuso-001",
+      "pergunta": "Os crimes previstos na Lei nº 13.869/2019 são, em regra, de ação penal:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Privada exclusiva"
+        },
+        {
+          "id": "b",
+          "texto": "Pública incondicionada"
+        },
+        {
+          "id": "c",
+          "texto": "Pública condicionada à representação"
+        },
+        {
+          "id": "d",
+          "texto": "Privada personalíssima"
+        }
+      ],
+      "correta": "b",
+      "explicacao": "A Lei de Abuso de Autoridade estabelece ação penal pública incondicionada.",
+      "dica": "Regra: atuação do Ministério Público sem depender de representação."
+    },
+    {
+      "id": "leg-abuso-002",
+      "pergunta": "A Lei nº 13.869/2019 exige finalidade específica para caracterizar abuso de autoridade. Qual alternativa traz uma dessas finalidades?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Prejudicar outrem, beneficiar a si ou terceiro, ou agir por mero capricho/satisfação pessoal"
+        },
+        {
+          "id": "b",
+          "texto": "Qualquer erro administrativo culposo"
+        },
+        {
+          "id": "c",
+          "texto": "Toda divergência na interpretação da lei"
+        },
+        {
+          "id": "d",
+          "texto": "Apenas obter vantagem econômica"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "A lei exige finalidade específica: prejudicar outrem, beneficiar a si ou terceiro, ou agir por mero capricho ou satisfação pessoal.",
+      "dica": "Não basta o erro: precisa haver finalidade específica."
+    },
+    {
+      "id": "leg-abuso-003",
+      "pergunta": "A divergência na interpretação de lei ou na avaliação de fatos e provas, por si só:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Sempre configura abuso de autoridade"
+        },
+        {
+          "id": "b",
+          "texto": "Não configura abuso de autoridade"
+        },
+        {
+          "id": "c",
+          "texto": "Configura crime culposo"
+        },
+        {
+          "id": "d",
+          "texto": "Gera automaticamente prisão"
+        }
+      ],
+      "correta": "b",
+      "explicacao": "A lei afasta o abuso quando houver mera divergência na interpretação da lei ou na avaliação de fatos e provas.",
+      "dica": "Divergência interpretativa, sozinha, não é abuso."
+    }
+  ]
+}

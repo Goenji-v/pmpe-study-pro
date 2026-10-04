@@ -1,0 +1,85 @@
+{
+  "materia": "Direito Constitucional",
+  "topico": "Dos princípios fundamentais.",
+  "aliases": [
+    "Princípios fundamentais",
+    "Dos princípios fundamentais"
+  ],
+  "questoes": [
+    {
+      "id": "const-pf-001",
+      "pergunta": "Qual alternativa apresenta apenas fundamentos da República Federativa do Brasil previstos no art. 1º da Constituição?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Soberania, cidadania e dignidade da pessoa humana"
+        },
+        {
+          "id": "b",
+          "texto": "Defesa da paz, pluralismo político e igualdade"
+        },
+        {
+          "id": "c",
+          "texto": "Cidadania, erradicação da pobreza e livre concorrência"
+        },
+        {
+          "id": "d",
+          "texto": "Soberania, desenvolvimento nacional e não intervenção"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "O art. 1º traz soberania, cidadania, dignidade da pessoa humana, valores sociais do trabalho e da livre iniciativa e pluralismo político.",
+      "dica": "Fundamentos ficam no art. 1º."
+    },
+    {
+      "id": "const-pf-002",
+      "pergunta": "“Construir uma sociedade livre, justa e solidária” é:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Fundamento da República"
+        },
+        {
+          "id": "b",
+          "texto": "Objetivo fundamental da República"
+        },
+        {
+          "id": "c",
+          "texto": "Princípio das relações internacionais"
+        },
+        {
+          "id": "d",
+          "texto": "Direito social"
+        }
+      ],
+      "correta": "b",
+      "explicacao": "Essa previsão está no art. 3º da Constituição, entre os objetivos fundamentais.",
+      "dica": "Art. 3º = objetivos."
+    },
+    {
+      "id": "const-pf-003",
+      "pergunta": "A prevalência dos direitos humanos é princípio que rege:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "A ordem econômica"
+        },
+        {
+          "id": "b",
+          "texto": "As relações internacionais do Brasil"
+        },
+        {
+          "id": "c",
+          "texto": "A seguridade social"
+        },
+        {
+          "id": "d",
+          "texto": "A organização dos Municípios"
+        }
+      ],
+      "correta": "b",
+      "explicacao": "A prevalência dos direitos humanos aparece no art. 4º, entre os princípios das relações internacionais.",
+      "dica": "Art. 4º = Brasil nas relações internacionais."
+    }
+  ]
+}

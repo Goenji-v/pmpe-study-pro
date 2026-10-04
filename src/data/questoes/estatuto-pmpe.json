@@ -1,0 +1,85 @@
+{
+  "materia": "Estatuto PMPE (Pós Edital)",
+  "topico": "Em Produção - Disposições preliminares",
+  "aliases": [
+    "Disposições preliminares",
+    "Estatuto dos Policiais Militares de Pernambuco"
+  ],
+  "questoes": [
+    {
+      "id": "estatuto-dp-001",
+      "pergunta": "Qual diploma legal dispõe sobre o Estatuto dos Policiais Militares do Estado de Pernambuco?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Lei nº 6.783, de 16 de outubro de 1974"
+        },
+        {
+          "id": "b",
+          "texto": "Lei nº 8.072, de 25 de julho de 1990"
+        },
+        {
+          "id": "c",
+          "texto": "Lei nº 11.340, de 7 de agosto de 2006"
+        },
+        {
+          "id": "d",
+          "texto": "Lei nº 13.869, de 5 de setembro de 2019"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "A Lei nº 6.783, de 16 de outubro de 1974, dispõe sobre o Estatuto dos Policiais Militares do Estado de Pernambuco.",
+      "dica": "Guarde o número 6.783/1974."
+    },
+    {
+      "id": "estatuto-dp-002",
+      "pergunta": "Segundo o Estatuto da PMPE, a Polícia Militar de Pernambuco subordina-se:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Ao Governador do Estado"
+        },
+        {
+          "id": "b",
+          "texto": "Ao Presidente da República"
+        },
+        {
+          "id": "c",
+          "texto": "Ao Tribunal de Justiça"
+        },
+        {
+          "id": "d",
+          "texto": "À Assembleia Legislativa"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "O Estatuto da PMPE estabelece a subordinação da Polícia Militar ao Governador do Estado.",
+      "dica": "PM estadual: vínculo institucional com o Governador."
+    },
+    {
+      "id": "estatuto-dp-003",
+      "pergunta": "Qual dupla de princípios estrutura a carreira militar estadual, conforme a Constituição de Pernambuco?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Hierarquia e disciplina"
+        },
+        {
+          "id": "b",
+          "texto": "Autonomia e independência"
+        },
+        {
+          "id": "c",
+          "texto": "Publicidade e livre iniciativa"
+        },
+        {
+          "id": "d",
+          "texto": "Federalismo e soberania"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "A Constituição de Pernambuco prevê que as carreiras militares estaduais têm por princípio a hierarquia e a disciplina.",
+      "dica": "Militarismo estadual: hierarquia + disciplina."
+    }
+  ]
+}
