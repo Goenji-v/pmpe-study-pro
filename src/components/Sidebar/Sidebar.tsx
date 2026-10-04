@@ -6,26 +6,31 @@ import {
 } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  BookOpen,
-  CalendarDays,
   ChevronRight,
-  ClipboardCheck,
-  FileText,
-  FolderOpen,
-  GraduationCap,
-  Home,
-  Library,
   Menu,
-  RotateCcw,
-  Route,
-  Settings,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  TrendingUp,
-  UsersRound,
   X,
 } from "lucide-react";
+import {
+  AccessIcon,
+  AIIcon,
+  BookIcon,
+  CalendarIcon,
+  CoursesIcon,
+  DashboardIcon,
+  EditalIcon,
+  FocusIcon,
+  IntelligenceIcon,
+  LibraryIcon,
+  MaterialsIcon,
+  PerformanceIcon,
+  PlanningIcon,
+  PracticeIcon,
+  QuestionsIcon,
+  ReviewsIcon,
+  SettingsIcon,
+  SimuladosIcon,
+  StudyPlanIcon,
+} from "../StudyProIcons/StudyProIcons";
 
 import "./Sidebar.css";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
@@ -166,7 +171,7 @@ export default function Sidebar() {
             <ItemMenu
               to="/"
               texto="Dashboard"
-              icone={Home}
+              icone={DashboardIcon}
               final
               onNavigate={() => setMenuMobileAberto(false)}
             />
@@ -175,52 +180,52 @@ export default function Sidebar() {
           <GrupoMenu
             id="planejamento"
             titulo="Planejamento"
-            icone={CalendarDays}
+            icone={PlanningIcon}
             ativo={rotaPertenceAoGrupo(location.pathname, "planejamento")}
             aberto={grupoAberto === "planejamento"}
             onToggle={alternarGrupo}
           >
-            <ItemMenu to="/meu-edital" texto="Meu Edital" icone={FileText} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/plano" texto="Plano de Estudos" icone={Route} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/calendario" texto="Calendário" icone={CalendarDays} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/cronograma-ia" texto="Cronograma IA" icone={Sparkles} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/meu-edital" texto="Meu Edital" icone={EditalIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/plano" texto="Plano de Estudos" icone={StudyPlanIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/calendario" texto="Calendário" icone={CalendarIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/cronograma-ia" texto="Cronograma IA" icone={AIIcon} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
           <GrupoMenu
             id="estudos"
             titulo="Estudo de foco"
-            icone={RotateCcw}
+            icone={FocusIcon}
             ativo={rotaPertenceAoGrupo(location.pathname, "estudos")}
             aberto={grupoAberto === "estudos"}
             onToggle={alternarGrupo}
           >
-            <ItemMenu to="/central-estudos" texto="Central de Estudos" icone={BookOpen} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/central-estudos" texto="Central de Estudos" icone={BookIcon} onNavigate={() => setMenuMobileAberto(false)} />
             {PARCERIAS_VISIVEIS && contexto?.papel === "aluno" && (
-              <ItemMenu to="/curso-mentoria" texto="Curso do Parceiro" icone={UsersRound} onNavigate={() => setMenuMobileAberto(false)} />
+              <ItemMenu to="/curso-mentoria" texto="Curso do Parceiro" icone={CoursesIcon} onNavigate={() => setMenuMobileAberto(false)} />
             )}
-            <ItemMenu to="/cursos" texto="Meus Cursos" icone={GraduationCap} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/estudos" texto="Conteúdos" icone={Library} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/materiais" texto="Materiais" icone={FolderOpen} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/revisoes" texto="Revisões" icone={RotateCcw} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/cursos" texto="Meus Cursos" icone={CoursesIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/estudos" texto="Conteúdos" icone={LibraryIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/materiais" texto="Materiais" icone={MaterialsIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/revisoes" texto="Revisões" icone={ReviewsIcon} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
           <GrupoMenu
             id="pratica"
             titulo="Prática"
-            icone={Target}
+            icone={PracticeIcon}
             ativo={rotaPertenceAoGrupo(location.pathname, "pratica")}
             aberto={grupoAberto === "pratica"}
             onToggle={alternarGrupo}
           >
-            <ItemMenu to="/questoes" texto="Questões" icone={ClipboardCheck} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/simulados" texto="Simulados" icone={Target} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/desempenho" texto="Desempenho" icone={TrendingUp} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/questoes" texto="Questões" icone={QuestionsIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/simulados" texto="Simulados" icone={SimuladosIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/desempenho" texto="Desempenho" icone={PerformanceIcon} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
           <ItemMenu
             to="/inteligencia"
             texto="Inteligência"
-            icone={Sparkles}
+            icone={IntelligenceIcon}
             onNavigate={() => setMenuMobileAberto(false)}
           />
 
@@ -231,14 +236,14 @@ export default function Sidebar() {
             <ItemMenu
               to="/meu-acesso"
               texto="Meu acesso"
-              icone={ShieldCheck}
+              icone={AccessIcon}
               onNavigate={() => setMenuMobileAberto(false)}
             />
           )}
           <ItemMenu
             to="/configuracoes"
             texto="Configurações"
-            icone={Settings}
+            icone={SettingsIcon}
             onNavigate={() => setMenuMobileAberto(false)}
           />
         </div>
