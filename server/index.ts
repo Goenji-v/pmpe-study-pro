@@ -947,6 +947,14 @@ app.post(
             domingoEstrategico?: boolean;
             observacao?: string;
             modo?: "assistido";
+            prioridadeAutomatica?: string;
+            distribuicaoAdaptativa?: Array<{
+              materia?: string;
+              blocosRecomendados?: number;
+              prioridade?: number;
+              percentualAcertos?: number;
+              motivo?: string;
+            }>;
           };
           metas?: unknown;
           questoes?: unknown[];
@@ -1007,6 +1015,9 @@ ${tempoDisponivel} minutos
 PERFIL E PREFERÊNCIAS DO ESTUDANTE:
 ${JSON.stringify(dados.perfilEstudo || {}, null, 2)}
 
+DISTRIBUIÇÃO ADAPTATIVA DE BLOCOS:
+${JSON.stringify(dados.perfilEstudo?.distribuicaoAdaptativa || [], null, 2)}
+
 METAS:
 ${JSON.stringify(dados.metas || {}, null, 2)}
 
@@ -1028,6 +1039,10 @@ ${JSON.stringify((dados.missoesPendentes || []).slice(0, 80), null, 2)}
 CRITÉRIOS:
 - priorize revisões atrasadas;
 - priorize matérias com baixo aproveitamento;
+- use a DISTRIBUIÇÃO ADAPTATIVA DE BLOCOS como peso semanal real: matérias com mais blocosRecomendados devem receber proporcionalmente mais tempo/tarefas;
+- preserve contato com todas as matérias presentes na distribuição; não retire uma matéria só porque o desempenho nela está alto;
+- um bloco é um peso de alocação, não precisa virar exatamente uma tarefa isolada;
+- dúvidas registradas, conteúdos pendentes e revisões atrasadas já estão refletidos nos pesos recebidos e devem ser respeitados;
 - inclua missões pendentes quando forem coerentes;
 - respeite o tempo disponível por dia;
 - não concentre todo o período em uma única matéria;
