@@ -32,6 +32,7 @@ export type EstadoEconomia = {
   tituloEquipado?: string;
   molduraEquipada?: string;
   temaEquipado?: string;
+  iconeEquipado?: string;
   atualizadoEm?: string;
 };
 
@@ -90,9 +91,14 @@ export function obterEstadoEconomia(
       0,
       Math.floor(Number(economia?.sequenciaLoginAtual) || 0)
     ),
-    inventario: Array.isArray(economia?.inventario)
-      ? [...new Set(economia.inventario.filter(Boolean))]
-      : [],
+    inventario: [
+      ...new Set([
+        "icones-vermelho-operacional",
+        ...(Array.isArray(economia?.inventario)
+          ? economia.inventario.filter(Boolean)
+          : []),
+      ]),
+    ],
     compras: Array.isArray(economia?.compras)
       ? economia.compras.filter(
           (compra): compra is CompraEconomia =>
@@ -103,6 +109,7 @@ export function obterEstadoEconomia(
     tituloEquipado: economia?.tituloEquipado,
     molduraEquipada: economia?.molduraEquipada,
     temaEquipado: economia?.temaEquipado,
+    iconeEquipado: economia?.iconeEquipado ?? "icones-vermelho-operacional",
     atualizadoEm: economia?.atualizadoEm,
   };
 }
