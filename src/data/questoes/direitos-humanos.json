@@ -1,0 +1,45 @@
+{
+  "materia": "Direitos Humanos",
+  "topico": "Gerações e Eficácia dos Direitos Fundamentais",
+  "questoes": [
+    {
+      "id": "dh-001",
+      "pergunta": "1ª geração: qual é a palavra-chave e a postura do Estado?",
+      "alternativas": [
+        { "id": "a", "texto": "Liberdade; prestação negativa (Estado se abstém)" },
+        { "id": "b", "texto": "Liberdade; prestação positiva (Estado age)" },
+        { "id": "c", "texto": "Igualdade; prestação negativa" },
+        { "id": "d", "texto": "Fraternidade; prestação positiva" }
+      ],
+      "correta": "a",
+      "explicacao": "1ª geração = LIBERDADE = direitos civis e políticos = Estado não interfere.",
+      "dica": "Pense em defesa do indivíduo contra o Estado."
+    },
+    {
+      "id": "dh-002",
+      "pergunta": "2ª geração: qual é a palavra-chave e a postura do Estado?",
+      "alternativas": [
+        { "id": "a", "texto": "Liberdade; prestação negativa" },
+        { "id": "b", "texto": "Igualdade; prestação positiva (Estado age)" },
+        { "id": "c", "texto": "Fraternidade; prestação negativa" },
+        { "id": "d", "texto": "Igualdade; ausência completa do Estado" }
+      ],
+      "correta": "b",
+      "explicacao": "2ª geração = IGUALDADE = direitos sociais, econômicos e culturais = atuação positiva do Estado.",
+      "dica": "Pense em prestações sociais e redução das desigualdades."
+    },
+    {
+      "id": "dh-003",
+      "pergunta": "3ª geração: qual é a ideia central desses direitos?",
+      "alternativas": [
+        { "id": "a", "texto": "Direitos individuais de defesa contra o Estado" },
+        { "id": "b", "texto": "Direitos sociais prestados apenas ao trabalhador" },
+        { "id": "c", "texto": "Fraternidade ou solidariedade; interesses coletivos e difusos" },
+        { "id": "d", "texto": "Direitos políticos ligados exclusivamente ao voto" }
+      ],
+      "correta": "c",
+      "explicacao": "3ª geração = FRATERNIDADE/SOLIDARIEDADE = direitos transindividuais, como meio ambiente, paz e desenvolvimento.",
+      "dica": "Pense em direitos que pertencem à coletividade."
+    }
+  ]
+}
