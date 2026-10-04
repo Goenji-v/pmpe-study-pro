@@ -174,6 +174,26 @@ const [
 ] = useState("");
 
 const [
+  conteudoConcluido,
+  setConteudoConcluido,
+] = useState(true);
+
+const [
+  pontoParada,
+  setPontoParada,
+] = useState("");
+
+const [
+  ficouComDuvida,
+  setFicouComDuvida,
+] = useState(false);
+
+const [
+  duvidaFinalizacao,
+  setDuvidaFinalizacao,
+] = useState("");
+
+const [
   concluirAssunto,
   setConcluirAssunto,
 ] = useState(false);
@@ -614,6 +634,10 @@ const [
     setBanca("");
     setDificuldade("media");
     setAvaliacaoRevisao("media");
+    setConteudoConcluido(true);
+    setPontoParada("");
+    setFicouComDuvida(false);
+    setDuvidaFinalizacao("");
     setConcluirAssunto(false);
     setArquivosFinalizacao([]);
     setTextoMaterialFinalizacao("");
@@ -714,6 +738,29 @@ const [
         "Informe um tempo válido entre 1 e 1440 minutos."
       );
 
+      return;
+    }
+
+    if (
+      estado.tipo === "aula" &&
+      !conteudoConcluido &&
+      !pontoParada.trim()
+    ) {
+      window.alert(
+        "Informe onde você parou na aula para conseguir retomar depois."
+      );
+      return;
+    }
+
+    if (
+      estado.tipo === "aula" &&
+      conteudoConcluido &&
+      ficouComDuvida &&
+      !duvidaFinalizacao.trim()
+    ) {
+      window.alert(
+        "Escreva qual dúvida ficou antes de salvar."
+      );
       return;
     }
 
@@ -840,6 +887,21 @@ const [
             ? formatoRevisao
             : undefined,
 
+        conteudoConcluido:
+          estado.tipo === "aula"
+            ? conteudoConcluido
+            : undefined,
+
+        pontoParada:
+          estado.tipo === "aula" && !conteudoConcluido
+            ? pontoParada.trim()
+            : undefined,
+
+        duvida:
+          estado.tipo === "aula" && conteudoConcluido && ficouComDuvida
+            ? duvidaFinalizacao.trim()
+            : undefined,
+
         concluirAssunto:
           concluirAssunto &&
           (estado.tipo === "aula" ||
@@ -863,7 +925,13 @@ const [
     );
 
     const mensagemBase =
-      estado.tipo === "simulado"
+      estado.tipo === "aula" &&
+      resultado.sessao.conteudoConcluido === false
+        ? `Sessão salva. Aula pendente para retomar em ${resultado.sessao.pontoParada ?? "onde você parou"}.`
+        : estado.tipo === "aula" &&
+            resultado.sessao.duvida
+          ? "Sessão salva. Aula concluída e dúvida registrada na revisão adaptativa."
+          : estado.tipo === "simulado"
         ? "Simulado salvo no histórico."
         : resultado.revisaoConcluida
           ? resultado.proximaRevisao
@@ -1094,6 +1162,23 @@ const [
                       </option>
                     ))}
                   </select>
+
+                  {aulaSelecionada?.progresso?.status === "em_andamento" && (
+                    <small>
+                      ⏸ Em andamento · retomar em{" "}
+                      <strong>{aulaSelecionada.progresso.pontoParada || "ponto salvo"}</strong>
+                      {aulaSelecionada.progresso.observacao
+                        ? ` · ${aulaSelecionada.progresso.observacao}`
+                        : ""}
+                    </small>
+                  )}
+
+                  {aulaSelecionada?.progresso?.status === "concluida" &&
+                    aulaSelecionada.progresso.duvida && (
+                      <small>
+                        ⚠ Dúvida registrada: {aulaSelecionada.progresso.duvida}
+                      </small>
+                    )}
                 </div>
               )}
 
@@ -1415,6 +1500,81 @@ const [
                 />
               </label>
 
+              {estado.tipo === "aula" && (
+                <>
+                  <label className="finalizacao-campo-largo">
+                    Terminou todo o conteúdo planejado desta aula?
+
+                    <select
+                      value={conteudoConcluido ? "sim" : "nao"}
+                      onChange={(evento) => {
+                        const terminou = evento.target.value === "sim";
+                        setConteudoConcluido(terminou);
+
+                        if (!terminou) {
+                          setConcluirAssunto(false);
+                          setFicouComDuvida(false);
+                          setDuvidaFinalizacao("");
+                        }
+                      }}
+                    >
+                      <option value="sim">✅ Sim, terminei</option>
+                      <option value="nao">⏸️ Não, ainda falta uma parte</option>
+                    </select>
+                  </label>
+
+                  {!conteudoConcluido && (
+                    <label className="finalizacao-campo-largo">
+                      Onde você parou?
+
+                      <input
+                        value={pontoParada}
+                        onChange={(evento) => setPontoParada(evento.target.value)}
+                        placeholder="Ex.: 42:30 da videoaula ou antes de equivalência lógica"
+                      />
+
+                      <small>
+                        A aula ficará em andamento e este ponto aparecerá quando você voltar.
+                      </small>
+                    </label>
+                  )}
+
+                  {conteudoConcluido && (
+                    <label className="finalizacao-campo-largo">
+                      Ficou com alguma dúvida?
+
+                      <select
+                        value={ficouComDuvida ? "sim" : "nao"}
+                        onChange={(evento) => {
+                          const ficou = evento.target.value === "sim";
+                          setFicouComDuvida(ficou);
+                          if (!ficou) setDuvidaFinalizacao("");
+                        }}
+                      >
+                        <option value="nao">✅ Não, entendi bem</option>
+                        <option value="sim">🤔 Sim, fiquei com dúvida</option>
+                      </select>
+                    </label>
+                  )}
+
+                  {conteudoConcluido && ficouComDuvida && (
+                    <label className="finalizacao-campo-largo">
+                      Qual foi sua dúvida?
+
+                      <textarea
+                        value={duvidaFinalizacao}
+                        onChange={(evento) => setDuvidaFinalizacao(evento.target.value)}
+                        placeholder="Ex.: não entendi a negação do SE... ENTÃO."
+                      />
+
+                      <small>
+                        A dúvida vai antecipar uma revisão e entrar no diagnóstico do planejamento.
+                      </small>
+                    </label>
+                  )}
+                </>
+              )}
+
               {finalizacaoComQuestoes && (
                 <>
                   <label>
@@ -1599,6 +1759,7 @@ const [
                     onChange={(evento) =>
                       setConcluirAssunto(evento.target.checked)
                     }
+                    disabled={estado.tipo === "aula" && !conteudoConcluido}
                   />
 
                   <span>
@@ -1617,9 +1778,11 @@ const [
                     <span>
                       <strong>Conteúdo vinculado ao Plano</strong>
                       <small>
-                        {sessaoVinculadaAAula
-                          ? "Ao finalizar, esta aula será marcada como concluída. O assunto só fecha quando todas as aulas dele forem concluídas."
-                          : "Ao finalizar, este assunto será marcado como concluído e o Plano será atualizado junto com Conteúdos."}
+                        {estado.tipo === "aula" && !conteudoConcluido
+                          ? "A sessão será salva, mas a aula continuará pendente com o ponto de retomada registrado."
+                          : sessaoVinculadaAAula
+                            ? "Ao finalizar, esta aula será marcada como concluída. O assunto só fecha quando todas as aulas dele forem concluídas."
+                            : "Ao finalizar, este assunto será marcado como concluído e o Plano será atualizado junto com Conteúdos."}
                       </small>
                     </span>
                   </div>
