@@ -431,6 +431,94 @@
   background: #163a5c;
   border-color: #315d83;
 }
+.simulado-pdf-historico-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.simulado-pdf-meu-gabarito-botao {
+  min-height: 40px;
+  padding: 0 14px;
+  color: #eff8ff;
+  background: #0f4f8f;
+  border: 1px solid #2f7cc2;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.simulado-pdf-meu-gabarito {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px;
+  background: #0b1526;
+  border: 1px solid #29415f;
+  border-radius: 12px;
+}
+
+.simulado-pdf-meu-gabarito-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.simulado-pdf-meu-gabarito-topo > div {
+  display: grid;
+  gap: 4px;
+}
+
+.simulado-pdf-meu-gabarito-topo strong {
+  color: #f8fafc;
+}
+
+.simulado-pdf-meu-gabarito-topo span,
+.simulado-pdf-meu-gabarito > small {
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+.simulado-pdf-meu-gabarito-topo > button {
+  min-height: 38px;
+  padding: 0 12px;
+  color: #eaf5ff;
+  background: #173b61;
+  border: 1px solid #315d83;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.simulado-pdf-meu-gabarito-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.simulado-pdf-meu-gabarito-grid > div {
+  min-height: 54px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 8px;
+  background: #111f33;
+  border: 1px solid #2a4666;
+  border-radius: 10px;
+}
+
+.simulado-pdf-meu-gabarito-grid span {
+  color: #8fa8c5;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.simulado-pdf-meu-gabarito-grid strong {
+  color: #7cc4ff;
+  font-size: 18px;
+}
 
 .simulado-pdf-diagnostico-salvo {
   display: grid;
@@ -518,8 +606,26 @@
   }
 
   .simulados-pdf-historico-topo > button,
-  .simulado-pdf-ver-diagnostico {
+  .simulado-pdf-ver-diagnostico,
+  .simulado-pdf-meu-gabarito-botao {
     width: 100%;
+  }
+
+  .simulado-pdf-historico-acoes {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .simulado-pdf-meu-gabarito-topo {
+    flex-direction: column;
+  }
+
+  .simulado-pdf-meu-gabarito-topo > button {
+    width: 100%;
+  }
+
+  .simulado-pdf-meu-gabarito-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .simulado-pdf-diagnostico-grid {
