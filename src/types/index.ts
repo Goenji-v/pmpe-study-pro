@@ -48,6 +48,14 @@ export type VinculoCursoAula = {
   candidatos?: CandidatoVinculoCurso[];
 };
 
+export type ProgressoAula = {
+  status: "em_andamento" | "concluida";
+  pontoParada?: string;
+  observacao?: string;
+  duvida?: string;
+  atualizadoEm: string;
+};
+
 export type AulaAssunto = {
   id: string;
   nome: string;
@@ -59,6 +67,8 @@ export type AulaAssunto = {
   origemCurso?: OrigemAulaCurso;
   /** Resultado da associação curso -> assunto canônico. */
   vinculoCurso?: VinculoCursoAula;
+  /** Estado de retomada da aula, separado da conclusão oficial do conteúdo. */
+  progresso?: ProgressoAula;
 };
 
 export type TipoTarefaAssunto =
@@ -185,6 +195,12 @@ export type SessaoEstudo = {
 
   objetivo?: string;
   observacao?: string;
+  /** Indica se a teoria/aula planejada foi realmente concluída nesta sessão. */
+  conteudoConcluido?: boolean;
+  /** Ponto de retomada quando a aula termina com conteúdo pendente. */
+  pontoParada?: string;
+  /** Dúvida declarada ao concluir a aula; alimenta revisão e planejamento adaptativos. */
+  duvida?: string;
 
   minutos: number;
 
