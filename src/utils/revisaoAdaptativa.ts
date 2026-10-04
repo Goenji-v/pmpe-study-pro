@@ -310,6 +310,7 @@ export function aplicarRevisaoAdaptativa(
       erradas: manterResultadoMaisCritico
         ? existente.erradas
         : params.erradas,
+      motivoAdaptativo: "baixo_desempenho",
     };
 
     return {
@@ -335,12 +336,82 @@ export function aplicarRevisaoAdaptativa(
     concluida: false,
     certas: params.certas,
     erradas: params.erradas,
+    motivoAdaptativo: "baixo_desempenho",
   };
 
   return {
     revisoes: [novaRevisao, ...params.revisoes],
     acao: "criada",
     diagnostico,
+  };
+}
+
+type AplicarRevisaoPorDuvidaParams = {
+  revisoes: Revisao[];
+  materiaId: string;
+  moduloId?: string;
+  assuntoId: string;
+  materia: string;
+  modulo?: string;
+  assunto: string;
+  agora?: Date;
+  criarId?: () => string;
+};
+
+export function aplicarRevisaoPorDuvida(
+  params: AplicarRevisaoPorDuvidaParams
+): Pick<ResultadoRevisaoAdaptativa, "revisoes" | "acao"> {
+  const agora = params.agora ?? new Date();
+  const dataPrevista = criarDataPrevista(agora, 1);
+  const indiceExistente = params.revisoes.findIndex(
+    (revisao) => !revisao.concluida && mesmaReferencia(revisao, params)
+  );
+
+  if (indiceExistente >= 0) {
+    const existente = params.revisoes[indiceExistente];
+    const atual = new Date(existente.dataPrevista);
+    const antecipar =
+      Number.isNaN(atual.getTime()) ||
+      dataPrevista.getTime() < atual.getTime();
+
+    return {
+      revisoes: params.revisoes.map((revisao, indice) =>
+        indice === indiceExistente
+          ? {
+              ...revisao,
+              materiaId: params.materiaId,
+              moduloId: params.moduloId ?? revisao.moduloId,
+              assuntoId: params.assuntoId,
+              materia: params.materia,
+              modulo: params.modulo ?? revisao.modulo,
+              assunto: params.assunto,
+              dataPrevista: antecipar ? dataPrevista.toISOString() : revisao.dataPrevista,
+              motivoAdaptativo: "duvida",
+            }
+          : revisao
+      ),
+      acao: "atualizada",
+    };
+  }
+
+  const novaRevisao: Revisao = {
+    id: params.criarId?.() ?? crypto.randomUUID(),
+    materiaId: params.materiaId,
+    moduloId: params.moduloId,
+    assuntoId: params.assuntoId,
+    materia: params.materia,
+    modulo: params.modulo,
+    assunto: params.assunto,
+    etapa: 1,
+    dataCriacao: agora.toISOString(),
+    dataPrevista: dataPrevista.toISOString(),
+    concluida: false,
+    motivoAdaptativo: "duvida",
+  };
+
+  return {
+    revisoes: [novaRevisao, ...params.revisoes],
+    acao: "criada",
   };
 }
 
@@ -364,7 +435,10 @@ function criarDataPrevista(
 
 function mesmaReferencia(
   revisao: Revisao,
-  params: AplicarRevisaoAdaptativaParams
+  params: Pick<
+    AplicarRevisaoAdaptativaParams,
+    "materiaId" | "assuntoId" | "materia" | "assunto"
+  >
 ) {
   if (
     revisao.materiaId === params.materiaId &&
