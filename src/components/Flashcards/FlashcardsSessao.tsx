@@ -1,0 +1,230 @@
+import { useEffect, useMemo, useState } from "react";
+
+import { registrarRespostaFlashcard } from "../../services/flashcardsProgressoService";
+import type {
+  PacoteQuestoesFlashcard,
+  ProgressoQuestaoFlashcard,
+  QuestaoFlashcard,
+  ResultadoQuestaoFlashcard,
+} from "../../types/flashcards";
+import Flashcard from "./Flashcard";
+import Resultado from "./Resultado";
+
+type Props = {
+  pacote: PacoteQuestoesFlashcard;
+  onVoltar: () => void;
+  onProgressoAtualizado: (progresso: ProgressoQuestaoFlashcard) => void;
+};
+
+function embaralhar<T>(itens: T[]) {
+  const copia = [...itens];
+
+  for (let indice = copia.length - 1; indice > 0; indice -= 1) {
+    const sorteado = Math.floor(Math.random() * (indice + 1));
+    [copia[indice], copia[sorteado]] = [
+      copia[sorteado],
+      copia[indice],
+    ];
+  }
+
+  return copia;
+}
+
+export default function FlashcardsSessao({
+  pacote,
+  onVoltar,
+  onProgressoAtualizado,
+}: Props) {
+  const [fila, setFila] = useState<QuestaoFlashcard[]>(pacote.questoes);
+  const [indice, setIndice] = useState(0);
+  const [virado, setVirado] = useState(false);
+  const [dicaVisivel, setDicaVisivel] = useState(false);
+  const [resultados, setResultados] = useState<ResultadoQuestaoFlashcard[]>([]);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    setFila(pacote.questoes);
+    setIndice(0);
+    setVirado(false);
+    setDicaVisivel(false);
+    setResultados([]);
+    setErro("");
+  }, [pacote]);
+
+  const questaoAtual = fila[indice];
+  const finalizado =
+    fila.length > 0 && resultados.length === fila.length;
+  const percentual = fila.length
+    ? Math.round((resultados.length / fila.length) * 100)
+    : 0;
+
+  const idsRespondidos = useMemo(
+    () => new Set(resultados.map((item) => item.questao.id)),
+    [resultados]
+  );
+
+  async function marcar(acertou: boolean) {
+    if (!questaoAtual || salvando || idsRespondidos.has(questaoAtual.id)) {
+      return;
+    }
+
+    setSalvando(true);
+    setErro("");
+
+    try {
+      const progresso = await registrarRespostaFlashcard({
+        questaoId: questaoAtual.id,
+        materia: pacote.materia,
+        topico: pacote.topico,
+        acertou,
+        modalidade: "flashcards",
+      });
+
+      onProgressoAtualizado(progresso);
+      setResultados((atuais) => [
+        ...atuais,
+        {
+          questao: questaoAtual,
+          acertou,
+        },
+      ]);
+
+      if (indice < fila.length - 1) {
+        setIndice((atual) => atual + 1);
+        setVirado(false);
+        setDicaVisivel(false);
+      }
+    } catch (falha) {
+      setErro(
+        falha instanceof Error
+          ? falha.message
+          : "Não foi possível salvar a resposta."
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function embaralharFila() {
+    if (resultados.length > 0) return;
+    setFila((atual) => embaralhar(atual));
+    setIndice(0);
+    setVirado(false);
+    setDicaVisivel(false);
+  }
+
+  function revisarErros(erros: ResultadoQuestaoFlashcard[]) {
+    setFila(erros.map((item) => item.questao));
+    setIndice(0);
+    setVirado(false);
+    setDicaVisivel(false);
+    setResultados([]);
+    setErro("");
+  }
+
+  if (finalizado) {
+    return (
+      <Resultado
+        resultados={resultados}
+        titulo={`Flashcards · ${pacote.topico}`}
+        onVoltar={onVoltar}
+        onRevisarErros={revisarErros}
+      />
+    );
+  }
+
+  if (!questaoAtual) {
+    return (
+      <div className="flashcards-vazio">
+        <p>Este tópico ainda não possui cartões.</p>
+        <button
+          type="button"
+          className="flashcards-botao-secundario"
+          onClick={onVoltar}
+        >
+          Voltar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <section className="flashcards-sessao">
+      <div className="flashcards-sessao-cabecalho">
+        <div>
+          <button
+            type="button"
+            className="flashcards-voltar"
+            onClick={onVoltar}
+          >
+            ← Tópicos
+          </button>
+          <h3>{pacote.topico}</h3>
+          <p>{pacote.materia} · Flashcards</p>
+        </div>
+
+        <button
+          type="button"
+          className="flashcards-botao-secundario"
+          onClick={embaralharFila}
+          disabled={resultados.length > 0}
+          title={
+            resultados.length > 0
+              ? "Embaralhe antes de começar a sessão."
+              : "Embaralhar ordem dos cartões"
+          }
+        >
+          🔀 Embaralhar
+        </button>
+      </div>
+
+      <div className="flashcards-progresso">
+        <div>
+          <span>
+            {Math.min(resultados.length + 1, fila.length)}/{fila.length}
+          </span>
+          <strong>{percentual}%</strong>
+        </div>
+        <div className="flashcards-progresso-barra">
+          <div style={{ width: `${percentual}%` }} />
+        </div>
+      </div>
+
+      <Flashcard
+        questao={questaoAtual}
+        virado={virado}
+        dicaVisivel={dicaVisivel}
+        onVirar={() => setVirado((atual) => !atual)}
+        onAlternarDica={() => setDicaVisivel((atual) => !atual)}
+      />
+
+      {virado && (
+        <div className="flashcards-avaliacao" aria-label="Avaliar resposta">
+          <button
+            type="button"
+            className="flashcards-errei"
+            onClick={() => void marcar(false)}
+            disabled={salvando}
+          >
+            ✕ Errei
+          </button>
+          <button
+            type="button"
+            className="flashcards-acertei"
+            onClick={() => void marcar(true)}
+            disabled={salvando}
+          >
+            ✓ Acertei
+          </button>
+        </div>
+      )}
+
+      {erro && (
+        <p className="flashcards-erro" role="alert">
+          {erro}
+        </p>
+      )}
+    </section>
+  );
+}
