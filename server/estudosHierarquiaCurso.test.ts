@@ -83,3 +83,63 @@ test("matéria comum mantém sua estrutura editável", () => {
   assert.equal(exibida.modulos?.[0].id, "manual-geral");
   assert.equal(materiaTemCursoImportado(exibida), false);
 });
+
+
+test("módulo que apenas repete o nome da matéria exibe cada aula como assunto", () => {
+  const constitucional: Materia = {
+    id: "direito-constitucional",
+    nome: "Direito Constitucional",
+    assuntos: [],
+    modulos: [
+      {
+        id: "curso:rdc:modulo:constitucional",
+        nome: "RDC · Direito Constitucional",
+        ordem: 1,
+        assuntos: [
+          {
+            id: "curso:rdc:aula:vida",
+            nome: "Direito a vida",
+            concluido: false,
+            prioridade: "media",
+            aulas: [
+              {
+                id: "vida-link",
+                nome: "Direito a vida",
+                url: "https://curso.test/vida",
+                ordem: 1,
+                concluida: false,
+              },
+            ],
+          },
+          {
+            id: "curso:rdc:aula:igualdade",
+            nome: "Direito a Igualdade",
+            concluido: false,
+            prioridade: "media",
+            aulas: [
+              {
+                id: "igualdade-link",
+                nome: "Direito a Igualdade",
+                url: "https://curso.test/igualdade",
+                ordem: 1,
+                concluida: false,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const exibida = prepararMateriaParaConteudos(constitucional);
+  assert.equal(exibida.modulos?.length, 1);
+  assert.equal(exibida.modulos?.[0].nome, "Geral");
+  assert.deepEqual(
+    exibida.modulos?.[0].assuntos.map((assunto) => assunto.nome),
+    ["Direito a vida", "Direito a Igualdade"]
+  );
+  assert.deepEqual(
+    exibida.modulos?.[0].assuntos.map((assunto) => assunto.aulas?.length),
+    [1, 1]
+  );
+});

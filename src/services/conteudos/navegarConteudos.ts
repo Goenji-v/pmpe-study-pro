@@ -208,9 +208,12 @@ export function obterModuloOriginalDoAssuntoVisaoCurso(
   assuntoId: string
 ) {
   if (!ehAssuntoVisaoCurso(assuntoId)) return undefined;
-  return decodificar(
-    assuntoId.slice(PREFIXO_ASSUNTO_CURSO_VISAO.length)
-  );
+  const [moduloCodificado] = assuntoId
+    .slice(PREFIXO_ASSUNTO_CURSO_VISAO.length)
+    .split("::");
+  return moduloCodificado
+    ? decodificar(moduloCodificado)
+    : undefined;
 }
 
 export function obterOrigemDaAulaVisaoCurso(
@@ -251,9 +254,16 @@ function agruparModulosImportadosDoCurso(
   const gruposCurso = Array.from(porCurso.entries()).map(
     ([cursoId, modulosCurso], indice) => {
       const nomeCurso = extrairNomeCurso(modulosCurso[0]?.nome ?? "");
-      const assuntos = modulosCurso
-        .sort((a, b) => a.ordem - b.ordem)
-        .map(criarAssuntoDeModuloImportado);
+      const ordenados = modulosCurso
+        .slice()
+        .sort((a, b) => a.ordem - b.ordem);
+      const assuntos = ordenados.flatMap((modulo) =>
+        moduloRepeteMateria(materia.nome, modulo.nome)
+          ? modulo.assuntos.map((assunto) =>
+              criarAssuntoDeEntradaImportada(modulo, assunto)
+            )
+          : [criarAssuntoDeModuloImportado(modulo)]
+      );
 
       return {
         id: `${PREFIXO_MODULO_CURSO_VISAO}${codificar(cursoId)}::${codificar(materia.id)}`,
@@ -267,6 +277,24 @@ function agruparModulosImportadosDoCurso(
   );
 
   return [...comuns, ...gruposCurso];
+}
+
+function criarAssuntoDeEntradaImportada(
+  modulo: Modulo,
+  assunto: Assunto
+): Assunto {
+  const aulas = criarAulasDaEntradaImportada(assunto);
+  return {
+    ...assunto,
+    id: `${PREFIXO_ASSUNTO_CURSO_VISAO}${codificar(modulo.id)}::${codificar(assunto.id)}`,
+    nome: assunto.nome,
+    aulas,
+    aula: aulas.find((aula) => aula.url)?.url ?? assunto.aula,
+    concluido:
+      aulas.length > 0
+        ? aulas.every((aula) => aula.concluida)
+        : assunto.concluido,
+  };
 }
 
 function criarAssuntoDeModuloImportado(
@@ -359,6 +387,45 @@ function removerPrefixoDoCurso(nomeModulo: string) {
     ? nomeModulo.slice(indice + 3)
     : nomeModulo;
   return nome.trim() || "Conteúdo";
+}
+
+function moduloRepeteMateria(
+  materiaNome: string,
+  moduloNome: string
+) {
+  const materia = normalizarRotuloCurso(materiaNome);
+  const modulo = normalizarRotuloCurso(
+    removerPrefixoDoCurso(moduloNome)
+  );
+  if (!materia || !modulo) return false;
+  if (materia === modulo) return true;
+
+  const reduzir = (valor: string) =>
+    valor
+      .replace(/\b(nocoes?|lingua|direitos?|de|da|do|das|dos)\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const materiaReduzida = reduzir(materia);
+  const moduloReduzido = reduzir(modulo);
+  if (materiaReduzida && materiaReduzida === moduloReduzido) {
+    return true;
+  }
+
+  return (
+    /\bportuguesa?\b/.test(materia) &&
+    /\bportuguesa?\b/.test(modulo)
+  );
+}
+
+function normalizarRotuloCurso(valor: string) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function codificar(valor: string) {
