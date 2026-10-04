@@ -242,6 +242,24 @@
   background: linear-gradient(135deg, #6d28d9, #7e22ce);
   border-color: rgba(216, 180, 254, 0.7) !important;
 }
+.revisao-flashcards {
+  background: linear-gradient(135deg, #0f6fd6, #0ea5e9);
+  border-color: rgba(125, 211, 252, 0.35) !important;
+}
+
+.revisao-flashcards:hover {
+  background: linear-gradient(135deg, #0b5db8, #0284c7);
+  border-color: rgba(125, 211, 252, 0.75) !important;
+}
+
+.revisao-flashcards-recomendacao {
+  display: block;
+  margin-top: 7px;
+  color: #7dd3fc;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 
 .revisao-concluir-toggle {
   background: #15803d;
