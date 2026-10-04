@@ -29,6 +29,8 @@ export type DiagnosticoMateriaSemanal = {
   minutos: number;
   sessoes: number;
   revisoesAtrasadas: number;
+  sessoesComDuvida: number;
+  sessoesIncompletas: number;
   diasSemEstudar?: number;
   prioridade: number;
   confianca: number;
@@ -93,6 +95,87 @@ export function calcularDiagnosticoSemanalPlano(params: {
     materias,
     possuiDados: materias.length > 0,
   };
+}
+
+export type DistribuicaoMateriaAdaptativa = {
+  materia: string;
+  blocosRecomendados: number;
+  prioridade: number;
+  percentualAcertos?: number;
+  motivo: string;
+};
+
+export function calcularDistribuicaoAdaptativaSemanal(params: {
+  diagnostico: DiagnosticoSemanalPlano;
+  materiasDisponiveis: string[];
+  totalBlocos: number;
+}): DistribuicaoMateriaAdaptativa[] {
+  const nomes = Array.from(
+    new Map(
+      params.materiasDisponiveis
+        .filter((nome) => nome && !ehMateriaOperacional(nome))
+        .map((nome) => [normalizar(nome), nome])
+    ).values()
+  );
+
+  if (nomes.length === 0) return [];
+
+  const totalBlocos = Math.max(nomes.length, Math.round(params.totalBlocos));
+  const porMateria = new Map(
+    params.diagnostico.materias.map((item) => [normalizar(item.materia), item])
+  );
+  const distribuicao = nomes.map((materia) => {
+    const diagnostico = porMateria.get(normalizar(materia));
+    const percentual = diagnostico?.percentualAcertos;
+    let score = diagnostico?.prioridade ?? 10;
+
+    if (percentual !== undefined) {
+      if (percentual < 50) score += 45;
+      else if (percentual < 70) score += 25;
+      else if (percentual < 80) score += 10;
+    }
+
+    score += Math.min(30, (diagnostico?.revisoesAtrasadas ?? 0) * 12);
+    score += Math.min(40, (diagnostico?.sessoesIncompletas ?? 0) * 20);
+    score += Math.min(35, (diagnostico?.sessoesComDuvida ?? 0) * 18);
+
+    return {
+      materia,
+      blocosRecomendados: 1,
+      prioridade: Math.max(1, Math.round(score)),
+      percentualAcertos: percentual,
+      motivo: diagnostico?.motivos[0] ?? "Manutenção do contato com a matéria.",
+    };
+  });
+
+  let restantes = totalBlocos - distribuicao.length;
+  const limitePorMateria = Math.max(
+    2,
+    Math.min(5, Math.ceil(totalBlocos / Math.max(1, distribuicao.length)) + 2)
+  );
+
+  while (restantes > 0) {
+    const candidatos = distribuicao
+      .filter((item) => item.blocosRecomendados < limitePorMateria)
+      .sort(
+        (a, b) =>
+          b.prioridade / (b.blocosRecomendados + 0.5) -
+            a.prioridade / (a.blocosRecomendados + 0.5) ||
+          a.materia.localeCompare(b.materia, "pt-BR")
+      );
+
+    const escolhido = candidatos[0];
+    if (!escolhido) break;
+    escolhido.blocosRecomendados += 1;
+    restantes -= 1;
+  }
+
+  return distribuicao.sort(
+    (a, b) =>
+      b.blocosRecomendados - a.blocosRecomendados ||
+      b.prioridade - a.prioridade ||
+      a.materia.localeCompare(b.materia, "pt-BR")
+  );
 }
 
 export function adaptarMissaoFlexivel<T extends {
@@ -184,6 +267,12 @@ function analisarMateria(
     );
   const minutos = sessoesMateria.reduce((total, item) => total + numero(item.minutos), 0) +
     questoesMateria.reduce((total, item) => total + numero(item.minutos), 0);
+  const sessoesComDuvida = sessoesMateria.filter(
+    (item) => Boolean(item.duvida?.trim())
+  ).length;
+  const sessoesIncompletas = sessoesMateria.filter(
+    (item) => item.conteudoConcluido === false
+  ).length;
 
   const ultimaData = [...questoesMateria.map((item) => item.data), ...sessoesMateria.map((item) => item.data)]
     .map(dataValida)
@@ -197,12 +286,18 @@ function analisarMateria(
   const revisaoScore = limitar(revisoesAtrasadas * 28, 0, 100);
   const intervaloScore = diasSemEstudar === undefined ? 55 : limitar((diasSemEstudar / 7) * 100, 0, 100);
   const volumeScore = totalQuestoes >= 20 ? 0 : limitar(((20 - totalQuestoes) / 20) * 100, 0, 100);
+  const aprendizagemScore = limitar(
+    sessoesIncompletas * 35 + sessoesComDuvida * 25,
+    0,
+    100
+  );
 
   const prioridade = Math.round(
-    erroScore * 0.5 +
-    revisaoScore * 0.2 +
-    intervaloScore * 0.2 +
-    volumeScore * 0.1
+    erroScore * 0.4 +
+    revisaoScore * 0.18 +
+    intervaloScore * 0.15 +
+    volumeScore * 0.07 +
+    aprendizagemScore * 0.2
   );
 
   const revisoesConcluidas = revisoesDaMateria.filter(
@@ -210,8 +305,9 @@ function analisarMateria(
   ).length;
   const confianca = Math.round(limitar(
     Math.min(55, (totalQuestoes / 20) * 55) +
-    Math.min(25, (sessoesMateria.length / 3) * 25) +
-    Math.min(20, ((revisoesAtrasadas > 0 ? 1 : 0) + Math.min(2, revisoesConcluidas)) / 3 * 20),
+    Math.min(20, (sessoesMateria.length / 3) * 20) +
+    Math.min(15, (sessoesComDuvida + sessoesIncompletas) * 7.5) +
+    Math.min(10, ((revisoesAtrasadas > 0 ? 1 : 0) + Math.min(2, revisoesConcluidas)) / 3 * 10),
     0,
     100
   ));
@@ -219,6 +315,8 @@ function analisarMateria(
   const motivos: string[] = [];
   if (percentualAcertos !== undefined && percentualAcertos < 70) motivos.push(`Aproveitamento de ${percentualAcertos}% nos últimos ${JANELA_DIAS} dias.`);
   if (revisoesAtrasadas > 0) motivos.push(`${revisoesAtrasadas} revisão${revisoesAtrasadas === 1 ? "" : "ões"} atrasada${revisoesAtrasadas === 1 ? "" : "s"}.`);
+  if (sessoesIncompletas > 0) motivos.push(`${sessoesIncompletas} sessão${sessoesIncompletas === 1 ? "" : "ões"} com conteúdo ainda pendente.`);
+  if (sessoesComDuvida > 0) motivos.push(`${sessoesComDuvida} sessão${sessoesComDuvida === 1 ? "" : "ões"} com dúvida registrada.`);
   if (diasSemEstudar !== undefined && diasSemEstudar >= 5) motivos.push(`${diasSemEstudar} dias sem registro recente de estudo.`);
   if (totalQuestoes > 0 && totalQuestoes < 10) motivos.push(`Amostra ainda curta: ${totalQuestoes} questões registradas.`);
   if (motivos.length === 0 && totalQuestoes >= 5) motivos.push(`Maior pontuação de reforço entre as matérias com dados recentes (${prioridade}/100).`);
@@ -244,6 +342,8 @@ function analisarMateria(
     minutos,
     sessoes: sessoesMateria.length,
     revisoesAtrasadas,
+    sessoesComDuvida,
+    sessoesIncompletas,
     diasSemEstudar,
     prioridade,
     confianca,
