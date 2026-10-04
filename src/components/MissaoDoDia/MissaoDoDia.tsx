@@ -38,9 +38,11 @@ export default function MissaoDoDia({
     () => getSemanaAtual(
       missoesConcluidas,
       planoCalendario,
-      configuracoes.semanaAtualPlano
+      configuracoes.planoPadraoAtivo === false
+        ? 1
+        : configuracoes.semanaAtualPlano
     ),
-    [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]
+    [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.planoPadraoAtivo]
   );
 
   // atualizacao é um token explícito para invalidar o cálculo após eventos externos.

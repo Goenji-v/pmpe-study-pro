@@ -587,6 +587,25 @@ function sincronizarMissoesDeConteudoComMaterias(
   return Array.from(new Set([...operacionais, ...Array.from(idsConcluidos)]));
 }
 
+function sincronizarMissoesRuntimeComMaterias(
+  materias: Materia[],
+  atuais: string[]
+) {
+  const idsConcluidos = new Set<string>();
+
+  materias.forEach((materia) => {
+    listarModulosDaMateria(materia).forEach((modulo) => {
+      modulo.assuntos.forEach((assunto) => {
+        if (!assunto.concluido) return;
+        idsConcluidos.add(`conteudo-${materia.id}-${assunto.id}`);
+      });
+    });
+  });
+
+  const operacionais = atuais.filter((id) => !id.startsWith("conteudo-"));
+  return Array.from(new Set([...operacionais, ...idsConcluidos]));
+}
+
 /**
  * Recupera progresso de Português gravado por versões anteriores antes de
  * recalcular as missões pela árvore canônica. A regra é intencionalmente
@@ -799,10 +818,15 @@ function reconciliarEstadoComConteudos(
   const sessoes = reconciliarSessoesComConteudos(materias, estado.sessoes);
   const questoes = reconciliarQuestoesComConteudos(materias, estado.questoes);
   const revisoes = reconciliarRevisoesComConteudos(materias, estado.revisoes);
-  const missoesConcluidas = usaPlanoPadrao(estadoCursos.configuracoes) ? sincronizarMissoesDeConteudoComMaterias(
-    materias,
-    estado.missoesConcluidas
-  ) : estado.missoesConcluidas;
+  const missoesConcluidas = usaPlanoPadrao(estadoCursos.configuracoes)
+    ? sincronizarMissoesDeConteudoComMaterias(
+        materias,
+        estado.missoesConcluidas
+      )
+    : sincronizarMissoesRuntimeComMaterias(
+        materias,
+        estado.missoesConcluidas
+      );
 
   return {
     ...estadoCursos,
@@ -937,7 +961,20 @@ function EstadoDaConta({
   // missões só acontece no render seguinte. Assim nenhum histórico antigo é
   // apagado antes de ser convertido para aula/assunto canônico.
   useEffect(() => {
-    if (configuracoes.planoPadraoAtivo === false) return;
+    if (configuracoes.planoPadraoAtivo === false) {
+      setMissoesConcluidas((anteriores) => {
+        const sincronizadas = sincronizarMissoesRuntimeComMaterias(
+          materias,
+          anteriores
+        );
+
+        return mesmosIds(anteriores, sincronizadas)
+          ? anteriores
+          : sincronizadas;
+      });
+      return;
+    }
+
     const recuperadas = recuperarHistoricoPortugues(
       materias,
       missoesConcluidas,
