@@ -23,6 +23,7 @@ type FocoFlashcards = {
   materia: string;
   topico: string;
   token: number;
+  modo?: ModoEstudoFlashcard;
 };
 
 type Props = {
@@ -73,7 +74,7 @@ export default function FlashcardsQuizPanel({
 
     if (!pacote) return;
     setPacoteSelecionado(pacote);
-    setModo(undefined);
+    setModo(foco.modo);
   }, [foco]);
 
   const estatisticas = useMemo(
