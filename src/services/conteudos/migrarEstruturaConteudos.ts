@@ -195,6 +195,7 @@ function aplicarAtualizacaoDaVisaoCurso(
                 ...aulaOriginal,
                 concluida: atualizada.concluida,
                 concluidaEm: atualizada.concluidaEm,
+                progresso: atualizada.progresso,
               }
             : aulaOriginal;
         });
