@@ -29,6 +29,17 @@ function ehQuestao(valor: unknown): valor is QuestaoFlashcard {
   );
 }
 
+function normalizarAliases(valor: unknown) {
+  if (!Array.isArray(valor)) return undefined;
+
+  const aliases = valor.filter(
+    (item): item is string =>
+      typeof item === "string" && item.trim().length > 0
+  );
+
+  return aliases.length > 0 ? aliases : undefined;
+}
+
 function converterArquivo(
   valor: unknown
 ): PacoteQuestoesFlashcard[] {
@@ -39,8 +50,10 @@ function converterArquivo(
       materia?: string;
       topico?: string;
       questoes?: unknown[];
+      aliases?: unknown;
       topicos?: Array<{
         topico?: string;
+        aliases?: unknown;
         questoes?: unknown[];
       }>;
     };
@@ -57,6 +70,7 @@ function converterArquivo(
           {
             materia: arquivo.materia,
             topico: arquivo.topico,
+            aliases: normalizarAliases(arquivo.aliases),
             questoes,
           },
         ]
@@ -78,6 +92,7 @@ function converterArquivo(
             {
               materia: arquivo.materia as string,
               topico: topico.topico,
+              aliases: normalizarAliases(topico.aliases),
               questoes,
             },
           ]
@@ -122,11 +137,19 @@ export function buscarPacoteQuestoesFlashcards(
   const topicoNormalizado =
     normalizarChaveFlashcards(topico);
 
-  return pacotesQuestoesFlashcards.find(
-    (pacote) =>
-      normalizarChaveFlashcards(pacote.materia) ===
-        materiaNormalizada &&
-      normalizarChaveFlashcards(pacote.topico) ===
-        topicoNormalizado
-  );
+  return pacotesQuestoesFlashcards.find((pacote) => {
+    if (
+      normalizarChaveFlashcards(pacote.materia) !==
+      materiaNormalizada
+    ) {
+      return false;
+    }
+
+    const nomesAceitos = [
+      pacote.topico,
+      ...(pacote.aliases ?? []),
+    ].map(normalizarChaveFlashcards);
+
+    return nomesAceitos.includes(topicoNormalizado);
+  });
 }
