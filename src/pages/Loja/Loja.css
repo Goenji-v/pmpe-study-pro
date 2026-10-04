@@ -72,7 +72,7 @@
 
 .loja-equipados {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -337,6 +337,38 @@
 .loja-preview-tema.tema-dourado-elite i {
   background: linear-gradient(90deg, #d99b24, #f2c45c);
 }
+
+.loja-preview-icones {
+  --preview-icon: #ff3644;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 10px 12px;
+  color: var(--preview-icon);
+  border: 1px solid color-mix(in srgb, var(--preview-icon) 44%, #2c435e);
+  background:
+    radial-gradient(circle at 25% 50%, color-mix(in srgb, var(--preview-icon) 13%, transparent), transparent 52%),
+    #0f1c2d;
+}
+
+.loja-preview-icones .study-pro-icon {
+  color: var(--preview-icon);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--preview-icon) 50%, transparent));
+}
+
+.loja-preview-icones span {
+  margin-left: auto;
+  color: #b9c7d7;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.loja-preview-icones.icones-vermelho-operacional { --preview-icon: #ff3644; }
+.loja-preview-icones.icones-prata-tatica { --preview-icon: #e2e8f0; }
+.loja-preview-icones.icones-azul-eletrico { --preview-icon: #2f8cff; }
+.loja-preview-icones.icones-roxo-neon { --preview-icon: #a855f7; }
+.loja-preview-icones.icones-dourado-elite { --preview-icon: #f5b93d; }
 
 .loja-card-rodape {
   display: flex;

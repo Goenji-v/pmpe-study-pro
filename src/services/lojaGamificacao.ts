@@ -1,6 +1,6 @@
 import type { EstadoEconomia } from "./economiaGamificacao";
 
-export type TipoItemLoja = "tema" | "moldura";
+export type TipoItemLoja = "tema" | "moldura" | "icone";
 export type RaridadeItemLoja = "comum" | "raro" | "epico" | "lendario";
 
 export type ItemLoja = {
@@ -16,6 +16,56 @@ export type ItemLoja = {
 };
 
 export const CATALOGO_LOJA: ItemLoja[] = [
+  {
+    id: "icones-vermelho-operacional",
+    tipo: "icone",
+    nome: "Vermelho Operacional",
+    descricao: "Cor padrão do Study Pro. Troca todos os ícones para o vermelho operacional.",
+    preco: 0,
+    raridade: "comum",
+    icone: "🔴",
+    valorVisual: "vermelho-operacional",
+  },
+  {
+    id: "icones-prata-tatica",
+    tipo: "icone",
+    nome: "Prata Tática",
+    descricao: "Troca todos os ícones para um acabamento prateado, limpo e profissional.",
+    preco: 520,
+    raridade: "raro",
+    icone: "⚪",
+    valorVisual: "prata-tatica",
+  },
+  {
+    id: "icones-azul-eletrico",
+    tipo: "icone",
+    nome: "Azul Elétrico",
+    descricao: "Troca todos os ícones para azul elétrico com brilho tecnológico.",
+    preco: 560,
+    raridade: "raro",
+    icone: "🔵",
+    valorVisual: "azul-eletrico",
+  },
+  {
+    id: "icones-roxo-neon",
+    tipo: "icone",
+    nome: "Roxo Neon",
+    descricao: "Troca todos os ícones para roxo neon com visual futurista.",
+    preco: 620,
+    raridade: "epico",
+    icone: "🟣",
+    valorVisual: "roxo-neon",
+  },
+  {
+    id: "icones-dourado-elite",
+    tipo: "icone",
+    nome: "Dourado Elite",
+    descricao: "Troca todos os ícones para dourado premium com destaque de elite.",
+    preco: 750,
+    raridade: "lendario",
+    icone: "🟡",
+    valorVisual: "dourado-elite",
+  },
   {
     id: "moldura-aco",
     tipo: "moldura",
@@ -152,6 +202,7 @@ export function itensDoInventario(
 
 export function itemEstaEquipado(estado: EstadoEconomia, item: ItemLoja) {
   if (item.tipo === "moldura") return estado.molduraEquipada === item.id;
+  if (item.tipo === "icone") return estado.iconeEquipado === item.id;
   return estado.temaEquipado === item.id;
 }
 
@@ -223,6 +274,10 @@ export function equiparItemLoja(
     return { item, estado: { ...base, molduraEquipada: item.id } };
   }
 
+  if (item.tipo === "icone") {
+    return { item, estado: { ...base, iconeEquipado: item.id } };
+  }
+
   return { item, estado: { ...base, temaEquipado: item.id } };
 }
 
@@ -234,5 +289,6 @@ export function desequiparTipoLoja(
   const proximo = { ...estado, atualizadoEm: agora.toISOString() };
   if (tipo === "moldura") delete proximo.molduraEquipada;
   if (tipo === "tema") delete proximo.temaEquipado;
+  if (tipo === "icone") proximo.iconeEquipado = "icones-vermelho-operacional";
   return proximo;
 }
