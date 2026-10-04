@@ -12,12 +12,14 @@ import {
 } from "react";
 
 import { avaliarRevisaoPorQuestoes, concluirRevisaoNaLista, revisaoCorrespondeASessao } from "../utils/revisoes";
+import { aplicarRevisaoPorDuvida } from "../utils/revisaoAdaptativa";
 import { useApp } from "./AppContext";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import {
   listarModulosDaMateria,
 } from "../services/conteudos/navegarConteudos";
+import { atualizarAssuntoNaArvore } from "../services/conteudos/migrarEstruturaConteudos";
 import { obterReferenciasDaMissao, planoPMPE } from "../data/planoPMPE";
 import { criarDadosSessaoDaMissao } from "../services/conteudos/sincronizacaoCanonica";
 import {
@@ -101,6 +103,9 @@ export type DadosFinalizacaoSessao = {
 
   formatoRevisao?: "teoria" | "questoes";
 
+  conteudoConcluido?: boolean;
+  pontoParada?: string;
+  duvida?: string;
   concluirAssunto?: boolean;
   /** O resolvedor IA já registrou as questões e o simulado. */
   resultadoJaRegistrado?: boolean;
@@ -175,6 +180,7 @@ export function CronometroProvider({
 
   const {
     materias,
+    setMaterias,
     revisoes,
     setRevisoes,
     configuracoes,
@@ -526,6 +532,16 @@ export function CronometroProvider({
       return null;
     }
 
+    const conteudoConcluido =
+      sessaoAtiva.tipo !== "aula" || dados.conteudoConcluido !== false;
+    const pontoParada = dados.pontoParada?.trim() || undefined;
+    const duvida = dados.duvida?.trim() || undefined;
+
+    if (sessaoAtiva.tipo === "aula" && !conteudoConcluido && !pontoParada) {
+      showToast("Informe onde você parou para conseguir retomar a aula depois.", "warning");
+      return null;
+    }
+
     const formatoRevisao = dados.formatoRevisao ?? sessaoAtiva.formatoRevisao;
     const revisaoPorQuestoes = sessaoAtiva.tipo === "revisao" && formatoRevisao === "questoes";
     const revisaoComResultadoQuestoes =
@@ -581,6 +597,12 @@ export function CronometroProvider({
         dados.observacao?.trim() ||
         sessaoAtiva.observacao ||
         undefined,
+      conteudoConcluido:
+        sessaoAtiva.tipo === "aula" ? conteudoConcluido : undefined,
+      pontoParada:
+        sessaoAtiva.tipo === "aula" && !conteudoConcluido ? pontoParada : undefined,
+      duvida:
+        sessaoAtiva.tipo === "aula" && conteudoConcluido ? duvida : undefined,
 
       minutos:
         Math.round(minutos),
@@ -612,6 +634,68 @@ export function CronometroProvider({
       semana: sessaoAtiva.semana,
       dia: sessaoAtiva.dia,
     };
+
+    if (
+      sessaoAtiva.tipo === "aula" &&
+      sessaoAtiva.materiaId &&
+      sessaoAtiva.assuntoId &&
+      sessaoAtiva.aulaId
+    ) {
+      setMaterias((anteriores) =>
+        anteriores.map((materia) =>
+          materia.id !== sessaoAtiva.materiaId
+            ? materia
+            : atualizarAssuntoNaArvore(
+                materia,
+                sessaoAtiva.assuntoId as string,
+                (assunto) => ({
+                  ...assunto,
+                  aulas: assunto.aulas?.map((aula) =>
+                    aula.id === sessaoAtiva.aulaId
+                      ? {
+                          ...aula,
+                          progresso: {
+                            status: conteudoConcluido ? "concluida" : "em_andamento",
+                            pontoParada: conteudoConcluido ? undefined : pontoParada,
+                            observacao:
+                              dados.observacao?.trim() ||
+                              sessaoAtiva.observacao ||
+                              undefined,
+                            duvida: conteudoConcluido ? duvida : undefined,
+                            atualizadoEm: finalizadaEm,
+                          },
+                        }
+                      : aula
+                  ),
+                  atualizadoEm: finalizadaEm,
+                }),
+                sessaoAtiva.moduloId
+              )
+        )
+      );
+    }
+
+    if (
+      sessaoAtiva.tipo === "aula" &&
+      conteudoConcluido &&
+      duvida &&
+      sessaoAtiva.materiaId &&
+      sessaoAtiva.assuntoId
+    ) {
+      setRevisoes((anteriores) =>
+        aplicarRevisaoPorDuvida({
+          revisoes: anteriores,
+          materiaId: sessaoAtiva.materiaId as string,
+          moduloId: sessaoAtiva.moduloId,
+          assuntoId: sessaoAtiva.assuntoId as string,
+          materia: sessaoAtiva.materia,
+          modulo: sessaoAtiva.modulo,
+          assunto: sessaoAtiva.assunto,
+          agora: new Date(finalizadaEm),
+          criarId: () => `${sessaoId}:revisao-duvida`,
+        }).revisoes
+      );
+    }
 
     // Simulado possui histórico próprio. Persisti-lo também como sessão faria
     // o Dashboard somar o mesmo tempo duas vezes.
@@ -764,7 +848,7 @@ export function CronometroProvider({
       return Boolean(assunto.concluido || ehReferenciaAtual);
     };
 
-    if (sessaoAtiva.missaoId && referenciaMissao) {
+    if (sessaoAtiva.missaoId && referenciaMissao && conteudoConcluido) {
       const materiaDaMissao = materias.find((item) => item.id === referenciaMissao.materiaId);
       const moduloDaMissao = materiaDaMissao
         ? listarModulosDaMateria(materiaDaMissao).find((item) => item.id === referenciaMissao.moduloId)
@@ -820,7 +904,7 @@ export function CronometroProvider({
           ? Array.from(new Set([...anteriores, sessaoAtiva.missaoId as string]))
           : anteriores.filter((id) => id !== sessaoAtiva.missaoId)
       );
-    } else if (sessaoAtiva.missaoId) {
+    } else if (sessaoAtiva.missaoId && conteudoConcluido) {
       // Missões dinâmicas do edital podem apontar para uma aula importada de
       // Meus Cursos. Nesse caso, concluir a sessão precisa atualizar também o
       // conteúdo canônico que alimenta o progresso do curso.
@@ -886,6 +970,7 @@ export function CronometroProvider({
     // para concluir o assunto. Missões do Plano já concluíram a aula exata acima.
     if (
       dados.concluirAssunto === true &&
+      conteudoConcluido &&
       tipoPermiteConcluirAssunto(sessaoAtiva.tipo) &&
       !referenciaMissao
     ) {
@@ -927,7 +1012,13 @@ export function CronometroProvider({
     showToast(
       sessaoAtiva.tipo === "simulado"
         ? "Simulado finalizado e salvo."
-        : revisaoConcluida ? "Sessão salva e revisão concluída. Agenda atualizada." : "Sessão finalizada e salva.",
+        : sessaoAtiva.tipo === "aula" && !conteudoConcluido
+          ? `Sessão salva. Aula mantida pendente para retomar em ${pontoParada}.`
+          : sessaoAtiva.tipo === "aula" && duvida
+            ? "Sessão salva. Aula concluída e dúvida enviada para a revisão adaptativa."
+            : revisaoConcluida
+              ? "Sessão salva e revisão concluída. Agenda atualizada."
+              : "Sessão finalizada e salva.",
       "success"
     );
 
