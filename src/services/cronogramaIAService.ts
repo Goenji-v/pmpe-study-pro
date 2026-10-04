@@ -54,6 +54,13 @@ export type DadosCronogramaIA = {
     observacao: string;
     modo: "assistido";
     prioridadeAutomatica?: string;
+    distribuicaoAdaptativa?: Array<{
+      materia: string;
+      blocosRecomendados: number;
+      prioridade: number;
+      percentualAcertos?: number;
+      motivo: string;
+    }>;
   };
   metas: {
     minutosDia: number;

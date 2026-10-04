@@ -23,6 +23,7 @@ import {
 } from "../../utils/cronogramaAdaptativo";
 import {
   calcularDiagnosticoSemanalPlano,
+  calcularDistribuicaoAdaptativaSemanal,
 } from "../../utils/adaptacaoPlano";
 
 import {
@@ -193,6 +194,19 @@ export default function CronogramaIA() {
         materiasDisponiveis: materias.map((materia) => materia.nome),
       }),
     [questoes, sessoes, revisoes, materias]
+  );
+
+  const distribuicaoAdaptativa = useMemo(
+    () =>
+      calcularDistribuicaoAdaptativaSemanal({
+        diagnostico: diagnosticoSemanal,
+        materiasDisponiveis: materias.map((materia) => materia.nome),
+        totalBlocos: Math.max(
+          materias.length,
+          Math.max(1, perfil.diasPorSemana) * 3
+        ),
+      }),
+    [diagnosticoSemanal, materias, perfil.diasPorSemana]
   );
 
   const prioridadeAtiva =
@@ -421,6 +435,7 @@ export default function CronogramaIA() {
           observacao: perfil.observacao,
           modo: "assistido",
           prioridadeAutomatica: prioridadeAtiva,
+          distribuicaoAdaptativa,
         },
         metas: {
           minutosDia: configuracoes.metaMinutosDiaria,
@@ -1143,11 +1158,34 @@ export default function CronogramaIA() {
             <div className="tatico-regras-ia">
               <span>Regras da automação</span>
               <ul>
-                <li>Aplica ajustes somente no início de uma nova semana.</li>
+                <li>A prioridade macro é consolidada no início de uma nova semana.</li>
+                <li>Ao gerar o plano, os blocos são redistribuídos pelo desempenho recente.</li>
                 <li>Nenhuma matéria é removida do plano.</li>
                 <li>A disponibilidade diária não é aumentada.</li>
                 <li>Todo ajuste ativo pode ser desfeito.</li>
               </ul>
+            </div>
+
+            <div className="tatico-historico-ajustes">
+              <span>Distribuição adaptativa da próxima semana</span>
+              {distribuicaoAdaptativa.length === 0 ? (
+                <p>Ainda não há matérias suficientes para distribuir os blocos.</p>
+              ) : (
+                distribuicaoAdaptativa.map((item) => (
+                  <article key={item.materia}>
+                    <div>
+                      <strong>{item.materia}</strong>
+                      <small>
+                        {item.blocosRecomendados} bloco{item.blocosRecomendados === 1 ? "" : "s"}
+                        {item.percentualAcertos !== undefined
+                          ? ` · ${item.percentualAcertos}% de acertos`
+                          : " · coletando desempenho"}
+                      </small>
+                      <p>{item.motivo}</p>
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
 
             <div className="tatico-historico-ajustes">

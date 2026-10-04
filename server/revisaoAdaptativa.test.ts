@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   aplicarRevisaoAdaptativa,
+  aplicarRevisaoPorDuvida,
   diagnosticarRevisaoAdaptativa,
   orientarRevisaoPorResultado,
   planejarRevisaoPendente,
@@ -177,4 +178,31 @@ test("toda revisão pendente recebe um plano explícito", () => {
     planejarRevisaoPendente({ certas: 8, erradas: 2 }).modo,
     "ciclo_normal"
   );
+});
+
+
+test("dúvida em aula cria revisão para o dia seguinte sem duplicar o assunto", () => {
+  const criado = aplicarRevisaoPorDuvida({
+    revisoes: [],
+    ...referencia,
+    agora: AGORA,
+    criarId: () => "rev-duvida",
+  });
+
+  assert.equal(criado.acao, "criada");
+  assert.equal(criado.revisoes[0].id, "rev-duvida");
+  assert.equal(criado.revisoes[0].motivoAdaptativo, "duvida");
+  assert.equal(
+    new Date(criado.revisoes[0].dataPrevista).getDate(),
+    AGORA.getDate() + 1
+  );
+
+  const repetido = aplicarRevisaoPorDuvida({
+    revisoes: criado.revisoes,
+    ...referencia,
+    agora: AGORA,
+  });
+
+  assert.equal(repetido.acao, "atualizada");
+  assert.equal(repetido.revisoes.length, 1);
 });
