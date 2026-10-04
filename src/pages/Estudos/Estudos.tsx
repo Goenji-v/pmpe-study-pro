@@ -58,11 +58,34 @@ export default function Estudos() {
   const [busca, setBusca] = useState("");
 
   useEffect(() => {
-    const estado = location.state as { focoBusca?: boolean; termoBusca?: string } | null;
+    const estado = location.state as {
+      focoBusca?: boolean;
+      termoBusca?: string;
+      flashcards?: {
+        materia: string;
+        topico: string;
+        modo?: ModoEstudoFlashcard;
+      };
+    } | null;
     const rotaDeBusca = ["/buscar", "/pesquisa", "/search"].includes(location.pathname);
 
     if (estado?.termoBusca) {
       setBusca(estado.termoBusca);
+    }
+
+    if (estado?.flashcards) {
+      setFocoFlashcards({
+        ...estado.flashcards,
+        token: Date.now(),
+      });
+      window.setTimeout(() => {
+        document
+          .getElementById("flashcards-quiz")
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      }, 0);
     }
 
     if (estado?.focoBusca || rotaDeBusca) {

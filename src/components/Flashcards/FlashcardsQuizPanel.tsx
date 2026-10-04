@@ -13,6 +13,7 @@ import type {
   PacoteQuestoesFlashcard,
   ProgressoQuestaoFlashcard,
 } from "../../types/flashcards";
+import { recomendarEstudoFlashcards } from "../../utils/flashcardsAdaptativo";
 import FlashcardsSessao from "./FlashcardsSessao";
 import Quiz from "./Quiz";
 import SeletorDeMateria from "./SeletorDeMateria";
@@ -80,6 +81,16 @@ export default function FlashcardsQuizPanel({
   const estatisticas = useMemo(
     () => calcularEstatisticasFlashcards(progresso),
     [progresso]
+  );
+  const recomendacao = useMemo(
+    () =>
+      pacoteSelecionado
+        ? recomendarEstudoFlashcards(
+            pacoteSelecionado,
+            progresso
+          )
+        : undefined,
+    [pacoteSelecionado, progresso]
   );
 
   function atualizarProgresso(
@@ -174,10 +185,25 @@ export default function FlashcardsQuizPanel({
             {pacoteSelecionado.questoes.length} questões disponíveis. Como você quer estudar?
           </p>
 
+          {recomendacao && (
+            <div
+              className={`flashcards-recomendacao nivel-${recomendacao.nivel}`}
+              role="status"
+            >
+              <strong>Recomendação: {recomendacao.titulo}</strong>
+              <p>{recomendacao.descricao}</p>
+              {typeof recomendacao.percentual === "number" && (
+                <small>
+                  Histórico deste tópico: {recomendacao.percentual}% de acertos em {recomendacao.tentativas} tentativa{recomendacao.tentativas === 1 ? "" : "s"}.
+                </small>
+              )}
+            </div>
+          )}
+
           <div className="flashcards-modos-grid">
             <button
               type="button"
-              className="flashcards-modo-card"
+              className={`flashcards-modo-card ${recomendacao?.modo === "flashcards" ? "recomendado" : ""}`}
               onClick={() => setModo("flashcards")}
             >
               <span>🃏</span>
@@ -186,7 +212,7 @@ export default function FlashcardsQuizPanel({
             </button>
             <button
               type="button"
-              className="flashcards-modo-card"
+              className={`flashcards-modo-card ${recomendacao?.modo === "quiz" ? "recomendado" : ""}`}
               onClick={() => setModo("quiz")}
             >
               <span>✅</span>

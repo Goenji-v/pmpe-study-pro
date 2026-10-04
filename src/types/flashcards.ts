@@ -15,6 +15,8 @@ export type QuestaoFlashcard = {
 export type PacoteQuestoesFlashcard = {
   materia: string;
   topico: string;
+  /** Nomes alternativos aceitos para vincular o deck ao assunto real do edital/curso. */
+  aliases?: string[];
   questoes: QuestaoFlashcard[];
 };
 
@@ -24,6 +26,7 @@ export type ArquivoQuestoesFlashcard =
       materia: string;
       topicos: Array<{
         topico: string;
+        aliases?: string[];
         questoes: QuestaoFlashcard[];
       }>;
     };
