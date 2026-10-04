@@ -422,6 +422,7 @@ function reconciliarAssuntoCanonico(
           ...aulaPlano,
           concluida: aulaSalva.concluida,
           concluidaEm: aulaSalva.concluidaEm,
+          progresso: aulaSalva.progresso,
         }
       : aulaPlano;
   });
@@ -493,6 +494,7 @@ function reconciliarAssuntoPortugues(
         aulaSalva?.concluidaEm ??
         assuntoLegadoDaAula?.concluidoEm ??
         assuntoSalvo?.concluidoEm,
+      progresso: aulaSalva?.progresso,
     };
   });
 
