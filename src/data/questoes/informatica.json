@@ -1,0 +1,84 @@
+{
+  "materia": "Informática",
+  "topico": "Conceito e princípios da Segurança da Informação",
+  "aliases": [
+    "Segurança da Informação"
+  ],
+  "questoes": [
+    {
+      "id": "info-seg-001",
+      "pergunta": "Qual princípio garante que apenas pessoas autorizadas tenham acesso à informação?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Disponibilidade"
+        },
+        {
+          "id": "b",
+          "texto": "Confidencialidade"
+        },
+        {
+          "id": "c",
+          "texto": "Integridade"
+        },
+        {
+          "id": "d",
+          "texto": "Redundância"
+        }
+      ],
+      "correta": "b",
+      "explicacao": "Confidencialidade protege a informação contra acesso não autorizado.",
+      "dica": "Confidencial = só quem pode deve ver."
+    },
+    {
+      "id": "info-seg-002",
+      "pergunta": "Qual princípio busca impedir alteração indevida da informação?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Integridade"
+        },
+        {
+          "id": "b",
+          "texto": "Disponibilidade"
+        },
+        {
+          "id": "c",
+          "texto": "Portabilidade"
+        },
+        {
+          "id": "d",
+          "texto": "Escalabilidade"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "Integridade assegura que a informação permaneça correta e sem modificações indevidas.",
+      "dica": "Integridade = dado sem adulteração."
+    },
+    {
+      "id": "info-seg-003",
+      "pergunta": "Qual princípio garante acesso à informação quando ela é necessária?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Confidencialidade"
+        },
+        {
+          "id": "b",
+          "texto": "Integridade"
+        },
+        {
+          "id": "c",
+          "texto": "Disponibilidade"
+        },
+        {
+          "id": "d",
+          "texto": "Anonimato"
+        }
+      ],
+      "correta": "c",
+      "explicacao": "Disponibilidade assegura acesso à informação e aos sistemas quando necessário.",
+      "dica": "Disponibilidade = estar acessível quando precisar."
+    }
+  ]
+}
