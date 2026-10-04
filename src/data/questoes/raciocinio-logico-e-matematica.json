@@ -1,0 +1,81 @@
+{
+  "materia": "Raciocínio Lógico e Matemática",
+  "topico": "Tabela verdade",
+  "questoes": [
+    {
+      "id": "rlm-tv-001",
+      "pergunta": "Com duas proposições simples P e Q, quantas linhas tem a tabela-verdade completa?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "2"
+        },
+        {
+          "id": "b",
+          "texto": "4"
+        },
+        {
+          "id": "c",
+          "texto": "6"
+        },
+        {
+          "id": "d",
+          "texto": "8"
+        }
+      ],
+      "correta": "b",
+      "explicacao": "O número de linhas é 2 elevado a n. Com duas proposições, são 4 linhas.",
+      "dica": "Use 2 elevado ao número de proposições."
+    },
+    {
+      "id": "rlm-tv-002",
+      "pergunta": "Com três proposições simples P, Q e R, quantas linhas são necessárias?",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "4"
+        },
+        {
+          "id": "b",
+          "texto": "6"
+        },
+        {
+          "id": "c",
+          "texto": "8"
+        },
+        {
+          "id": "d",
+          "texto": "9"
+        }
+      ],
+      "correta": "c",
+      "explicacao": "Com três proposições, temos 2 elevado a 3, isto é, 8 combinações.",
+      "dica": "Três letras: 2 elevado a 3."
+    },
+    {
+      "id": "rlm-tv-003",
+      "pergunta": "Uma tautologia é uma proposição composta que:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "É sempre verdadeira"
+        },
+        {
+          "id": "b",
+          "texto": "É sempre falsa"
+        },
+        {
+          "id": "c",
+          "texto": "Tem sempre metade verdadeiro e metade falso"
+        },
+        {
+          "id": "d",
+          "texto": "Não possui valor lógico"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "Tautologia é a fórmula verdadeira em todas as linhas da tabela-verdade.",
+      "dica": "Tautologia é verdadeira em todos os casos."
+    }
+  ]
+}
