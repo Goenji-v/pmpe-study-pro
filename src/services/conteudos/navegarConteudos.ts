@@ -412,9 +412,21 @@ function moduloRepeteMateria(
     return true;
   }
 
-  return (
+  if (
     /\bportuguesa?\b/.test(materia) &&
     /\bportuguesa?\b/.test(modulo)
+  ) {
+    return true;
+  }
+
+  const ehRaciocinioLogicoMatematica = (valor: string) =>
+    /\braciocinio\b/.test(valor) &&
+    /\blogico\b/.test(valor) &&
+    /\bmatematic/.test(valor);
+
+  return (
+    ehRaciocinioLogicoMatematica(materia) &&
+    ehRaciocinioLogicoMatematica(modulo)
   );
 }
 

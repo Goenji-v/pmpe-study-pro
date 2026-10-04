@@ -143,3 +143,59 @@ test("módulo que apenas repete o nome da matéria exibe cada aula como assunto"
     [1, 1]
   );
 });
+
+
+test("Raciocínio Lógico e Matemática exibe as aulas importadas como assuntos separados", () => {
+  const rlm: Materia = {
+    id: "curso-materia-raciocinio-logico-e-matematica",
+    nome: "Raciocínio Lógico e Matemática",
+    assuntos: [],
+    modulos: [
+      {
+        id: "curso:rdc:modulo:rlm",
+        nome: "Polícia Militar de Pernambuco — RDC · Raciocínio lógico Matemático",
+        ordem: 1,
+        assuntos: [
+          {
+            id: "curso:rdc:aula:proposicoes",
+            nome: "Proposições lógicas",
+            concluido: false,
+            prioridade: "alta",
+            aulas: [
+              {
+                id: "proposicoes-link",
+                nome: "Proposições lógicas",
+                url: "https://curso.test/proposicoes",
+                ordem: 1,
+                concluida: false,
+              },
+            ],
+          },
+          {
+            id: "curso:rdc:aula:tabela",
+            nome: "Tabela verdade",
+            concluido: true,
+            prioridade: "alta",
+            aulas: [
+              {
+                id: "tabela-link",
+                nome: "Tabela verdade",
+                url: "https://curso.test/tabela",
+                ordem: 1,
+                concluida: true,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const exibida = prepararMateriaParaConteudos(rlm);
+  assert.equal(exibida.modulos?.length, 1);
+  assert.equal(exibida.modulos?.[0].nome, "Geral");
+  assert.deepEqual(
+    exibida.modulos?.[0].assuntos.map((assunto) => assunto.nome),
+    ["Proposições lógicas", "Tabela verdade"]
+  );
+});
