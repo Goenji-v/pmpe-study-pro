@@ -185,6 +185,43 @@
   margin-top: 16px;
 }
 
+.flashcards-recomendacao {
+  margin-top: 14px;
+  padding: 13px 14px;
+  border: 1px solid #2d5f94;
+  border-radius: 12px;
+  background: rgba(20, 95, 176, 0.13);
+  color: #dbeaff;
+}
+
+.flashcards-recomendacao strong,
+.flashcards-recomendacao p,
+.flashcards-recomendacao small {
+  display: block;
+}
+
+.flashcards-recomendacao p {
+  margin: 5px 0 3px;
+  color: #bdd0e8;
+  line-height: 1.45;
+}
+
+.flashcards-recomendacao small {
+  color: #88a9cb;
+}
+
+.flashcards-recomendacao.nivel-recuperacao {
+  border-color: #a96a42;
+  background: rgba(167, 85, 30, 0.12);
+}
+
+.flashcards-modo-card.recomendado {
+  border-color: #2f91ff;
+  box-shadow:
+    0 0 0 2px rgba(47, 145, 255, 0.14),
+    inset 0 0 24px rgba(33, 125, 228, 0.06);
+}
+
 .flashcards-modos-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
