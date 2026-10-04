@@ -80,6 +80,26 @@ export function obterEstadoEconomia(
   configuracoes: ConfiguracoesApp
 ): EstadoEconomia {
   const economia = (configuracoes as ConfiguracoesComEconomia).economia;
+  const comprasValidas = Array.isArray(economia?.compras)
+    ? economia.compras.filter(
+        (compra): compra is CompraEconomia =>
+          Boolean(compra?.id && compra?.itemId && compra?.compradoEm) &&
+          Number.isFinite(Number(compra?.preco))
+      )
+    : [];
+  const vermelhoFoiComprado = comprasValidas.some(
+    (compra) => compra.itemId === "icones-vermelho-operacional" && compra.preco >= 500
+  );
+  const inventarioSalvo = Array.isArray(economia?.inventario)
+    ? economia.inventario.filter(Boolean)
+    : [];
+  const inventarioNormalizado = inventarioSalvo.filter(
+    (itemId) => itemId !== "icones-vermelho-operacional" || vermelhoFoiComprado
+  );
+  const iconeSalvo =
+    economia?.iconeEquipado === "icones-vermelho-operacional" && !vermelhoFoiComprado
+      ? "icones-prata-tatica"
+      : economia?.iconeEquipado;
 
   return {
     moedas: Math.max(0, Math.floor(Number(economia?.moedas) || 0)),
@@ -91,25 +111,12 @@ export function obterEstadoEconomia(
       0,
       Math.floor(Number(economia?.sequenciaLoginAtual) || 0)
     ),
-    inventario: [
-      ...new Set([
-        "icones-vermelho-operacional",
-        ...(Array.isArray(economia?.inventario)
-          ? economia.inventario.filter(Boolean)
-          : []),
-      ]),
-    ],
-    compras: Array.isArray(economia?.compras)
-      ? economia.compras.filter(
-          (compra): compra is CompraEconomia =>
-            Boolean(compra?.id && compra?.itemId && compra?.compradoEm) &&
-            Number.isFinite(Number(compra?.preco))
-        )
-      : [],
+    inventario: [...new Set(["icones-prata-tatica", ...inventarioNormalizado])],
+    compras: comprasValidas,
     tituloEquipado: economia?.tituloEquipado,
     molduraEquipada: economia?.molduraEquipada,
     temaEquipado: economia?.temaEquipado,
-    iconeEquipado: economia?.iconeEquipado ?? "icones-vermelho-operacional",
+    iconeEquipado: iconeSalvo ?? "icones-prata-tatica",
     atualizadoEm: economia?.atualizadoEm,
   };
 }
