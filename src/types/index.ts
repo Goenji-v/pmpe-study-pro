@@ -399,6 +399,8 @@ export type Revisao = {
   desempenho?: "facil" | "media" | "dificil";
   certas?: number;
   erradas?: number;
+  /** Sinal que antecipou a revisão fora do ciclo normal. */
+  motivoAdaptativo?: "duvida" | "baixo_desempenho";
   reagendadaEm?: string;
 };
 
