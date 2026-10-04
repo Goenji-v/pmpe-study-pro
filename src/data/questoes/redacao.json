@@ -1,0 +1,84 @@
+{
+  "materia": "Redação",
+  "topico": "A tese",
+  "aliases": [
+    "Tese"
+  ],
+  "questoes": [
+    {
+      "id": "red-tese-001",
+      "pergunta": "Em um texto dissertativo-argumentativo, a tese corresponde:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "À posição central que será defendida ao longo do texto"
+        },
+        {
+          "id": "b",
+          "texto": "Ao título obrigatório"
+        },
+        {
+          "id": "c",
+          "texto": "À cópia do tema"
+        },
+        {
+          "id": "d",
+          "texto": "À conclusão pronta"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "A tese é a ideia ou posicionamento central que orienta a argumentação do texto.",
+      "dica": "Tese = o que você defende."
+    },
+    {
+      "id": "red-tese-002",
+      "pergunta": "Uma boa tese deve estar relacionada diretamente:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Ao tema proposto"
+        },
+        {
+          "id": "b",
+          "texto": "A qualquer assunto de preferência do candidato"
+        },
+        {
+          "id": "c",
+          "texto": "Somente ao repertório usado"
+        },
+        {
+          "id": "d",
+          "texto": "A uma pergunta sem resposta"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "A tese precisa responder ao recorte temático e orientar os argumentos desenvolvidos.",
+      "dica": "A tese nasce do tema."
+    },
+    {
+      "id": "red-tese-003",
+      "pergunta": "Os argumentos do desenvolvimento devem, principalmente:",
+      "alternativas": [
+        {
+          "id": "a",
+          "texto": "Sustentar a tese"
+        },
+        {
+          "id": "b",
+          "texto": "Mudar o tema"
+        },
+        {
+          "id": "c",
+          "texto": "Contradizer a introdução sem justificativa"
+        },
+        {
+          "id": "d",
+          "texto": "Repetir o título"
+        }
+      ],
+      "correta": "a",
+      "explicacao": "O desenvolvimento apresenta razões, exemplos e explicações que sustentam a tese definida.",
+      "dica": "Argumento bom trabalha a favor da tese."
+    }
+  ]
+}
