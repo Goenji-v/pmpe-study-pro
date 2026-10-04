@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 
 import "./Loja.css";
 
+import {
+  DashboardIcon,
+  QuestionsIcon,
+  ReviewsIcon,
+} from "../../components/StudyProIcons/StudyProIcons";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -29,6 +34,7 @@ const FILTROS: Array<{ id: Filtro; nome: string }> = [
   { id: "todos", nome: "Todos" },
   { id: "moldura", nome: "Molduras" },
   { id: "tema", nome: "Temas" },
+  { id: "icone", nome: "Cores dos ícones" },
 ];
 
 export default function Loja() {
@@ -49,6 +55,7 @@ export default function Loja() {
 
   const moldura = encontrarItemLoja(economia.molduraEquipada);
   const tema = encontrarItemLoja(economia.temaEquipado);
+  const corIcones = encontrarItemLoja(economia.iconeEquipado);
   const configTema = configuracoes as typeof configuracoes & { temaBasico?: TemaBasico };
   const temaBasico: TemaBasico =
     configTema.temaBasico ?? (configuracoes.tema === "claro" ? "claro" : "azul");
@@ -96,7 +103,7 @@ export default function Loja() {
           <h1>Loja & Inventário</h1>
           <p>
             Estude, acumule moedas e desbloqueie visuais especiais para o Study Pro.
-            Os temas básicos azul, claro e escuro continuam gratuitos nas Configurações.
+            Agora você também pode trocar a cor de todos os ícones com uma única compra.
           </p>
         </div>
 
@@ -116,6 +123,7 @@ export default function Loja() {
         </button>
         <ResumoEquipado rotulo="Moldura" item={moldura} fallback="Moldura padrão" />
         <ResumoEquipado rotulo="Tema" item={tema} fallback={`Grátis: ${nomeTemaBasico(temaBasico)}`} />
+        <ResumoEquipado rotulo="Cores dos ícones" item={corIcones} fallback="🔴 Vermelho Operacional" />
       </section>
 
       <div className="loja-controles">
@@ -224,8 +232,8 @@ export default function Loja() {
       <section className="loja-regra">
         <strong>Como funciona</strong>
         <p>
-          Temas especiais são comprados uma única vez, ficam no inventário e podem ser equipados ou desequipados quando quiser.
-          Ao desequipar, o site volta para o tema básico escolhido nas Configurações.
+          Temas, molduras e cores dos ícones são comprados uma única vez e ficam permanentemente no inventário.
+          Ao equipar uma cor de ícones, todos os ícones personalizados do Study Pro passam a usar aquela paleta.
         </p>
       </section>
     </div>
@@ -240,6 +248,18 @@ function PreviewItem({ item }: { item: ItemLoja }) {
   if (item.tipo === "moldura") {
     return <div className={`loja-preview loja-preview-moldura moldura-${item.valorVisual}`}><span>Nível 4</span><strong>808 XP</strong></div>;
   }
+
+  if (item.tipo === "icone") {
+    return (
+      <div className={`loja-preview loja-preview-icones icones-${item.valorVisual}`}>
+        <DashboardIcon size={23} />
+        <QuestionsIcon size={23} />
+        <ReviewsIcon size={23} />
+        <span>Todos os ícones</span>
+      </div>
+    );
+  }
+
   return <div className={`loja-preview loja-preview-tema tema-${item.valorVisual}`}><i /><span>Prévia do tema</span></div>;
 }
 
@@ -251,6 +271,7 @@ function nomeTemaBasico(tema: TemaBasico) {
 
 function nomeTipo(tipo: TipoItemLoja) {
   if (tipo === "moldura") return "MOLDURA";
+  if (tipo === "icone") return "CORES DOS ÍCONES";
   return "TEMA";
 }
 
