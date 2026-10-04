@@ -32,7 +32,28 @@ export default function SeletorDeMateria({
 
   return (
     <div className="flashcards-seletor" aria-label="Matérias e tópicos de flashcards">
-      {grupos.map(([materia, topicos]) => (
+      {grupos.map(([materia, topicos]) => {
+        const idsMateria = new Set(
+          topicos.flatMap((pacote) =>
+            pacote.questoes.map((questao) => questao.id)
+          )
+        );
+        const progressoMateria = progresso.filter((item) =>
+          idsMateria.has(item.questaoId)
+        );
+        const tentativasMateria = progressoMateria.reduce(
+          (total, item) => total + item.tentativas,
+          0
+        );
+        const acertosMateria = progressoMateria.reduce(
+          (total, item) => total + item.acertos,
+          0
+        );
+        const percentualAcertos = tentativasMateria
+          ? Math.round((acertosMateria / tentativasMateria) * 100)
+          : 0;
+
+        return (
         <article className="flashcards-materia" key={materia}>
           <div className="flashcards-materia-cabecalho">
             <div>
@@ -43,7 +64,7 @@ export default function SeletorDeMateria({
               {topicos.reduce(
                 (total, pacote) => total + pacote.questoes.length,
                 0
-              )} questões
+              )} questões · {percentualAcertos}% acertos
             </strong>
           </div>
 
@@ -81,7 +102,8 @@ export default function SeletorDeMateria({
             })}
           </div>
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }
