@@ -30,7 +30,7 @@ export default function PersonalizacaoBridge() {
     const valorTema = tema?.tipo === "tema" ? tema.valorVisual : "padrao";
     const valorMoldura = moldura?.tipo === "moldura" ? moldura.valorVisual : "padrao";
     const valorIcones =
-      corIcones?.tipo === "icone" ? corIcones.valorVisual : "vermelho-operacional";
+      corIcones?.tipo === "icone" ? corIcones.valorVisual : "prata-tatica";
 
     raiz.dataset.studyBaseTheme = temaBasico;
     raiz.dataset.studyTheme = valorTema;

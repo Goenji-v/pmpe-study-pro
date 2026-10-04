@@ -1,15 +1,5 @@
 /* Ícones próprios do Study Pro — cor escolhida na Loja. */
 :root,
-html[data-study-icon-theme="vermelho-operacional"] {
-  --study-icon-base: #ff6670;
-  --study-icon-hot: #ff3644;
-  --study-icon-strong: #ff1d31;
-  --study-icon-border: rgba(255, 51, 64, .62);
-  --study-icon-soft: rgba(255, 46, 59, .20);
-  --study-icon-bg: rgba(65, 8, 15, .94);
-  --study-icon-glow: rgba(255, 35, 48, .72);
-}
-
 html[data-study-icon-theme="prata-tatica"] {
   --study-icon-base: #e2e8f0;
   --study-icon-hot: #f8fafc;
@@ -18,6 +8,16 @@ html[data-study-icon-theme="prata-tatica"] {
   --study-icon-soft: rgba(226, 232, 240, .16);
   --study-icon-bg: rgba(38, 45, 56, .94);
   --study-icon-glow: rgba(226, 232, 240, .48);
+}
+
+html[data-study-icon-theme="vermelho-operacional"] {
+  --study-icon-base: #ff6670;
+  --study-icon-hot: #ff3644;
+  --study-icon-strong: #ff1d31;
+  --study-icon-border: rgba(255, 51, 64, .62);
+  --study-icon-soft: rgba(255, 46, 59, .20);
+  --study-icon-bg: rgba(65, 8, 15, .94);
+  --study-icon-glow: rgba(255, 35, 48, .72);
 }
 
 html[data-study-icon-theme="azul-eletrico"] {

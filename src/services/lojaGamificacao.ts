@@ -17,24 +17,24 @@ export type ItemLoja = {
 
 export const CATALOGO_LOJA: ItemLoja[] = [
   {
-    id: "icones-vermelho-operacional",
-    tipo: "icone",
-    nome: "Vermelho Operacional",
-    descricao: "Cor padrão do Study Pro. Troca todos os ícones para o vermelho operacional.",
-    preco: 0,
-    raridade: "comum",
-    icone: "🔴",
-    valorVisual: "vermelho-operacional",
-  },
-  {
     id: "icones-prata-tatica",
     tipo: "icone",
     nome: "Prata Tática",
-    descricao: "Troca todos os ícones para um acabamento prateado, limpo e profissional.",
-    preco: 520,
-    raridade: "raro",
+    descricao: "Cor padrão gratuita do Study Pro. Mantém todos os ícones com acabamento prateado.",
+    preco: 0,
+    raridade: "comum",
     icone: "⚪",
     valorVisual: "prata-tatica",
+  },
+  {
+    id: "icones-vermelho-operacional",
+    tipo: "icone",
+    nome: "Vermelho Operacional",
+    descricao: "Troca todos os ícones para o vermelho operacional com brilho premium.",
+    preco: 500,
+    raridade: "raro",
+    icone: "🔴",
+    valorVisual: "vermelho-operacional",
   },
   {
     id: "icones-azul-eletrico",
@@ -289,6 +289,6 @@ export function desequiparTipoLoja(
   const proximo = { ...estado, atualizadoEm: agora.toISOString() };
   if (tipo === "moldura") delete proximo.molduraEquipada;
   if (tipo === "tema") delete proximo.temaEquipado;
-  if (tipo === "icone") proximo.iconeEquipado = "icones-vermelho-operacional";
+  if (tipo === "icone") proximo.iconeEquipado = "icones-prata-tatica";
   return proximo;
 }

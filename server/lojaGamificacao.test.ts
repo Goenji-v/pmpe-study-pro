@@ -86,7 +86,47 @@ test("cor premium dos ícones desconta moedas e pode ser equipada", () => {
   assert.equal(estado.iconeEquipado, "icones-roxo-neon");
 
   estado = desequiparTipoLoja(estado, "icone");
-  assert.equal(estado.iconeEquipado, "icones-vermelho-operacional");
+  assert.equal(estado.iconeEquipado, "icones-prata-tatica");
+});
+
+test("Prata Tática é padrão grátis e Vermelho Operacional custa 500 moedas", () => {
+  const prata = CATALOGO_LOJA.find((item) => item.id === "icones-prata-tatica");
+  const vermelho = CATALOGO_LOJA.find((item) => item.id === "icones-vermelho-operacional");
+
+  assert.equal(prata?.preco, 0);
+  assert.equal(vermelho?.preco, 500);
+
+  const semSaldo = comprarItemLoja(economiaComMoedas(499), "icones-vermelho-operacional");
+  assert.match(semSaldo.erro ?? "", /Faltam 1 moedas/i);
+
+  const comprado = comprarItemLoja(economiaComMoedas(500), "icones-vermelho-operacional");
+  assert.equal(comprado.erro, undefined);
+  assert.equal(comprado.estado.moedas, 0);
+  assert.equal(comprado.estado.inventario?.includes("icones-vermelho-operacional"), true);
+});
+
+test("vermelho que entrou grátis antes da correção não permanece desbloqueado", () => {
+  const configuracoes = {
+    nomeUsuario: "Teste",
+    concurso: "PMPE",
+    bancaPadrao: "AOCP",
+    metaQuestoesDiaria: 30,
+    metaMinutosDiaria: 120,
+    metaRevisoesDiaria: 2,
+    tema: "escuro",
+    economia: {
+      moedas: 50,
+      recompensasRecebidas: [],
+      inventario: ["icones-vermelho-operacional"],
+      compras: [],
+      iconeEquipado: "icones-vermelho-operacional",
+    },
+  } as ConfiguracoesApp & { economia: EstadoEconomia };
+
+  const estado = obterEstadoEconomia(configuracoes);
+  assert.equal(estado.inventario?.includes("icones-vermelho-operacional"), false);
+  assert.equal(estado.inventario?.includes("icones-prata-tatica"), true);
+  assert.equal(estado.iconeEquipado, "icones-prata-tatica");
 });
 
 test("nao equipa item que nao foi comprado", () => {
@@ -149,7 +189,7 @@ test("normalizacao da economia preserva inventario compras e dados legados para 
   const estado = obterEstadoEconomia(configuracoes);
   assert.equal(estado.moedas, 99);
   assert.deepEqual(estado.inventario, [
-    "icones-vermelho-operacional",
+    "icones-prata-tatica",
     "titulo-disciplinado",
     "moldura-aco",
   ]);
@@ -157,5 +197,5 @@ test("normalizacao da economia preserva inventario compras e dados legados para 
   assert.equal(estado.tituloEquipado, "titulo-disciplinado");
   assert.equal(estado.molduraEquipada, "moldura-aco");
   assert.equal(estado.temaEquipado, "tema-azul-operacional");
-  assert.equal(estado.iconeEquipado, "icones-vermelho-operacional");
+  assert.equal(estado.iconeEquipado, "icones-prata-tatica");
 });
