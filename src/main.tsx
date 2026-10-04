@@ -24,6 +24,7 @@ import "./components/BetaMonitor/BetaMonitorProducao.css";
 import "./components/Sidebar/SidebarPremiumVisual.css";
 import "./pages/Dashboard/DashboardHeroPremium.css";
 import "./styles/premium-polish-final.css";
+import "./components/StudyProIcons/StudyProIcons.css";
 
 declare const __APP_VERSION__: string;
 
