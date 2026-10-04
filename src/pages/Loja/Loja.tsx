@@ -123,7 +123,7 @@ export default function Loja() {
         </button>
         <ResumoEquipado rotulo="Moldura" item={moldura} fallback="Moldura padrão" />
         <ResumoEquipado rotulo="Tema" item={tema} fallback={`Grátis: ${nomeTemaBasico(temaBasico)}`} />
-        <ResumoEquipado rotulo="Cores dos ícones" item={corIcones} fallback="🔴 Vermelho Operacional" />
+        <ResumoEquipado rotulo="Cores dos ícones" item={corIcones} fallback="⚪ Prata Tática" />
       </section>
 
       <div className="loja-controles">
