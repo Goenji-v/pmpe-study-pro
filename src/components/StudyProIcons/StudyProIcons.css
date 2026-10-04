@@ -1,0 +1,123 @@
+/* Ícones próprios do Study Pro — estados vermelho metálico/neon. */
+.study-pro-icon {
+  display: block;
+  overflow: visible;
+  transform: translateZ(0);
+  transition:
+    color .18s ease,
+    filter .18s ease,
+    transform .18s ease,
+    opacity .18s ease;
+}
+
+.sidebar-link-icone,
+.sidebar-grupo-icone {
+  color: #d7dde5 !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .055), rgba(8, 10, 14, .88)) !important;
+  border-color: rgba(209, 217, 226, .24) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .08),
+    inset 0 -1px 0 rgba(0, 0, 0, .28) !important;
+}
+
+.sidebar-link:hover .sidebar-link-icone,
+.sidebar-grupo-botao:hover .sidebar-grupo-icone {
+  color: #ff3c48 !important;
+  border-color: rgba(255, 45, 57, .58) !important;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 33, 48, .20), transparent 70%),
+    linear-gradient(145deg, rgba(61, 10, 15, .86), rgba(10, 8, 11, .96)) !important;
+  filter:
+    drop-shadow(0 0 4px rgba(255, 35, 48, .78))
+    drop-shadow(0 0 10px rgba(255, 24, 39, .30));
+}
+
+.sidebar-link-ativo {
+  color: #fff1f2 !important;
+  background:
+    linear-gradient(90deg, rgba(123, 11, 22, .28), rgba(31, 11, 18, .42)) !important;
+  border-color: rgba(255, 47, 61, .54) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 88, 98, .04),
+    0 0 15px rgba(255, 21, 38, .06) !important;
+}
+
+.sidebar-link-ativo::before {
+  background: linear-gradient(180deg, #ff6a73, #ff1d31) !important;
+  box-shadow:
+    0 0 5px rgba(255, 50, 64, .95),
+    0 0 12px rgba(255, 28, 43, .46) !important;
+}
+
+.sidebar-link-ativo .sidebar-link-icone {
+  color: #ff3644 !important;
+  border-color: rgba(255, 51, 64, .72) !important;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 46, 59, .24), transparent 72%),
+    linear-gradient(145deg, rgba(65, 8, 15, .96), rgba(12, 7, 10, .98)) !important;
+  filter:
+    drop-shadow(0 0 4px rgba(255, 45, 57, .9))
+    drop-shadow(0 0 11px rgba(255, 24, 39, .34));
+}
+
+.sidebar-grupo-aberto .sidebar-grupo-botao,
+.sidebar-grupo-ativo .sidebar-grupo-botao {
+  color: #fff3f4 !important;
+  background:
+    linear-gradient(90deg, rgba(89, 12, 21, .72), rgba(33, 12, 19, .46)) !important;
+  border-color: rgba(255, 47, 61, .28) !important;
+}
+
+.sidebar-grupo-aberto .sidebar-grupo-icone,
+.sidebar-grupo-ativo .sidebar-grupo-icone {
+  color: #ff3b49 !important;
+  border-color: rgba(255, 54, 67, .62) !important;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 46, 59, .22), transparent 72%),
+    linear-gradient(145deg, rgba(64, 8, 15, .94), rgba(12, 7, 10, .98)) !important;
+  filter:
+    drop-shadow(0 0 4px rgba(255, 45, 57, .86))
+    drop-shadow(0 0 10px rgba(255, 24, 39, .30));
+}
+
+.sidebar-grupo-aberto .sidebar-chevron,
+.sidebar-grupo-ativo .sidebar-chevron {
+  color: #ff5260 !important;
+  filter: drop-shadow(0 0 5px rgba(255, 41, 54, .45));
+}
+
+.sidebar-submenu .sidebar-link-ativo {
+  color: #ffb7bd !important;
+  background: rgba(115, 11, 24, .12) !important;
+}
+
+.sidebar-submenu .sidebar-link-ativo::before {
+  background: #ff3140 !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 49, 64, .08),
+    0 0 7px rgba(255, 49, 64, .42) !important;
+}
+
+.sidebar-submenu .sidebar-link-icone {
+  color: #aab4c1 !important;
+}
+
+.sidebar-submenu .sidebar-link:hover .sidebar-link-icone,
+.sidebar-submenu .sidebar-link-ativo .sidebar-link-icone {
+  color: #ff4a58 !important;
+  filter: drop-shadow(0 0 5px rgba(255, 44, 58, .36));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar-link:hover .study-pro-icon,
+  .sidebar-grupo-botao:hover .study-pro-icon {
+    transform: scale(1.045);
+  }
+
+  .sidebar-link-ativo .study-pro-icon,
+  .sidebar-grupo-ativo .study-pro-icon,
+  .sidebar-grupo-aberto .study-pro-icon {
+    transform: scale(1.03);
+  }
+}
