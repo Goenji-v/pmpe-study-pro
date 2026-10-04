@@ -7,6 +7,7 @@ import "./Revisoes.css";
 import { useApp } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import {
   calcularDiasDiferenca,
   criarPrimeiraRevisao,
@@ -253,6 +254,39 @@ export default function Revisoes() {
     navigate("/gerar-simulado-ia");
   }
 
+  function abrirFlashcardsDaRevisao(revisao: Revisao) {
+    const dados = obterDadosCanonicos(revisao);
+    const pacote = buscarPacoteQuestoesFlashcards(
+      dados.materia,
+      dados.assunto
+    );
+
+    if (!pacote) {
+      showToast(
+        "Ainda não há flashcards cadastrados para este assunto.",
+        "info"
+      );
+      return;
+    }
+
+    const plano = planejarRevisaoPendente(revisao);
+    const modo =
+      typeof plano.percentual === "number" &&
+      plano.percentual >= 80
+        ? "quiz"
+        : "flashcards";
+
+    navigate("/estudos", {
+      state: {
+        flashcards: {
+          materia: dados.materia,
+          topico: dados.assunto,
+          modo,
+        },
+      },
+    });
+  }
+
   function concluirRevisao(revisao: Revisao, desempenho: DesempenhoRevisao) {
     const agora = new Date();
     const proximaId = crypto.randomUUID();
@@ -325,6 +359,7 @@ export default function Revisoes() {
   const propsGrupo = {
     abrirRevisao,
     abrirQuestoesIA,
+    abrirFlashcards: abrirFlashcardsDaRevisao,
     concluirRevisao,
     reagendarRevisao: reagendar,
     excluirRevisao,
@@ -417,6 +452,7 @@ type GrupoRevisoesProps = {
   revisoes: Revisao[];
   abrirRevisao: (revisao: Revisao) => void;
   abrirQuestoesIA: (revisao: Revisao) => void;
+  abrirFlashcards: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
   excluirRevisao: (revisao: Revisao) => void;
@@ -427,6 +463,7 @@ function GrupoRevisoes({
   revisoes,
   abrirRevisao,
   abrirQuestoesIA,
+  abrirFlashcards,
   concluirRevisao,
   reagendarRevisao,
   excluirRevisao,
@@ -453,6 +490,17 @@ function GrupoRevisoes({
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
           const plano = planejarRevisaoPendente(revisao);
+          const temFlashcards = Boolean(
+            buscarPacoteQuestoesFlashcards(
+              revisao.materia,
+              revisao.assunto
+            )
+          );
+          const modoFlashcardsRecomendado =
+            typeof plano.percentual === "number" &&
+            plano.percentual >= 80
+              ? "Quiz"
+              : "Flashcards";
           const quando =
             diferenca < 0
               ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
@@ -489,6 +537,11 @@ function GrupoRevisoes({
                     )}
                   </div>
                   <p>{plano.descricao}</p>
+                  {temFlashcards && (
+                    <small className="revisao-flashcards-recomendacao">
+                      🧠 Reforço disponível: {modoFlashcardsRecomendado}
+                    </small>
+                  )}
                 </div>
               </div>
 
@@ -509,6 +562,16 @@ function GrupoRevisoes({
                   >
                     ✨ Questões IA
                   </button>
+                  {temFlashcards && (
+                    <button
+                      type="button"
+                      className="revisao-flashcards"
+                      onClick={() => abrirFlashcards(revisao)}
+                      title={`Abrir ${modoFlashcardsRecomendado} deste assunto`}
+                    >
+                      🃏 {modoFlashcardsRecomendado}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`revisao-concluir-toggle ${avaliando ? "ativo" : ""}`}
