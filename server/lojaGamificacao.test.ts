@@ -24,9 +24,15 @@ function economiaComMoedas(moedas: number): EstadoEconomia {
   };
 }
 
-test("catalogo da loja mantém apenas temas e molduras", () => {
+test("catalogo da loja mantém temas, molduras e cores de ícones", () => {
   assert.ok(CATALOGO_LOJA.length > 0);
-  assert.equal(CATALOGO_LOJA.every((item) => item.tipo === "tema" || item.tipo === "moldura"), true);
+  assert.equal(
+    CATALOGO_LOJA.every(
+      (item) => item.tipo === "tema" || item.tipo === "moldura" || item.tipo === "icone"
+    ),
+    true
+  );
+  assert.equal(CATALOGO_LOJA.filter((item) => item.tipo === "icone").length, 5);
 });
 
 test("compra desconta moedas uma vez e adiciona item permanentemente ao inventario", () => {
@@ -52,20 +58,35 @@ test("nao permite comprar item sem saldo suficiente", () => {
   assert.deepEqual(resultado.estado.inventario, []);
 });
 
-test("moldura e tema usam slots independentes", () => {
-  let estado = economiaComMoedas(1000);
+test("moldura, tema e cor dos ícones usam slots independentes", () => {
+  let estado = economiaComMoedas(2000);
 
-  for (const itemId of ["moldura-aco", "tema-grafite"]) {
+  for (const itemId of ["moldura-aco", "tema-grafite", "icones-azul-eletrico"]) {
     estado = comprarItemLoja(estado, itemId).estado;
     estado = equiparItemLoja(estado, itemId).estado;
   }
 
   assert.equal(estado.molduraEquipada, "moldura-aco");
   assert.equal(estado.temaEquipado, "tema-grafite");
+  assert.equal(estado.iconeEquipado, "icones-azul-eletrico");
 
   const moldura = comprarItemLoja(economiaComMoedas(300), "moldura-aco").item;
   assert.ok(moldura);
   assert.equal(itemEstaEquipado(estado, moldura), true);
+});
+
+test("cor premium dos ícones desconta moedas e pode ser equipada", () => {
+  let estado = economiaComMoedas(1000);
+  const compra = comprarItemLoja(estado, "icones-roxo-neon");
+
+  assert.equal(compra.erro, undefined);
+  assert.equal(compra.estado.moedas, 380);
+
+  estado = equiparItemLoja(compra.estado, "icones-roxo-neon").estado;
+  assert.equal(estado.iconeEquipado, "icones-roxo-neon");
+
+  estado = desequiparTipoLoja(estado, "icone");
+  assert.equal(estado.iconeEquipado, "icones-vermelho-operacional");
 });
 
 test("nao equipa item que nao foi comprado", () => {
@@ -127,9 +148,14 @@ test("normalizacao da economia preserva inventario compras e dados legados para 
 
   const estado = obterEstadoEconomia(configuracoes);
   assert.equal(estado.moedas, 99);
-  assert.deepEqual(estado.inventario, ["titulo-disciplinado", "moldura-aco"]);
+  assert.deepEqual(estado.inventario, [
+    "icones-vermelho-operacional",
+    "titulo-disciplinado",
+    "moldura-aco",
+  ]);
   assert.equal(estado.compras?.length, 1);
   assert.equal(estado.tituloEquipado, "titulo-disciplinado");
   assert.equal(estado.molduraEquipada, "moldura-aco");
   assert.equal(estado.temaEquipado, "tema-azul-operacional");
+  assert.equal(estado.iconeEquipado, "icones-vermelho-operacional");
 });
