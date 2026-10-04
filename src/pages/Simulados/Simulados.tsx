@@ -20,6 +20,10 @@ import {
   resumirSimulado,
 } from "../../utils/metricasConsolidadas";
 import {
+  formatarMeuGabaritoTexto,
+  montarMeuGabarito,
+} from "../../utils/gabaritoSimulado";
+import {
   listarAnalisesSimulados,
   type AnaliseSimuladoSalva,
 } from "../../services/analisesSimuladosService";
@@ -83,6 +87,10 @@ export default function Simulados() {
   const [
     diagnosticoPdfAberto,
     setDiagnosticoPdfAberto,
+  ] = useState<string | null>(null);
+  const [
+    gabaritoPdfAberto,
+    setGabaritoPdfAberto,
   ] = useState<string | null>(null);
 
   useEffect(() => {
@@ -371,6 +379,35 @@ export default function Simulados() {
     }
 
     return "simulado-critico";
+  }
+
+  async function copiarMeuGabarito(
+    registro: AnaliseSimuladoSalva
+  ) {
+    const texto = formatarMeuGabaritoTexto(
+      registro.analise.correcao
+    );
+
+    if (!texto) {
+      showToast(
+        "Este simulado não possui respostas marcadas salvas.",
+        "warning"
+      );
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(texto);
+      showToast(
+        "Seu gabarito foi copiado.",
+        "success"
+      );
+    } catch {
+      showToast(
+        "Não foi possível copiar o gabarito agora.",
+        "warning"
+      );
+    }
   }
 
   return (
@@ -791,6 +828,12 @@ export default function Simulados() {
               const resumo = registro.analise.resumo;
               const aberto =
                 diagnosticoPdfAberto === registro.tentativaId;
+              const gabaritoAberto =
+                gabaritoPdfAberto === registro.tentativaId;
+              const meuGabarito = montarMeuGabarito(
+                registro.analise.correcao
+              );
+              const temMeuGabarito = meuGabarito.length > 0;
 
               return (
                 <article
@@ -832,19 +875,81 @@ export default function Simulados() {
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    className="simulado-pdf-ver-diagnostico"
-                    onClick={() =>
-                      setDiagnosticoPdfAberto(
-                        aberto ? null : registro.tentativaId
-                      )
-                    }
-                  >
-                    {aberto
-                      ? "Fechar diagnóstico"
-                      : "Ver diagnóstico"}
-                  </button>
+                  <div className="simulado-pdf-historico-acoes">
+                    <button
+                      type="button"
+                      className="simulado-pdf-ver-diagnostico"
+                      onClick={() =>
+                        setDiagnosticoPdfAberto(
+                          aberto ? null : registro.tentativaId
+                        )
+                      }
+                    >
+                      {aberto
+                        ? "Fechar diagnóstico"
+                        : "Ver diagnóstico"}
+                    </button>
+
+                    {temMeuGabarito && (
+                      <button
+                        type="button"
+                        className="simulado-pdf-meu-gabarito-botao"
+                        aria-expanded={gabaritoAberto}
+                        onClick={() =>
+                          setGabaritoPdfAberto(
+                            gabaritoAberto
+                              ? null
+                              : registro.tentativaId
+                          )
+                        }
+                      >
+                        {gabaritoAberto
+                          ? "Fechar meu gabarito"
+                          : "📝 Meu gabarito"}
+                      </button>
+                    )}
+                  </div>
+
+                  {gabaritoAberto && (
+                    <section
+                      className="simulado-pdf-meu-gabarito"
+                      aria-label={`Meu gabarito de ${registro.nome}`}
+                    >
+                      <div className="simulado-pdf-meu-gabarito-topo">
+                        <div>
+                          <strong>Respostas marcadas por você</strong>
+                          <span>
+                            Este painel mostra somente as suas marcações,
+                            sem misturar com o gabarito da correção.
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void copiarMeuGabarito(registro)
+                          }
+                        >
+                          Copiar gabarito
+                        </button>
+                      </div>
+
+                      <div className="simulado-pdf-meu-gabarito-grid">
+                        {meuGabarito.map((item) => (
+                          <div key={item.numero}>
+                            <span>Q{item.numero}</span>
+                            <strong>
+                              {item.resposta ?? "—"}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+
+                      <small>
+                        “—” indica questão sem resposta marcada.
+                      </small>
+                    </section>
+                  )}
 
                   {aberto && (
                     <div className="simulado-pdf-diagnostico-salvo">
