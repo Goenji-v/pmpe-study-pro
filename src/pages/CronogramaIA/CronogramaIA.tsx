@@ -1081,6 +1081,9 @@ export default function CronogramaIA() {
                         ? `${item.percentualAcertos}% de acertos · `
                         : ""}
                       {item.questoes} questões · {item.revisoesAtrasadas} revisões atrasadas
+                      {item.revisoesProximas > 0
+                        ? ` · ${item.revisoesProximas} vencendo em até 2 dias`
+                        : ""}
                     </small>
                     {item.motivos[0] && <p>{item.motivos[0]}</p>}
                   </div>
