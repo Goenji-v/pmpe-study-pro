@@ -1,5 +1,6 @@
 import "./Header.css";
-import { Bell } from "lucide-react";
+import { Bell, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import {
   useApp,
@@ -9,6 +10,7 @@ import CloudStatus from "../CloudStatus/CloudStatus";
 import UserProfileMenu from "../UserProfileMenu/UserProfileMenu";
 
 export default function Header() {
+  const navigate = useNavigate();
   const {
     configuracoes,
   } = useApp();
@@ -39,6 +41,16 @@ export default function Header() {
         </div>
         <span className="header-concurso">{configuracoes.concurso}</span>
       </div>
+
+      <button
+        type="button"
+        className="header-search"
+        onClick={() => navigate("/buscar", { state: { focoBusca: true } })}
+        aria-label="Buscar conteúdos e questões"
+      >
+        <Search size={17} strokeWidth={1.9} aria-hidden="true" />
+        <span>Buscar conteúdos, questões...</span>
+      </button>
 
       <div className="header-acoes">
         <CloudStatus />
