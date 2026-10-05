@@ -256,11 +256,19 @@ export async function salvarEstadoEstruturalComSeguranca(
   validarIntegridadeEstado(novoNormalizado);
 
   try {
-    await salvarEstadoNaNuvem(
+    await salvarEstadoComControleDeRevisao(
       userId,
-      novoNormalizado
+      novoNormalizado,
+      obterRevisaoSincronizacao(estadoAnterior)
     );
   } catch (erroSalvar) {
+    if (erroSalvar instanceof ConflitoSincronizacaoError) {
+      // Outro aparelho avançou a revisão entre a leitura e a gravação.
+      // Não fazemos rollback aqui, porque restaurar estadoAnterior apagaria
+      // justamente a alteração legítima feita no outro dispositivo.
+      throw erroSalvar;
+    }
+
     let rollbackConcluido = false;
 
     try {
@@ -332,25 +340,55 @@ export async function salvarEstadoComControleDeRevisao(
   estadoLocal: EstadoAppNuvem,
   revisaoBase: number
 ): Promise<EstadoAppNuvem> {
-  const estadoNuvem = await carregarEstadoDaNuvem(userId);
-  const revisaoNuvem = obterRevisaoSincronizacao(estadoNuvem);
-
-  if (estadoNuvem && revisaoNuvem !== Math.max(0, Math.floor(revisaoBase))) {
-    throw new ConflitoSincronizacaoError(revisaoNuvem, revisaoBase);
+  if (!userId) {
+    throw new Error("Usuário inválido para sincronização.");
   }
 
+  const revisaoEsperada = Math.max(0, Math.floor(revisaoBase));
   const agora = new Date().toISOString();
-  const proximaRevisao = revisaoNuvem + 1;
   const estadoParaSalvar = normalizarEstadoParaSalvar({
     ...estadoLocal,
-    syncRevision: proximaRevisao,
+    syncRevision: revisaoEsperada + 1,
     atualizadoEm: agora,
     salvoEm: agora,
   });
 
   validarIntegridadeEstado(estadoParaSalvar);
-  await salvarEstadoNaNuvem(userId, estadoParaSalvar);
-  return estadoParaSalvar;
+
+  const { data, error } = await supabase.rpc(
+    "salvar_estado_app_cas",
+    {
+      p_expected_revision: revisaoEsperada,
+      p_estado: estadoParaSalvar,
+    }
+  );
+
+  if (error) {
+    throw new Error(
+      `Erro ao salvar dados na nuvem com controle de revisão: ${error.message}`
+    );
+  }
+
+  const resultado = Array.isArray(data)
+    ? data[0]
+    : data;
+
+  const revisaoAtual =
+    typeof resultado?.revisao_atual === "number"
+      ? Math.max(0, Math.floor(resultado.revisao_atual))
+      : revisaoEsperada;
+
+  if (!resultado?.ok) {
+    throw new ConflitoSincronizacaoError(
+      revisaoAtual,
+      revisaoEsperada
+    );
+  }
+
+  return normalizarEstadoParaSalvar({
+    ...estadoParaSalvar,
+    syncRevision: revisaoAtual,
+  });
 }
 
 export function montarEstadoNuvem(
