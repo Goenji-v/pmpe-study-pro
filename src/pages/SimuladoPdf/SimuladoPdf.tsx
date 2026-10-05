@@ -11,6 +11,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,10 +19,15 @@ import { useNavigate } from "react-router-dom";
 import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
 import { useApp } from "../../context/AppContext";
 import type { Simulado } from "../../types";
-import type {
-  MarcacaoQuestaoSimulado,
-  QuestaoAnaliseSimulado,
+import {
+  analisarSimuladoStudyPro,
+  type MarcacaoQuestaoSimulado,
+  type QuestaoAnaliseSimulado,
 } from "../../utils/analiseSimuladoStudyPro";
+import {
+  salvarAnaliseSimulado,
+  salvarAnaliseSimuladoLocal,
+} from "../../services/analisesSimuladosService";
 import {
   consultarAnaliseSimuladoPdf,
   excluirAnaliseSimuladoPdf,
@@ -131,6 +137,11 @@ export default function SimuladoPdf() {
   const [restaurando, setRestaurando] = useState(false);
   const [reiniciandoAnalise, setReiniciandoAnalise] =
     useState(false);
+  const resultadoPersistidoRef = useRef("");
+  const [salvandoResultadoFinal, setSalvandoResultadoFinal] =
+    useState(false);
+  const [avisoResultadoFinal, setAvisoResultadoFinal] =
+    useState("");
 
   const totalQuestoes =
     rascunho?.totalQuestoes ?? (Number(totalTexto) || 0);
@@ -520,9 +531,6 @@ export default function SimuladoPdf() {
       );
     }
 
-    window.dispatchEvent(
-      new Event("pmpe-simulado-pdf-finalizado")
-    );
   }, [
     analise,
     comentado,
@@ -581,6 +589,93 @@ export default function SimuladoPdf() {
       ),
     [respostas, totalQuestoes]
   );
+
+
+  const persistirResultadoFinal = useCallback(async () => {
+    if (
+      !finalizado ||
+      !analise ||
+      !rascunho ||
+      questoesResultado.length === 0
+    ) {
+      return false;
+    }
+
+    const assinatura = [
+      rascunho.id,
+      analise.questoes.length,
+      JSON.stringify(respostasResultado),
+    ].join(":");
+
+    if (resultadoPersistidoRef.current === assinatura) {
+      return true;
+    }
+
+    const diagnostico = analisarSimuladoStudyPro({
+      tentativaId: rascunho.id,
+      nome,
+      data: criadoEm,
+      questoes: questoesResultado,
+      respostas: respostasResultado,
+      marcacoes: {},
+    });
+
+    // Garante um relatório completo antes de depender da montagem do
+    // componente visual. O histórico da tela de Simulados já consegue ler
+    // este backup imediatamente.
+    salvarAnaliseSimuladoLocal({
+      origem: "pdf",
+      tentativaId: rascunho.id,
+      simuladoId: rascunho.id,
+      nome,
+      analise: diagnostico,
+    });
+
+    window.dispatchEvent(
+      new Event("pmpe-simulado-pdf-finalizado")
+    );
+
+    setSalvandoResultadoFinal(true);
+    setAvisoResultadoFinal("");
+
+    try {
+      await salvarAnaliseSimulado({
+        origem: "pdf",
+        tentativaId: rascunho.id,
+        simuladoId: rascunho.id,
+        nome,
+        analise: diagnostico,
+      });
+
+      resultadoPersistidoRef.current = assinatura;
+      return true;
+    } catch {
+      setAvisoResultadoFinal(
+        "Resultado protegido neste aparelho. A cópia online será tentada novamente ao reabrir o diagnóstico."
+      );
+      return false;
+    } finally {
+      setSalvandoResultadoFinal(false);
+    }
+  }, [
+    analise,
+    criadoEm,
+    finalizado,
+    nome,
+    questoesResultado,
+    rascunho,
+    respostasResultado,
+  ]);
+
+  useEffect(() => {
+    if (!finalizado || !analise || !rascunho) return;
+    void persistirResultadoFinal();
+  }, [
+    analise,
+    finalizado,
+    persistirResultadoFinal,
+    rascunho,
+  ]);
 
   const persistirAnotacoes = useCallback(
     (valor: AnotacoesPdf) => {
@@ -870,7 +965,11 @@ export default function SimuladoPdf() {
     setAnotacoesIniciais(undefined);
   }
 
-  function encerrarEVoltar() {
+  async function encerrarEVoltar() {
+    if (finalizado && analise && rascunho) {
+      await persistirResultadoFinal();
+    }
+
     limparRascunhoSimuladoPdf();
 
     // Mantém o último resultado finalizado salvo no aparelho.
@@ -1160,6 +1259,13 @@ export default function SimuladoPdf() {
             <strong>
               {formatarTempo(segundos)}
             </strong>
+            {(salvandoResultadoFinal || avisoResultadoFinal) && (
+              <small className="simulado-pdf-status-salvamento">
+                {salvandoResultadoFinal
+                  ? "Salvando diagnóstico…"
+                  : avisoResultadoFinal}
+              </small>
+            )}
           </div>
         </div>
 
