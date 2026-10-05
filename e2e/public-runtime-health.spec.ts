@@ -63,7 +63,7 @@ test.describe("saúde das telas públicas", () => {
       const falhas: FalhaRuntime[] = [];
       instalarAuditoria(page, falhas);
 
-      await page.goto(rota, { waitUntil: "networkidle" });
+      await page.goto(rota, { waitUntil: "domcontentloaded", timeout: 30_000 });
 
       if (rota === "/login") {
         await expect(
@@ -73,7 +73,8 @@ test.describe("saúde das telas públicas", () => {
         await expect(page.getByText("MODO DEMONSTRAÇÃO")).toBeVisible();
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("load");
+      await page.waitForTimeout(1_000);
 
       expect(
         falhas,
