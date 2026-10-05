@@ -405,16 +405,71 @@ export function mesclarCursoRecebido(cursos: CursoImportado[], recebido: CursoIm
       let moduloDestino = destino.modulos.find(m => slugCurso(m.nome) === slugCurso(modulo.nome));
       for (const aula of modulo.aulas) {
         const url = normalizarUrl(aula.url);
-        if (url && urls.has(url)) continue;
-        if (!url && moduloDestino?.aulas.some(a => !a.url && slugCurso(a.nome) === slugCurso(aula.nome))) continue;
-        if (!moduloDestino) { moduloDestino = { ...modulo, id: `${destino.id}-modulo-novo-${destino.modulos.length + 1}`, aulas: [] }; destino.modulos.push(moduloDestino); }
-        moduloDestino.aulas.push({ ...aula, id: `${moduloDestino.id}-aula-nova-${moduloDestino.aulas.length + 1}`, ordem: moduloDestino.aulas.length + 1 });
+        const existentePorUrl = url
+          ? resultado.materias
+              .flatMap((item) => item.modulos)
+              .flatMap((item) => item.aulas)
+              .find((item) => normalizarUrl(item.url) === url)
+          : undefined;
+        const existentePorNome = !url
+          ? moduloDestino?.aulas.find(
+              (item) =>
+                !item.url &&
+                slugCurso(item.nome) === slugCurso(aula.nome)
+            )
+          : undefined;
+        const existente = existentePorUrl ?? existentePorNome;
+
+        if (existente) {
+          existente.materiais = mesclarMateriaisCurso(
+            existente.materiais,
+            aula.materiais
+          );
+          continue;
+        }
+
+        if (!moduloDestino) {
+          moduloDestino = {
+            ...modulo,
+            id: `${destino.id}-modulo-novo-${destino.modulos.length + 1}`,
+            aulas: [],
+          };
+          destino.modulos.push(moduloDestino);
+        }
+
+        moduloDestino.aulas.push({
+          ...aula,
+          id: `${moduloDestino.id}-aula-nova-${moduloDestino.aulas.length + 1}`,
+          ordem: moduloDestino.aulas.length + 1,
+        });
         if (url) urls.add(url);
       }
     }
   }
   return { ...resultado, atualizadoEm: novo.atualizadoEm, relatorioCaptura: novo.relatorioCaptura ?? resultado.relatorioCaptura,
     materias: resultado.materias.filter(m => m.modulos.length).map((m, i) => ({ ...m, ordem: i + 1 })) };
+}
+
+function mesclarMateriaisCurso(
+  atuais: CursoAula["materiais"],
+  recebidos: CursoAula["materiais"]
+) {
+  const resultado = [...(atuais ?? [])];
+
+  for (const material of recebidos ?? []) {
+    const url = normalizarUrl(material.url);
+    const existe = resultado.some(
+      (item) =>
+        (url && normalizarUrl(item.url) === url) ||
+        item.id === material.id
+    );
+
+    if (!existe) {
+      resultado.push(material);
+    }
+  }
+
+  return resultado.length > 0 ? resultado : undefined;
 }
 
 type ExtrasCursos = {
@@ -642,10 +697,59 @@ function converterModuloCurso(curso: CursoImportado, _materia: CursoMateria, mod
     const concluido = salvo?.aula?.concluida ?? registro?.concluido ?? aula.concluida ?? false;
     const concluidoEm = salvo?.aula?.concluidaEm ?? registro?.concluidoEm ?? aula.concluidaEm ?? aula.concluidoEm;
     const id = `curso:${curso.id}:aula:${aula.id}`;
-    return { ...registro, id, nome: registro?.nome ?? aula.nome, concluido, concluidoEm, prioridade: registro?.prioridade ?? "media", aula: aula.url,
-      aulas: registro?.aulas?.length ? registro.aulas : [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm: concluidoEm }] };
+    const materiaisCapturados = (aula.materiais ?? []).map(
+      (material, indice) => ({
+        id: `${id}:material:${indice + 1}`,
+        tipo: material.tipo === "pdf" ? "pdf" as const : "link" as const,
+        nome: material.nome,
+        url: material.url,
+        criadoEm: curso.atualizadoEm || curso.criadoEm,
+      })
+    );
+    const materiais = [
+      ...(registro?.materiais ?? []),
+      ...materiaisCapturados,
+    ].filter(
+      (material, indice, lista) =>
+        lista.findIndex(
+          (item) =>
+            item.id === material.id ||
+            normalizarUrl(item.url) === normalizarUrl(material.url)
+        ) === indice
+    );
+    const pdfCapturado = materiais.find(
+      (material) => material.tipo === "pdf"
+    )?.url;
+
+    return {
+      ...registro,
+      id,
+      nome: registro?.nome ?? aula.nome,
+      concluido,
+      concluidoEm,
+      prioridade: registro?.prioridade ?? "media",
+      aula: aula.url,
+      pdf: registro?.pdf ?? pdfCapturado,
+      materiais: materiais.length > 0 ? materiais : undefined,
+      aulas: registro?.aulas?.length
+        ? registro.aulas
+        : [{
+            id: `${id}:link`,
+            nome: aula.nome,
+            url: aula.url,
+            ordem: 1,
+            concluida: concluido,
+            concluidaEm,
+          }],
+    };
   });
-  return { id: `curso:${curso.id}:modulo:${modulo.id}`, nome: `${curso.nome} · ${modulo.nome}`, ordem: modulo.ordem, assuntos };
+
+  return {
+    id: `curso:${curso.id}:modulo:${modulo.id}`,
+    nome: `${curso.nome} · ${modulo.nome}`,
+    ordem: modulo.ordem,
+    assuntos,
+  };
 }
 
 function removerModulosDeCursos(materias: Materia[]): Materia[] {
@@ -707,13 +811,17 @@ function removerExtensao(nome: string) { return nome.replace(/\.(html?|mhtml|mht
 function ehCapturaCurso(valor: unknown): valor is CapturaCurso {
   if (!valor || typeof valor !== "object") return false;
   const v = valor as Partial<CapturaCurso>;
-  if (![1, 2, 3].includes(v.versao ?? 0) || !Array.isArray(v.itens) || !v.itens.every(i => i && typeof i.texto === "string")) return false;
+  if (![1, 2, 3, 4].includes(v.versao ?? 0) || !Array.isArray(v.itens) || !v.itens.every(i => i && typeof i.texto === "string")) return false;
   if (v.avisos !== undefined && (!Array.isArray(v.avisos) || !v.avisos.every(a => typeof a === "string"))) return false;
-  if (v.versao === 3 && v.paginas !== undefined) {
+  if ((v.versao === 3 || v.versao === 4) && v.paginas !== undefined) {
     if (!Array.isArray(v.paginas)) return false;
+    const tiposMateriais = new Set(["pdf", "download", "material", "link"]);
     const validas = v.paginas.every(p => p && typeof p.nome === "string" && typeof p.url === "string"
       && Array.isArray(p.modulos) && p.modulos.every(m => m && typeof m.nome === "string"
-        && Array.isArray(m.aulas) && m.aulas.every(a => a && typeof a.nome === "string" && typeof a.url === "string")));
+        && Array.isArray(m.aulas) && m.aulas.every(a => a && typeof a.nome === "string" && typeof a.url === "string"
+          && (a.materiais === undefined || (Array.isArray(a.materiais) && a.materiais.every(material =>
+            material && typeof material.nome === "string" && typeof material.url === "string" && tiposMateriais.has(material.tipo)
+          ))))));
     if (!validas) return false;
   }
   return true;
