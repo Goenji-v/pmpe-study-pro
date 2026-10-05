@@ -11,6 +11,7 @@ import { useApp } from "../../context/AppContext";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { analisarMidiasDoCurso } from "../../services/cursoMidiaService";
 import { criarCodigoCapturadorCurso } from "../../utils/capturadorCurso";
+import { criarCodigoCapturadorRdc } from "../../utils/capturadorCursoRdc";
 import type { CategoriaCursoMateria, CursoImportado, ConfiguracoesComCursos } from "../../types/cursos";
 import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
 import {
@@ -393,9 +394,22 @@ export default function Cursos() {
   async function copiarCapturador() {
     try {
       await navigator.clipboard.writeText(criarCodigoCapturadorCurso());
-      setMensagem("Capturador V3 copiado. Substitua todo o campo URL do favorito antigo por este código. Execute na página principal da plataforma do curso, não aqui.");
+      setMensagem("Capturador V3 copiado. Use esta versão apenas em plataformas Tutor LMS antigas.");
     } catch {
       setMensagem("O navegador bloqueou a cópia automática. Selecione o código abaixo e copie manualmente.");
+    }
+  }
+
+  async function copiarCapturadorRdc() {
+    try {
+      await navigator.clipboard.writeText(criarCodigoCapturadorRdc());
+      setMensagem(
+        "Capturador RDC V4 copiado. Abra qualquer matéria/aula do RDC já logado, execute o favorito e aguarde o JSON com aulas + materiais."
+      );
+    } catch {
+      setMensagem(
+        "O navegador bloqueou a cópia automática. Selecione o código V4 abaixo e copie manualmente."
+      );
     }
   }
 
@@ -547,22 +561,40 @@ export default function Cursos() {
         ) : (
           <div className="cursos-capturador">
             <div>
-              <h2>Capturador V3 · Uma execução, um JSON</h2>
+              <span>RECOMENDADO PARA O RDC ATUAL</span>
+              <h2>Capturador RDC V4 · aulas + materiais</h2>
               <p>
-                Na página principal do RDC/Tutor LMS, o capturador percorre os cartões das matérias e reúne suas grades em um único arquivo. Usa o login já aberto no seu navegador e não altera seu progresso.
+                O V4 usa o login que já está aberto no RDC. Ele percorre as matérias e as aulas e procura os links de PDF, materiais de apoio e links úteis, sem baixar os arquivos e sem alterar seu progresso.
               </p>
               <ol>
                 <li>Crie um favorito ou edite o favorito do capturador antigo.</li>
-                <li>Clique em “Copiar capturador” e substitua todo o campo URL do favorito pelo código novo.</li>
-                <li>Com login feito na plataforma do curso, abra a página principal com todos os cartões das matérias e execute o favorito uma vez.</li>
-                <li>Acompanhe a leitura no painel. Você pode cancelar e salvar o resultado parcial.</li>
-                <li>Será baixado <b>study-pro-curso-v3.json</b>. Se necessário, use “Baixar JSON único”. Volte aqui, analise esse arquivo e confira as pendências antes de confirmar.</li>
+                <li>Clique em “Copiar capturador RDC V4” e substitua todo o campo URL do favorito.</li>
+                <li>Entre no RDC e abra qualquer matéria/aula do curso PMPE.</li>
+                <li>Execute o favorito e aguarde o painel terminar a leitura. A captura pode levar alguns minutos porque abre as aulas uma a uma.</li>
+                <li>Será baixado <b>study-pro-rdc-v4.json</b>. Volte ao Study Pro, selecione esse JSON em “Página salva” e confirme a importação.</li>
               </ol>
-              <p>Captura nomes, módulos e links das aulas; não baixa vídeos nem PDFs internos. Em outras plataformas, captura apenas a página aberta e informa essa limitação.</p>
-              <p>A importação identifica matérias pelos links originais. Mentoria, cronograma e encontros gerais ficam como complementares; itens sem identificação aguardam confirmação.</p>
-              <button type="button" onClick={copiarCapturador}>Copiar capturador</button>
+              <p>
+                Uma nova captura é aditiva: aulas já concluídas e anotações são preservadas; os materiais encontrados entram nas aulas existentes sem duplicar links.
+              </p>
+              <button type="button" onClick={copiarCapturadorRdc}>
+                Copiar capturador RDC V4
+              </button>
+
+              <details className="cursos-capturador-legado">
+                <summary>Usa Tutor LMS antigo? Ver Capturador V3</summary>
+                <p>
+                  O V3 continua disponível para plataformas com URLs /courses/.../lessons/....
+                </p>
+                <button type="button" onClick={copiarCapturador}>
+                  Copiar V3 antigo
+                </button>
+              </details>
             </div>
-            <textarea readOnly value={criarCodigoCapturadorCurso()} aria-label="Código do capturador" />
+            <textarea
+              readOnly
+              value={criarCodigoCapturadorRdc()}
+              aria-label="Código do capturador RDC V4"
+            />
           </div>
         )}
         </details>

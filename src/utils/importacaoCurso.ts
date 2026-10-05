@@ -29,9 +29,11 @@ export function identificarMateriaCurso(texto: string): string | undefined {
 
 export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: string): CursoImportado {
   if (/study\s*pro/i.test(captura.titulo || "") || /^https?:\/\/pmpe-study-pro[^/]*\/cursos(?:[/?#]|$)/i.test(captura.urlOrigem || "")) {
-    throw new Error("Este arquivo foi capturado no próprio Study Pro. Execute o Capturador V3 na página principal da plataforma do curso, onde estão os cartões das matérias.");
+    throw new Error("Este arquivo foi capturado no próprio Study Pro. Execute o capturador na plataforma do curso, não aqui.");
   }
-  if (captura.versao === 3 && captura.paginas?.length) return organizarPaginasCapturadas(captura, nomeInformado);
+  if ((captura.versao === 3 || captura.versao === 4) && captura.paginas?.length) {
+    return organizarPaginasCapturadas(captura, nomeInformado);
+  }
   const cartoes = captura.itens.filter((item) => /course-link/.test(`${item.classes || ""} ${item.containerKey || ""}`) && item.href && URL_CURSO.test(item.href));
   if (cartoes.length) {
     const quantidade = new Set(cartoes.map((item) => item.href?.split("/lessons/")[0])).size;
@@ -136,52 +138,219 @@ export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: str
 }
 
 function organizarPaginasCapturadas(captura: CapturaCurso, nomeInformado?: string): CursoImportado {
-  if (!captura.paginas || captura.paginas.length > 100) throw new Error("O JSON excedeu o limite de 100 matérias por importação.");
+  if (!captura.paginas || captura.paginas.length > 100) {
+    throw new Error("O JSON excedeu o limite de 100 matérias por importação.");
+  }
+
   const agora = new Date().toISOString();
   const nome = limparTexto(nomeInformado || captura.titulo || "Curso importado");
   const id = `curso-${slugCurso(nome)}-${agora.replace(/\D/g, "").slice(0, 14)}`;
   const materias: CursoMateria[] = [];
-  const relatorio = { origensEncontradas: 0, origensLidas: 0, pendencias: [] as Array<{ nome: string; motivo: string }>, avisos: captura.avisos ?? [], cancelada: Boolean(captura.cancelada) };
+  const relatorio = {
+    origensEncontradas: 0,
+    origensLidas: 0,
+    pendencias: [] as Array<{ nome: string; motivo: string }>,
+    avisos: captura.avisos ?? [],
+    cancelada: Boolean(captura.cancelada),
+  };
   const paginasVistas = new Set<string>();
   const origem = normalizarUrl(captura.urlOrigem);
-  if (!origem) throw new Error("A captura não informa a página de origem válida.");
+
+  if (!origem) {
+    throw new Error("A captura não informa a página de origem válida.");
+  }
+
   for (const pagina of captura.paginas) {
     const url = normalizarUrl(pagina.url);
     const nomePagina = limparTexto(pagina.nome) || "Matéria sem nome";
-    const caminhoCurso = url && new URL(url).pathname.match(/^\/courses\/[^/]+\//)?.[0];
-    if (!url || !caminhoCurso || new URL(url).origin !== new URL(origem).origin) {
-      relatorio.origensEncontradas++;
-      relatorio.pendencias.push({ nome: nomePagina, motivo: "Página de matéria inválida ou de outra plataforma." });
+    relatorio.origensEncontradas += 1;
+
+    if (!url || new URL(url).origin !== new URL(origem).origin) {
+      relatorio.pendencias.push({
+        nome: nomePagina,
+        motivo: "Página de matéria inválida ou de outra plataforma.",
+      });
       continue;
     }
-    const chave = new URL(url).origin + caminhoCurso;
-    if (paginasVistas.has(chave)) continue;
-    paginasVistas.add(chave);
-    relatorio.origensEncontradas++;
-    const materia: CursoMateria = { id: `${id}-materia-${materias.length + 1}`, nome: nomePagina, origemUrl: url, ordem: materias.length + 1, modulos: [] };
+
+    const formato = identificarFormatoPaginaCurso(url);
+    if (!formato) {
+      relatorio.pendencias.push({
+        nome: nomePagina,
+        motivo: "A página não corresponde a uma grade Tutor LMS ou a um módulo RDC compatível.",
+      });
+      continue;
+    }
+
+    if (paginasVistas.has(formato.chavePagina)) continue;
+    paginasVistas.add(formato.chavePagina);
+
+    const materia: CursoMateria = {
+      id: `${id}-materia-${materias.length + 1}`,
+      nome: nomePagina,
+      origemUrl: url,
+      ordem: materias.length + 1,
+      modulos: [],
+    };
+
     const vistas = new Set<string>();
     let invalidas = 0;
+
     for (const modulo of pagina.modulos.slice(0, 300)) {
       const idModulo = `${materia.id}-modulo-${materia.modulos.length + 1}`;
       const aulas: CursoAula[] = [];
+
       for (const aula of modulo.aulas.slice(0, 5000)) {
         const href = normalizarUrl(aula.url);
         const titulo = limparTexto(aula.nome);
-        if (!href || !titulo || /^\d+(?:[.,]\d+)?\s*%$/.test(titulo) || new URL(href).origin !== new URL(url).origin || !new URL(href).pathname.startsWith(`${caminhoCurso}lessons/`)) { invalidas++; continue; }
+
+        if (
+          !href ||
+          !titulo ||
+          /^\d+(?:[.,]\d+)?\s*%$/.test(titulo) ||
+          !formato.aulaValida(href)
+        ) {
+          invalidas += 1;
+          continue;
+        }
+
         if (vistas.has(href)) continue;
         vistas.add(href);
-        aulas.push({ id: `${idModulo}-aula-${aulas.length + 1}`, nome: titulo.slice(0, 220), url: href, ordem: aulas.length + 1 });
+
+        const materiais = (aula.materiais ?? [])
+          .slice(0, 100)
+          .flatMap((material, indice) => {
+            const materialUrl = normalizarUrl(material.url);
+            const materialNome = limparTexto(material.nome) || `Material ${indice + 1}`;
+            if (!materialUrl) return [];
+
+            return [{
+              id: `${idModulo}-aula-${aulas.length + 1}-material-${indice + 1}`,
+              nome: materialNome.slice(0, 220),
+              tipo: normalizarTipoMaterialCurso(material.tipo, materialNome, materialUrl),
+              url: materialUrl,
+            }];
+          })
+          .filter(
+            (material, indice, lista) =>
+              lista.findIndex((item) => item.url === material.url) === indice
+          );
+
+        aulas.push({
+          id: `${idModulo}-aula-${aulas.length + 1}`,
+          nome: titulo.slice(0, 220),
+          url: href,
+          ordem: aulas.length + 1,
+          materiais: materiais.length > 0 ? materiais : undefined,
+        });
       }
-      if (modulo.aulas.length > 5000) invalidas += modulo.aulas.length - 5000;
-      if (aulas.length) materia.modulos.push({ id: idModulo, nome: limparTexto(modulo.nome).slice(0, 160) || "Geral", ordem: materia.modulos.length + 1, aulas });
+
+      if (modulo.aulas.length > 5000) {
+        invalidas += modulo.aulas.length - 5000;
+      }
+
+      if (aulas.length) {
+        materia.modulos.push({
+          id: idModulo,
+          nome: limparTexto(modulo.nome).slice(0, 160) || "Geral",
+          ordem: materia.modulos.length + 1,
+          aulas,
+        });
+      }
     }
-    if (pagina.modulos.length > 300) invalidas++;
+
+    if (pagina.modulos.length > 300) invalidas += 1;
     if (materia.modulos.length) materias.push(materia);
-    if (pagina.estado === "lida" && materia.modulos.length && !invalidas) relatorio.origensLidas++;
-    else relatorio.pendencias.push({ nome: nomePagina, motivo: [pagina.motivo || "Grade incompleta ou sem aulas acessíveis.", invalidas ? `${invalidas} item(ns) inválido(s) ou acima do limite ignorado(s).` : ""].filter(Boolean).join(" ") });
+
+    if (pagina.estado === "lida" && materia.modulos.length && !invalidas) {
+      relatorio.origensLidas += 1;
+    } else {
+      relatorio.pendencias.push({
+        nome: nomePagina,
+        motivo: [
+          pagina.motivo || "Grade incompleta ou sem aulas acessíveis.",
+          invalidas
+            ? `${invalidas} item(ns) inválido(s) ou acima do limite ignorado(s).`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      });
+    }
   }
-  if (!materias.length) throw new Error(`Nenhuma grade pôde ser importada. ${relatorio.pendencias.slice(0, 3).map(p => `${p.nome}: ${p.motivo}`).join(" ")}`);
-  return normalizarClassificacaoCurso({ id, nome, origem: "captura-json", urlOrigem: origem, criadoEm: agora, atualizadoEm: agora, materias, relatorioCaptura: relatorio });
+
+  if (!materias.length) {
+    throw new Error(
+      `Nenhuma grade pôde ser importada. ${relatorio.pendencias
+        .slice(0, 3)
+        .map((p) => `${p.nome}: ${p.motivo}`)
+        .join(" ")}`
+    );
+  }
+
+  return normalizarClassificacaoCurso({
+    id,
+    nome,
+    origem: "captura-json",
+    urlOrigem: origem,
+    criadoEm: agora,
+    atualizadoEm: agora,
+    materias,
+    relatorioCaptura: relatorio,
+  });
+}
+
+function identificarFormatoPaginaCurso(url: string) {
+  const pagina = new URL(url);
+  const tutor = pagina.pathname.match(/^\/courses\/[^/]+\//i);
+
+  if (tutor) {
+    const caminhoCurso = tutor[0];
+    return {
+      chavePagina: pagina.origin + caminhoCurso,
+      aulaValida(href: string) {
+        const aula = new URL(href);
+        return (
+          aula.origin === pagina.origin &&
+          aula.pathname.startsWith(`${caminhoCurso}lessons/`)
+        );
+      },
+    };
+  }
+
+  const rdc = pagina.pathname.match(/^\/m\/([^/]+)\/modulo\/(\d+)\/?$/i);
+  if (rdc) {
+    const caminhoModulo = pagina.pathname.replace(/\/$/, "");
+    return {
+      chavePagina: pagina.origin + caminhoModulo,
+      aulaValida(href: string) {
+        const aula = new URL(href);
+        return (
+          aula.origin === pagina.origin &&
+          aula.pathname.replace(/\/$/, "") === caminhoModulo &&
+          aula.searchParams.has("aula")
+        );
+      },
+    };
+  }
+
+  return undefined;
+}
+
+function normalizarTipoMaterialCurso(
+  tipo: string,
+  nome: string,
+  url: string
+): "pdf" | "download" | "material" | "link" {
+  if (
+    tipo === "pdf" ||
+    tipo === "download" ||
+    tipo === "material" ||
+    tipo === "link"
+  ) {
+    return tipo;
+  }
+  return tipoMaterial(nome, url);
 }
 
 /** Same repair for new files and old catalogs; IDs and lesson objects survive. */
@@ -238,16 +407,74 @@ export function mesclarCursoRecebido(cursos: CursoImportado[], recebido: CursoIm
       let moduloDestino = destino.modulos.find(m => slugCurso(m.nome) === slugCurso(modulo.nome));
       for (const aula of modulo.aulas) {
         const url = normalizarUrl(aula.url);
-        if (url && urls.has(url)) continue;
-        if (!url && moduloDestino?.aulas.some(a => !a.url && slugCurso(a.nome) === slugCurso(aula.nome))) continue;
-        if (!moduloDestino) { moduloDestino = { ...modulo, id: `${destino.id}-modulo-novo-${destino.modulos.length + 1}`, aulas: [] }; destino.modulos.push(moduloDestino); }
-        moduloDestino.aulas.push({ ...aula, id: `${moduloDestino.id}-aula-nova-${moduloDestino.aulas.length + 1}`, ordem: moduloDestino.aulas.length + 1 });
+        const existentePorUrl = url
+          ? resultado.materias
+              .flatMap((item) => item.modulos)
+              .flatMap((item) => item.aulas)
+              .find((item) => normalizarUrl(item.url) === url)
+          : undefined;
+        const existentePorNome = !url
+          ? moduloDestino?.aulas.find(
+              (item) =>
+                !item.url &&
+                slugCurso(item.nome) === slugCurso(aula.nome)
+            )
+          : undefined;
+        const existente = existentePorUrl ?? existentePorNome;
+
+        if (existente) {
+          const materiaisMesclados = mesclarMateriaisCurso(
+            existente.materiais,
+            aula.materiais
+          );
+          if (materiaisMesclados) {
+            existente.materiais = materiaisMesclados;
+          }
+          continue;
+        }
+
+        if (!moduloDestino) {
+          moduloDestino = {
+            ...modulo,
+            id: `${destino.id}-modulo-novo-${destino.modulos.length + 1}`,
+            aulas: [],
+          };
+          destino.modulos.push(moduloDestino);
+        }
+
+        moduloDestino.aulas.push({
+          ...aula,
+          id: `${moduloDestino.id}-aula-nova-${moduloDestino.aulas.length + 1}`,
+          ordem: moduloDestino.aulas.length + 1,
+        });
         if (url) urls.add(url);
       }
     }
   }
   return { ...resultado, atualizadoEm: novo.atualizadoEm, relatorioCaptura: novo.relatorioCaptura ?? resultado.relatorioCaptura,
     materias: resultado.materias.filter(m => m.modulos.length).map((m, i) => ({ ...m, ordem: i + 1 })) };
+}
+
+function mesclarMateriaisCurso(
+  atuais: CursoAula["materiais"],
+  recebidos: CursoAula["materiais"]
+) {
+  const resultado = [...(atuais ?? [])];
+
+  for (const material of recebidos ?? []) {
+    const url = normalizarUrl(material.url);
+    const existe = resultado.some(
+      (item) =>
+        (url && normalizarUrl(item.url) === url) ||
+        item.id === material.id
+    );
+
+    if (!existe) {
+      resultado.push(material);
+    }
+  }
+
+  return resultado.length > 0 ? resultado : undefined;
 }
 
 type ExtrasCursos = {
@@ -475,10 +702,59 @@ function converterModuloCurso(curso: CursoImportado, _materia: CursoMateria, mod
     const concluido = salvo?.aula?.concluida ?? registro?.concluido ?? aula.concluida ?? false;
     const concluidoEm = salvo?.aula?.concluidaEm ?? registro?.concluidoEm ?? aula.concluidaEm ?? aula.concluidoEm;
     const id = `curso:${curso.id}:aula:${aula.id}`;
-    return { ...registro, id, nome: registro?.nome ?? aula.nome, concluido, concluidoEm, prioridade: registro?.prioridade ?? "media", aula: aula.url,
-      aulas: registro?.aulas?.length ? registro.aulas : [{ id: `${id}:link`, nome: aula.nome, url: aula.url, ordem: 1, concluida: concluido, concluidaEm: concluidoEm }] };
+    const materiaisCapturados = (aula.materiais ?? []).map(
+      (material, indice) => ({
+        id: `${id}:material:${indice + 1}`,
+        tipo: material.tipo === "pdf" ? "pdf" as const : "link" as const,
+        nome: material.nome,
+        url: material.url,
+        criadoEm: curso.atualizadoEm || curso.criadoEm,
+      })
+    );
+    const materiais = [
+      ...(registro?.materiais ?? []),
+      ...materiaisCapturados,
+    ].filter(
+      (material, indice, lista) =>
+        lista.findIndex(
+          (item) =>
+            item.id === material.id ||
+            normalizarUrl(item.url) === normalizarUrl(material.url)
+        ) === indice
+    );
+    const pdfCapturado = materiais.find(
+      (material) => material.tipo === "pdf"
+    )?.url;
+
+    return {
+      ...registro,
+      id,
+      nome: registro?.nome ?? aula.nome,
+      concluido,
+      concluidoEm,
+      prioridade: registro?.prioridade ?? "media",
+      aula: aula.url,
+      pdf: registro?.pdf ?? pdfCapturado,
+      materiais: materiais.length > 0 ? materiais : undefined,
+      aulas: registro?.aulas?.length
+        ? registro.aulas
+        : [{
+            id: `${id}:link`,
+            nome: aula.nome,
+            url: aula.url,
+            ordem: 1,
+            concluida: concluido,
+            concluidaEm: concluidoEm,
+          }],
+    };
   });
-  return { id: `curso:${curso.id}:modulo:${modulo.id}`, nome: `${curso.nome} · ${modulo.nome}`, ordem: modulo.ordem, assuntos };
+
+  return {
+    id: `curso:${curso.id}:modulo:${modulo.id}`,
+    nome: `${curso.nome} · ${modulo.nome}`,
+    ordem: modulo.ordem,
+    assuntos,
+  };
 }
 
 function removerModulosDeCursos(materias: Materia[]): Materia[] {
@@ -540,13 +816,17 @@ function removerExtensao(nome: string) { return nome.replace(/\.(html?|mhtml|mht
 function ehCapturaCurso(valor: unknown): valor is CapturaCurso {
   if (!valor || typeof valor !== "object") return false;
   const v = valor as Partial<CapturaCurso>;
-  if (![1, 2, 3].includes(v.versao ?? 0) || !Array.isArray(v.itens) || !v.itens.every(i => i && typeof i.texto === "string")) return false;
+  if (![1, 2, 3, 4].includes(v.versao ?? 0) || !Array.isArray(v.itens) || !v.itens.every(i => i && typeof i.texto === "string")) return false;
   if (v.avisos !== undefined && (!Array.isArray(v.avisos) || !v.avisos.every(a => typeof a === "string"))) return false;
-  if (v.versao === 3 && v.paginas !== undefined) {
+  if ((v.versao === 3 || v.versao === 4) && v.paginas !== undefined) {
     if (!Array.isArray(v.paginas)) return false;
+    const tiposMateriais = new Set(["pdf", "download", "material", "link"]);
     const validas = v.paginas.every(p => p && typeof p.nome === "string" && typeof p.url === "string"
       && Array.isArray(p.modulos) && p.modulos.every(m => m && typeof m.nome === "string"
-        && Array.isArray(m.aulas) && m.aulas.every(a => a && typeof a.nome === "string" && typeof a.url === "string")));
+        && Array.isArray(m.aulas) && m.aulas.every(a => a && typeof a.nome === "string" && typeof a.url === "string"
+          && (a.materiais === undefined || (Array.isArray(a.materiais) && a.materiais.every(material =>
+            material && typeof material.nome === "string" && typeof material.url === "string" && tiposMateriais.has(material.tipo)
+          ))))));
     if (!validas) return false;
   }
   return true;
