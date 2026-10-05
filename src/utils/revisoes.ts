@@ -131,6 +131,28 @@ export function criarProximaRevisao(
   };
 }
 
+export function preverProximaRevisaoPorDesempenho(params: {
+  revisao: Revisao;
+  desempenho: NonNullable<Revisao["desempenho"]>;
+  revisoesExistentes?: Revisao[];
+  limiteDiario?: number;
+  agora?: Date;
+}): Revisao | null {
+  const agora = params.agora ?? new Date();
+  return criarProximaRevisao(
+    {
+      ...params.revisao,
+      desempenho: params.desempenho,
+      concluida: true,
+      dataConclusao: agora.toISOString(),
+    },
+    params.revisoesExistentes ?? [params.revisao],
+    params.limiteDiario ?? 0,
+    agora,
+    "previsao-proxima-revisao"
+  );
+}
+
 export function avaliarRevisaoPorQuestoes(total?: number, acertos?: number): NonNullable<Revisao["desempenho"]> | null {
   if (typeof total !== "number" || typeof acertos !== "number" ||
     !Number.isInteger(total) || !Number.isInteger(acertos) || total <= 0 || acertos < 0 || acertos > total) return null;
@@ -185,8 +207,24 @@ export function concluirRevisaoNaLista(params: {
   const atual = revisoes.find((item) => item.id === revisaoId);
   if (!atual || atual.concluida || (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
   const concluida: Revisao = {
-    ...atual, concluida: true, desempenho, dataConclusao: agora.toISOString(),
-    ...(sessao ? { sessaoId: sessao.id, certas: sessao.quantidadeAcertos, erradas: sessao.quantidadeErros } : {}),
+    ...atual,
+    concluida: true,
+    desempenho,
+    dataConclusao: agora.toISOString(),
+    ...(sessao
+      ? {
+          sessaoId: sessao.id,
+          certas: sessao.quantidadeAcertos,
+          erradas: sessao.quantidadeErros,
+        }
+      : {
+          // Avaliação manual não é uma nova medição objetiva. Limpar o placar
+          // evita que a próxima revisão reutilize acertos/erros de uma sessão
+          // anterior e recomende teoria/questões com base em uma nota velha.
+          sessaoId: undefined,
+          certas: undefined,
+          erradas: undefined,
+        }),
   };
   const atualizadas = revisoes.map((item) => item.id === revisaoId ? concluida : item);
   const proxima = criarProximaRevisao(concluida, atualizadas, limiteDiario, agora, proximaId);
