@@ -110,6 +110,43 @@ export function listarBackupsAutomaticosLocais(
  * Reduz apenas os backups automáticos quando a cota do localStorage fica
  * pressionada. Nunca apaga o estado operacional atual nem dados da nuvem.
  */
+export function limparBackupsAutomaticosDeOutrasContas(
+  usuarioIdAtual: string
+): number {
+  if (typeof window === "undefined") return 0;
+
+  let removidos = 0;
+  const prefixo = `${PREFIXO_CHAVE}:`;
+  const chaveAtual = chaveDoUsuario(usuarioIdAtual);
+  const chaves: string[] = [];
+
+  for (let indice = 0; indice < window.localStorage.length; indice += 1) {
+    const chave = window.localStorage.key(indice);
+    if (
+      chave &&
+      chave.startsWith(prefixo) &&
+      chave !== chaveAtual
+    ) {
+      chaves.push(chave);
+    }
+  }
+
+  chaves.forEach((chave) => {
+    try {
+      window.localStorage.removeItem(chave);
+      removidos += 1;
+    } catch {
+      // Limpeza best-effort: nunca derruba o estado operacional atual.
+    }
+  });
+
+  if (removidos > 0) {
+    window.dispatchEvent(new Event("pmpe-backup-atualizado"));
+  }
+
+  return removidos;
+}
+
 export function reduzirBackupsAutomaticosLocais(
   usuarioId: string,
   limite: number
