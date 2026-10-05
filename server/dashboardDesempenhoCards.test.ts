@@ -12,7 +12,7 @@ test("dashboard oficial usa cards 2D no lugar do gráfico 3D", async () => {
   assert.match(codigo, /dashboard-materia-card/);
   assert.match(codigo, /dashboard-geral-cards-titleline/);
   assert.match(codigo, /<strong>\{aproveitamento\}%<\/strong>/);
-  assert.match(codigo, /aria-label=\{\`Abrir desempenho de \$\{item\.materia\}\`\}/);
+  assert.match(codigo, /aria-label=\{`Abrir desempenho de \$\{item\.materia\}`\}/);
   assert.match(codigo, /onClick=\{onDetalhes\}/);
   assert.match(codigo, /Foque nos pontos de atenção/);
   assert.match(codigo, /Recomendação/);
