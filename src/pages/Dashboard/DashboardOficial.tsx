@@ -136,7 +136,10 @@ function DesempenhoGeralCards({
       <header className="dashboard-geral-donut-header">
         <div>
           <span className="dashboard-pro-kicker">DESEMPENHO</span>
-          <h2>Desempenho geral</h2>
+          <div className="dashboard-geral-cards-titleline">
+            <h2>Desempenho geral</h2>
+            <strong>{aproveitamento}%</strong>
+          </div>
           <p>Seu esforço, traduzido em evolução.</p>
         </div>
         <button type="button" onClick={onDetalhes}>Ver detalhes ↗</button>
@@ -144,11 +147,6 @@ function DesempenhoGeralCards({
 
       <div className="dashboard-geral-cards-content">
         <section className="dashboard-cards-area" aria-label="Desempenho por matéria">
-          <div className="dashboard-cards-overview">
-            <strong>{aproveitamento}%</strong>
-            <span>aproveitamento geral</span>
-          </div>
-
           {materias.length > 0 ? (
             <div className="dashboard-cards-grid">
               {materias.map((item, indice) => {
@@ -156,10 +154,13 @@ function DesempenhoGeralCards({
                 const Icone = obterIconeMateria(item.materia);
 
                 return (
-                  <article
+                  <button
+                    type="button"
                     className={`dashboard-materia-card dashboard-materia-tone-${indice + 1}`}
                     key={item.materia}
                     title={`${item.materia}: ${item.percentual}% (${item.total} questões)`}
+                    aria-label={`Abrir desempenho de ${item.materia}`}
+                    onClick={onDetalhes}
                   >
                     <div className="dashboard-materia-card-top">
                       <span className="dashboard-materia-icon" aria-hidden="true">
@@ -180,7 +181,7 @@ function DesempenhoGeralCards({
                     >
                       <span style={{ width: `${Math.max(0, Math.min(100, item.percentual))}%` }} />
                     </div>
-                  </article>
+                  </button>
                 );
               })}
             </div>
