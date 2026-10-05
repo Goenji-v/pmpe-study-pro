@@ -22,6 +22,16 @@ export default function AvisoArmazenamento() {
   const pendente = destino !== "local" && statusNuvem !== "sincronizado";
 
   useEffect(() => {
+    if (destino === "local" || statusNuvem !== "sincronizado") return;
+
+    // Quando a nuvem já confirmou a alteração, tentamos devolver caches
+    // temporários ao localStorage. Mesmo que o navegador continue limitando
+    // o armazenamento local, não há motivo para manter um alerta de risco:
+    // a cópia autoritativa já está preservada no Supabase.
+    repetirGravacoesLocais(usuarioId);
+  }, [destino, statusNuvem, usuarioId]);
+
+  useEffect(() => {
     if (!pendente) return;
     const protegerSaida = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -31,7 +41,7 @@ export default function AvisoArmazenamento() {
     return () => window.removeEventListener("beforeunload", protegerSaida);
   }, [pendente]);
 
-  if (destino === "local") return null;
+  if (!pendente) return null;
 
   async function tentarSalvar() {
     setTentando(true);
@@ -50,9 +60,7 @@ export default function AvisoArmazenamento() {
     <p>{destino === "memoria"
       ? "O navegador não conseguiu gravar a cópia local. As alterações continuam na memória desta página."
       : "A cópia local está temporariamente nesta aba e pode desaparecer quando ela for fechada."}
-      {statusNuvem === "sincronizado"
-        ? " A sincronização com a nuvem está confirmada."
-        : " Não feche nem recarregue antes de confirmar a sincronização. Se continuar sem conexão, exporte um backup."}
+      {" Não feche nem recarregue antes de confirmar a sincronização. Se continuar sem conexão, exporte um backup."}
     </p>
     <button type="button" onClick={() => void tentarSalvar()} disabled={tentando}>
       {tentando ? "Tentando salvar…" : "Tentar salvar novamente"}
