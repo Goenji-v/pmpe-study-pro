@@ -563,6 +563,14 @@
   font-size: 18px;
 }
 
+.simulado-pdf-status-salvamento {
+  max-width: 360px;
+  margin-top: 4px;
+  color: #9fb2c7;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .simulado-pdf-workspace.resultado > .analise-simulado-study {
   max-width: 1500px;
   margin-inline: auto;
