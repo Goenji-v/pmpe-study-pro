@@ -19,6 +19,7 @@ import {
 } from "../../utils/revisoes";
 import type { Materia, Revisao } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
+import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
 
 type RevisaoIA = {
@@ -188,18 +189,42 @@ export default function Revisoes() {
   function obterDadosCanonicos(revisao: Revisao) {
     const referencia = localizarReferenciaCanonica(materias, {
       materia: revisao.materia,
+      materiaId: revisao.materiaId,
       assunto: revisao.assunto,
+      assuntoId: revisao.assuntoId,
+      modulo: revisao.modulo,
+      moduloId: revisao.moduloId,
     });
 
+    const materiaCanonica =
+      referencia?.materia ??
+      materias.find(
+        (item) =>
+          item.id === revisao.materiaId ||
+          item.idsLegados?.includes(revisao.materiaId) ||
+          normalizar(item.nome) === normalizar(revisao.materia) ||
+          materiasEquivalentes(item.nome, revisao.materia)
+      );
+
+    const materiaMudou =
+      Boolean(materiaCanonica) &&
+      materiaCanonica?.id !== revisao.materiaId;
+
     return {
-      materia: referencia?.materia.nome ?? revisao.materia,
-      materiaId: referencia?.materia.id ?? revisao.materiaId,
+      materia: referencia?.materia.nome ?? materiaCanonica?.nome ?? revisao.materia,
+      materiaId: referencia?.materia.id ?? materiaCanonica?.id ?? revisao.materiaId,
       modulo:
         referencia?.modulo.nome ??
-        (revisao.modulo && revisao.modulo !== "Geral" ? revisao.modulo : undefined),
-      moduloId: referencia?.modulo.id ?? revisao.moduloId,
+        (!materiaMudou && revisao.modulo && revisao.modulo !== "Geral"
+          ? revisao.modulo
+          : undefined),
+      moduloId:
+        referencia?.modulo.id ??
+        (!materiaMudou ? revisao.moduloId : undefined),
       assunto: referencia?.assunto.nome ?? revisao.assunto,
-      assuntoId: referencia?.assunto.id ?? revisao.assuntoId,
+      assuntoId:
+        referencia?.assunto.id ??
+        (!materiaMudou ? revisao.assuntoId : undefined),
     };
   }
 
