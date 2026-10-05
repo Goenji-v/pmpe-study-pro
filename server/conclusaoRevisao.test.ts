@@ -259,3 +259,27 @@ test("conclusão manual não reaproveita nota antiga na próxima revisão", () =
   assert.equal(concluida.certas, undefined);
   assert.equal(concluida.erradas, undefined);
 });
+
+
+test("resultado medido fora do cronômetro é preservado na próxima revisão", () => {
+  const resultado = concluirRevisaoNaLista({
+    ...parametros,
+    sessao: undefined,
+    desempenho: "media",
+    resultadoMedido: {
+      certas: 6,
+      erradas: 4,
+    },
+    revisoes: [revisao],
+  });
+
+  const proxima = resultado.find((item) => !item.concluida)!;
+  const concluida = resultado.find((item) => item.id === revisao.id)!;
+
+  assert.equal(concluida.certas, 6);
+  assert.equal(concluida.erradas, 4);
+  assert.equal(proxima.certas, 6);
+  assert.equal(proxima.erradas, 4);
+  assert.equal(proxima.etapa, 2);
+  assert.equal(new Date(proxima.dataPrevista).getDate(), 5);
+});
