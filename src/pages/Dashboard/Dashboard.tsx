@@ -493,11 +493,6 @@ function iniciarProximaAulaPortugues() {
           <h1>{saudacao}, {nomeCurto}</h1>
           <p>Vamos avançar na missão de hoje.</p>
         </div>
-        <div className="dashboard-pro-header-right">
-          <button type="button" className="dashboard-pro-search" onClick={() => navigate("/buscar", { state: { focoBusca: true } })}>⌕ <span>Buscar conteúdos, questões...</span></button>
-          <button type="button" className="dashboard-pro-icon" aria-label="Notificações">♧<i /></button>
-          <div className="dashboard-pro-date">▣ {formatarDataLongaDashboard(new Date())}</div>
-        </div>
       </header>
 
       <section className="dashboard-pro-hero">
@@ -794,9 +789,6 @@ function obterSaudacaoDashboard() {
   return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
 }
 
-function formatarDataLongaDashboard(data: Date) {
-  return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
-}
 
 type ProximaMissaoCardProps = {
   proxima:

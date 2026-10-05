@@ -103,30 +103,61 @@
   white-space: nowrap;
 }
 
+.header-search {
+  min-width: 220px;
+  max-width: 420px;
+  height: 44px;
+  flex: 0 1 390px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid #2a3a55;
+  border-radius: 12px;
+  background: #0b1628;
+  color: #b9c7da;
+  text-align: left;
+  cursor: pointer;
+}
+
+.header-search:hover {
+  border-color: rgba(96, 165, 250, .52);
+  background: #0d1a2e;
+}
+
+.header-search span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.header-search:focus-visible {
+  outline: 3px solid rgba(96, 165, 250, .35);
+  outline-offset: 2px;
+}
+
 .header-acoes {
   min-width: 0;
-
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 12px;
 }
 
 .header-notification-button {
-  display: none;
-}
-
-/* No desktop, o atalho de notificações do dashboard usa um sino claro. */
-@media (min-width: 601px) {
-  .dashboard-pro-header .dashboard-pro-icon[aria-label="Notificações"] {
-    font-size: 0;
-  }
-
-  .dashboard-pro-header .dashboard-pro-icon[aria-label="Notificações"]::before {
-    content: "🔔";
-    font-size: 18px;
-    line-height: 1;
-  }
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  cursor: pointer;
 }
 
 @media (max-width: 850px) {
@@ -135,8 +166,13 @@
     gap: 12px;
   }
 
+  .header-search {
+    min-width: 180px;
+    flex-basis: 260px;
+  }
+
   .header-acoes {
-    margin-left: auto;
+    margin-left: 0;
   }
 }
 
@@ -152,8 +188,18 @@
     display: none;
   }
 
+  .header-search {
+    min-width: 0;
+    max-width: none;
+    height: 42px;
+    flex: 1 1 160px;
+    margin-left: 0;
+    padding-inline: 12px;
+  }
+
   .header-acoes {
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
     margin-left: 0;
     display: flex;
     align-items: center;
@@ -185,18 +231,20 @@
     z-index: 2;
     width: 42px;
     height: 42px;
-    display: grid !important;
-    place-items: center;
-    padding: 0;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 14px;
-    background: rgba(15, 23, 42, 0.72);
-    color: #f8fafc;
     font-size: 18px;
     line-height: 1;
   }
+}
 
-  .dashboard-pro-header .dashboard-pro-icon[aria-label="Notificações"] {
+@media (max-width: 430px) {
+  .header-search {
+    width: 42px;
+    flex: 0 0 42px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .header-search span {
     display: none;
   }
 }
