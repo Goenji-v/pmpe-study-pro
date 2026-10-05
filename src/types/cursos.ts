@@ -19,7 +19,7 @@ export type ItemCapturaCurso = {
 };
 
 export type CapturaCurso = {
-  versao: 1 | 2 | 3;
+  versao: 1 | 2 | 3 | 4;
   titulo?: string;
   urlOrigem?: string;
   capturadoEm?: string;
@@ -34,7 +34,18 @@ export type PaginaCapturaCurso = {
   url: string;
   estado: "lida" | "parcial" | "pendente";
   motivo?: string;
-  modulos: Array<{ nome: string; aulas: Array<{ nome: string; url: string }> }>;
+  modulos: Array<{
+    nome: string;
+    aulas: Array<{
+      nome: string;
+      url: string;
+      materiais?: Array<{
+        nome: string;
+        tipo: "pdf" | "download" | "material" | "link";
+        url: string;
+      }>;
+    }>;
+  }>;
 };
 
 export type RelatorioCapturaCurso = {
