@@ -144,6 +144,35 @@ test("libera backups automáticos antigos antes de falhar por cota do localStora
   removerWindow();
 });
 
+test("libera backups automáticos de outra conta antes de degradar para a sessão", t => {
+  const uid = "conta-atual";
+  const local = new StorageComCota(1350);
+  const sessao = new StorageComCota(5000);
+  instalarWindow(local, sessao);
+  t.after(removerWindow);
+
+  const chaveOutra = "pmpe:seguranca:backups-automaticos:conta-antiga";
+  local.preload(chaveOutra, JSON.stringify([{
+    id: "antigo",
+    usuarioId: "conta-antiga",
+    criadoEm: "2026-09-01T10:00:00.000Z",
+    motivo: "antes_rollback",
+    schemaVersionOrigem: 18,
+    schemaVersionDestino: 18,
+    checksum: "old",
+    dados: { carga: "z".repeat(650) },
+  }]));
+  local.preload("pmpe:conta-antiga:materias", "conteudo-operacional-preservado");
+
+  const chave = `pmpe:${uid}:configuracoes`;
+  const valor = JSON.stringify({ notas: "novo".repeat(120) });
+
+  assert.equal(salvarTextoComRecuperacaoDeCota(uid, chave, valor), "local");
+  assert.equal(local.getItem(chaveOutra), null);
+  assert.equal(local.getItem("pmpe:conta-antiga:materias"), "conteudo-operacional-preservado");
+  assert.equal(sessao.getItem(chave), null);
+});
+
 test("usa sessionStorage como última defesa quando o snapshot não cabe no localStorage", () => {
   const usuarioId = "usuario-session";
   const local = new StorageComCota(120);

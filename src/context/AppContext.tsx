@@ -1811,7 +1811,45 @@ function EstadoDaConta({
   
         if (pendente) {
           const estadoNuvem = await carregarEstadoDaNuvem(usuario.id);
-          if (estadoNuvem && houveReinicioDaConta(pendente.estado.configuracoes, estadoNuvem.configuracoes)) {
+
+          if (
+            estadoNuvem &&
+            deveAplicarMigracaoEstruturalRemota(
+              pendente.estado,
+              estadoNuvem
+            )
+          ) {
+            try {
+              criarBackupAutomaticoLocal(
+                usuario.id,
+                pendente.estado,
+                "antes_resolucao_conflito"
+              );
+            } catch (erroBackupLocal) {
+              console.warn(
+                "Backup local da migração remota indisponível; preservando as duas versões no Supabase:",
+                erroBackupLocal
+              );
+            }
+
+            await registrarBackupConflitoNaNuvem({
+              usuarioId: usuario.id,
+              estadoLocal: pendente.estado,
+              estadoNuvem,
+            });
+
+            aplicarEstadoDaNuvem(estadoNuvem);
+            confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
+            return;
+          }
+
+          if (
+            estadoNuvem &&
+            houveReinicioDaConta(
+              pendente.estado.configuracoes,
+              estadoNuvem.configuracoes
+            )
+          ) {
             aplicarEstadoDaNuvem(estadoNuvem);
             confirmarSincronizacaoLocal(usuario.id, estadoNuvem);
             return;
