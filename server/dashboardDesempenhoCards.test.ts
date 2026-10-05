@@ -10,6 +10,10 @@ test("dashboard oficial usa cards 2D no lugar do gráfico 3D", async () => {
   assert.match(codigo, /DesempenhoGeralCards/);
   assert.match(codigo, /dashboard-cards-grid/);
   assert.match(codigo, /dashboard-materia-card/);
+  assert.match(codigo, /dashboard-geral-cards-titleline/);
+  assert.match(codigo, /<strong>\{aproveitamento\}%<\/strong>/);
+  assert.match(codigo, /aria-label=\{\`Abrir desempenho de \$\{item\.materia\}\`\}/);
+  assert.match(codigo, /onClick=\{onDetalhes\}/);
   assert.match(codigo, /Foque nos pontos de atenção/);
   assert.match(codigo, /Recomendação/);
   assert.doesNotMatch(codigo, /DesempenhoGeral3D/);
@@ -17,6 +21,8 @@ test("dashboard oficial usa cards 2D no lugar do gráfico 3D", async () => {
 
   assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /dashboard-materia-progress/);
+  assert.match(css, /min-height: 118px/);
+  assert.match(css, /cursor: pointer/);
   assert.match(css, /dashboard-cards-insight/);
   assert.match(css, /@media \(max-width: 560px\)/);
 });
