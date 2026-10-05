@@ -7,6 +7,7 @@ import {
   criarPrimeiraRevisao,
   criarProximaRevisao,
   INTERVALOS_REVISAO_DIAS,
+  preverProximaRevisaoPorDesempenho,
   resolverAvaliacaoRevisao,
   sessaoExigeResultadoQuestoes,
 } from "../src/utils/revisoes.ts";
@@ -196,4 +197,65 @@ test("conclusão teórica usa avaliação manual sem inventar acertos", () => {
   assert.equal(resultado[1].certas, undefined);
   assert.equal(resultado[1].desempenho, "media");
   assert.equal(new Date(resultado[0].dataPrevista).getDate(), 5);
+});
+
+
+test("prévia adaptativa mostra a data exata para difícil, médio e fácil", () => {
+  const dificil = preverProximaRevisaoPorDesempenho({
+    revisao,
+    desempenho: "dificil",
+    agora,
+  });
+  const media = preverProximaRevisaoPorDesempenho({
+    revisao,
+    desempenho: "media",
+    agora,
+  });
+  const facil = preverProximaRevisaoPorDesempenho({
+    revisao,
+    desempenho: "facil",
+    agora,
+  });
+
+  assert.ok(dificil);
+  assert.ok(media);
+  assert.ok(facil);
+  assert.equal(dificil.etapa, 2);
+  assert.equal(media.etapa, 2);
+  assert.equal(facil.etapa, 3);
+  assert.equal(new Date(dificil.dataPrevista).getDate(), 3);
+  assert.equal(new Date(media.dataPrevista).getDate(), 5);
+  assert.equal(new Date(facil.dataPrevista).getDate(), 9);
+
+  assert.equal(
+    preverProximaRevisaoPorDesempenho({
+      revisao: { ...revisao, etapa: 5 },
+      desempenho: "facil",
+      agora,
+    }),
+    null
+  );
+});
+
+test("conclusão manual não reaproveita nota antiga na próxima revisão", () => {
+  const comNotaAntiga: Revisao = {
+    ...revisao,
+    certas: 2,
+    erradas: 8,
+  };
+
+  const resultado = concluirRevisaoNaLista({
+    ...parametros,
+    sessao: undefined,
+    desempenho: "dificil",
+    revisoes: [comNotaAntiga],
+  });
+
+  const proxima = resultado.find((item) => !item.concluida)!;
+  const concluida = resultado.find((item) => item.id === revisao.id)!;
+
+  assert.equal(proxima.certas, undefined);
+  assert.equal(proxima.erradas, undefined);
+  assert.equal(concluida.certas, undefined);
+  assert.equal(concluida.erradas, undefined);
 });
