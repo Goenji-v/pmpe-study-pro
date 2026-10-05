@@ -2005,28 +2005,24 @@ function EstadoDaConta({
                 return;
               }
           
-              const agora = new Date().toISOString();
               const revisaoNuvem = obterRevisaoSincronizacao(estadoNuvem);
-              const localParaSalvar: EstadoAppNuvem = {
-                ...estadoLocal,
-                syncRevision: revisaoNuvem + 1,
-                atualizadoEm: agora,
-                salvoEm: agora,
-              };
-          
-              validarIntegridadeEstado(localParaSalvar);
-          
-              // O backup completo das duas versões já foi confirmado no
-              // Supabase acima. Salvar diretamente evita uma segunda tentativa
-              // obrigatória de backup no localStorage, que pode estar sem cota
-              // e era o que fazia "Usar este aparelho" voltar ao conflito.
-              await salvarEstadoNaNuvem(
+
+              // As duas versões já foram preservadas no Supabase. A troca pela
+              // versão local usa CAS atômico para impedir que uma terceira
+              // gravação feita por outro aparelho seja sobrescrita no intervalo
+              // entre a leitura do conflito e a confirmação do usuário.
+              const localConfirmado =
+                await salvarEstadoComControleDeRevisao(
+                  usuario.id,
+                  estadoLocal,
+                  revisaoNuvem
+                );
+
+              aplicarEstadoDaNuvem(localConfirmado);
+              confirmarSincronizacaoLocal(
                 usuario.id,
-                localParaSalvar
+                localConfirmado
               );
-          
-              aplicarEstadoDaNuvem(localParaSalvar);
-              confirmarSincronizacaoLocal(usuario.id, localParaSalvar);
            
         } catch (erro) {
           const mensagem =
