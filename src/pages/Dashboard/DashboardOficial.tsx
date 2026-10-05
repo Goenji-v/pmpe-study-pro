@@ -114,7 +114,6 @@ function DesempenhoGeral3D({
   materias: Materia3D[];
   onDetalhes: () => void;
 }) {
-  const [giroAtivo, setGiroAtivo] = useState(true);
   const mensagem = obterMensagemDesempenho(aproveitamento, totalQuestoes);
 
   return (
@@ -135,18 +134,10 @@ function DesempenhoGeral3D({
               <strong>{aproveitamento}%</strong>
               <span>aproveitamento geral</span>
             </div>
-            <button
-              type="button"
-              className={giroAtivo ? "ativo" : ""}
-              onClick={() => setGiroAtivo((valor) => !valor)}
-              aria-pressed={giroAtivo}
-            >
-              ↻ {giroAtivo ? "Giro automático" : "Giro pausado"}
-            </button>
           </div>
 
           {materias.length > 0 ? (
-            <div className={`dashboard-3d-stage ${giroAtivo ? "girando" : "pausado"}`}>
+            <div className="dashboard-3d-stage dashboard-3d-stage-static">
               <div className="dashboard-3d-platform" aria-hidden="true" />
               <div className="dashboard-3d-ring" aria-hidden="true" />
               <div className="dashboard-3d-columns">

@@ -501,3 +501,26 @@
     transform: none;
   }
 }
+
+.dashboard-3d-stage-static,
+.dashboard-3d-stage-static .dashboard-3d-ring,
+.dashboard-3d-stage-static .dashboard-3d-platform,
+.dashboard-3d-stage-static .dashboard-3d-columns,
+.dashboard-3d-stage-static .dashboard-3d-bar,
+.dashboard-3d-stage-static .dashboard-3d-bar-wrap > strong {
+  animation: none !important;
+}
+
+.dashboard-3d-stage-static {
+  transform: none !important;
+  will-change: auto;
+}
+
+.dashboard-3d-stage-static .dashboard-3d-bar {
+  transform: none !important;
+}
+
+.dashboard-3d-stage-static .dashboard-3d-bar-wrap > strong {
+  opacity: 1;
+  transform: none;
+}
