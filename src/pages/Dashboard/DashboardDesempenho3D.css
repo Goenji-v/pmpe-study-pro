@@ -80,7 +80,9 @@
   perspective: 780px;
   perspective-origin: 50% 54%;
   transform-style: preserve-3d;
+  transform-origin: 50% 58%;
   isolation: isolate;
+  will-change: transform;
 }
 
 .dashboard-3d-platform,
@@ -137,13 +139,20 @@
   animation: dashboard3dRingSpin 6.5s linear infinite;
 }
 
+.dashboard-3d-stage.girando {
+  animation: dashboard3dSceneTurn 6.8s ease-in-out infinite;
+}
+
 .dashboard-3d-stage.girando .dashboard-3d-platform {
   animation: dashboard3dPlatformBreath 5.5s ease-in-out infinite;
 }
 
+.dashboard-3d-stage.pausado {
+  animation: none;
+}
+
 .dashboard-3d-stage.pausado .dashboard-3d-ring,
-.dashboard-3d-stage.pausado .dashboard-3d-platform,
-.dashboard-3d-stage.pausado .dashboard-3d-columns {
+.dashboard-3d-stage.pausado .dashboard-3d-platform {
   animation-play-state: paused;
 }
 
@@ -155,13 +164,7 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: end;
   gap: 8px;
-  transform-origin: 50% 84%;
   transform-style: preserve-3d;
-  will-change: transform;
-}
-
-.dashboard-3d-stage.girando .dashboard-3d-columns {
-  animation: dashboard3dOrbit 8s ease-in-out infinite;
 }
 
 .dashboard-3d-column {
@@ -372,18 +375,18 @@
   to { transform: perspective(620px) rotateX(68deg) rotateZ(360deg); }
 }
 
-@keyframes dashboard3dOrbit {
+@keyframes dashboard3dSceneTurn {
   0%, 100% {
-    transform: translateX(-8px) rotateY(-5deg) rotateX(.8deg) translateZ(0);
+    transform: translateX(-10px) rotateY(-7deg) rotateX(.8deg) scale(.995);
   }
   25% {
-    transform: translateX(0) rotateY(0deg) rotateX(0deg) translateZ(10px);
+    transform: translateX(0) rotateY(0deg) rotateX(0deg) scale(1.008);
   }
   50% {
-    transform: translateX(8px) rotateY(5deg) rotateX(-.8deg) translateZ(0);
+    transform: translateX(10px) rotateY(7deg) rotateX(-.8deg) scale(.995);
   }
   75% {
-    transform: translateX(0) rotateY(0deg) rotateX(0deg) translateZ(10px);
+    transform: translateX(0) rotateY(0deg) rotateX(0deg) scale(1.008);
   }
 }
 
@@ -398,12 +401,12 @@
   }
 }
 
-@keyframes dashboard3dOrbitMobile {
+@keyframes dashboard3dSceneTurnMobile {
   0%, 100% {
-    transform: translateX(-4px) rotateY(-2.4deg) translateZ(0);
+    transform: translateX(-5px) rotateY(-3deg) scale(.998);
   }
   50% {
-    transform: translateX(4px) rotateY(2.4deg) translateZ(5px);
+    transform: translateX(5px) rotateY(3deg) scale(1.004);
   }
 }
 
@@ -458,9 +461,9 @@
     min-width: 500px;
   }
 
-  .dashboard-3d-stage.girando .dashboard-3d-columns {
-    animation-name: dashboard3dOrbitMobile;
-    animation-duration: 7s;
+  .dashboard-3d-stage.girando {
+    animation-name: dashboard3dSceneTurnMobile;
+    animation-duration: 6.5s;
   }
 
   .dashboard-3d-stage.girando .dashboard-3d-ring {
@@ -480,6 +483,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .dashboard-3d-stage,
   .dashboard-3d-ring,
   .dashboard-3d-platform,
   .dashboard-3d-columns,
