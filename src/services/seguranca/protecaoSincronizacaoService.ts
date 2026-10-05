@@ -1,5 +1,6 @@
 import type { EstadoAppNuvem } from "../sincronizacaoService";
 import {
+  limparBackupsAutomaticosDeOutrasContas,
   reduzirBackupsAutomaticosLocais,
 } from "./backupAutomaticoService";
 
@@ -228,10 +229,18 @@ export function salvarTextoComRecuperacaoDeCota(
 
   if (ehErroDeCota(tentativaLocal.erro)) {
     // Backups automáticos são cópias de segurança e não podem impedir o dado
-    // operacional pendente de ser salvo. Primeiro preservamos apenas o mais
-    // recente; se ainda não couber, liberamos esse cache por completo.
+    // operacional pendente de ser salvo. Primeiro preservamos o backup mais
+    // recente da conta atual. Se a cota continuar cheia, limpamos somente
+    // backups automáticos de contas inativas neste navegador e, como último
+    // recurso, removemos também o backup automático atual. Estado operacional,
+    // fila de sincronização e dados de outras contas nunca são apagados.
     try { reduzirBackupsAutomaticosLocais(usuarioId, 1); } catch { /* Storage pode estar bloqueado. */ }
     tentativaLocal = tentarSalvar(local, chave, serializado);
+
+    if (!tentativaLocal.salvou && ehErroDeCota(tentativaLocal.erro)) {
+      try { limparBackupsAutomaticosDeOutrasContas(usuarioId); } catch { /* Não interromper o dado atual. */ }
+      tentativaLocal = tentarSalvar(local, chave, serializado);
+    }
 
     if (!tentativaLocal.salvou && ehErroDeCota(tentativaLocal.erro)) {
       try { reduzirBackupsAutomaticosLocais(usuarioId, 0); } catch { /* Não interromper o dado atual. */ }
