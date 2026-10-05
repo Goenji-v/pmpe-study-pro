@@ -423,10 +423,13 @@ export function mesclarCursoRecebido(cursos: CursoImportado[], recebido: CursoIm
         const existente = existentePorUrl ?? existentePorNome;
 
         if (existente) {
-          existente.materiais = mesclarMateriaisCurso(
+          const materiaisMesclados = mesclarMateriaisCurso(
             existente.materiais,
             aula.materiais
           );
+          if (materiaisMesclados) {
+            existente.materiais = materiaisMesclados;
+          }
           continue;
         }
 
@@ -741,7 +744,7 @@ function converterModuloCurso(curso: CursoImportado, _materia: CursoMateria, mod
             url: aula.url,
             ordem: 1,
             concluida: concluido,
-            concluidaEm,
+            concluidaEm: concluidoEm,
           }],
     };
   });
