@@ -29,9 +29,11 @@ export function identificarMateriaCurso(texto: string): string | undefined {
 
 export function organizarCapturaCurso(captura: CapturaCurso, nomeInformado?: string): CursoImportado {
   if (/study\s*pro/i.test(captura.titulo || "") || /^https?:\/\/pmpe-study-pro[^/]*\/cursos(?:[/?#]|$)/i.test(captura.urlOrigem || "")) {
-    throw new Error("Este arquivo foi capturado no próprio Study Pro. Execute o Capturador V3 na página principal da plataforma do curso, onde estão os cartões das matérias.");
+    throw new Error("Este arquivo foi capturado no próprio Study Pro. Execute o capturador na plataforma do curso, não aqui.");
   }
-  if (captura.versao === 3 && captura.paginas?.length) return organizarPaginasCapturadas(captura, nomeInformado);
+  if ((captura.versao === 3 || captura.versao === 4) && captura.paginas?.length) {
+    return organizarPaginasCapturadas(captura, nomeInformado);
+  }
   const cartoes = captura.itens.filter((item) => /course-link/.test(`${item.classes || ""} ${item.containerKey || ""}`) && item.href && URL_CURSO.test(item.href));
   if (cartoes.length) {
     const quantidade = new Set(cartoes.map((item) => item.href?.split("/lessons/")[0])).size;
