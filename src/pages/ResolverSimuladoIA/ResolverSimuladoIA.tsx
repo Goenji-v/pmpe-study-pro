@@ -716,6 +716,12 @@ export default function ResolverSimuladoIA() {
           limiteDiario: configuracoes.metaRevisoesDiaria,
           agora: new Date(novoResultado.data),
           proximaId: `${novoResultado.id}:revisao:${revisaoDireta.id}:proxima`,
+          resultadoMedido: {
+            certas: diagnosticoDaRevisaoDireta.certas,
+            erradas:
+              diagnosticoDaRevisaoDireta.erradas +
+              diagnosticoDaRevisaoDireta.emBranco,
+          },
         });
       }
 

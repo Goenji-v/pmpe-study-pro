@@ -13,6 +13,7 @@ import {
   criarPrimeiraRevisao,
   concluirRevisaoNaLista,
   formatarDataRevisao,
+  preverProximaRevisaoPorDesempenho,
   statusDaRevisao,
   redistribuirRevisoesPendentes,
   reagendarRevisao,
@@ -388,6 +389,8 @@ export default function Revisoes() {
     concluirRevisao,
     reagendarRevisao: reagendar,
     excluirRevisao,
+    revisoesBase: revisoesComModulo,
+    limiteDiario: configuracoes.metaRevisoesDiaria,
   };
 
   return (
@@ -481,6 +484,8 @@ type GrupoRevisoesProps = {
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
   excluirRevisao: (revisao: Revisao) => void;
+  revisoesBase: Revisao[];
+  limiteDiario: number;
 };
 
 function GrupoRevisoes({
@@ -492,6 +497,8 @@ function GrupoRevisoes({
   concluirRevisao,
   reagendarRevisao,
   excluirRevisao,
+  revisoesBase,
+  limiteDiario,
 }: GrupoRevisoesProps) {
   const [avaliandoId, setAvaliandoId] = useState<string | null>(null);
   const [opcoesId, setOpcoesId] = useState<string | null>(null);
@@ -534,6 +541,24 @@ function GrupoRevisoes({
                 : diferenca === 1
                   ? "Amanhã"
                   : `Daqui a ${diferenca} dias`;
+          const previsaoDificil = preverProximaRevisaoPorDesempenho({
+            revisao,
+            desempenho: "dificil",
+            revisoesExistentes: revisoesBase,
+            limiteDiario,
+          });
+          const previsaoMedia = preverProximaRevisaoPorDesempenho({
+            revisao,
+            desempenho: "media",
+            revisoesExistentes: revisoesBase,
+            limiteDiario,
+          });
+          const previsaoFacil = preverProximaRevisaoPorDesempenho({
+            revisao,
+            desempenho: "facil",
+            revisoesExistentes: revisoesBase,
+            limiteDiario,
+          });
 
           return (
             <article key={revisao.id} className="revisao-card">
@@ -562,6 +587,26 @@ function GrupoRevisoes({
                     )}
                   </div>
                   <p>{plano.descricao}</p>
+                  <div className="revisao-proximos-retornos">
+                    <span>
+                      <b>Difícil</b>
+                      {previsaoDificil
+                        ? ` → ${formatarDataRevisao(previsaoDificil.dataPrevista)} · repete etapa ${previsaoDificil.etapa}`
+                        : " → sem novo agendamento"}
+                    </span>
+                    <span>
+                      <b>Médio</b>
+                      {previsaoMedia
+                        ? ` → ${formatarDataRevisao(previsaoMedia.dataPrevista)} · repete etapa ${previsaoMedia.etapa}`
+                        : " → sem novo agendamento"}
+                    </span>
+                    <span>
+                      <b>Fácil</b>
+                      {previsaoFacil
+                        ? ` → ${formatarDataRevisao(previsaoFacil.dataPrevista)} · etapa ${previsaoFacil.etapa}`
+                        : " → encerra o ciclo"}
+                    </span>
+                  </div>
                   {temFlashcards && (
                     <small className="revisao-flashcards-recomendacao">
                       🧠 Reforço disponível: {modoFlashcardsRecomendado}
@@ -577,7 +622,9 @@ function GrupoRevisoes({
                     className="revisao-iniciar"
                     onClick={() => abrirRevisao(revisao)}
                   >
-                    🔁 Revisar
+                    {plano.modo === "teoria_questoes"
+                      ? "📖 Rever teoria"
+                      : "🧩 Fazer questões"}
                   </button>
                   <button
                     type="button"

@@ -1037,7 +1037,7 @@ MISSÕES PENDENTES DO PLANO:
 ${JSON.stringify((dados.missoesPendentes || []).slice(0, 80), null, 2)}
 
 CRITÉRIOS:
-- priorize revisões atrasadas;
+- priorize revisões atrasadas e revisões que vencem hoje ou nos próximos 2 dias;
 - priorize matérias com baixo aproveitamento;
 - use a DISTRIBUIÇÃO ADAPTATIVA DE BLOCOS como peso semanal real: matérias com mais blocosRecomendados devem receber proporcionalmente mais tempo/tarefas;
 - preserve contato com todas as matérias presentes na distribuição; não retire uma matéria só porque o desempenho nela está alto;

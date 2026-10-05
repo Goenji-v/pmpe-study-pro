@@ -110,3 +110,54 @@ test("dúvida e aula incompleta entram no diagnóstico semanal", () => {
     )
   );
 });
+
+
+test("revisão que vence em até dois dias já entra na prioridade adaptativa", () => {
+  const agora = new Date("2026-10-04T12:00:00-03:00");
+  const diagnostico = calcularDiagnosticoSemanalPlano({
+    agora,
+    materiasDisponiveis: ["Português", "RLM"],
+    questoes: [
+      {
+        id: "q-port-forte",
+        materia: "Português",
+        assunto: "Interpretação",
+        banca: "AOCP",
+        certas: 9,
+        erradas: 1,
+        minutos: 0,
+        data: "2026-10-04T10:00:00-03:00",
+      },
+    ],
+    sessoes: [],
+    revisoes: [
+      {
+        id: "rev-rlm-proxima",
+        materiaId: "rlm",
+        assuntoId: "proposicoes",
+        materia: "RLM",
+        assunto: "Proposições",
+        etapa: 2,
+        dataCriacao: "2026-09-29T12:00:00-03:00",
+        dataPrevista: "2026-10-05T12:00:00-03:00",
+        concluida: false,
+      },
+    ],
+  });
+
+  const rlm = diagnostico.materias.find((item) => item.materia === "RLM");
+  assert.ok(rlm);
+  assert.equal(rlm.revisoesAtrasadas, 0);
+  assert.equal(rlm.revisoesProximas, 1);
+  assert.ok(rlm.motivos.some((motivo) => motivo.includes("próximos 2 dias")));
+  assert.equal(diagnostico.materiaPrioritaria, "RLM");
+
+  const distribuicao = calcularDistribuicaoAdaptativaSemanal({
+    diagnostico,
+    materiasDisponiveis: ["Português", "RLM"],
+    totalBlocos: 4,
+  });
+  const blocosRlm = distribuicao.find((item) => item.materia === "RLM")!;
+  const blocosPortugues = distribuicao.find((item) => item.materia === "Português")!;
+  assert.ok(blocosRlm.blocosRecomendados > blocosPortugues.blocosRecomendados);
+});
