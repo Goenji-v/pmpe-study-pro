@@ -50,6 +50,14 @@ test("revisão abre Questões IA já preenchidas e vinculadas à pendência", ()
   assert.match(fonteRevisoes, /navigate\("\/gerar-simulado-ia"\)/);
 });
 
+test("revisão legada resolve a matéria atual mesmo quando o assunto não existe mais na grade", () => {
+  assert.match(fonteRevisoes, /materiasEquivalentes/);
+  assert.match(fonteRevisoes, /const materiaCanonica/);
+  assert.match(fonteRevisoes, /materiaCanonica\?\.nome \?\? revisao\.materia/);
+  assert.match(fonteRevisoes, /materiaMudou/);
+  assert.match(fonteRevisoes, /assunto: referencia\?\.assunto\.nome \?\? revisao\.assunto/);
+});
+
 
 test("gerador consome matéria, assunto, quantidade e banca vindos do reforço", () => {
   assert.match(fonteGerador, /pmpe:gerar-ia:prefill/);
