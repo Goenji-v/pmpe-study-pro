@@ -29,6 +29,7 @@ export type DiagnosticoMateriaSemanal = {
   minutos: number;
   sessoes: number;
   revisoesAtrasadas: number;
+  revisoesProximas: number;
   sessoesComDuvida: number;
   sessoesIncompletas: number;
   diasSemEstudar?: number;
@@ -136,6 +137,7 @@ export function calcularDistribuicaoAdaptativaSemanal(params: {
     }
 
     score += Math.min(30, (diagnostico?.revisoesAtrasadas ?? 0) * 12);
+    score += Math.min(24, (diagnostico?.revisoesProximas ?? 0) * 8);
     score += Math.min(40, (diagnostico?.sessoesIncompletas ?? 0) * 20);
     score += Math.min(35, (diagnostico?.sessoesComDuvida ?? 0) * 18);
 
@@ -249,10 +251,18 @@ function analisarMateria(
     (item) => normalizar(item.materia) === chave && dentroDaJanela(item.data, inicio, fim)
   );
   const revisoesDaMateria = revisoes.filter((item) => normalizar(item.materia) === chave);
-  const hoje = inicioDoDia(agora).getTime();
+  const hojeData = inicioDoDia(agora);
+  const hoje = hojeData.getTime();
+  const limiteProximas = fimDoDia(adicionarDiasLocais(hojeData, 2)).getTime();
   const revisoesAtrasadas = revisoesDaMateria.filter((item) => {
     const prevista = dataValida(item.dataPrevista);
     return !item.concluida && Boolean(prevista && prevista.getTime() < hoje);
+  }).length;
+  const revisoesProximas = revisoesDaMateria.filter((item) => {
+    const prevista = dataValida(item.dataPrevista);
+    if (item.concluida || !prevista) return false;
+    const tempo = prevista.getTime();
+    return tempo >= hoje && tempo <= limiteProximas;
   }).length;
 
   const certas = questoesMateria.reduce((total, item) => total + numero(item.certas), 0);
@@ -283,7 +293,11 @@ function analisarMateria(
     : undefined;
 
   const erroScore = percentualAcertos === undefined ? 35 : limitar(100 - percentualAcertos, 0, 100);
-  const revisaoScore = limitar(revisoesAtrasadas * 28, 0, 100);
+  const revisaoScore = limitar(
+    revisoesAtrasadas * 28 + revisoesProximas * 14,
+    0,
+    100
+  );
   const intervaloScore = diasSemEstudar === undefined ? 55 : limitar((diasSemEstudar / 7) * 100, 0, 100);
   const volumeScore = totalQuestoes >= 20 ? 0 : limitar(((20 - totalQuestoes) / 20) * 100, 0, 100);
   const aprendizagemScore = limitar(
@@ -307,7 +321,14 @@ function analisarMateria(
     Math.min(55, (totalQuestoes / 20) * 55) +
     Math.min(20, (sessoesMateria.length / 3) * 20) +
     Math.min(15, (sessoesComDuvida + sessoesIncompletas) * 7.5) +
-    Math.min(10, ((revisoesAtrasadas > 0 ? 1 : 0) + Math.min(2, revisoesConcluidas)) / 3 * 10),
+    Math.min(
+      10,
+      (
+        (revisoesAtrasadas > 0 ? 1 : 0) +
+        (revisoesProximas > 0 ? 1 : 0) +
+        Math.min(1, revisoesConcluidas)
+      ) / 3 * 10
+    ),
     0,
     100
   ));
@@ -315,6 +336,7 @@ function analisarMateria(
   const motivos: string[] = [];
   if (percentualAcertos !== undefined && percentualAcertos < 70) motivos.push(`Aproveitamento de ${percentualAcertos}% nos últimos ${JANELA_DIAS} dias.`);
   if (revisoesAtrasadas > 0) motivos.push(`${revisoesAtrasadas} revisão${revisoesAtrasadas === 1 ? "" : "ões"} atrasada${revisoesAtrasadas === 1 ? "" : "s"}.`);
+  if (revisoesProximas > 0) motivos.push(`${revisoesProximas} revisão${revisoesProximas === 1 ? "" : "ões"} vence${revisoesProximas === 1 ? "" : "m"} entre hoje e os próximos 2 dias.`);
   if (sessoesIncompletas > 0) motivos.push(`${sessoesIncompletas} sessão${sessoesIncompletas === 1 ? "" : "ões"} com conteúdo ainda pendente.`);
   if (sessoesComDuvida > 0) motivos.push(`${sessoesComDuvida} sessão${sessoesComDuvida === 1 ? "" : "ões"} com dúvida registrada.`);
   if (diasSemEstudar !== undefined && diasSemEstudar >= 5) motivos.push(`${diasSemEstudar} dias sem registro recente de estudo.`);
@@ -342,6 +364,7 @@ function analisarMateria(
     minutos,
     sessoes: sessoesMateria.length,
     revisoesAtrasadas,
+    revisoesProximas,
     sessoesComDuvida,
     sessoesIncompletas,
     diasSemEstudar,
@@ -472,7 +495,12 @@ function escolherAssuntoPrioritario(
 }
 
 function temEvidencia(item: DiagnosticoMateriaSemanal) {
-  return item.questoes > 0 || item.sessoes > 0 || item.revisoesAtrasadas > 0;
+  return (
+    item.questoes > 0 ||
+    item.sessoes > 0 ||
+    item.revisoesAtrasadas > 0 ||
+    item.revisoesProximas > 0
+  );
 }
 
 function ehMateriaOperacional(nome: string) {
@@ -496,6 +524,12 @@ function dataValida(valor?: string) {
 function inicioDoDia(data: Date) {
   const copia = new Date(data);
   copia.setHours(0, 0, 0, 0);
+  return copia;
+}
+
+function adicionarDiasLocais(data: Date, dias: number) {
+  const copia = new Date(data);
+  copia.setDate(copia.getDate() + dias);
   return copia;
 }
 
