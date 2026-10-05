@@ -21,7 +21,7 @@ test("acabamento premium é carregado depois das camadas visuais existentes", ()
 });
 
 test("topo usa ícone vetorial de notificações", () => {
-  assert.match(header, /import \{ Bell \} from "lucide-react"/);
+  assert.match(header, /import \{ Bell, Search \} from "lucide-react"/);
   assert.match(header, /<Bell size=\{18\}/);
   assert.doesNotMatch(header, />\s*🔔\s*</);
 });
