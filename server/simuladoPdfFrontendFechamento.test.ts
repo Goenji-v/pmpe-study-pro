@@ -144,3 +144,30 @@ test("simulado PDF oficial não exibe rótulos de prévia", async () => {
   assert.doesNotMatch(codigo, /preview-pdf/);
   assert.match(codigo, /SIMULADO DE DOMINGO/);
 });
+
+
+test("fechamento do PDF persiste o diagnóstico antes de depender da tela de relatório", async () => {
+  const codigo = await readFile(
+    "src/pages/SimuladoPdf/SimuladoPdf.tsx",
+    "utf8"
+  );
+
+  assert.match(codigo, /const persistirResultadoFinal = useCallback/);
+  assert.match(codigo, /analisarSimuladoStudyPro\(\{/);
+  assert.match(
+    codigo,
+    /salvarAnaliseSimuladoLocal\(\{[\s\S]*origem: "pdf"/
+  );
+  assert.match(
+    codigo,
+    /await salvarAnaliseSimulado\(\{[\s\S]*origem: "pdf"/
+  );
+  assert.match(
+    codigo,
+    /async function encerrarEVoltar\(\)[\s\S]*await persistirResultadoFinal\(\)/
+  );
+  assert.match(
+    codigo,
+    /new Event\("pmpe-simulado-pdf-finalizado"\)/
+  );
+});
