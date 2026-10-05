@@ -202,8 +202,21 @@ export function concluirRevisaoNaLista(params: {
   agora: Date;
   proximaId: string;
   sessao?: SessaoEstudo;
+  resultadoMedido?: {
+    certas: number;
+    erradas: number;
+  };
 }): Revisao[] {
-  const { revisoes, revisaoId, desempenho, limiteDiario, agora, proximaId, sessao } = params;
+  const {
+    revisoes,
+    revisaoId,
+    desempenho,
+    limiteDiario,
+    agora,
+    proximaId,
+    sessao,
+    resultadoMedido,
+  } = params;
   const atual = revisoes.find((item) => item.id === revisaoId);
   if (!atual || atual.concluida || (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
   const concluida: Revisao = {
@@ -217,14 +230,20 @@ export function concluirRevisaoNaLista(params: {
           certas: sessao.quantidadeAcertos,
           erradas: sessao.quantidadeErros,
         }
-      : {
-          // Avaliação manual não é uma nova medição objetiva. Limpar o placar
-          // evita que a próxima revisão reutilize acertos/erros de uma sessão
-          // anterior e recomende teoria/questões com base em uma nota velha.
-          sessaoId: undefined,
-          certas: undefined,
-          erradas: undefined,
-        }),
+      : resultadoMedido
+        ? {
+            sessaoId: undefined,
+            certas: resultadoMedido.certas,
+            erradas: resultadoMedido.erradas,
+          }
+        : {
+            // Avaliação manual não é uma nova medição objetiva. Limpar o placar
+            // evita que a próxima revisão reutilize acertos/erros de uma sessão
+            // anterior e recomende teoria/questões com base em uma nota velha.
+            sessaoId: undefined,
+            certas: undefined,
+            erradas: undefined,
+          }),
   };
   const atualizadas = revisoes.map((item) => item.id === revisaoId ? concluida : item);
   const proxima = criarProximaRevisao(concluida, atualizadas, limiteDiario, agora, proximaId);
