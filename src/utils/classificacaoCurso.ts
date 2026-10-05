@@ -49,7 +49,10 @@ function tipoComplemento(texto: string): string | undefined {
   const t = textoIdentidadeCurso(texto).replace(/^(pmpe|pmpb|pmal|curso)\s+/, "");
   if (/\bmentorias?\b/.test(t)) return "Mentoria";
   if (/\b(cronograma|plano de estudos|planejamento de estudos)\b/.test(t)) return "Cronograma e orientação";
-  if (/^(comece aqui|boas vindas|orientacoes|conhecendo o projeto|apresentacao do curso)\b/.test(t)) return "Orientações iniciais";
+  if (/^(comece( por)? aqui|boas vindas|orientacoes|conhecendo o projeto|apresentacao do curso)\b/.test(t)) return "Orientações iniciais";
+  if (/\b(simulados?|mini simulados?)\b/.test(t) && !identificarDisciplina(t)) return "Simulados";
+  if (/\bturma de exercicios\b/.test(t) && !identificarDisciplina(t)) return "Turma de exercícios";
+  if (/\bbonus\b/.test(t) && !identificarDisciplina(t)) return "Bônus";
   if (/^(lives?|ao vivo|aulas ao vivo)\b/.test(t) && !identificarDisciplina(t)) return "Lives e encontros";
   return;
 }
