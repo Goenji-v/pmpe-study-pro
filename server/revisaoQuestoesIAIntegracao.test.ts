@@ -78,3 +78,14 @@ test("correção oferece próximos passos sem criar revisão duplicada", () => {
   assert.match(fonteCorrecao, /navigate\("\/central-estudos"\)/);
   assert.doesNotMatch(fonteCorrecao, /setRevisoes/);
 });
+
+
+test("revisão mostra a decisão adaptativa e as três datas de retorno", () => {
+  assert.match(fonteRevisoes, /preverProximaRevisaoPorDesempenho/);
+  assert.match(fonteRevisoes, /Difícil/);
+  assert.match(fonteRevisoes, /Médio/);
+  assert.match(fonteRevisoes, /Fácil/);
+  assert.match(fonteRevisoes, /encerra o ciclo/);
+  assert.match(fonteRevisoes, /Rever teoria/);
+  assert.match(fonteRevisoes, /Fazer questões/);
+});
