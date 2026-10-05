@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import type { RegistroQuestao, Simulado } from "../../types/index";
 import Dashboard from "./Dashboard";
+import DashboardAdaptivePreview from "./DashboardAdaptivePreview";
 import "./DashboardDesempenhoDonut.css";
 import "./DashboardDesempenho3D.css";
 
@@ -13,6 +14,7 @@ export default function DashboardOficial() {
   const navigate = useNavigate();
   const { questoes, revisoes, simulados } = useApp();
   const [alvo, setAlvo] = useState<HTMLElement | null>(null);
+  const [alvoAdaptativo, setAlvoAdaptativo] = useState<HTMLElement | null>(null);
 
   const materias3D = useMemo(() => calcularDesempenhoPorMateria(questoes), [questoes]);
 
@@ -34,6 +36,40 @@ export default function DashboardOficial() {
 
     return { certas, erros, total, aproveitamento, percentualErros, emRevisao };
   }, [questoes, revisoes, simulados]);
+
+  useEffect(() => {
+    let cancelado = false;
+    let tentativas = 0;
+    let timer = 0;
+    let slot: HTMLDivElement | null = null;
+
+    const localizarHero = () => {
+      if (cancelado) return;
+
+      const hero = document.querySelector<HTMLElement>(".dashboard-pro-hero");
+      if (hero) {
+        slot = document.createElement("div");
+        slot.className = "dashboard-adaptive-preview-slot";
+        hero.insertAdjacentElement("afterend", slot);
+        setAlvoAdaptativo(slot);
+        return;
+      }
+
+      tentativas += 1;
+      if (tentativas < 20) {
+        timer = window.setTimeout(localizarHero, 50);
+      }
+    };
+
+    localizarHero();
+
+    return () => {
+      cancelado = true;
+      window.clearTimeout(timer);
+      setAlvoAdaptativo(null);
+      slot?.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
@@ -69,6 +105,7 @@ export default function DashboardOficial() {
   return (
     <>
       <Dashboard />
+      {alvoAdaptativo && createPortal(<DashboardAdaptivePreview />, alvoAdaptativo)}
       {alvo && createPortal(
         USAR_DESEMPENHO_3D ? (
           <DesempenhoGeral3D
