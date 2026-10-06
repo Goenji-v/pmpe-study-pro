@@ -10,6 +10,7 @@ const telas = [
   ["questoes", "/questoes"],
   ["revisoes", "/revisoes"],
   ["simulados", "/simulados"],
+  ["simulado-pdf", "/simulado-pdf"],
   ["configuracoes", "/configuracoes"],
 ] as const;
 
@@ -65,24 +66,66 @@ async function anexarScreenshot(
   testInfo: import("@playwright/test").TestInfo,
   nome: string
 ) {
-  await page.evaluate(async () => {
+  const dimensoes = await page.evaluate(async () => {
     if (document.fonts?.ready) await document.fonts.ready;
     window.scrollTo(0, 0);
-  });
-  await page.waitForTimeout(500);
 
-  const imagem = await page.screenshot({
-    fullPage: true,
-    animations: "disabled",
+    return {
+      altura: Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight
+      ),
+      viewport: window.innerHeight,
+    };
   });
 
-  await testInfo.attach(`${nome}-360px`, {
-    body: imagem,
-    contentType: "image/png",
-  });
+  await page.waitForTimeout(250);
+
+  // Full-page em páginas muito longas (Revisões/Questões) pode gerar imagens
+  // com dezenas de milhares de pixels e estourar o timeout do Playwright.
+  // O diagnóstico funcional já percorre o DOM inteiro; a inspeção visual usa
+  // amostras topo/meio/fim para continuar representativa e rápida.
+  const limiteFullPage = 6_000;
+
+  if (dimensoes.altura <= limiteFullPage) {
+    const imagem = await page.screenshot({
+      fullPage: true,
+      animations: "disabled",
+    });
+
+    await testInfo.attach(`${nome}-360px`, {
+      body: imagem,
+      contentType: "image/png",
+    });
+    return;
+  }
+
+  const maxScroll = Math.max(0, dimensoes.altura - dimensoes.viewport);
+  const pontos = [
+    { rotulo: "topo", y: 0 },
+    { rotulo: "meio", y: Math.floor(maxScroll / 2) },
+    { rotulo: "fim", y: maxScroll },
+  ];
+
+  for (const ponto of pontos) {
+    await page.evaluate((y) => window.scrollTo(0, y), ponto.y);
+    await page.waitForTimeout(180);
+    const imagem = await page.screenshot({
+      fullPage: false,
+      animations: "disabled",
+    });
+
+    await testInfo.attach(`${nome}-360px-${ponto.rotulo}`, {
+      body: imagem,
+      contentType: "image/png",
+    });
+  }
+
+  await page.evaluate(() => window.scrollTo(0, 0));
 }
 
 test.describe("capturas da auditoria visual mobile", () => {
+  test.setTimeout(180_000);
   test.skip(!email || !senha, "Configure a conta E2E dedicada.");
 
   test("captura telas principais e prova em 360px", async ({ page }, testInfo) => {
@@ -95,6 +138,13 @@ test.describe("capturas da auditoria visual mobile", () => {
       await page.goto(rota, { waitUntil: "domcontentloaded" });
       await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
       await fecharRecompensaSeAberta(page);
+
+      if (rota === "/central-estudos") {
+        await expect(
+          page.getByRole("button", { name: "Redação", exact: true })
+        ).toBeVisible({ timeout: 10_000 });
+      }
+
       await anexarScreenshot(page, testInfo, nome);
     }
 
