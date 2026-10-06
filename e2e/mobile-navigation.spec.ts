@@ -83,8 +83,30 @@ async function navegarPeloPerfil(
 
   await expect(trigger).toBeVisible();
   await trigger.click();
-  await expect(page.locator(".user-profile-dropdown")).toBeVisible();
-  await page.getByRole("menuitem", { name: item, exact: true }).click();
+
+  const dropdown = page.locator(".user-profile-dropdown");
+  await expect(dropdown).toBeVisible();
+
+  const opcao = dropdown.getByRole("menuitem", {
+    name: item,
+    exact: true,
+  });
+  await expect(opcao).toBeVisible();
+
+  // O header pode renderizar novamente quando a sincronização termina.
+  // Se isso acontecer entre abrir o perfil e clicar, reabre uma vez em vez
+  // de transformar a atualização de estado em falso negativo da auditoria.
+  try {
+    await opcao.click({ timeout: 4_000 });
+  } catch {
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    const opcaoRetomada = page
+      .locator(".user-profile-dropdown")
+      .getByRole("menuitem", { name: item, exact: true });
+    await expect(opcaoRetomada).toBeVisible();
+    await opcaoRetomada.click();
+  }
 
   await expect(page).toHaveURL(destino, { timeout: 15_000 });
   await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
