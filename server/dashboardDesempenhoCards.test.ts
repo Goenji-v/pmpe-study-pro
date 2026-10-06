@@ -23,6 +23,14 @@ test("dashboard oficial usa cards 2D no lugar do gráfico 3D", async () => {
   assert.doesNotMatch(codigo, /DesempenhoGeral3D/);
   assert.doesNotMatch(codigo, /dashboard-3d-stage/);
 
+  // A cor da barra segue o status da matéria, não a posição do card.
+  assert.match(codigo, /dashboard-materia-card-\$\{status\}/);
+  assert.doesNotMatch(codigo, /dashboard-materia-tone/);
+  assert.match(css, /dashboard-materia-card-evoluindo \{ --dash-materia-cor/);
+  assert.match(css, /dashboard-materia-card-bom \{ --dash-materia-cor/);
+  assert.match(css, /dashboard-materia-card-atencao \{ --dash-materia-cor/);
+  assert.doesNotMatch(css, /dashboard-materia-tone/);
+
   assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /dashboard-materia-progress/);
   assert.match(css, /min-height: 118px/);

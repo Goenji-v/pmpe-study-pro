@@ -53,14 +53,14 @@ export default function DesempenhoGeralCards({
         <section className="dashboard-cards-area" aria-label="Desempenho por matéria">
           {materias.length > 0 ? (
             <div className="dashboard-cards-grid">
-              {materias.map((item, indice) => {
+              {materias.map((item) => {
                 const status = obterStatusMateria(item.percentual);
                 const Icone = obterIconeMateria(item.materia);
 
                 return (
                   <button
                     type="button"
-                    className={`dashboard-materia-card dashboard-materia-tone-${indice + 1}`}
+                    className={`dashboard-materia-card dashboard-materia-card-${status}`}
                     key={item.materia}
                     title={`${item.materia}: ${item.percentual}% (${item.total} questões)`}
                     aria-label={`Abrir desempenho de ${item.materia}`}
