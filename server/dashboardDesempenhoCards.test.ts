@@ -3,11 +3,15 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("dashboard oficial usa cards 2D no lugar do gráfico 3D", async () => {
-  const codigo = await readFile("src/pages/Dashboard/DashboardOficial.tsx", "utf8");
+  const codigo = await readFile("src/pages/Dashboard/DesempenhoGeralCards.tsx", "utf8");
+  const dashboard = await readFile("src/pages/Dashboard/Dashboard.tsx", "utf8");
   const css = await readFile("src/pages/Dashboard/DashboardDesempenhoCards.css", "utf8");
 
-  assert.match(codigo, /USAR_DESEMPENHO_CARDS = true/);
-  assert.match(codigo, /DesempenhoGeralCards/);
+  // Os cards são renderizados direto pelo Dashboard (sem portal/DOM patch).
+  assert.match(dashboard, /<DesempenhoGeralCards/);
+  assert.match(dashboard, /dashboard-pro-performance-donut-ready/);
+  assert.doesNotMatch(dashboard, /createPortal|querySelector/);
+
   assert.match(codigo, /dashboard-cards-grid/);
   assert.match(codigo, /dashboard-materia-card/);
   assert.match(codigo, /dashboard-geral-cards-titleline/);
