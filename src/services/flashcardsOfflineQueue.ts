@@ -80,7 +80,8 @@ function executarTransacao<T = void>(
 ) {
   return new Promise<T>((resolve, reject) => {
     const transacao = banco.transaction(STORE_FLASHCARDS, modo);
-    const requisicao = executar(transacao);
+    const store = transacao.objectStore(STORE_FLASHCARDS);
+    const requisicao = executar(store);
 
     requisicao.onsuccess = () => resolve(requisicao.result as T);
     requisicao.onerror = () =>
