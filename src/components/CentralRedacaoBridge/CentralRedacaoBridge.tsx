@@ -62,7 +62,6 @@ export default function CentralRedacaoBridge() {
     continuar,
   } = useCronometro();
 
-  const [destinoTipos, setDestinoTipos] = useState<HTMLElement | null>(null);
   const [destinoFormulario, setDestinoFormulario] = useState<HTMLElement | null>(null);
   const [destinoFinalizacao, setDestinoFinalizacao] = useState<HTMLElement | null>(null);
   const [temaFinalizacao, setTemaFinalizacao] = useState("");
@@ -157,21 +156,22 @@ export default function CentralRedacaoBridge() {
 
   useEffect(() => {
     if (!naCentral) {
-      setDestinoTipos(null);
       setDestinoFormulario(null);
       setDestinoFinalizacao(null);
       return;
     }
 
     const localizarDestinos = () => {
-      setDestinoTipos(
-        document.querySelector<HTMLElement>(".central-estudos-tipos")
+      const formulario =
+        document.querySelector<HTMLElement>(".central-estudos-formulario");
+      const finalizacao =
+        document.querySelector<HTMLElement>(".finalizacao-grid");
+
+      setDestinoFormulario((anterior) =>
+        anterior === formulario ? anterior : formulario
       );
-      setDestinoFormulario(
-        document.querySelector<HTMLElement>(".central-estudos-formulario")
-      );
-      setDestinoFinalizacao(
-        document.querySelector<HTMLElement>(".finalizacao-grid")
+      setDestinoFinalizacao((anterior) =>
+        anterior === finalizacao ? anterior : finalizacao
       );
     };
 
@@ -183,7 +183,14 @@ export default function CentralRedacaoBridge() {
       subtree: true,
     });
 
-    return () => observer.disconnect();
+    // Fallback para transições com Suspense/lazy routes: mesmo que a mutação
+    // aconteça antes do observer enxergar o nó final, a ponte se reconecta.
+    const intervalo = window.setInterval(localizarDestinos, 250);
+
+    return () => {
+      observer.disconnect();
+      window.clearInterval(intervalo);
+    };
   }, [naCentral]);
 
   useEffect(() => {
@@ -208,6 +215,56 @@ export default function CentralRedacaoBridge() {
     const atual = sessaoAtiva.tipo;
 
     if (
+      anterior !== TIPO_REDACAO &&
+      atual === TIPO_REDACAO &&
+      !cronometroAtivo
+    ) {
+      const rascunho = carregarRascunhoRedacao();
+      const veioPreenchida =
+        Boolean(sessaoAtiva.assunto.trim()) ||
+        Boolean(sessaoAtiva.objetivo.trim()) ||
+        Boolean(sessaoAtiva.observacao.trim());
+
+      tipoAnteriorRef.current = atual;
+      prepararSessao({
+        materia: MATERIA_REDACAO,
+        assunto:
+          sessaoAtiva.assunto.trim() ||
+          rascunho?.tema ||
+          "",
+        tipo: TIPO_REDACAO,
+        objetivo:
+          sessaoAtiva.objetivo.trim() ||
+          rascunho?.objetivo ||
+          "Atividade de redação",
+        observacao:
+          sessaoAtiva.observacao.trim() ||
+          rascunho?.observacao ||
+          "",
+        missaoId:
+          sessaoAtiva.missaoId ??
+          vinculoRedacaoHoje?.missaoId ??
+          rascunho?.missaoId,
+        semana:
+          sessaoAtiva.semana ??
+          vinculoRedacaoHoje?.semana ??
+          rascunho?.semana,
+        dia:
+          sessaoAtiva.dia ??
+          vinculoRedacaoHoje?.dia ??
+          rascunho?.dia,
+      });
+
+      if (rascunho && !veioPreenchida) {
+        showToast(
+          "Rascunho da redação restaurado.",
+          "info"
+        );
+      }
+      return;
+    }
+
+    if (
       anterior === TIPO_REDACAO &&
       atual !== TIPO_REDACAO &&
       !cronometroAtivo
@@ -222,7 +279,19 @@ export default function CentralRedacaoBridge() {
     }
 
     tipoAnteriorRef.current = atual;
-  }, [cronometroAtivo, prepararSessao, sessaoAtiva.tipo]);
+  }, [
+    cronometroAtivo,
+    prepararSessao,
+    sessaoAtiva.assunto,
+    sessaoAtiva.dia,
+    sessaoAtiva.missaoId,
+    sessaoAtiva.objetivo,
+    sessaoAtiva.observacao,
+    sessaoAtiva.semana,
+    sessaoAtiva.tipo,
+    showToast,
+    vinculoRedacaoHoje,
+  ]);
 
   useEffect(() => {
     if (!destinoFinalizacao || !redacaoAtiva) return;
@@ -327,38 +396,6 @@ export default function CentralRedacaoBridge() {
     );
   }, [sessoes, setSessoes]);
 
-  function selecionarRedacao() {
-    if (cronometroAtivo) return;
-
-    const rascunho = carregarRascunhoRedacao();
-
-    prepararSessao({
-      materia: MATERIA_REDACAO,
-      assunto: rascunho?.tema ?? "",
-      tipo: TIPO_REDACAO,
-      objetivo:
-        rascunho?.objetivo ||
-        "Atividade de redação",
-      observacao: rascunho?.observacao ?? "",
-      missaoId:
-        vinculoRedacaoHoje?.missaoId ??
-        rascunho?.missaoId,
-      semana:
-        vinculoRedacaoHoje?.semana ??
-        rascunho?.semana,
-      dia:
-        vinculoRedacaoHoje?.dia ??
-        rascunho?.dia,
-    });
-
-    if (rascunho) {
-      showToast(
-        "Rascunho da redação restaurado.",
-        "info"
-      );
-    }
-  }
-
   function iniciarTreinoRedacao() {
     if (cronometroAtivo || !redacaoAtiva) return;
 
@@ -398,24 +435,6 @@ export default function CentralRedacaoBridge() {
 
   return (
     <>
-      {naCentral && destinoTipos &&
-        createPortal(
-          <button
-            type="button"
-            className={
-              redacaoAtiva
-                ? "central-tipo central-tipo-ativo central-tipo-redacao"
-                : "central-tipo central-tipo-redacao"
-            }
-            onClick={selecionarRedacao}
-            disabled={cronometroAtivo}
-          >
-            <span>✍️</span>
-            <strong>Redação</strong>
-          </button>,
-          destinoTipos
-        )}
-
       {naCentral && redacaoAtiva && destinoFormulario &&
         createPortal(
           <>
