@@ -1,0 +1,66 @@
+/*
+ * Piso de legibilidade do Dashboard.
+ * Vários textos secundários estavam entre 8px e 11px. Este arquivo é importado
+ * por último e usa !important de propósito: ele é a "palavra final" sobre os
+ * ajustes espalhados em Dashboard.css, mobile*.css e visual-*.css.
+ * Para mudar um tamanho, edite aqui.
+ */
+
+/* Texto secundário: 12px no desktop */
+.page-dashboard .dashboard-geral-donut-header p,
+.page-dashboard .dashboard-geral-donut-header button,
+.page-dashboard .dashboard-cards-insight > p,
+.page-dashboard .dashboard-cards-recomendacao p,
+.page-dashboard .dashboard-cards-recomendacao strong,
+.page-dashboard .dashboard-pro-review-counts span,
+.page-dashboard .dashboard-pro-stat small,
+.page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > small,
+.page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > b,
+.page-dashboard .dashboard-xp-inline-meta small,
+.page-dashboard .dashboard-diagnostico-linha,
+.page-dashboard .dashboard-pro-v3 .dashboard-pro-coach p {
+  font-size: 12px !important;
+}
+
+/* Selos e rótulos curtos: 11px (selo de matéria 10px para não espremer o nome) */
+.page-dashboard .dashboard-pro-review-status,
+.page-dashboard .dashboard-xp-inline-nivel small {
+  font-size: 11px !important;
+}
+
+.page-dashboard .dashboard-materia-status {
+  font-size: 10px !important;
+}
+
+/* Dias da sequência (SEG, TER...) ficam dentro de colunas estreitas */
+.page-dashboard .dashboard-pro-stat-streak .dashboard-pro-streak-week span {
+  font-size: 10px !important;
+}
+
+/* Celular: piso um pouco menor, para não estourar o layout */
+@media (max-width: 720px) {
+  .page-dashboard .dashboard-geral-donut-header p,
+  .page-dashboard .dashboard-geral-donut-header button,
+  .page-dashboard .dashboard-cards-insight > p,
+  .page-dashboard .dashboard-cards-recomendacao p,
+  .page-dashboard .dashboard-cards-recomendacao strong,
+  .page-dashboard .dashboard-pro-review-counts span,
+  .page-dashboard .dashboard-pro-stat small,
+  .page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > small,
+  .page-dashboard .dashboard-pro-stat-art .dashboard-pro-stat-copy > b,
+  .page-dashboard .dashboard-diagnostico-linha,
+  .page-dashboard .dashboard-pro-v3 .dashboard-pro-coach p {
+    font-size: 11px !important;
+  }
+
+  .page-dashboard .dashboard-xp-inline-meta small,
+  .page-dashboard .dashboard-pro-review-status,
+  .page-dashboard .dashboard-xp-inline-nivel small {
+    font-size: 10px !important;
+  }
+
+  .page-dashboard .dashboard-materia-status,
+  .page-dashboard .dashboard-pro-stat-streak .dashboard-pro-streak-week span {
+    font-size: 9px !important;
+  }
+}
