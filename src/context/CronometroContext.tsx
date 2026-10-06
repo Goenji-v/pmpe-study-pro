@@ -368,7 +368,7 @@ export function CronometroProvider({
     }
 
     finalizacaoConsumida.current = false;
-    setSessaoAtiva({
+    const novaSessao: SessaoAtiva = {
       sessaoId: crypto.randomUUID(),
       materia: materiaEfetiva,
       materiaId: dados.materiaId,
@@ -391,7 +391,16 @@ export function CronometroProvider({
       dia: dados.dia,
       urlAula: dados.urlAula,
       urlQuestoes: dados.urlQuestoes,
-    });
+    };
+
+    // Persiste no mesmo evento do clique. Assim, mesmo que a página seja
+    // atualizada imediatamente após iniciar, a sessão e o cronômetro podem
+    // ser reconstruídos sem depender da execução posterior de um useEffect.
+    setSessaoAtiva(novaSessao);
+    localStorage.setItem(
+      chaveStorage,
+      JSON.stringify(novaSessao)
+    );
 
     setAgora(Date.now());
 
@@ -466,12 +475,21 @@ export function CronometroProvider({
     }
 
     setSessaoAtiva(
-      (anterior) => ({
-        ...anterior,
-        status: "pausado",
-        pausadoEm:
-          new Date().toISOString(),
-      })
+      (anterior) => {
+        const pausada: SessaoAtiva = {
+          ...anterior,
+          status: "pausado",
+          pausadoEm:
+            new Date().toISOString(),
+        };
+
+        localStorage.setItem(
+          chaveStorage,
+          JSON.stringify(pausada)
+        );
+
+        return pausada;
+      }
     );
   }
 
@@ -497,14 +515,23 @@ export function CronometroProvider({
       );
 
     setSessaoAtiva(
-      (anterior) => ({
-        ...anterior,
-        status: "rodando",
-        pausadoEm: null,
-        segundosPausados:
-          anterior.segundosPausados +
-          segundosDaPausa,
-      })
+      (anterior) => {
+        const retomada: SessaoAtiva = {
+          ...anterior,
+          status: "rodando",
+          pausadoEm: null,
+          segundosPausados:
+            anterior.segundosPausados +
+            segundosDaPausa,
+        };
+
+        localStorage.setItem(
+          chaveStorage,
+          JSON.stringify(retomada)
+        );
+
+        return retomada;
+      }
     );
 
     setAgora(Date.now());

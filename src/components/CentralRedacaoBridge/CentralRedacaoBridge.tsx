@@ -9,8 +9,10 @@ import { useLocation } from "react-router-dom";
 
 import "./CentralRedacaoBridge.css";
 
+import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
 import { useApp } from "../../context/AppContext";
-import { useCronometro } from "../../context/CronometroContext";
+import { formatarTempo, useCronometro } from "../../context/CronometroContext";
+import { useToast } from "../../context/ToastContext";
 import {
   criarPlanoCalendario,
   normalizarMissoesPorDia,
@@ -23,9 +25,15 @@ import {
   montarObservacaoRedacao,
   type ModalidadeRedacao,
 } from "../../utils/redacaoRegistro";
+import {
+  criarRascunhoTreinoRedacao,
+  normalizarRascunhoTreinoRedacao,
+  rascunhoTreinoRedacaoTemConteudo,
+} from "../../utils/redacaoTreino";
 
 const TIPO_REDACAO = "redacao" as const;
 const MATERIA_REDACAO = "Redação";
+const CHAVE_RASCUNHO_REDACAO = "pmpe:redacao:rascunho";
 
 type PendenciaRedacao = {
   iniciadaEm: string | null;
@@ -36,6 +44,7 @@ type PendenciaRedacao = {
 
 export default function CentralRedacaoBridge() {
   const location = useLocation();
+  const { showToast } = useToast();
   const {
     sessoes,
     setSessoes,
@@ -44,9 +53,13 @@ export default function CentralRedacaoBridge() {
   } = useApp();
   const {
     sessaoAtiva,
+    segundosDecorridos,
     cronometroAtivo,
+    iniciar,
     prepararSessao,
     atualizarDados,
+    pausar,
+    continuar,
   } = useCronometro();
 
   const [destinoTipos, setDestinoTipos] = useState<HTMLElement | null>(null);
@@ -109,6 +122,38 @@ export default function CentralRedacaoBridge() {
       ),
     [diaAtual, missoesConcluidas, planoCalendario, semanaAtual]
   );
+
+  useEffect(() => {
+    if (!redacaoAtiva || cronometroAtivo) return;
+
+    const rascunho = criarRascunhoTreinoRedacao({
+      tema: sessaoAtiva.assunto,
+      objetivo: sessaoAtiva.objetivo,
+      observacao: sessaoAtiva.observacao,
+      missaoId: sessaoAtiva.missaoId,
+      semana: sessaoAtiva.semana,
+      dia: sessaoAtiva.dia,
+    });
+
+    if (!rascunhoTreinoRedacaoTemConteudo(rascunho)) {
+      localStorage.removeItem(CHAVE_RASCUNHO_REDACAO);
+      return;
+    }
+
+    localStorage.setItem(
+      CHAVE_RASCUNHO_REDACAO,
+      JSON.stringify(rascunho)
+    );
+  }, [
+    cronometroAtivo,
+    redacaoAtiva,
+    sessaoAtiva.assunto,
+    sessaoAtiva.dia,
+    sessaoAtiva.missaoId,
+    sessaoAtiva.objetivo,
+    sessaoAtiva.observacao,
+    sessaoAtiva.semana,
+  ]);
 
   useEffect(() => {
     if (!naCentral) {
@@ -259,6 +304,7 @@ export default function CentralRedacaoBridge() {
     if (!sessaoCriada) return;
 
     pendenciaRef.current = null;
+    localStorage.removeItem(CHAVE_RASCUNHO_REDACAO);
 
     setSessoes((anteriores) =>
       anteriores.map((sessao) => {
@@ -284,15 +330,70 @@ export default function CentralRedacaoBridge() {
   function selecionarRedacao() {
     if (cronometroAtivo) return;
 
+    const rascunho = carregarRascunhoRedacao();
+
     prepararSessao({
       materia: MATERIA_REDACAO,
-      assunto: "",
+      assunto: rascunho?.tema ?? "",
       tipo: TIPO_REDACAO,
-      objetivo: "Atividade de redação",
-      missaoId: vinculoRedacaoHoje?.missaoId,
-      semana: vinculoRedacaoHoje?.semana,
-      dia: vinculoRedacaoHoje?.dia,
+      objetivo:
+        rascunho?.objetivo ||
+        "Atividade de redação",
+      observacao: rascunho?.observacao ?? "",
+      missaoId:
+        vinculoRedacaoHoje?.missaoId ??
+        rascunho?.missaoId,
+      semana:
+        vinculoRedacaoHoje?.semana ??
+        rascunho?.semana,
+      dia:
+        vinculoRedacaoHoje?.dia ??
+        rascunho?.dia,
     });
+
+    if (rascunho) {
+      showToast(
+        "Rascunho da redação restaurado.",
+        "info"
+      );
+    }
+  }
+
+  function iniciarTreinoRedacao() {
+    if (cronometroAtivo || !redacaoAtiva) return;
+
+    const tema = sessaoAtiva.assunto.trim();
+    if (!tema) {
+      showToast(
+        "Informe o tema ou foco do treino antes de iniciar.",
+        "warning"
+      );
+      return;
+    }
+
+    const iniciada = iniciar({
+      materia: MATERIA_REDACAO,
+      assunto: tema,
+      tipo: TIPO_REDACAO,
+      objetivo: sessaoAtiva.objetivo,
+      observacao: sessaoAtiva.observacao,
+      missaoId:
+        sessaoAtiva.missaoId ??
+        vinculoRedacaoHoje?.missaoId,
+      semana:
+        sessaoAtiva.semana ??
+        vinculoRedacaoHoje?.semana,
+      dia:
+        sessaoAtiva.dia ??
+        vinculoRedacaoHoje?.dia,
+    });
+
+    if (iniciada) {
+      showToast(
+        "Treino de redação iniciado. O cronômetro será retomado mesmo após atualizar a página.",
+        "success"
+      );
+    }
   }
 
   return (
@@ -371,6 +472,57 @@ export default function CentralRedacaoBridge() {
                 placeholder="Pontos treinados, dificuldades, repertórios usados..."
               />
             </div>
+
+            <div className="central-redacao-controles">
+              <div className="central-redacao-status">
+                <span>
+                  {!cronometroAtivo
+                    ? "Pronto para iniciar"
+                    : sessaoAtiva.status === "pausado"
+                      ? "Treino pausado"
+                      : "Treino em andamento"}
+                </span>
+                <strong>{formatarTempo(segundosDecorridos)}</strong>
+              </div>
+
+              <div className="central-redacao-acoes">
+                {!cronometroAtivo && (
+                  <button
+                    type="button"
+                    className="central-redacao-iniciar"
+                    onClick={iniciarTreinoRedacao}
+                  >
+                    ▶ Iniciar treino
+                  </button>
+                )}
+
+                {cronometroAtivo && sessaoAtiva.status === "rodando" && (
+                  <button
+                    type="button"
+                    className="central-redacao-pausar"
+                    onClick={pausar}
+                  >
+                    ⏸ Pausar
+                  </button>
+                )}
+
+                {cronometroAtivo && sessaoAtiva.status === "pausado" && (
+                  <button
+                    type="button"
+                    className="central-redacao-continuar"
+                    onClick={continuar}
+                  >
+                    ▶ Continuar
+                  </button>
+                )}
+              </div>
+
+              <small>
+                {!cronometroAtivo
+                  ? "Tema, objetivo e observações são salvos automaticamente neste aparelho."
+                  : "Sessão salva automaticamente. Se atualizar ou fechar a página, o cronômetro retoma do ponto correto."}
+              </small>
+            </div>
           </>,
           destinoFormulario
         )}
@@ -437,6 +589,20 @@ export default function CentralRedacaoBridge() {
         )}
     </>
   );
+}
+
+function carregarRascunhoRedacao() {
+  const salvo = localStorage.getItem(CHAVE_RASCUNHO_REDACAO);
+  if (!salvo) return null;
+
+  try {
+    return normalizarRascunhoTreinoRedacao(
+      JSON.parse(salvo)
+    );
+  } catch {
+    localStorage.removeItem(CHAVE_RASCUNHO_REDACAO);
+    return null;
+  }
 }
 
 function parseNota(valor: string) {
