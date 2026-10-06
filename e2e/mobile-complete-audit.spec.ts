@@ -10,6 +10,7 @@ const rotasPrincipais = [
   "/questoes",
   "/revisoes",
   "/simulados",
+  "/simulado-pdf",
   "/configuracoes",
 ];
 
@@ -213,6 +214,88 @@ async function auditar(page: Page, rota: string) {
 test.describe("auditoria mobile completa", () => {
   test.setTimeout(120_000);
   test.skip(!email || !senha, "Configure a conta E2E dedicada.");
+
+  test("topo e telas essenciais também cabem em 320px", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chrome", "Teste exclusivo do projeto mobile.");
+
+    await page.setViewportSize({ width: 320, height: 700 });
+
+    const errosDePagina: Error[] = [];
+    page.on("pageerror", (erro) => errosDePagina.push(erro));
+
+    await entrar(page);
+
+    for (const rota of ["/", "/central-estudos", "/revisoes", "/simulados"]) {
+      errosDePagina.length = 0;
+      await auditar(page, rota);
+      expect(errosDePagina, `Erro de JavaScript em ${rota} com 320px`).toEqual([]);
+    }
+
+    await page.goto("/central-estudos", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("button", { name: "Redação", exact: true })
+    ).toBeVisible({ timeout: 10_000 });
+
+    const topo = await page.evaluate(() => {
+      const seletores = [
+        ".sidebar-mobile-toggle",
+        ".header-search",
+        ".cloud-status",
+        ".header-notification-button",
+        ".user-profile-trigger",
+      ];
+
+      const itens = seletores
+        .map((seletor) => {
+          const elemento = document.querySelector<HTMLElement>(seletor);
+          if (!elemento) return null;
+          const estilo = getComputedStyle(elemento);
+          const caixa = elemento.getBoundingClientRect();
+          if (
+            estilo.display === "none" ||
+            estilo.visibility === "hidden" ||
+            caixa.width <= 0 ||
+            caixa.height <= 0
+          ) {
+            return null;
+          }
+          return {
+            seletor,
+            left: caixa.left,
+            right: caixa.right,
+            top: caixa.top,
+            bottom: caixa.bottom,
+          };
+        })
+        .filter(Boolean) as Array<{
+          seletor: string;
+          left: number;
+          right: number;
+          top: number;
+          bottom: number;
+        }>;
+
+      const sobreposicoes: string[] = [];
+      for (let i = 0; i < itens.length; i += 1) {
+        for (let j = i + 1; j < itens.length; j += 1) {
+          const a = itens[i];
+          const b = itens[j];
+          const intersecta =
+            a.left < b.right - 1 &&
+            a.right > b.left + 1 &&
+            a.top < b.bottom - 1 &&
+            a.bottom > b.top + 1;
+          if (intersecta) {
+            sobreposicoes.push(`${a.seletor} x ${b.seletor}`);
+          }
+        }
+      }
+
+      return { itens, sobreposicoes };
+    });
+
+    expect(topo.sobreposicoes, "Topo possui controles sobrepostos em 320px").toEqual([]);
+  });
 
   test("rotas principais e prova realista cabem em 360px", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "Teste exclusivo do projeto mobile.");
