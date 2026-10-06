@@ -453,6 +453,8 @@ const [
         assunto: "",
         assuntoId: undefined,
         aulaId: undefined,
+        objetivo: "",
+        observacao: "",
         urlAula: undefined,
         urlQuestoes: undefined,
       });
