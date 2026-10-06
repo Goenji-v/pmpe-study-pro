@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      E2E_BASE_URL: https://pmpe-study-pro-git-fix-mobile-final-2026-10-06-pmpe-study-pro.vercel.app
+      E2E_BASE_URL: https://pmpe-study-gcre74jch-pmpe-study-pro.vercel.app
       E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
       E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
     steps:
@@ -38,20 +38,6 @@ jobs:
         run: |
           test -n "$E2E_TEST_EMAIL"
           test -n "$E2E_TEST_PASSWORD"
-      - name: Aguardar preview do commit
-        shell: bash
-        run: |
-          for tentativa in $(seq 1 60); do
-            versao="$(curl -fsSL "$E2E_BASE_URL/version.json?t=$(date +%s)" || true)"
-            if echo "$versao" | grep -q "$GITHUB_SHA"; then
-              echo "Preview atualizado para $GITHUB_SHA."
-              exit 0
-            fi
-            echo "Aguardando preview... tentativa $tentativa/60"
-            sleep 10
-          done
-          echo "Preview não chegou ao commit esperado."
-          exit 1
       - name: Auditar mobile
         run: >-
           npx playwright test
