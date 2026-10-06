@@ -56,6 +56,7 @@ const TIPOS_ATIVIDADE_CENTRAL = [
   { tipo: "aula", icone: "🎥", texto: "Aula" },
   { tipo: "questoes", icone: "📝", texto: "Questões" },
   { tipo: "revisao", icone: "🔁", texto: "Revisão" },
+  { tipo: "redacao", icone: "✍️", texto: "Redação" },
 ] as const;
 
 export default function CentralEstudos() {

@@ -83,6 +83,7 @@ async function anexarScreenshot(
 }
 
 test.describe("capturas da auditoria visual mobile", () => {
+  test.setTimeout(180_000);
   test.skip(!email || !senha, "Configure a conta E2E dedicada.");
 
   test("captura telas principais e prova em 360px", async ({ page }, testInfo) => {

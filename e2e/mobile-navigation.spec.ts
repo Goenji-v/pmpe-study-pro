@@ -155,7 +155,11 @@ test.describe("navegação mobile autenticada", () => {
     await page.setViewportSize({ width: 360, height: 740 });
     await expect(toggle).toBeVisible();
     await toggle.click();
-    await page.locator(".sidebar-mobile-overlay").click();
+    await expect(page.locator(".sidebar-mobile-overlay")).toBeVisible();
+
+    // O centro do backdrop fica coberto pela própria sidebar. Toca na faixa
+    // direita realmente visível, como um usuário faria no celular.
+    await page.mouse.click(350, 370);
 
     await expect(toggle).toHaveAttribute("aria-label", "Abrir menu");
     await expect(page.locator("body")).not.toHaveClass(/menu-mobile-aberto/);
