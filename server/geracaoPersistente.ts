@@ -238,6 +238,44 @@ export async function atualizarJobGeracaoIA(
   return itens[0] ?? null;
 }
 
+/**
+ * Disparado quando esta execução já não é a dona do job (o lease expirou e outra
+ * execução assumiu, ou o job foi excluído). Quem recebe deve PARAR: continuar
+ * gastaria chamadas do Gemini e poderia marcar como "concluída" uma geração
+ * que nunca foi salva.
+ */
+export class ErroPosseJobPerdida extends Error {
+  jobId: string;
+
+  constructor(jobId: string) {
+    super(`A execução perdeu a posse do job ${jobId}.`);
+    this.name = "ErroPosseJobPerdida";
+    this.jobId = jobId;
+  }
+}
+
+/**
+ * Igual a atualizarJobGeracaoIA, mas exige que a atualização tenha atingido uma
+ * linha. Sem isso, o PATCH filtrado por execucao_id devolve lista vazia e o
+ * chamador acreditava que tinha salvo.
+ */
+export async function atualizarJobGeracaoIAComPosse(
+  contexto: ContextoSupabaseJob,
+  id: string,
+  atualizacao: Parameters<typeof atualizarJobGeracaoIA>[2],
+  execucaoId: string
+) {
+  const atualizado = await atualizarJobGeracaoIA(
+    contexto,
+    id,
+    atualizacao,
+    execucaoId
+  );
+
+  if (!atualizado) throw new ErroPosseJobPerdida(id);
+  return atualizado;
+}
+
 export async function excluirJobGeracaoIA(
   contexto: ContextoSupabaseJob,
   id: string
