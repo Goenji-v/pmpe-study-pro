@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+const app = readFileSync(new URL("../src/PrivateApp.tsx", import.meta.url), "utf8");
 
 test("conta sem edital pode acessar cursos e as demais rotas", () => {
   assert.doesNotMatch(app, /EditalPrimeiroAcessoGuard/);
