@@ -2,6 +2,9 @@ name: Mobile Audit
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - fix/mobile-final-2026-10-06
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
