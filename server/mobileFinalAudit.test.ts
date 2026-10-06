@@ -45,6 +45,7 @@ test("workflow mobile espera a versão de produção e roda a suíte completa", 
   assert.match(workflow, /mobile-complete-audit\.spec\.ts/);
   assert.match(workflow, /mobile-secondary\.spec\.ts/);
   assert.match(workflow, /mobile-visual-audit\.spec\.ts/);
+  assert.match(workflow, /--workers=1/);
 });
 
 
@@ -62,4 +63,25 @@ test("Redação é seletor nativo e auditoria visual tem tempo compatível com s
   assert.match(tipos, /tipo:\s*"redacao"/);
   assert.equal((tipos.match(/tipo:\s*"redacao"/g) ?? []).length, 1);
   assert.match(visual, /test\.setTimeout\(180_000\)/);
+});
+
+
+test("CSS da Central não esconde o quarto tipo de atividade", async () => {
+  const css = await readFile(
+    "src/pages/CentralEstudos/CentralEstudos.css",
+    "utf8"
+  );
+
+  assert.doesNotMatch(
+    css,
+    /central-estudos-tipos\s*>\s*\.central-tipo:nth-child\(n\s*\+\s*4\)[\s\S]*?display:\s*none/
+  );
+  assert.match(
+    css,
+    /central-estudos-tipos\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*700px\)[\s\S]*?central-estudos-tipos[\s\S]*?repeat\(2,\s*1fr\)/
+  );
 });
