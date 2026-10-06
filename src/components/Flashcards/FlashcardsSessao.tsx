@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { registrarRespostaFlashcard } from "../../services/flashcardsProgressoService";
 import type {
@@ -75,9 +75,6 @@ export default function FlashcardsSessao({
   onVoltar,
   onProgressoAtualizado,
 }: Props) {
-  const progressoRef = useRef(progresso);
-  progressoRef.current = progresso;
-
   const [fila, setFila] = useState<QuestaoFlashcard[]>(() =>
     ordenarPorRevisao(pacote.questoes, progresso)
   );
@@ -89,7 +86,7 @@ export default function FlashcardsSessao({
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    setFila(ordenarPorRevisao(pacote.questoes, progressoRef.current));
+    setFila(ordenarPorRevisao(pacote.questoes, progresso));
     setIndice(0);
     setVirado(false);
     setDicaVisivel(false);
