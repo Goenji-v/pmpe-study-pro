@@ -341,6 +341,22 @@
   }
 }
 
+
+
+/* Celulares muito estreitos: a gamificação desce para uma segunda linha.
+ * Evita que o último atalho (Conquistas) ultrapasse a viewport em 320px. */
+@media (max-width: 340px) {
+  .dashboard-pro-header h1 {
+    flex-wrap: wrap;
+  }
+
+  .dashboard-xp-inline {
+    flex: 1 0 100%;
+    width: 100%;
+    grid-template-columns: auto minmax(34px, 1fr) auto 27px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-xp-inline-conquistas,
   .dashboard-xp-inline-barra i {
