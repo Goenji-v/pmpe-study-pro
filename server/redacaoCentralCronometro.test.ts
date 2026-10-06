@@ -11,7 +11,7 @@ test("redação inicia com matéria efetiva mesmo sem matéria de Conteúdos", (
   );
 });
 
-test("Central usa um único seletor de Redação, o fluxo dedicado", async () => {
+test("Central possui um único seletor nativo de Redação e o bridge inicializa seus dados", async () => {
   const [central, bridge] = await Promise.all([
     readFile("src/pages/CentralEstudos/CentralEstudos.tsx", "utf8"),
     readFile(
@@ -25,9 +25,11 @@ test("Central usa um único seletor de Redação, o fluxo dedicado", async () =>
   assert.ok(inicio >= 0 && fim > inicio);
 
   const tiposVisiveis = central.slice(inicio, fim);
-  assert.doesNotMatch(tiposVisiveis, /tipo:\s*"redacao"/);
+  assert.match(tiposVisiveis, /tipo:\s*"redacao"/);
+  assert.equal((tiposVisiveis.match(/tipo:\s*"redacao"/g) ?? []).length, 1);
 
   assert.match(bridge, /const MATERIA_REDACAO = "Redação"/);
+  assert.doesNotMatch(bridge, /destinoTipos/);
   assert.match(
     bridge,
     /prepararSessao\(\{[\s\S]*?materia:\s*MATERIA_REDACAO[\s\S]*?tipo:\s*TIPO_REDACAO/
