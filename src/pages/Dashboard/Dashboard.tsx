@@ -13,6 +13,13 @@ import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
 import {
+  calcularDesempenhoPorMateria,
+  destacarMelhorEPior,
+  selecionarMateriasParaCards,
+  selecionarPontosDeAtencao,
+} from "../../utils/desempenhoMaterias";
+import DesempenhoGeralCards from "./DesempenhoGeralCards";
+import {
   listarAssuntosDaMateria,
   listarModulosDaMateria,
 } from "../../services/conteudos/navegarConteudos";
@@ -332,20 +339,27 @@ export default function Dashboard() {
       simuladosContabilizaveis
     );
 
-  const resumoMaterias =
-    calcularResumoMaterias(
-      questoes
-    );
+  // Fonte única para cards, "Visão rápida", IA Coach e Taxa de acertos:
+  // nomes equivalentes são unificados e melhor/pior exigem amostra mínima.
+  const desempenhoMaterias = useMemo(
+    () => calcularDesempenhoPorMateria(questoes),
+    [questoes]
+  );
 
-  const melhorMateria =
-    resumoMaterias[0] || null;
+  const { melhor: melhorMateria, pior: piorMateria } = useMemo(
+    () => destacarMelhorEPior(desempenhoMaterias),
+    [desempenhoMaterias]
+  );
 
-  const piorMateria =
-    resumoMaterias.length > 0
-      ? resumoMaterias[
-          resumoMaterias.length - 1
-        ]
-      : null;
+  const pontosAtencaoMaterias = useMemo(
+    () => selecionarPontosDeAtencao(desempenhoMaterias, aproveitamento),
+    [desempenhoMaterias, aproveitamento]
+  );
+
+  const materiasDosCards = useMemo(
+    () => selecionarMateriasParaCards(desempenhoMaterias, 6, piorMateria),
+    [desempenhoMaterias, piorMateria]
+  );
 
   const gamificacao = useMemo(
     () =>
@@ -607,14 +621,19 @@ function iniciarProximaAulaPortugues() {
       <section className="dashboard-pro-stats dashboard-pro-stats-art">
         <ProStat tone="azul" icon="⏱" valor={formatarMinutos(minutosHoje)} label="Tempo estudado hoje" detalhe={`${formatarMinutos(minutosSemanaAtual)} esta semana`} onClick={() => navigate("/historico-sessoes")} />
         <ProStat tone="roxo" icon="📝" valor={String(questoesHoje)} label="Questões hoje" detalhe={`${totalQuestoes} no total`} onClick={() => navigate("/historico")} />
-        <ProStat tone="verde" icon="🎯" valor={`${aproveitamento}%`} label="Taxa de acertos" detalhe={melhorMateria ? `${melhorMateria.materia}: ${melhorMateria.percentual}%` : "Comece resolvendo questões"} onClick={() => navigate("/estatisticas")} />
+        <ProStat tone="verde" icon="🎯" valor={`${aproveitamento}%`} label="Taxa de acertos" detalhe={melhorMateria ? `${melhorMateria.materia}: ${melhorMateria.percentual}%` : totalQuestoes > 0 ? "Poucas questões por matéria" : "Comece resolvendo questões"} onClick={() => navigate("/estatisticas")} />
         <StreakStat sequencia={sequencia} dados={desempenhoSemanal} onClick={() => navigate("/historico-sessoes", { state: { periodo: "semana" } })} />
       </section>
 
       <section className="dashboard-pro-middle">
-        <article className="dashboard-pro-panel dashboard-pro-performance">
-          <div className="dashboard-pro-panel-title"><div><span className="dashboard-pro-kicker">DESEMPENHO</span><h2>Desempenho semanal</h2></div><button type="button" onClick={() => navigate("/estatisticas")}>Esta semana ⌄</button></div>
-          <GraficoDesempenhoSemanal dados={desempenhoSemanal} />
+        <article className="dashboard-pro-panel dashboard-pro-performance dashboard-pro-performance-donut-ready">
+          <DesempenhoGeralCards
+            aproveitamento={aproveitamento}
+            totalQuestoes={totalQuestoes}
+            materias={materiasDosCards}
+            pontosAtencao={pontosAtencaoMaterias}
+            onDetalhes={() => navigate("/desempenho")}
+          />
         </article>
 
         <article className="dashboard-pro-panel dashboard-pro-reviews">
@@ -640,7 +659,7 @@ function iniciarProximaAulaPortugues() {
       </section>
 
       <section className="dashboard-pro-footer-grid">
-        <article className="dashboard-pro-panel dashboard-pro-diagnostic"><span className="dashboard-pro-kicker">DIAGNÓSTICO</span><h2>Visão rápida</h2><LinhaDiagnostico titulo="Melhor matéria" valor={melhorMateria ? `${melhorMateria.materia} · ${melhorMateria.percentual}%` : "Sem dados"} classe="dashboard-positivo" /><LinhaDiagnostico titulo="Ponto de atenção" valor={piorMateria ? `${piorMateria.materia} · ${piorMateria.percentual}%` : "Sem dados"} classe="dashboard-negativo" /></article>
+        <article className="dashboard-pro-panel dashboard-pro-diagnostic"><span className="dashboard-pro-kicker">DIAGNÓSTICO</span><h2>Visão rápida</h2><LinhaDiagnostico titulo="Melhor matéria" valor={melhorMateria ? `${melhorMateria.materia} · ${melhorMateria.percentual}%` : "Poucos dados"} classe="dashboard-positivo" /><LinhaDiagnostico titulo="Ponto de atenção" valor={piorMateria ? `${piorMateria.materia} · ${piorMateria.percentual}%` : "Poucos dados"} classe="dashboard-negativo" /></article>
         <article className="dashboard-pro-panel dashboard-pro-coach"><span className="dashboard-pro-kicker">IA COACH</span><h2>{recomendacaoCoach.titulo}</h2><p>{recomendacaoCoach.texto}</p><button type="button" onClick={() => navigate(recomendacaoCoach.rota)}>Começar agora →</button></article>
       </section>
     </section>
@@ -653,51 +672,6 @@ type DesempenhoDia = {
   minutos: number;
   percentual: number;
 };
-
-function GraficoDesempenhoSemanal({ dados }: { dados: DesempenhoDia[] }) {
-  const largura = 700;
-  const altura = 132;
-  const baseY = 94;
-  const topoY = 16;
-  const maxMinutos = Math.max(1, ...dados.map((item) => item.minutos));
-  const passo = largura / Math.max(1, dados.length);
-  const pontos = dados.map((item, indice) => {
-    const x = passo * indice + passo / 2;
-    const y = baseY - ((item.percentual / 100) * (baseY - topoY));
-    return `${x},${y}`;
-  }).join(" ");
-
-  return (
-    <div className="dashboard-pro-chart-wrap">
-      <div className="dashboard-pro-chart-legend"><span><i className="bar" /> Tempo estudado</span><span><i className="line" /> Taxa de acertos</span></div>
-      <div className="dashboard-pro-chart">
-        <div className="dashboard-pro-chart-bars">
-          {dados.map((item) => (
-            <div className="dashboard-pro-chart-day" key={item.chave}>
-              <div className="dashboard-pro-chart-bar-track">
-                <i style={{ height: `${Math.max(5, Math.round((item.minutos / maxMinutos) * 100))}%` }} />
-              </div>
-              <span>{item.rotulo}</span>
-            </div>
-          ))}
-        </div>
-        <svg viewBox={`0 0 ${largura} ${altura}`} preserveAspectRatio="none" aria-label="Taxa de acertos da semana">
-          <polyline points={pontos} fill="none" vectorEffect="non-scaling-stroke" />
-          {dados.map((item, indice) => {
-            const x = passo * indice + passo / 2;
-            const y = baseY - ((item.percentual / 100) * (baseY - topoY));
-            return <circle key={item.chave} cx={x} cy={y} r="4" vectorEffect="non-scaling-stroke" />;
-          })}
-        </svg>
-      </div>
-      <div className="dashboard-pro-chart-summary">
-        <strong>{formatarMinutos(dados.reduce((total, item) => total + item.minutos, 0))}</strong> estudados na semana
-        <span>•</span>
-        <strong>{dados.length ? Math.round(dados.reduce((total, item) => total + item.percentual, 0) / dados.length) : 0}%</strong> média de acertos
-      </div>
-    </div>
-  );
-}
 
 function ProStat({ icon, valor, label, detalhe, tone, onClick }: { icon: string; valor: string; label: string; detalhe: string; tone: "azul" | "roxo" | "verde"; onClick: () => void }) {
   return (
@@ -1123,78 +1097,6 @@ function calcularSequencia(
   }
 
   return sequencia;
-}
-
-function calcularResumoMaterias(
-  questoes: RegistroQuestao[]
-) {
-  const mapa = new Map<
-    string,
-    {
-      certas: number;
-      erradas: number;
-    }
-  >();
-
-  questoes.forEach(
-    (registro) => {
-      const atual =
-        mapa.get(
-          registro.materia
-        ) || {
-          certas: 0,
-          erradas: 0,
-        };
-
-      mapa.set(
-        registro.materia,
-        {
-          certas:
-            atual.certas +
-            registro.certas,
-
-          erradas:
-            atual.erradas +
-            registro.erradas,
-        }
-      );
-    }
-  );
-
-  return Array.from(
-    mapa.entries()
-  )
-    .map(
-      ([materia, dados]) => {
-        const total =
-          dados.certas +
-          dados.erradas;
-
-        return {
-          materia,
-
-          certas:
-            dados.certas,
-
-          erradas:
-            dados.erradas,
-
-          percentual:
-            total === 0
-              ? 0
-              : Math.round(
-                  (dados.certas /
-                    total) *
-                    100
-                ),
-        };
-      }
-    )
-    .sort(
-      (a, b) =>
-        b.percentual -
-        a.percentual
-    );
 }
 
 function formatarMinutos(
