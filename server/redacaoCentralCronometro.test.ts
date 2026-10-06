@@ -45,3 +45,51 @@ test("resumo da Central identifica a matéria da redação", async () => {
     /if \(tipo === "redacao"\) \{\s*return "Redação";\s*\}/
   );
 });
+
+
+test("Redação possui iniciar dedicado, cronômetro visível e rascunho persistente", async () => {
+  const bridge = await readFile(
+    "src/components/CentralRedacaoBridge/CentralRedacaoBridge.tsx",
+    "utf8"
+  );
+
+  assert.match(bridge, /CHAVE_RASCUNHO_REDACAO/);
+  assert.match(bridge, /localStorage\.setItem\([\s\S]*?CHAVE_RASCUNHO_REDACAO/);
+  assert.match(bridge, /function iniciarTreinoRedacao\(\)/);
+  assert.match(
+    bridge,
+    /iniciar\(\{[\s\S]*?materia:\s*MATERIA_REDACAO[\s\S]*?tipo:\s*TIPO_REDACAO/
+  );
+  assert.match(bridge, /▶ Iniciar treino/);
+  assert.match(bridge, /formatarTempo\(segundosDecorridos\)/);
+  assert.match(bridge, /onClick=\{pausar\}/);
+  assert.match(bridge, /onClick=\{continuar\}/);
+  assert.match(bridge, /Rascunho da redação restaurado/);
+});
+
+test("cronômetro é persistido no mesmo evento de iniciar, pausar e continuar", async () => {
+  const cronometro = await readFile(
+    "src/context/CronometroContext.tsx",
+    "utf8"
+  );
+
+  const inicio = cronometro.indexOf("function iniciar(");
+  const pausa = cronometro.indexOf("function pausar(");
+  const retomada = cronometro.indexOf("function continuar(");
+  const finalizacao = cronometro.indexOf("function finalizar(");
+
+  assert.ok(inicio >= 0 && pausa > inicio && retomada > pausa && finalizacao > retomada);
+
+  assert.match(
+    cronometro.slice(inicio, pausa),
+    /localStorage\.setItem\([\s\S]*?chaveStorage[\s\S]*?JSON\.stringify\(novaSessao\)/
+  );
+  assert.match(
+    cronometro.slice(pausa, retomada),
+    /localStorage\.setItem\([\s\S]*?JSON\.stringify\(pausada\)/
+  );
+  assert.match(
+    cronometro.slice(retomada, finalizacao),
+    /localStorage\.setItem\([\s\S]*?JSON\.stringify\(retomada\)/
+  );
+});
