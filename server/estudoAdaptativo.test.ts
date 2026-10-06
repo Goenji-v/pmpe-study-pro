@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { SessaoEstudo } from "../src/types/index.ts";
 import { calcularProximaRevisaoSRS } from "../src/utils/repeticaoEspacada.ts";
 import { calcularSequenciaAtividades } from "../src/utils/sequenciaAtividades.ts";
 
@@ -32,12 +33,14 @@ test("SRS: fácil amplia o intervalo", () => {
 });
 
 test("streak: aceita atividade hoje ou ontem e preserva recorde", () => {
+  const sessoes: SessaoEstudo[] = [
+    { id: "1", tipo: "estudo", materia: "RLM", assunto: "A", minutos: 20, data: "2026-10-03" },
+    { id: "2", tipo: "estudo", materia: "RLM", assunto: "A", minutos: 20, data: "2026-10-04" },
+    { id: "3", tipo: "estudo", materia: "RLM", assunto: "A", minutos: 20, data: "2026-10-05" },
+  ];
+
   const resultado = calcularSequenciaAtividades({
-    sessoes: [
-      { id: "1", materia: "RLM", assunto: "A", minutos: 20, data: "2026-10-03" },
-      { id: "2", materia: "RLM", assunto: "A", minutos: 20, data: "2026-10-04" },
-      { id: "3", materia: "RLM", assunto: "A", minutos: 20, data: "2026-10-05" },
-    ] as never[],
+    sessoes,
     questoes: [],
     revisoes: [],
     simulados: [],
@@ -49,11 +52,13 @@ test("streak: aceita atividade hoje ou ontem e preserva recorde", () => {
 });
 
 test("streak: sequência atual zera quando atividade ficou antiga", () => {
+  const sessoes: SessaoEstudo[] = [
+    { id: "1", tipo: "estudo", materia: "RLM", assunto: "A", minutos: 20, data: "2026-09-01" },
+    { id: "2", tipo: "estudo", materia: "RLM", assunto: "A", minutos: 20, data: "2026-09-02" },
+  ];
+
   const resultado = calcularSequenciaAtividades({
-    sessoes: [
-      { id: "1", materia: "RLM", assunto: "A", minutos: 20, data: "2026-09-01" },
-      { id: "2", materia: "RLM", assunto: "A", minutos: 20, data: "2026-09-02" },
-    ] as never[],
+    sessoes,
     questoes: [],
     revisoes: [],
     simulados: [],
