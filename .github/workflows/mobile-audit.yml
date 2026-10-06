@@ -42,6 +42,8 @@ jobs:
         run: >-
           npx playwright test
           e2e/mobile-complete-audit.spec.ts
+          e2e/mobile-navigation.spec.ts
+          e2e/mobile-secondary.spec.ts
           e2e/mobile-visual-audit.spec.ts
           --project=mobile-chrome
       - name: Anexar relatório visual
