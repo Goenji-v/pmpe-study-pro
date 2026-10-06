@@ -36,6 +36,28 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Aguardar produção deste commit
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          for tentativa in $(seq 1 42); do
+            publicado="$(
+              curl -fsS "https://pmpe-study-pro-two.vercel.app/version.json?t=$(date +%s)" |
+              node -e 'let x="";process.stdin.on("data",d=>x+=d);process.stdin.on("end",()=>{try{process.stdout.write(JSON.parse(x).commit||"")}catch{}})'
+            )"
+
+            if [[ "$publicado" == "$GITHUB_SHA" ]]; then
+              echo "Deploy $publicado confirmado."
+              exit 0
+            fi
+
+            echo "Aguardando produção: esperado=$GITHUB_SHA atual=$publicado"
+            sleep 10
+          done
+
+          echo "A produção não chegou ao commit esperado dentro do prazo."
+          exit 1
+
       - name: Verificar produção
         shell: bash
         run: |
