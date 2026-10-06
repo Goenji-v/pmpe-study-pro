@@ -25,9 +25,14 @@ test("Central usa um único seletor de Redação, o fluxo dedicado", async () =>
   assert.ok(inicio >= 0 && fim > inicio);
 
   const tiposVisiveis = central.slice(inicio, fim);
-  assert.doesNotMatch(tiposVisiveis, /tipo:\s*"redacao"/);
+  assert.match(tiposVisiveis, /tipo:\s*"redacao"/);
+  assert.equal(
+    (tiposVisiveis.match(/tipo:\s*"redacao"/g) ?? []).length,
+    1
+  );
 
   assert.match(bridge, /const MATERIA_REDACAO = "Redação"/);
+  assert.doesNotMatch(bridge, /central-tipo-redacao/);
   assert.match(
     bridge,
     /prepararSessao\(\{[\s\S]*?materia:\s*MATERIA_REDACAO[\s\S]*?tipo:\s*TIPO_REDACAO/
@@ -91,5 +96,22 @@ test("cronômetro é persistido no mesmo evento de iniciar, pausar e continuar",
   assert.match(
     cronometro.slice(retomada, finalizacao),
     /localStorage\.setItem\([\s\S]*?JSON\.stringify\(retomada\)/
+  );
+});
+
+
+test("CSS da Central não oculta o quarto tipo Redação", async () => {
+  const css = await readFile(
+    "src/pages/CentralEstudos/CentralEstudos.css",
+    "utf8"
+  );
+
+  assert.doesNotMatch(
+    css,
+    /central-estudos-tipos\s*>\s*\.central-tipo:nth-child\(n\s*\+\s*4\)/
+  );
+  assert.match(
+    css,
+    /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
   );
 });
