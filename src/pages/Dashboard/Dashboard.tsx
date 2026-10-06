@@ -19,6 +19,7 @@ import {
   selecionarPontosDeAtencao,
 } from "../../utils/desempenhoMaterias";
 import DesempenhoGeralCards from "./DesempenhoGeralCards";
+import "./DashboardLegibilidade.css";
 import {
   listarAssuntosDaMateria,
   listarModulosDaMateria,
