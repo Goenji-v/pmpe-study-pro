@@ -347,3 +347,46 @@
     transition: none;
   }
 }
+
+
+.dashboard-xp-inline-streak {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    "icone valor"
+    "icone legenda";
+  align-items: center;
+  column-gap: 5px;
+  min-height: 42px;
+  padding: 5px 9px;
+  border: 1px solid rgba(255, 151, 55, 0.34);
+  border-radius: 10px;
+  background: rgba(164, 74, 13, 0.12);
+  color: #ffd19a;
+  white-space: nowrap;
+}
+
+.dashboard-xp-inline-streak > span {
+  grid-area: icone;
+  font-size: 1rem;
+}
+
+.dashboard-xp-inline-streak > strong {
+  grid-area: valor;
+  line-height: 1;
+  font-size: 0.9rem;
+}
+
+.dashboard-xp-inline-streak > small {
+  grid-area: legenda;
+  color: #d9ad82;
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .dashboard-xp-inline-streak {
+    min-height: 38px;
+    padding: 4px 7px;
+  }
+}

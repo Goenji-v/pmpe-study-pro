@@ -4,6 +4,7 @@ import type {
 
 import { criarUrlApi } from "../config/api";
 import { fetchApiAutenticada } from "./apiAutenticada";
+import { executarComToleranciaDeFalhas } from "../utils/tolerarFalhasConsulta";
 
 export type DificuldadeIA =
   | "Fácil"
@@ -58,11 +59,8 @@ export type ParametrosGeracaoIA = {
   dificuldade: DificuldadeIA;
   quantidade: number;
   enunciadosEvitar?: string[];
-  /** Mantém a mesma geração recuperável sem disparar nova cobrança. */
   requestId?: string;
-  /** Recoloca na fila um job que terminou em erro quando o usuário pediu retomada. */
   retomarErro?: boolean;
-  /** Informa a etapa real persistida no servidor. */
   onEtapa?: (
     etapa: "gerando" | "revisando" | "corrigindo" | "salvando"
   ) => void;
@@ -82,6 +80,8 @@ type RespostaListaJobs = {
 
 const API_JOBS_URL = criarUrlApi("/api/geracoes");
 const INTERVALO_CONSULTA_MS = 1_500;
+const INTERVALO_LENTO_MS = 3_000;
+const TEMPO_ATE_INTERVALO_LENTO_MS = 60_000;
 const LIMITE_ESPERA_MS = 15 * 60 * 1000;
 const LETRAS = ["A", "B", "C", "D", "E"] as const;
 
@@ -274,8 +274,17 @@ async function aguardarJobGeracaoIA(
       );
     }
 
-    await aguardar(INTERVALO_CONSULTA_MS);
-    job = await consultarJobGeracaoIA(job.requestId);
+    await aguardar(
+      Date.now() - inicio > TEMPO_ATE_INTERVALO_LENTO_MS
+        ? INTERVALO_LENTO_MS
+        : INTERVALO_CONSULTA_MS
+    );
+
+    const requestId = job.requestId;
+    job = await executarComToleranciaDeFalhas(
+      () => consultarJobGeracaoIA(requestId),
+      { esperar: aguardar }
+    );
   }
 }
 

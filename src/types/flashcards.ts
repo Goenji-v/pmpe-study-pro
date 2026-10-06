@@ -1,3 +1,5 @@
+import type { AvaliacaoSRS } from "../utils/repeticaoEspacada";
+
 export type AlternativaFlashcard = {
   id: string;
   texto: string;
@@ -45,6 +47,11 @@ export type ProgressoQuestaoFlashcard = {
   ultimaAcertou: boolean;
   ultimaModalidade?: ModoEstudoFlashcard;
   ultimaRespostaEm: string;
+  avaliacaoUltima?: AvaliacaoSRS;
+  repeticoes?: number;
+  intervaloDias?: number;
+  fatorFacilidade?: number;
+  proximaRevisaoEm?: string;
 };
 
 export type ResultadoQuestaoFlashcard = {
@@ -58,4 +65,5 @@ export type EstatisticasFlashcards = {
   totalAcertos: number;
   totalErros: number;
   percentualAcertos: number;
+  revisoesPendentes: number;
 };

@@ -51,5 +51,8 @@
     "tsx": "^4.23.12",
     "typescript": "~7.0.2",
     "vite": "^8.2.2"
+  },
+  "overrides": {
+    "shell-quote": "1.12.0"
   }
 }

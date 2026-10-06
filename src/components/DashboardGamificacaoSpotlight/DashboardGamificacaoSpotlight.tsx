@@ -14,6 +14,7 @@ import {
   calcularTitulosConquista,
   obterTituloEquipadoValido,
 } from "../../services/conquistasTitulos";
+import { calcularSequenciaAtividades } from "../../utils/sequenciaAtividades";
 
 const XP_POR_NIVEL = 250;
 
@@ -33,6 +34,17 @@ export default function DashboardGamificacaoSpotlight() {
   const gamificacao = useMemo(
     () =>
       calcularGamificacao({
+        sessoes,
+        questoes,
+        revisoes,
+        simulados,
+      }),
+    [sessoes, questoes, revisoes, simulados]
+  );
+
+  const sequencia = useMemo(
+    () =>
+      calcularSequenciaAtividades({
         sessoes,
         questoes,
         revisoes,
@@ -139,6 +151,15 @@ export default function DashboardGamificacaoSpotlight() {
         >
           <i style={{ width: `${progresso}%` }} />
         </span>
+      </span>
+
+      <span
+        className="dashboard-xp-inline-streak"
+        title={`Recorde: ${sequencia.melhor} dia${sequencia.melhor === 1 ? "" : "s"}`}
+      >
+        <span>🔥</span>
+        <strong>{sequencia.atual}</strong>
+        <small>dias</small>
       </span>
 
       <button

@@ -6,7 +6,9 @@ import {
 } from "../../data/questoes";
 import {
   calcularEstatisticasFlashcards,
+  contarPendenciasFlashcardsOffline,
   listarProgressoFlashcards,
+  sincronizarRespostasFlashcardsOffline,
 } from "../../services/flashcardsProgressoService";
 import type {
   ModoEstudoFlashcard,
@@ -40,6 +42,7 @@ export default function FlashcardsQuizPanel({
   const [modo, setModo] = useState<ModoEstudoFlashcard>();
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [pendenciasOffline, setPendenciasOffline] = useState(0);
 
   useEffect(() => {
     let ativo = true;
@@ -62,6 +65,43 @@ export default function FlashcardsQuizPanel({
 
     return () => {
       ativo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function sincronizar() {
+      try {
+        const atualizados = await sincronizarRespostasFlashcardsOffline();
+        if (!ativo) return;
+
+        if (atualizados.length > 0) {
+          setProgresso((atuais) => {
+            const mapa = new Map(atuais.map((item) => [item.questaoId, item]));
+            atualizados.forEach((item) => mapa.set(item.questaoId, item));
+            return [...mapa.values()];
+          });
+        }
+
+        setPendenciasOffline(await contarPendenciasFlashcardsOffline());
+      } catch {
+        try {
+          if (ativo) {
+            setPendenciasOffline(await contarPendenciasFlashcardsOffline());
+          }
+        } catch {
+          if (ativo) setPendenciasOffline(0);
+        }
+      }
+    }
+
+    void sincronizar();
+    window.addEventListener("online", sincronizar);
+
+    return () => {
+      ativo = false;
+      window.removeEventListener("online", sincronizar);
     };
   }, []);
 
@@ -144,8 +184,18 @@ export default function FlashcardsQuizPanel({
             <strong>{estatisticas.percentualAcertos}%</strong>
             <span>acertos</span>
           </div>
+          <div>
+            <strong>{estatisticas.revisoesPendentes}</strong>
+            <span>para revisar</span>
+          </div>
         </div>
       </header>
+
+      {pendenciasOffline > 0 && (
+        <p className="flashcards-offline-aviso" role="status">
+          📶 {pendenciasOffline} resposta{pendenciasOffline === 1 ? "" : "s"} salva{pendenciasOffline === 1 ? "" : "s"} offline. A sincronização acontece automaticamente quando a internet voltar.
+        </p>
+      )}
 
       {erro && (
         <p className="flashcards-erro" role="alert">
@@ -160,6 +210,7 @@ export default function FlashcardsQuizPanel({
       ) : modo === "flashcards" && pacoteSelecionado ? (
         <FlashcardsSessao
           pacote={pacoteSelecionado}
+          progresso={progresso}
           onVoltar={voltarAosTopicos}
           onProgressoAtualizado={atualizarProgresso}
         />
@@ -208,7 +259,7 @@ export default function FlashcardsQuizPanel({
             >
               <span>🃏</span>
               <strong>Flashcards</strong>
-              <small>Vire o cartão e marque Acertei ou Errei.</small>
+              <small>Vire o cartão e marque Difícil, Médio ou Fácil.</small>
             </button>
             <button
               type="button"

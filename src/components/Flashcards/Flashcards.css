@@ -56,9 +56,9 @@
 
 .flashcards-estatisticas {
   display: grid;
-  grid-template-columns: repeat(3, minmax(86px, 1fr));
+  grid-template-columns: repeat(4, minmax(82px, 1fr));
   gap: 8px;
-  width: min(100%, 330px);
+  width: min(100%, 430px);
 }
 
 .flashcards-estatisticas > div {
@@ -685,5 +685,89 @@
   .flashcards-progresso-barra > div,
   .flashcards-topico {
     transition: none;
+  }
+}
+
+
+/* SRS: avaliação em três níveis */
+.flashcards-srs-instrucao {
+  width: min(100%, 780px);
+  margin: 14px auto 8px;
+  color: #a9bdd8;
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.flashcards-avaliacao {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.flashcards-dificil,
+.flashcards-medio,
+.flashcards-facil {
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.flashcards-dificil small,
+.flashcards-medio small,
+.flashcards-facil small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.82;
+}
+
+.flashcards-dificil {
+  border: 1px solid #e45c68;
+  background: rgba(180, 44, 56, 0.16);
+  color: #ff9aa3;
+}
+
+.flashcards-medio {
+  border: 1px solid #e3b341;
+  background: rgba(191, 139, 20, 0.15);
+  color: #f7d77f;
+}
+
+.flashcards-facil {
+  border: 1px solid #39b97b;
+  background: rgba(25, 145, 91, 0.16);
+  color: #81e0ad;
+}
+
+.flashcards-dificil:disabled,
+.flashcards-medio:disabled,
+.flashcards-facil:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+@media (max-width: 620px) {
+  .flashcards-avaliacao {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.flashcards-offline-aviso {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(61, 153, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(21, 91, 164, 0.12);
+  color: #b9d9ff;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .flashcards-estatisticas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
 }
