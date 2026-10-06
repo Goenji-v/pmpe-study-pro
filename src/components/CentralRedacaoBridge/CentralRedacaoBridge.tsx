@@ -201,6 +201,7 @@ export default function CentralRedacaoBridge() {
     redacaoAtiva,
     sessaoAtiva.assunto,
     sessaoAtiva.dia,
+    sessaoAtiva.materia,
     sessaoAtiva.missaoId,
     sessaoAtiva.objetivo,
     sessaoAtiva.observacao,
