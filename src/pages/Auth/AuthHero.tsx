@@ -21,6 +21,7 @@ export default function AuthHero() {
             className="auth-brand-logo auth-brand-logo-completa"
             src="/assets/study-pro-logo-original-v2.jpg"
             alt="Study Pro"
+            fetchPriority="high"
           />
         </header>
 

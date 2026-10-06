@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import App from "./App";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
-import { iniciarSentryFrontend } from "./lib/sentry";
+import { capturarErroFrontend } from "./lib/sentry";
 import {
   ehErroChunkDinamico,
   limparMarcadorRecuperacaoChunkDaUrl,
@@ -11,25 +11,10 @@ import {
 } from "./utils/erroChunkDinamico";
 
 import "./global.css";
-import "./styles/mobile.css";
-import "./styles/visual-final.css";
-import "./styles/visual-3d.css";
-import "./styles/sidebar-organizado.css";
-import "./styles/app-premium.css";
-import "./styles/mobile-density.css";
-import "./styles/mobile-dashboard-fixes.css";
-import "./styles/visual-qa-final.css";
-import "./styles/responsive-critical-fixes.css";
-import "./components/BetaMonitor/BetaMonitorProducao.css";
-import "./components/Sidebar/SidebarPremiumVisual.css";
-import "./pages/Dashboard/DashboardHeroPremium.css";
-import "./styles/premium-polish-final.css";
-import "./components/StudyProIcons/StudyProIcons.css";
 
 declare const __APP_VERSION__: string;
 
 limparMarcadorRecuperacaoChunkDaUrl();
-iniciarSentryFrontend();
 
 const CHAVE_RECARGA_VERSAO = "study-pro:version-reload";
 const INTERVALO_VERIFICACAO_VERSAO_MS = 60_000;
@@ -92,13 +77,27 @@ window.addEventListener(
     const erro = evento instanceof ErrorEvent
       ? evento.error || evento.message || evento.filename
       : evento;
-    if (tentarRecuperarAssetAntigo(erro)) evento.preventDefault();
+    if (tentarRecuperarAssetAntigo(erro)) {
+      evento.preventDefault();
+      return;
+    }
+
+    capturarErroFrontend(erro, {
+      area: "window-error",
+    });
   },
   true
 );
 
 window.addEventListener("unhandledrejection", (evento) => {
-  if (tentarRecuperarAssetAntigo(evento.reason)) evento.preventDefault();
+  if (tentarRecuperarAssetAntigo(evento.reason)) {
+    evento.preventDefault();
+    return;
+  }
+
+  capturarErroFrontend(evento.reason, {
+    area: "unhandled-rejection",
+  });
 });
 
 if (import.meta.env.PROD) {

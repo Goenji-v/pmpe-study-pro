@@ -1,84 +1,12 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-} from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import "./pages/PlanoEdital/PlanoEditalCursos.css";
-import Sidebar from "./components/Sidebar/Sidebar";
-import Header from "./components/Header/Header";
-import ProtectedRoute from "./components/ProtectedRoute";
-import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
-import AvisoArmazenamento from "./components/AvisoArmazenamento/AvisoArmazenamento";
-import RuntimeErrorGuard from "./components/RuntimeErrorGuard/RuntimeErrorGuard";
-import QuestaoIACronometroBridge from "./components/QuestaoIACronometroBridge/QuestaoIACronometroBridge";
-import CentralRedacaoBridge from "./components/CentralRedacaoBridge/CentralRedacaoBridge";
-import PersonalizacaoBridge from "./components/PersonalizacaoBridge/PersonalizacaoBridge";
-import MentoriaProgressoBridge from "./components/MentoriaProgressoBridge/MentoriaProgressoBridge";
-import MentoriaCronometroBridge from "./components/MentoriaCronometroBridge/MentoriaCronometroBridge";
-import DeferredAppExtras from "./components/DeferredAppExtras/DeferredAppExtras";
-import CommercialAccessGate from "./components/CommercialAccessGate/CommercialAccessGate";
 import PWAInstallPrompt from "./components/PWAInstallPrompt/PWAInstallPrompt";
-import { armazenamentoSessaoDaConta as sessionStorage } from "./services/armazenamentoConta";
-import { PARCERIAS_VISIVEIS } from "./config/recursos";
 
-import { AppProvider } from "./context/AppContext";
-import { ToastProvider } from "./context/ToastContext";
-import { CronometroProvider } from "./context/CronometroContext";
-import { AuthProvider } from "./context/AuthContext";
-
-const PlanoEditalGateway = lazy(() => import("./pages/PlanoEdital/PlanoEditalGatewayCursos"));
-const MeuEdital = lazy(() => import("./pages/MeuEdital/MeuEdital"));
-const Cursos = lazy(() => import("./pages/Cursos/Cursos"));
-const CursoMentoria = lazy(() => import("./pages/CursoMentoria/CursoMentoria"));
-const Loja = lazy(() => import("./pages/Loja/Loja"));
-const ResolverSimuladoIA = lazy(() => import("./pages/ResolverSimuladoIA/ResolverSimuladoIA"));
-const MeusSimuladosIA = lazy(() => import("./pages/MeusSimuladosIA/MeusSimuladosIA"));
-const RevisaoCadernoIA = lazy(() => import("./pages/RevisaoCadernoIA/RevisaoCadernoIA"));
-const CronogramaGateway = lazy(() => import("./pages/CronogramaIA/CronogramaGateway"));
-const GerarSimuladoIA = lazy(() => import("./pages/GerarSimuladoIA/GerarSimuladoIA"));
-const CentroMateriais = lazy(() => import("./pages/CentroMateriais/CentroMateriais"));
-const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
-const Estudos = lazy(() => import("./pages/Estudos/Estudos"));
-const Questoes = lazy(() => import("./pages/Questoes/Questoes"));
-const Historico = lazy(() => import("./pages/Historico/Historico"));
-const Estatisticas = lazy(() => import("./pages/Estatisticas/Estatisticas"));
-const Revisoes = lazy(() => import("./pages/Revisoes/Revisoes"));
-const CentralEstudosGateway = lazy(() => import("./pages/CentralEstudos/CentralEstudosGateway"));
-const HistoricoSessoes = lazy(() => import("./pages/HistoricoSessoes/HistoricoSessoes"));
-const SimuladosGateway = lazy(() => import("./pages/Simulados/SimuladosGateway"));
-const SimuladosOficiais = lazy(() => import("./pages/SimuladosOficiais/SimuladosOficiais"));
-const SimuladoOficial = lazy(() => import("./pages/SimuladoOficial/SimuladoOficial"));
-const SimuladoPdf = lazy(() => import("./pages/SimuladoPdf/SimuladoPdf"));
-const Backup = lazy(() => import("./pages/Backup/Backup"));
-const CentralQuestoes = lazy(() => import("./pages/CentralQuestoes/CentralQuestoes"));
-const Configuracoes = lazy(() => import("./pages/Configuracoes/Configuracoes"));
-const BancoQuestoes = lazy(() => import("./pages/BancoQuestoes/BancoQuestoes"));
-const InteligenciaHub = lazy(() => import("./pages/InteligenciaHub/InteligenciaHub"));
-const EstatisticasSimuladoIA = lazy(() => import("./pages/EstatisticasSimuladoIA/EstatisticasSimuladoIA"));
-const EstatisticasSessoes = lazy(() => import("./pages/EstatisticasSessoes/EstatisticasSessoes"));
-const CentralDesempenho = lazy(() => import("./pages/CentralDesempenho/CentralDesempenho"));
-const Calendario = lazy(() => import("./pages/Calendario/Calendario"));
-const Auth = lazy(() => import("./pages/Auth/Auth"));
+const AuthenticatedApp = lazy(() => import("./AuthenticatedApp"));
 const TermosUso = lazy(() => import("./pages/Legal/TermosUso"));
 const PoliticaPrivacidade = lazy(() => import("./pages/Legal/PoliticaPrivacidade"));
 const Demo = lazy(() => import("./pages/Demo/Demo"));
-const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
-const Ranking = lazy(() => import("./pages/Ranking/Ranking"));
-const Admin = lazy(() => import("./pages/Admin/Admin"));
-const Conquistas = lazy(() => import("./pages/Conquistas/Conquistas"));
-const Perfil = lazy(() => import("./pages/Perfil/Perfil"));
-const Parceiro = lazy(() => import("./pages/Parceiro/Parceiro"));
-const ParceiroCursos = lazy(() => import("./pages/ParceiroCursos/ParceiroCursos"));
-const ParceiroSimulados = lazy(() => import("./pages/ParceiroSimulados/ParceiroSimulados"));
-const Convite = lazy(() => import("./pages/Convite/Convite"));
-const MeuAcesso = lazy(() => import("./pages/MeuAcesso/MeuAcesso"));
-const DashboardGamificacaoSpotlight = lazy(
-  () => import("./components/DashboardGamificacaoSpotlight/DashboardGamificacaoSpotlight")
-);
 
 function CarregandoRota() {
   return (
@@ -88,168 +16,18 @@ function CarregandoRota() {
   );
 }
 
-function LayoutProtegido() {
-  const location = useLocation();
-  const paginaDashboard = location.pathname === "/";
-  const paginaGeradorIA = location.pathname === "/gerar-simulado-ia";
-  const [geradorIAMontado, setGeradorIAMontado] = useState(paginaGeradorIA);
-  const [geradorIAInstancia, setGeradorIAInstancia] = useState(0);
-  const geradorIAMontadoRef = useRef(paginaGeradorIA);
-
-  useEffect(() => {
-    if (!paginaGeradorIA) return;
-
-    const temNovaSolicitacao =
-      sessionStorage.getItem("pmpe:gerar-ia:modo") !== null ||
-      sessionStorage.getItem("pmpe:gerar-ia:prefill") !== null;
-
-    if (geradorIAMontadoRef.current && temNovaSolicitacao) {
-      setGeradorIAInstancia((atual) => atual + 1);
-    }
-
-    geradorIAMontadoRef.current = true;
-    setGeradorIAMontado(true);
-  }, [location.key, paginaGeradorIA]);
-
+export default function App() {
   return (
-    <ProtectedRoute>
-      <CommercialAccessGate>
-      <ToastProvider>
-        <RuntimeErrorGuard />
-        <AppProvider>
-          <PersonalizacaoBridge />
-          {PARCERIAS_VISIVEIS && <MentoriaProgressoBridge />}
-          {paginaDashboard && (
-            <Suspense fallback={null}>
-              <DashboardGamificacaoSpotlight />
-            </Suspense>
-          )}
-          <DeferredAppExtras />
-          <CronometroProvider>
-            <QuestaoIACronometroBridge />
-            <CentralRedacaoBridge />
-            {PARCERIAS_VISIVEIS && <MentoriaCronometroBridge />}
-            <div className="layout">
-              <Sidebar />
-
-              <div className="content">
-                <Header />
-                <AvisoArmazenamento />
-
-                <main className={`page ${paginaDashboard ? "page-dashboard" : "page-interna"}`}>
-                  {(geradorIAMontado || paginaGeradorIA) && (
-                    <div hidden={!paginaGeradorIA}>
-                      <Suspense fallback={<CarregandoRota />}>
-                        <GerarSimuladoIA key={geradorIAInstancia} />
-                      </Suspense>
-                    </div>
-                  )}
-
-                  {!paginaGeradorIA && (
-                    <Suspense fallback={<CarregandoRota />}>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-
-                        <Route path="/meu-edital" element={<MeuEdital />} />
-                        <Route path="/cursos" element={<Cursos />} />
-                        <Route path="/curso-mentoria" element={PARCERIAS_VISIVEIS ? <CursoMentoria /> : <Navigate to="/" replace />} />
-                        <Route path="/plano" element={<PlanoEditalGateway />} />
-                        <Route path="/plano-estudos" element={<PlanoEditalGateway />} />
-
-                        <Route path="/calendario" element={<Calendario />} />
-                        <Route path="/cronograma-ia" element={<CronogramaGateway />} />
-                        <Route path="/central-estudos" element={<CentralEstudosGateway />} />
-                        <Route path="/materiais" element={<CentroMateriais />} />
-                        <Route path="/inteligencia" element={<InteligenciaHub />} />
-
-                        <Route path="/estudos" element={<Estudos />} />
-                        <Route path="/conteudos" element={<Estudos />} />
-                        <Route path="/buscar" element={<Estudos />} />
-                        <Route path="/pesquisa" element={<Estudos />} />
-                        <Route path="/search" element={<Estudos />} />
-
-                        <Route path="/revisoes" element={<Revisoes />} />
-
-                        <Route path="/questoes" element={<CentralQuestoes />} />
-                        <Route path="/registrar-questoes" element={<Questoes />} />
-                        <Route path="/historico" element={<Historico />} />
-                        <Route path="/banco-questoes" element={<BancoQuestoes />} />
-                        <Route path="/estatisticas" element={<Estatisticas />} />
-
-                        <Route path="/simulados" element={<SimuladosGateway />} />
-                        <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
-                        <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
-                        <Route path="/simulado-pdf" element={<SimuladoPdf />} />
-                        <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
-                        <Route path="/caderno-questoes" element={<MeusSimuladosIA />} />
-                        <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
-                        <Route path="/resolver-simulado-ia/revisao/:cadernoId" element={<RevisaoCadernoIA />} />
-                        <Route path="/gerar-simulado-ia" element={<GerarSimuladoIA />} />
-                        <Route path="/estatisticas-simulado-ia" element={<EstatisticasSimuladoIA />} />
-
-                        <Route path="/desempenho" element={<CentralDesempenho />} />
-                        <Route path="/historico-sessoes" element={<HistoricoSessoes />} />
-                        <Route path="/estatisticas-sessoes" element={<EstatisticasSessoes />} />
-                        <Route path="/perfil" element={<Perfil />} />
-                        <Route path="/ranking" element={<Ranking />} />
-                        <Route path="/conquistas" element={<Conquistas />} />
-                        <Route path="/loja" element={<Loja />} />
-
-                        <Route
-                          path="/relatorio-inteligente"
-                          element={<Navigate to="/inteligencia?aba=relatorio" replace />}
-                        />
-                        <Route
-                          path="/ia-coach"
-                          element={<Navigate to="/inteligencia?aba=coach" replace />}
-                        />
-
-                        <Route path="/backup" element={<Backup />} />
-                        <Route path="/configuracoes" element={<Configuracoes />} />
-                        <Route path="/admin" element={<Admin />} />
-                        <Route path="/parceiro" element={PARCERIAS_VISIVEIS ? <Parceiro /> : <Navigate to="/" replace />} />
-                        <Route path="/parceiro/mentoria" element={PARCERIAS_VISIVEIS ? <Navigate to="/parceiro/cursos" replace /> : <Navigate to="/" replace />} />
-                        <Route path="/parceiro/mentoria/aluno/:userId" element={PARCERIAS_VISIVEIS ? <Navigate to="/parceiro" replace /> : <Navigate to="/" replace />} />
-                        <Route path="/parceiro/cursos" element={PARCERIAS_VISIVEIS ? <ParceiroCursos /> : <Navigate to="/" replace />} />
-                        <Route path="/parceiro/simulados" element={PARCERIAS_VISIVEIS ? <ParceiroSimulados /> : <Navigate to="/" replace />} />
-                        <Route path="/parceiro/relatorios" element={PARCERIAS_VISIVEIS ? <Navigate to="/parceiro" replace /> : <Navigate to="/" replace />} />
-                        <Route path="/meu-acesso" element={PARCERIAS_VISIVEIS ? <MeuAcesso /> : <Navigate to="/" replace />} />
-
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </Suspense>
-                  )}
-                </main>
-              </div>
-            </div>
-          </CronometroProvider>
-        </AppProvider>
-      </ToastProvider>
-      </CommercialAccessGate>
-    </ProtectedRoute>
+    <BrowserRouter>
+      <PWAInstallPrompt />
+      <Suspense fallback={<CarregandoRota />}>
+        <Routes>
+          <Route path="/termos" element={<TermosUso />} />
+          <Route path="/privacidade" element={<PoliticaPrivacidade />} />
+          <Route path="/demo" element={<Demo />} />
+          <Route path="/*" element={<AuthenticatedApp />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
 }
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <BrowserRouter>
-          <PWAInstallPrompt />
-          <Suspense fallback={<CarregandoRota />}>
-            <Routes>
-              <Route path="/login" element={<Auth />} />
-              <Route path="/termos" element={<TermosUso />} />
-              <Route path="/privacidade" element={<PoliticaPrivacidade />} />
-              <Route path="/demo" element={<Demo />} />
-              <Route path="/convite/:codigo" element={PARCERIAS_VISIVEIS ? <Convite /> : <Navigate to="/login" replace />} />
-              <Route path="/*" element={<LayoutProtegido />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-}
-
-export default App;
