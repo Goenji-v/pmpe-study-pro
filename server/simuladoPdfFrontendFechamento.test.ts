@@ -122,7 +122,7 @@ test("frontend não aceita diagnóstico PDF com questões sem gabarito confiáve
 test("atividade semanal abre a sala dedicada do Simulado PDF", async () => {
   const [plano, app] = await Promise.all([
     readFile("src/pages/PlanoEstudos/PlanoEstudos.tsx", "utf8"),
-    readFile("src/App.tsx", "utf8"),
+    readFile("src/PrivateApp.tsx", "utf8"),
   ]);
 
   assert.match(plano, /guardarRascunhoSimuladoPdf/);
