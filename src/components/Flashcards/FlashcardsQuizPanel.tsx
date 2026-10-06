@@ -210,6 +210,7 @@ export default function FlashcardsQuizPanel({
       ) : modo === "flashcards" && pacoteSelecionado ? (
         <FlashcardsSessao
           pacote={pacoteSelecionado}
+          progresso={progresso}
           onVoltar={voltarAosTopicos}
           onProgressoAtualizado={atualizarProgresso}
         />
