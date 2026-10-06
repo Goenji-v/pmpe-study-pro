@@ -84,7 +84,10 @@ export function normalizarRespostaAnaliseEdital(valor: unknown): AnaliseEdital {
   const bruto = valor as Record<string, unknown>;
   const materiasBrutas = Array.isArray(bruto.materias) ? bruto.materias : [];
   const materias: MateriaEdital[] = [];
-  const nomesMaterias = new Set<string>();
+  const porChave = new Map<
+    string,
+    { materia: MateriaEdital; assuntosVistos: Set<string> }
+  >();
 
   for (const item of materiasBrutas.slice(0, 40)) {
     if (!item || typeof item !== "object") continue;
@@ -92,21 +95,36 @@ export function normalizarRespostaAnaliseEdital(valor: unknown): AnaliseEdital {
     const nome = textoSeguro(materia.nome, 140);
     if (!nome) continue;
     const chaveMateria = normalizarChave(nome);
-    if (nomesMaterias.has(chaveMateria)) continue;
-    nomesMaterias.add(chaveMateria);
+
+    let registro = porChave.get(chaveMateria);
+    if (!registro) {
+      registro = {
+        materia: { id: "", nome, incidenciaEstimada: 1, assuntos: [] },
+        assuntosVistos: new Set<string>(),
+      };
+      porChave.set(chaveMateria, registro);
+      materias.push(registro.materia);
+    }
+
+    registro.materia.incidenciaEstimada = Math.max(
+      registro.materia.incidenciaEstimada,
+      Math.max(
+        1,
+        Math.min(5, Math.round(numeroSeguro(materia.incidenciaEstimada, 3)))
+      )
+    );
 
     const assuntosBrutos = Array.isArray(materia.assuntos) ? materia.assuntos : [];
-    const assuntos: MateriaEdital["assuntos"] = [];
-    const nomesAssuntos = new Set<string>();
 
     for (const itemAssunto of assuntosBrutos.slice(0, 160)) {
+      if (registro.materia.assuntos.length >= 160) break;
       if (!itemAssunto || typeof itemAssunto !== "object") continue;
       const assunto = itemAssunto as Record<string, unknown>;
       const nomeAssunto = textoSeguro(assunto.nome, 220);
       if (!nomeAssunto) continue;
       const chaveAssunto = normalizarChave(nomeAssunto);
-      if (nomesAssuntos.has(chaveAssunto)) continue;
-      nomesAssuntos.add(chaveAssunto);
+      if (registro.assuntosVistos.has(chaveAssunto)) continue;
+      registro.assuntosVistos.add(chaveAssunto);
 
       const prioridadeBruta = textoSeguro(assunto.prioridade, 20).toLowerCase();
       const prioridade: PrioridadeEdital =
@@ -114,7 +132,7 @@ export function normalizarRespostaAnaliseEdital(valor: unknown): AnaliseEdital {
           ? prioridadeBruta
           : "media";
 
-      assuntos.push({
+      registro.materia.assuntos.push({
         id: "",
         nome: nomeAssunto,
         prioridade,
@@ -122,18 +140,10 @@ export function normalizarRespostaAnaliseEdital(valor: unknown): AnaliseEdital {
           textoSeguro(assunto.justificativaPrioridade, 260) || undefined,
       });
     }
+  }
 
-    if (assuntos.length === 0) continue;
-
-    materias.push({
-      id: "",
-      nome,
-      incidenciaEstimada: Math.max(
-        1,
-        Math.min(5, Math.round(numeroSeguro(materia.incidenciaEstimada, 3)))
-      ),
-      assuntos,
-    });
+  for (let indice = materias.length - 1; indice >= 0; indice -= 1) {
+    if (materias[indice].assuntos.length === 0) materias.splice(indice, 1);
   }
 
   if (materias.length === 0) {
