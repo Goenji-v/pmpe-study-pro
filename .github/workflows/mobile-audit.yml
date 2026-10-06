@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   mobile-audit:
-    name: Auditoria mobile 360px
+    name: Auditoria mobile 320-360px
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -46,6 +46,7 @@ jobs:
           e2e/mobile-secondary.spec.ts
           e2e/mobile-visual-audit.spec.ts
           --project=mobile-chrome
+          --workers=1
       - name: Anexar relatório visual
         if: always()
         uses: actions/upload-artifact@v4
