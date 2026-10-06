@@ -64,12 +64,10 @@
   outline-offset: 2px;
 }
 
-.dashboard-materia-tone-1 { --dash-materia-cor: #2f8fff; }
-.dashboard-materia-tone-2 { --dash-materia-cor: #30d19a; }
-.dashboard-materia-tone-3 { --dash-materia-cor: #9a5cff; }
-.dashboard-materia-tone-4 { --dash-materia-cor: #f4bd43; }
-.dashboard-materia-tone-5 { --dash-materia-cor: #ff5d72; }
-.dashboard-materia-tone-6 { --dash-materia-cor: #3cc9ef; }
+/* A cor segue o status da matéria (e não a posição do card). */
+.dashboard-materia-card-evoluindo { --dash-materia-cor: #30d19a; }
+.dashboard-materia-card-bom { --dash-materia-cor: #2f8fff; }
+.dashboard-materia-card-atencao { --dash-materia-cor: #f4bd43; }
 
 .dashboard-materia-card-top {
   display: grid;
@@ -112,9 +110,9 @@
 }
 
 .dashboard-materia-status-bom {
-  color: #45dfa1;
-  border: 1px solid rgba(69, 223, 161, .34);
-  background: rgba(69, 223, 161, .08);
+  color: #67b4ff;
+  border: 1px solid rgba(103, 180, 255, .34);
+  background: rgba(103, 180, 255, .08);
 }
 
 .dashboard-materia-status-atencao {
@@ -124,9 +122,9 @@
 }
 
 .dashboard-materia-status-evoluindo {
-  color: #67b4ff;
-  border: 1px solid rgba(103, 180, 255, .34);
-  background: rgba(103, 180, 255, .08);
+  color: #45dfa1;
+  border: 1px solid rgba(69, 223, 161, .34);
+  background: rgba(69, 223, 161, .08);
 }
 
 .dashboard-materia-percentual {
