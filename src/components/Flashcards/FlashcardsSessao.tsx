@@ -13,6 +13,7 @@ import Resultado from "./Resultado";
 
 type Props = {
   pacote: PacoteQuestoesFlashcard;
+  progresso: ProgressoQuestaoFlashcard[];
   onVoltar: () => void;
   onProgressoAtualizado: (progresso: ProgressoQuestaoFlashcard) => void;
 };
@@ -31,12 +32,52 @@ function embaralhar<T>(itens: T[]) {
   return copia;
 }
 
+function ordenarPorRevisao(
+  questoes: QuestaoFlashcard[],
+  progresso: ProgressoQuestaoFlashcard[]
+) {
+  const agora = Date.now();
+  const porId = new Map(progresso.map((item) => [item.questaoId, item]));
+
+  return [...questoes].sort((a, b) => {
+    const progressoA = porId.get(a.id);
+    const progressoB = porId.get(b.id);
+    const prioridadeA = prioridadeSRS(progressoA, agora);
+    const prioridadeB = prioridadeSRS(progressoB, agora);
+
+    if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB;
+
+    const dataA = progressoA?.proximaRevisaoEm
+      ? Date.parse(progressoA.proximaRevisaoEm)
+      : Number.MAX_SAFE_INTEGER;
+    const dataB = progressoB?.proximaRevisaoEm
+      ? Date.parse(progressoB.proximaRevisaoEm)
+      : Number.MAX_SAFE_INTEGER;
+
+    return dataA - dataB;
+  });
+}
+
+function prioridadeSRS(
+  progresso: ProgressoQuestaoFlashcard | undefined,
+  agora: number
+) {
+  if (progresso?.proximaRevisaoEm && Date.parse(progresso.proximaRevisaoEm) <= agora) {
+    return 0;
+  }
+  if (!progresso || progresso.tentativas === 0) return 1;
+  return 2;
+}
+
 export default function FlashcardsSessao({
   pacote,
+  progresso,
   onVoltar,
   onProgressoAtualizado,
 }: Props) {
-  const [fila, setFila] = useState<QuestaoFlashcard[]>(pacote.questoes);
+  const [fila, setFila] = useState<QuestaoFlashcard[]>(() =>
+    ordenarPorRevisao(pacote.questoes, progresso)
+  );
   const [indice, setIndice] = useState(0);
   const [virado, setVirado] = useState(false);
   const [dicaVisivel, setDicaVisivel] = useState(false);
@@ -45,7 +86,7 @@ export default function FlashcardsSessao({
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    setFila(pacote.questoes);
+    setFila(ordenarPorRevisao(pacote.questoes, progresso));
     setIndice(0);
     setVirado(false);
     setDicaVisivel(false);
