@@ -130,6 +130,30 @@ export default function Sidebar() {
     return () => document.body.classList.remove("menu-mobile-aberto");
   }, [menuMobileAberto]);
 
+  useEffect(() => {
+    if (!menuMobileAberto) return;
+
+    function fecharComEscape(evento: KeyboardEvent) {
+      if (evento.key !== "Escape") return;
+      setMenuMobileAberto(false);
+    }
+
+    function fecharAoSairDoMobile(evento: MediaQueryListEvent) {
+      if (evento.matches) {
+        setMenuMobileAberto(false);
+      }
+    }
+
+    const desktop = window.matchMedia("(min-width: 901px)");
+    window.addEventListener("keydown", fecharComEscape);
+    desktop.addEventListener("change", fecharAoSairDoMobile);
+
+    return () => {
+      window.removeEventListener("keydown", fecharComEscape);
+      desktop.removeEventListener("change", fecharAoSairDoMobile);
+    };
+  }, [menuMobileAberto]);
+
   function alternarGrupo(id: GrupoId) {
     setGrupoAberto((atual) => (atual === id ? null : id));
   }
@@ -141,6 +165,7 @@ export default function Sidebar() {
         className="sidebar-mobile-toggle"
         aria-label={menuMobileAberto ? "Fechar menu" : "Abrir menu"}
         aria-expanded={menuMobileAberto}
+        aria-controls="sidebar-principal"
         onClick={() => setMenuMobileAberto((aberto) => !aberto)}
       >
         {menuMobileAberto ? <X size={22} /> : <Menu size={22} />}
@@ -155,7 +180,10 @@ export default function Sidebar() {
         />
       )}
 
-      <aside className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}>
+      <aside
+        id="sidebar-principal"
+        className={`sidebar ${menuMobileAberto ? "sidebar-mobile-aberta" : ""}`}
+      >
         <div className="sidebar-logo">
           <img
             className="sidebar-logo-oficial"
