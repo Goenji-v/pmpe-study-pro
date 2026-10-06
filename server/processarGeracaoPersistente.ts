@@ -12,10 +12,13 @@ import {
 } from "./promptQuestoesIA.ts";
 import {
   atualizarJobGeracaoIA,
+  atualizarJobGeracaoIAComPosse,
+  ErroPosseJobPerdida,
   reivindicarJobGeracaoIA,
   type ContextoSupabaseJob,
   type JobGeracaoIA,
 } from "./geracaoPersistente.ts";
+import { validarPayloadGeracaoIA } from "./payloadGeracaoIA.ts";
 import {
   montarPromptRevisaoQuestoesIA,
   validarLoteRevisado,
@@ -25,13 +28,6 @@ type DependenciasGeracaoPersistente = {
   ai: GoogleGenAI;
   modelo: string;
   modeloFallback: string;
-};
-
-type PayloadGeracaoPersistente = {
-  assunto: string;
-  quantidade: number;
-  banca: string;
-  enunciadosEvitar: string[];
 };
 
 const filasPorUsuario = new Map<string, Promise<void>>();
@@ -102,7 +98,6 @@ async function processarJobGeracaoIA(
 
   if (!assumido) return;
 
-  const payload = validarPayload(job.payload);
   const modelos = [
     dependencias.modelo,
     dependencias.modeloFallback,
@@ -113,7 +108,7 @@ async function processarJobGeracaoIA(
     progresso: number,
     descricao: string
   ) => {
-    await atualizarJobGeracaoIA(
+    await atualizarJobGeracaoIAComPosse(
       contexto,
       job.id,
       {
@@ -128,6 +123,8 @@ async function processarJobGeracaoIA(
   };
 
   try {
+    const payload = validarPayloadGeracaoIA(job.payload);
+
     await atualizar(
       "gerando",
       20,
@@ -196,32 +193,6 @@ async function processarJobGeracaoIA(
           payload.quantidade,
           payload.assunto
         );
-
-        await atualizar(
-          "salvando",
-          92,
-          "O lote aprovado está sendo salvo."
-        );
-
-        await atualizarJobGeracaoIA(
-          contexto,
-          job.id,
-          {
-            status: "concluida",
-            etapa: "concluida",
-            progresso: 100,
-            descricao: "Questões prontas.",
-            resultado: {
-              questoes: loteRevisado,
-            },
-            erro: null,
-            concluida_em: new Date().toISOString(),
-            lease_ate: null,
-          },
-          execucaoId
-        );
-
-        return;
       } catch (erroValidacao) {
         motivoReprovacao =
           erroValidacao instanceof Error
@@ -231,9 +202,45 @@ async function processarJobGeracaoIA(
         if (tentativa >= 2) {
           throw erroValidacao;
         }
+
+        continue;
       }
+
+      await atualizar(
+        "salvando",
+        92,
+        "O lote aprovado está sendo salvo."
+      );
+
+      await atualizarJobGeracaoIAComPosse(
+        contexto,
+        job.id,
+        {
+          status: "concluida",
+          etapa: "concluida",
+          progresso: 100,
+          descricao: "Questões prontas.",
+          resultado: {
+            questoes: loteRevisado,
+          },
+          erro: null,
+          concluida_em: new Date().toISOString(),
+          lease_ate: null,
+        },
+        execucaoId
+      );
+
+      return;
     }
   } catch (erro) {
+    if (erro instanceof ErroPosseJobPerdida) {
+      console.warn("[geracao-ia-job] execução encerrada: posse do job perdida", {
+        jobId: job.id,
+        requestId: job.request_id,
+      });
+      return;
+    }
+
     const mensagem =
       erro instanceof Error
         ? erro.message
@@ -298,39 +305,4 @@ async function gerarLote(
       tentativasPorModelo: [2, 1],
     }
   );
-}
-
-function validarPayload(
-  valor: Record<string, unknown>
-): PayloadGeracaoPersistente {
-  const assunto =
-    typeof valor.assunto === "string"
-      ? valor.assunto.trim()
-      : "";
-  const banca =
-    typeof valor.banca === "string"
-      ? valor.banca.trim()
-      : "AOCP";
-  const quantidade = Math.max(
-    1,
-    Math.min(60, Number(valor.quantidade) || 5)
-  );
-  const enunciadosEvitar = Array.isArray(valor.enunciadosEvitar)
-    ? valor.enunciadosEvitar
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim().slice(0, 500))
-        .filter(Boolean)
-        .slice(0, 120)
-    : [];
-
-  if (!assunto) {
-    throw new Error("O assunto da geração está vazio.");
-  }
-
-  return {
-    assunto,
-    quantidade,
-    banca,
-    enunciadosEvitar,
-  };
 }
