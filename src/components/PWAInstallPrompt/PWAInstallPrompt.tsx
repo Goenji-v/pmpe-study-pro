@@ -13,6 +13,7 @@ type BeforeInstallPromptEvent = Event & {
 
 const CHAVE_DISPENSADO = "studio-pro:pwa-prompt-dispensado";
 const SETE_DIAS = 7 * 24 * 60 * 60 * 1000;
+const ATRASO_EXIBICAO_MS = 12_000;
 
 function estaEmModoAplicativo() {
   const navegador = navigator as Navigator & { standalone?: boolean };
@@ -35,6 +36,16 @@ export default function PWAInstallPrompt() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [mostrarIOS, setMostrarIOS] = useState(false);
   const [mostrarAjudaIOS, setMostrarAjudaIOS] = useState(false);
+  const [prontoParaMostrar, setProntoParaMostrar] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setProntoParaMostrar(true),
+      ATRASO_EXIBICAO_MS
+    );
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (estaEmModoAplicativo() || foiDispensadoRecentemente()) return;
@@ -85,7 +96,12 @@ export default function PWAInstallPrompt() {
     dispensar();
   }
 
-  if (!eventoInstalacao && !mostrarIOS) return null;
+  if (
+    !prontoParaMostrar ||
+    (!eventoInstalacao && !mostrarIOS)
+  ) {
+    return null;
+  }
 
   return (
     <aside className="pwa-install" role="dialog" aria-label="Instalar Studio Pro">
