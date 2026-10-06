@@ -1,0 +1,619 @@
+PROMPT — CONTEXTO COMPLETO DA IA DO STUDY PRO
+Use este texto em outro chat para explicar exatamente o que a IA faz no projeto.
+
+INÍCIO DO PROMPT
+
+Você vai trabalhar no projeto “Study Pro / PMPE Study Pro”.
+
+REGRA PRINCIPAL:
+Considere as informações abaixo como especificação funcional baseada no código real do projeto. Não invente funções que não estão listadas. Quando algo for cálculo local, não diga que foi decidido por um modelo de IA. Diferencie sempre:
+1. IA GENERATIVA;
+2. MOTOR INTELIGENTE LOCAL;
+3. INFRAESTRUTURA DA IA.
+
+Não exponha nem solicite API keys, tokens, secrets ou credenciais.
+
+==================================================
+VISÃO GERAL
+==================================================
+
+O Study Pro usa IA generativa para:
+- gerar questões;
+- fazer uma segunda revisão independente das questões;
+- corrigir o lote se a revisão for reprovada;
+- montar cronograma assistido;
+- produzir diagnóstico do Coach IA;
+- analisar PDF de edital;
+- ler prints/fotos/PDF da grade de um curso;
+- analisar Simulado PDF;
+- extrair gabarito de PDF comentado;
+- extrair literalmente questões do PDF;
+- resolver e classificar questões extraídas;
+- analisar prova oficial para curadoria administrativa.
+
+O Study Pro NÃO usa modelo generativo para:
+- calcular percentuais;
+- calcular certas/erradas/em branco;
+- calcular índice de prontidão;
+- calcular nota projetada;
+- calcular índice de projeção;
+- calcular comparação semanal;
+- gerar Relatório Inteligente;
+- decidir revisão adaptativa por faixas de nota;
+- distribuir blocos adaptativos;
+- fazer ajuste semanal controlado;
+- recomendar flashcards por faixa de desempenho;
+- construir diagnóstico final do simulado depois das respostas do aluno.
+
+Esses itens são motores locais determinísticos.
+
+==================================================
+QUESTÕES IA
+==================================================
+
+A geração pode partir:
+- de uma matéria/assunto;
+- de vários assuntos;
+- do conteúdo de uma semana.
+
+Antes de gerar:
+- o sistema procura questões compatíveis no catálogo;
+- pode priorizar questões ainda não respondidas;
+- reutiliza o que puder;
+- pede à IA apenas as questões que faltam.
+
+A operação é persistida para poder continuar/repetir depois de erro.
+
+O prompt de geração exige:
+- quantidade exata;
+- questão inédita;
+- banca-alvo;
+- cinco alternativas A–E;
+- uma única alternativa correta;
+- explicação;
+- fonte;
+- auditoria;
+- referência normativa quando aplicável;
+- data de referência.
+
+O estilo editorial usa a prova PMPE/AOCP 2024 como referência de estrutura/dificuldade, mas proíbe cópia e paráfrase textual.
+
+A IA deve verificar a própria questão antes de entregar:
+- resolver sem confiar na chave redigida;
+- julgar A–E;
+- descartar questão com duas alternativas defensáveis;
+- conferir fatos, datas, artigos, versões e exceções.
+
+Depois da primeira geração, existe uma SEGUNDA ETAPA DE REVISÃO.
+
+Essa revisão:
+- recebe o lote completo;
+- resolve tudo novamente;
+- não confia no gabarito anterior;
+- verifica enunciado;
+- verifica unicidade da resposta;
+- verifica explicação;
+- verifica fonte;
+- verifica legislação/norma quando aplicável;
+- rejeita dúvida factual.
+
+Depois há um VALIDADOR LOCAL.
+
+Para liberar uma questão, o código exige:
+- auditoria aprovada;
+- confiança alta;
+- exatamente uma alternativa correta;
+- a alternativa auditada igual ao gabarito;
+- fonte primária identificável;
+- justificativa de unicidade;
+- data de referência;
+- fonte da questão;
+- norma/dispositivo em contexto jurídico.
+
+O código também rejeita repetição semântica forte entre questões.
+
+Se o lote falhar:
+- o motivo objetivo volta para a IA;
+- a IA recebe nova chance de corrigir o lote completo;
+- se continuar inválido, o lote não é liberado.
+
+==================================================
+CATÁLOGO DE QUESTÕES
+==================================================
+
+O catálogo:
+- armazena questões compatíveis;
+- reaproveita questões;
+- pode excluir já respondidas da seleção;
+- usa fingerprint/assinatura;
+- registra resposta e correção do usuário;
+- valida novas questões antes de confirmar publicação.
+
+A interface informa que novas questões geradas podem aguardar curadoria antes de entrar no banco compartilhado.
+
+==================================================
+RESOLUÇÃO DE QUESTÕES IA
+==================================================
+
+O usuário pode:
+- responder;
+- eliminar alternativas;
+- navegar;
+- marcar chute;
+- marcar não sei;
+- marcar não estudado;
+- deixar em branco;
+- retomar rascunho.
+
+Na finalização, o código calcula:
+- certas;
+- erradas;
+- em branco;
+- percentual.
+
+Agrupa por:
+- matéria;
+- módulo;
+- assunto.
+
+“Não estudado” fica fora do diagnóstico adaptativo.
+“Chutei” e “não sei” não contam como domínio seguro.
+
+Se o treino veio de uma revisão:
+- o sistema localiza a revisão original;
+- com amostra válida, conclui aquela revisão;
+- agenda a próxima conforme desempenho.
+
+“Treinar erros” cria um novo caderno com erros, brancos e respostas inseguras.
+
+==================================================
+REVISÃO ADAPTATIVA — MOTOR LOCAL
+==================================================
+
+Não é uma resposta livre de IA.
+
+Com amostra suficiente:
+- <50%: teoria + questões;
+- 50–69%: revisão curta + questões;
+- 70–79%: novas questões + revisão espaçada;
+- >=80%: ciclo normal.
+
+Antecipação por baixo desempenho:
+- <40%: revisão hoje;
+- 40–59%: +1 dia;
+- 60–74%: +2 dias;
+- >=75%: não ativa antecipação de baixo desempenho.
+
+Se já existe revisão pendente equivalente:
+- atualiza a existente;
+- não duplica;
+- pode antecipar;
+- preserva o resultado mais crítico quando necessário.
+
+O ciclo regular e Difícil/Médio/Fácil também são regras locais.
+
+==================================================
+CRONOGRAMA IA / PLANO TÁTICO
+==================================================
+
+Antes da IA, um motor local analisa 14 dias de dados.
+
+Ele usa:
+- questões;
+- sessões;
+- revisões;
+- matérias existentes.
+
+Prioridade aumenta com:
+- nota baixa;
+- revisões atrasadas;
+- revisões vencendo em até 2 dias;
+- sessão incompleta;
+- sessão com dúvida.
+
+Toda matéria recebe pelo menos um bloco.
+Os blocos extras são distribuídos por prioridade.
+Nenhuma matéria é simplesmente removida.
+
+A IA do cronograma recebe:
+- usuário;
+- concurso;
+- banca;
+- hoje/7 dias;
+- minutos disponíveis;
+- perfil;
+- matéria de maior dificuldade;
+- formato preferido;
+- metas;
+- distribuição adaptativa;
+- questões recentes;
+- sessões;
+- revisões;
+- simulados;
+- missões pendentes.
+
+Se houver mentoria/trilha ativa, o contexto inclui:
+- progresso;
+- assuntos pendentes;
+- reforços;
+- próximo assunto;
+- limites/regras do mentor.
+
+A IA deve:
+- priorizar revisões atrasadas;
+- priorizar revisões que vencem hoje/próximos 2 dias;
+- priorizar matérias fracas;
+- respeitar distribuição adaptativa;
+- manter contato com todas as matérias;
+- respeitar o tempo diário;
+- usar questões realistas;
+- considerar maior dificuldade e preferência;
+- usar domingo estratégico para redação + simulado quando habilitado;
+- não inventar IDs de missão;
+- tratar o cronograma como proposta assistida.
+
+Tipos permitidos:
+teoria, questoes, revisao, simulado, redacao, misto.
+
+Depois da resposta da IA, o código valida:
+- dia dentro do período;
+- duração;
+- tipo permitido;
+- missionId existente;
+- no máximo 5 tarefas/dia;
+- soma de minutos <= disponibilidade.
+
+Somente depois salva.
+
+Aprovar o cronograma é ação separada do usuário e não chama IA.
+
+==================================================
+PLANEJAMENTO ADAPTATIVO LOCAL
+==================================================
+
+O motor local calcula distribuição semanal.
+
+Pesos observados:
+- <50%: forte aumento;
+- 50–69%: aumento intermediário;
+- 70–79%: aumento menor;
+- revisão atrasada: aumenta prioridade;
+- revisão que vence em até 2 dias: aumenta prioridade;
+- sessão incompleta: aumenta prioridade;
+- sessão com dúvida: aumenta prioridade.
+
+Missões flexíveis podem ser adaptadas à matéria/assunto prioritário.
+
+Existe ajuste controlado periódico de matéria prioritária.
+O usuário pode desfazer.
+O ajuste não remove matérias.
+
+==================================================
+COACH IA
+==================================================
+
+O Coach mistura:
+- cálculos locais;
+- interpretação generativa quando o usuário pede.
+
+Dados preparados localmente:
+- índice de prontidão;
+- aproveitamento;
+- minutos;
+- dias ativos;
+- revisões atrasadas;
+- revisões pendentes;
+- total de questões;
+- simulados;
+- desempenho por matéria;
+- assuntos críticos;
+- metas;
+- comparação dos últimos 7 dias com os 7 anteriores.
+
+O prompt do Coach diz:
+- não inventar dados;
+- evitar motivação genérica;
+- interpretar números;
+- priorizar revisão atrasada;
+- matéria fraca;
+- assunto crítico;
+- consistência;
+- metas;
+- tempo real disponível.
+
+A IA devolve:
+- resumo;
+- alerta principal;
+- foco do dia;
+- tempo sugerido;
+- mensagem final;
+- 3 a 5 ações.
+
+Cada ação tem:
+- prioridade;
+- título;
+- motivo;
+- duração;
+- quantidade de questões;
+- tipo;
+- matéria/assunto opcionais.
+
+“Executar agora” direciona:
+- revisão -> Revisões;
+- questões/simulado -> Gerador IA;
+- teoria/material -> Materiais filtrados.
+
+O diagnóstico mais recente fica salvo.
+Se surgirem atividades novas depois, a tela marca a análise como desatualizada.
+
+==================================================
+CENTRAL DE INTELIGÊNCIA — MOTOR LOCAL
+==================================================
+
+Não atribua estes cálculos ao modelo.
+
+Calcula:
+- hoje;
+- últimos 7 dias;
+- total;
+- revisões atrasadas/hoje;
+- desempenho por matéria;
+- desempenho por assunto;
+- desempenho por banca;
+- melhor matéria;
+- pior matéria;
+- matéria esquecida;
+- assuntos críticos;
+- assuntos dominados;
+- aproveitamento de simulados;
+- prontidão;
+- nota projetada;
+- índice de projeção;
+- missões.
+
+Índice de prontidão:
+- questões 35%;
+- simulados 20%;
+- tempo semanal 20%;
+- frequência 15%;
+- confiança da amostra 10%;
+- penalidade por revisões atrasadas.
+
+Nota projetada:
+- questões 55%;
+- simulados 30%;
+- prontidão 15%.
+
+O índice de projeção não é probabilidade estatística de aprovação.
+
+==================================================
+RELATÓRIO INTELIGENTE — MOTOR LOCAL
+==================================================
+
+Não chama modelo.
+
+Compara:
+- semana atual;
+- semana anterior.
+
+Calcula:
+- minutos;
+- questões;
+- aproveitamento;
+- dias ativos;
+- materiais;
+- matéria crítica;
+- melhor matéria;
+- matéria esquecida;
+- revisões atrasadas;
+- consistência;
+- recomendações;
+- resumo executivo.
+
+Índice de consistência:
+- meta de tempo 35%;
+- frequência 35%;
+- aproveitamento 30%;
+- penalidade por revisões atrasadas.
+
+==================================================
+EDITAL INTELIGENTE
+==================================================
+
+A IA lê PDF de edital.
+
+Ela deve:
+- usar somente conteúdo presente no PDF;
+- detectar concurso/cargo/banca;
+- filtrar pelo cargo-alvo quando fornecido;
+- excluir conteúdo de outros cargos;
+- organizar Matéria -> Assuntos;
+- consolidar repetições;
+- não inventar;
+- não transformar requisito administrativo em matéria;
+- registrar ambiguidade.
+
+Pode usar pesquisa para ajudar na PRIORIDADE, mas não para inventar conteúdo do edital.
+
+A saída inclui prioridade e incidência estimada.
+Incidência é peso de estudo, não probabilidade estatística.
+
+O sistema possui fallback/retry quando a leitura assistida não é concluída.
+
+==================================================
+LEITURA DE CURSO POR IMAGEM/PDF
+==================================================
+
+A IA lê print, foto ou PDF de grade do curso.
+
+Reconstrói:
+Matéria -> Módulo -> Aula.
+
+Regras:
+- somente o que estiver visível;
+- preservar ordem;
+- “Geral” se não houver módulo;
+- menu/perfil/suporte/login/certificado/rodapé não viram aula;
+- mentoria/encontros/comunidade podem ser complementares;
+- não inventar aula;
+- não inventar URL;
+- URL somente se estiver literalmente visível;
+- deduplicar prints sobrepostos.
+
+==================================================
+SIMULADO PDF
+==================================================
+
+Fluxo generativo:
+1. usuário envia prova;
+2. opcionalmente PDF comentado/gabarito;
+3. job persistente inicia;
+4. se houver comentado, a IA extrai o gabarito do DOCUMENTO;
+5. IA extrai literalmente enunciados e alternativas;
+6. IA resolve/classifica cada questão separadamente;
+7. checkpoints salvam avanço;
+8. pendências podem ser retomadas.
+
+Na extração:
+- não resolver;
+- não classificar;
+- não inventar ilegível.
+
+Na resolução:
+- usa o texto já extraído;
+- retorna matéria/módulo/assunto/subassunto;
+- dificuldade;
+- gabarito;
+- comentário;
+- norma/dispositivo;
+- confiança;
+- status.
+
+Se existe gabarito externo confirmado, ele prevalece.
+
+Sem gabarito externo:
+- a IA resolve;
+- baixa confiança fica como “revisar”.
+
+A confiança final considera leitura + resolução.
+
+O job persiste resultado parcial.
+Na retomada, só trabalha o que falta.
+
+==================================================
+DIAGNÓSTICO FINAL DE SIMULADO — MOTOR LOCAL
+==================================================
+
+Depois que o aluno responde, o sistema calcula localmente:
+- correção;
+- resumo;
+- materiais;
+- assuntos;
+- caderno de erros;
+- não estudados;
+- plano de revisão;
+- dificuldade;
+- evolução;
+- recomendação final.
+
+O plano prioriza:
+- erros;
+- brancos;
+- chutes;
+- assuntos abaixo de 80%.
+
+Evita concentrar demais numa matéria e evita duplicar prioridades muito semelhantes.
+
+==================================================
+ANÁLISE DE PROVA OFICIAL / CURADORIA
+==================================================
+
+Fluxo administrativo.
+
+A IA:
+- extrai gabarito oficial;
+- identifica anuladas conforme o documento;
+- não substitui gabarito oficial por memória;
+- extrai questões;
+- relaciona cada uma ao edital;
+- classifica compatibilidade;
+- aponta confiança;
+- sugere status.
+
+Compatibilidade:
+direta, implicita, relacionada, fora, incerta.
+
+Status:
+anulada, desatualizada, duvidosa, pendente.
+
+REGRA CRÍTICA:
+A IA não aprova questão automaticamente.
+Questão aparentemente válida fica pendente para revisão humana.
+
+==================================================
+FLASHCARDS
+==================================================
+
+É motor local, não IA generativa.
+
+- sem tentativa: começar por flashcards;
+- <50%: teoria + flashcards;
+- 50–79%: flashcards;
+- >=80%: quiz.
+
+==================================================
+REDAÇÃO
+==================================================
+
+Não diga que o Study Pro corrige redação por IA no código atual.
+
+O código atual tem:
+- tema;
+- objetivo;
+- observação;
+- rascunho;
+- cronômetro;
+- pausar/continuar;
+- retomada;
+- vínculo com plano;
+- registro.
+
+A IA do cronograma pode AGENDAR redação.
+Não foi encontrada chamada generativa que leia/corrija/dê nota ao texto da redação.
+
+==================================================
+INFRAESTRUTURA
+==================================================
+
+A IA possui suporte de:
+- autenticação;
+- controle de uso;
+- retry;
+- modelo reserva;
+- filas;
+- jobs persistentes;
+- IDs de operação;
+- leases;
+- checkpoints;
+- retomada;
+- parser robusto de JSON;
+- validadores locais.
+
+Não exponha credenciais nem detalhes secretos.
+
+==================================================
+REGRA FINAL PARA QUALQUER ALTERAÇÃO
+==================================================
+
+Ao modificar o Study Pro:
+- não diga que “a IA decidiu” quando foi fórmula local;
+- não remova validações locais depois da resposta do modelo;
+- não pule a segunda revisão das Questões IA;
+- não deixe IA inventar IDs ou conteúdo externo ao PDF;
+- preserve retomada/persistência das gerações;
+- preserve curadoria humana onde o código exige;
+- preserve os limites de tempo/tarefas do cronograma;
+- preserve o uso do gabarito externo como autoridade quando existente;
+- preserve a regra de que Redação ainda não tem corretor generativo no código atual.
+
+FIM DO PROMPT.
