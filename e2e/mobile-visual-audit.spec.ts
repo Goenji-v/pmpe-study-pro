@@ -141,7 +141,7 @@ test.describe("capturas da auditoria visual mobile", () => {
 
       if (rota === "/central-estudos") {
         await expect(
-          page.getByRole("button", { name: "Redação", exact: true })
+          page.locator(".central-estudos-tipos .central-tipo").filter({ hasText: "Redação" })
         ).toBeVisible({ timeout: 10_000 });
       }
 
