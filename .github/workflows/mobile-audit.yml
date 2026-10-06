@@ -2,6 +2,16 @@ name: Mobile Audit
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "e2e/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.*"
+      - ".github/workflows/mobile-audit.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -35,10 +45,33 @@ jobs:
         run: |
           test -n "$E2E_TEST_EMAIL"
           test -n "$E2E_TEST_PASSWORD"
+      - name: Aguardar deploy de produção deste commit
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          for tentativa in $(seq 1 42); do
+            publicado="$(
+              curl -fsS "https://pmpe-study-pro-two.vercel.app/version.json?t=$(date +%s)" |
+              node -e 'let x="";process.stdin.on("data",d=>x+=d);process.stdin.on("end",()=>{try{process.stdout.write(JSON.parse(x).commit||"")}catch{}})'
+            )"
+
+            if [[ "$publicado" == "$GITHUB_SHA" ]]; then
+              echo "Deploy $publicado confirmado."
+              exit 0
+            fi
+
+            echo "Aguardando produção: esperado=$GITHUB_SHA atual=$publicado"
+            sleep 10
+          done
+
+          echo "O deploy de produção não chegou ao commit esperado dentro do prazo."
+          exit 1
       - name: Auditar mobile
         run: >-
           npx playwright test
+          e2e/mobile-navigation.spec.ts
           e2e/mobile-complete-audit.spec.ts
+          e2e/mobile-secondary.spec.ts
           e2e/mobile-visual-audit.spec.ts
           --project=mobile-chrome
       - name: Anexar relatório visual
