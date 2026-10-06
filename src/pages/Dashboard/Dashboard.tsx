@@ -357,8 +357,8 @@ export default function Dashboard() {
   );
 
   const materiasDosCards = useMemo(
-    () => selecionarMateriasParaCards(desempenhoMaterias, 6, piorMateria),
-    [desempenhoMaterias, piorMateria]
+    () => selecionarMateriasParaCards(desempenhoMaterias, 6, [melhorMateria, piorMateria]),
+    [desempenhoMaterias, melhorMateria, piorMateria]
   );
 
   const gamificacao = useMemo(
