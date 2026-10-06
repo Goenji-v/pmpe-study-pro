@@ -286,6 +286,7 @@
 
   .sidebar-mobile-toggle {
     position: fixed;
+    touch-action: manipulation;
     top: 10px;
     left: 10px;
     z-index: 1302;
@@ -305,6 +306,7 @@
 
   .sidebar-mobile-overlay {
     position: fixed;
+    touch-action: manipulation;
     inset: 0;
     z-index: 1298;
     display: block;
@@ -319,12 +321,13 @@
   .sidebar {
     width: min(86vw, 330px);
     min-width: 0;
-    padding: 66px 16px 18px;
+    padding: 66px 16px max(18px, env(safe-area-inset-bottom));
     border-right: 1px solid rgba(75, 113, 151, 0.38);
     box-shadow: 18px 0 45px rgba(2, 6, 23, 0.40);
     transform: translateX(-105%);
     transition: transform .24s ease;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     pointer-events: none;
   }
 
