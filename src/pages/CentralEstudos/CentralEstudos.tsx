@@ -442,6 +442,23 @@ const [
 
     setMensagem("");
 
+    if (tipo === "redacao") {
+      atualizarDados({
+        tipo,
+        formatoRevisao: undefined,
+        materia: "Redação",
+        materiaId: undefined,
+        modulo: undefined,
+        moduloId: undefined,
+        assunto: "",
+        assuntoId: undefined,
+        aulaId: undefined,
+        urlAula: undefined,
+        urlQuestoes: undefined,
+      });
+      return;
+    }
+
     if (tipo !== "simulado") {
       atualizarDados({
         tipo,
