@@ -93,13 +93,15 @@ test("cards: a pior matéria aparece mesmo fora do top 6 por volume", () => {
     registro("F", 50, 50),
     registro("G", 10, 14), // 7ª por volume (24 questões) e a pior (42%)
   ]);
-  const { pior } = destacarMelhorEPior(materias);
-  const cards = selecionarMateriasParaCards(materias, 6, pior);
+  const { melhor, pior } = destacarMelhorEPior(materias);
+  const cards = selecionarMateriasParaCards(materias, 6, [melhor, pior]);
 
   assert.equal(pior?.materia, "G");
   assert.equal(materias.slice(0, 6).some((item) => item.materia === "G"), false);
   assert.equal(cards.length, 6);
   assert.ok(cards.some((item) => item.materia === "G"));
+  // A melhor matéria também precisa continuar visível.
+  assert.ok(cards.some((item) => item.materia === melhor?.materia));
 });
 
 test("pontos de atenção respeitam média geral e amostra mínima", () => {
@@ -115,4 +117,24 @@ test("pontos de atenção respeitam média geral e amostra mínima", () => {
     atencao.map((item) => item.materia),
     ["Português", "RLM"]
   );
+});
+
+test("cards: melhor e pior fora do top 6 entram sem remover uma à outra", () => {
+  const materias = calcularDesempenhoPorMateria([
+    registro("A", 60, 40),
+    registro("B", 60, 40),
+    registro("C", 60, 40),
+    registro("D", 60, 40),
+    registro("E", 60, 40),
+    registro("F", 60, 40),
+    registro("Melhor", 20, 2), // 7ª por volume, 91%
+    registro("Pior", 9, 12), // 8ª por volume, 43%
+  ]);
+  const { melhor, pior } = destacarMelhorEPior(materias);
+  const cards = selecionarMateriasParaCards(materias, 6, [melhor, pior]);
+
+  assert.equal(cards.length, 6);
+  assert.ok(cards.some((item) => item.materia === "Melhor"));
+  assert.ok(cards.some((item) => item.materia === "Pior"));
+  assert.equal(new Set(cards.map((item) => item.materia)).size, 6);
 });

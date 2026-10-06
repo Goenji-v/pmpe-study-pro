@@ -179,17 +179,31 @@ export function selecionarPontosDeAtencao(
 }
 
 /**
- * Matérias para os cards: as mais estudadas, mas garantindo que a matéria
- * apontada como ponto de atenção apareça (senão a tela se contradiz).
+ * Matérias para os cards: as mais estudadas, mas garantindo que as matérias
+ * citadas no diagnóstico (melhor e pior) apareçam; senão a tela se contradiz.
+ * Para abrir espaço, saem as menos estudadas que não são obrigatórias.
  */
 export function selecionarMateriasParaCards(
   materias: DesempenhoMateria[],
   limite = 6,
-  garantir?: DesempenhoMateria | null
+  garantir: Array<DesempenhoMateria | null | undefined> = []
 ): DesempenhoMateria[] {
-  const principais = materias.slice(0, limite);
-  if (!garantir || principais.some((item) => item.materia === garantir.materia)) {
-    return principais;
+  const obrigatorias = garantir.filter(
+    (item, indice, lista): item is DesempenhoMateria =>
+      Boolean(item) && lista.findIndex((outro) => outro?.materia === item?.materia) === indice
+  );
+  const ehObrigatoria = (item: DesempenhoMateria) =>
+    obrigatorias.some((outra) => outra.materia === item.materia);
+
+  const selecionadas = materias.slice(0, limite);
+
+  for (const falta of obrigatorias) {
+    if (selecionadas.some((item) => item.materia === falta.materia)) continue;
+    const indiceRemovivel = selecionadas.findLastIndex((item) => !ehObrigatoria(item));
+    if (indiceRemovivel === -1) break;
+    selecionadas.splice(indiceRemovivel, 1, falta);
   }
-  return [...principais.slice(0, Math.max(0, limite - 1)), garantir];
+
+  // Mantém a ordem original (mais estudadas primeiro).
+  return selecionadas.sort((a, b) => materias.indexOf(a) - materias.indexOf(b));
 }
