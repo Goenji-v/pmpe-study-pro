@@ -62,7 +62,6 @@ export default function CentralRedacaoBridge() {
     continuar,
   } = useCronometro();
 
-  const [destinoTipos, setDestinoTipos] = useState<HTMLElement | null>(null);
   const [destinoFormulario, setDestinoFormulario] = useState<HTMLElement | null>(null);
   const [destinoFinalizacao, setDestinoFinalizacao] = useState<HTMLElement | null>(null);
   const [temaFinalizacao, setTemaFinalizacao] = useState("");
@@ -124,7 +123,60 @@ export default function CentralRedacaoBridge() {
   );
 
   useEffect(() => {
-    if (!redacaoAtiva || cronometroAtivo) return;
+    if (
+      !naCentral ||
+      !redacaoAtiva ||
+      cronometroAtivo ||
+      sessaoAtiva.materia === MATERIA_REDACAO
+    ) {
+      return;
+    }
+
+    const rascunho = carregarRascunhoRedacao();
+
+    prepararSessao({
+      materia: MATERIA_REDACAO,
+      assunto: rascunho?.tema ?? "",
+      tipo: TIPO_REDACAO,
+      objetivo:
+        rascunho?.objetivo ||
+        "Atividade de redação",
+      observacao: rascunho?.observacao ?? "",
+      missaoId:
+        vinculoRedacaoHoje?.missaoId ??
+        rascunho?.missaoId,
+      semana:
+        vinculoRedacaoHoje?.semana ??
+        rascunho?.semana,
+      dia:
+        vinculoRedacaoHoje?.dia ??
+        rascunho?.dia,
+    });
+
+    if (rascunho) {
+      showToast(
+        "Rascunho da redação restaurado.",
+        "info"
+      );
+    }
+  }, [
+    cronometroAtivo,
+    naCentral,
+    prepararSessao,
+    redacaoAtiva,
+    sessaoAtiva.materia,
+    showToast,
+    vinculoRedacaoHoje?.dia,
+    vinculoRedacaoHoje?.missaoId,
+    vinculoRedacaoHoje?.semana,
+  ]);
+
+  useEffect(() => {
+    if (
+      !redacaoAtiva ||
+      cronometroAtivo ||
+      sessaoAtiva.materia !== MATERIA_REDACAO
+    ) return;
 
     const rascunho = criarRascunhoTreinoRedacao({
       tema: sessaoAtiva.assunto,
@@ -149,6 +201,7 @@ export default function CentralRedacaoBridge() {
     redacaoAtiva,
     sessaoAtiva.assunto,
     sessaoAtiva.dia,
+    sessaoAtiva.materia,
     sessaoAtiva.missaoId,
     sessaoAtiva.objetivo,
     sessaoAtiva.observacao,
@@ -157,16 +210,12 @@ export default function CentralRedacaoBridge() {
 
   useEffect(() => {
     if (!naCentral) {
-      setDestinoTipos(null);
       setDestinoFormulario(null);
       setDestinoFinalizacao(null);
       return;
     }
 
     const localizarDestinos = () => {
-      setDestinoTipos(
-        document.querySelector<HTMLElement>(".central-estudos-tipos")
-      );
       setDestinoFormulario(
         document.querySelector<HTMLElement>(".central-estudos-formulario")
       );
@@ -327,38 +376,6 @@ export default function CentralRedacaoBridge() {
     );
   }, [sessoes, setSessoes]);
 
-  function selecionarRedacao() {
-    if (cronometroAtivo) return;
-
-    const rascunho = carregarRascunhoRedacao();
-
-    prepararSessao({
-      materia: MATERIA_REDACAO,
-      assunto: rascunho?.tema ?? "",
-      tipo: TIPO_REDACAO,
-      objetivo:
-        rascunho?.objetivo ||
-        "Atividade de redação",
-      observacao: rascunho?.observacao ?? "",
-      missaoId:
-        vinculoRedacaoHoje?.missaoId ??
-        rascunho?.missaoId,
-      semana:
-        vinculoRedacaoHoje?.semana ??
-        rascunho?.semana,
-      dia:
-        vinculoRedacaoHoje?.dia ??
-        rascunho?.dia,
-    });
-
-    if (rascunho) {
-      showToast(
-        "Rascunho da redação restaurado.",
-        "info"
-      );
-    }
-  }
-
   function iniciarTreinoRedacao() {
     if (cronometroAtivo || !redacaoAtiva) return;
 
@@ -398,24 +415,6 @@ export default function CentralRedacaoBridge() {
 
   return (
     <>
-      {naCentral && destinoTipos &&
-        createPortal(
-          <button
-            type="button"
-            className={
-              redacaoAtiva
-                ? "central-tipo central-tipo-ativo central-tipo-redacao"
-                : "central-tipo central-tipo-redacao"
-            }
-            onClick={selecionarRedacao}
-            disabled={cronometroAtivo}
-          >
-            <span>✍️</span>
-            <strong>Redação</strong>
-          </button>,
-          destinoTipos
-        )}
-
       {naCentral && redacaoAtiva && destinoFormulario &&
         createPortal(
           <>

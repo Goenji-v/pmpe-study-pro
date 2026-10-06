@@ -10,6 +10,7 @@ const rotasPrincipais = [
   "/questoes",
   "/revisoes",
   "/simulados",
+  "/simulado-pdf",
   "/configuracoes",
 ];
 
@@ -241,5 +242,44 @@ test.describe("auditoria mobile completa", () => {
 
     await expect(page.locator(".resolver-ia-container")).toBeVisible();
     await expect(page.getByText("Carregando questões...", { exact: true })).toHaveCount(0);
+  });
+
+  test("Redação inicia, sobrevive a F5 e continua utilizável em 360px", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chrome", "Teste exclusivo do projeto mobile.");
+
+    await page.setViewportSize({ width: 360, height: 740 });
+    await entrar(page);
+    await page.goto("/central-estudos", { waitUntil: "domcontentloaded" });
+
+    await page.getByRole("button", { name: /Redação/ }).click();
+
+    const tema = page.locator(".central-redacao-campo input").first();
+    await tema.fill("Treino mobile de introdução");
+
+    const iniciarTreino = page.getByRole("button", {
+      name: "▶ Iniciar treino",
+      exact: true,
+    });
+    await expect(iniciarTreino).toBeVisible();
+    await iniciarTreino.click();
+
+    await expect(page.getByText("Treino em andamento", { exact: true })).toBeVisible();
+    await expect(page.locator(".central-redacao-status strong")).toHaveText(/\d{2}:\d{2}:\d{2}/);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Treino em andamento", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.locator(".central-redacao-status strong")).toHaveText(/\d{2}:\d{2}:\d{2}/);
+
+    const diagnostico = await coletarDiagnosticoMobile(page);
+    expect(diagnostico.larguraPagina).toBeLessThanOrEqual(diagnostico.largura + 2);
+    expect(diagnostico.foraDaTela).toEqual([]);
+
+    page.once("dialog", async (dialogo) => {
+      await dialogo.accept();
+    });
+    await page.getByRole("button", { name: "Limpar", exact: true }).click();
+    await expect(page.getByText("Pronto para iniciar", { exact: true })).toBeVisible();
   });
 });

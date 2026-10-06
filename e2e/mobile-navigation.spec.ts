@@ -126,4 +126,42 @@ test.describe("navegação mobile autenticada", () => {
 
     expect(errosDePagina).toEqual([]);
   });
+
+  test("menu móvel nunca deixa o body travado ao fechar por Escape ou mudar viewport", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chrome", "Teste exclusivo do projeto mobile.");
+
+    await page.setViewportSize({ width: 360, height: 740 });
+    await entrar(page);
+
+    const toggle = page.locator(".sidebar-mobile-toggle");
+    await expect(toggle).toHaveAttribute("aria-controls", "sidebar-principal");
+
+    await toggle.click();
+    await expect(page.locator("body")).toHaveClass(/menu-mobile-aberto/);
+    await expect(page.locator(".sidebar-mobile-overlay")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(toggle).toHaveAttribute("aria-label", "Abrir menu");
+    await expect(page.locator(".sidebar-mobile-overlay")).toHaveCount(0);
+    await expect(page.locator("body")).not.toHaveClass(/menu-mobile-aberto/);
+
+    await toggle.click();
+    await expect(page.locator("body")).toHaveClass(/menu-mobile-aberto/);
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await expect(page.locator(".sidebar-mobile-overlay")).toHaveCount(0);
+    await expect(page.locator("body")).not.toHaveClass(/menu-mobile-aberto/);
+
+    await page.setViewportSize({ width: 360, height: 740 });
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(page.locator(".sidebar-mobile-overlay")).toBeVisible();
+
+    // O centro do backdrop fica coberto pela própria sidebar. Toca na faixa
+    // direita realmente visível, como um usuário faria no celular.
+    await page.mouse.click(350, 370);
+
+    await expect(toggle).toHaveAttribute("aria-label", "Abrir menu");
+    await expect(page.locator("body")).not.toHaveClass(/menu-mobile-aberto/);
+  });
 });
