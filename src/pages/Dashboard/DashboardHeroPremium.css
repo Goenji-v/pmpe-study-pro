@@ -287,3 +287,17 @@
     flex-wrap: wrap;
   }
 }
+
+/* Etiqueta do concurso: deve ser uma pílula, não uma barra de largura total. */
+.dashboard-pro-v3 .dashboard-pro-mission > .dashboard-pro-badge {
+  width: fit-content;
+  max-width: max-content;
+  align-self: flex-start;
+  justify-self: start;
+}
+
+/* Com tema colorido o fundo vira dourado: o texto precisa ser escuro. */
+html[data-study-theme]:not([data-study-theme="padrao"]) .dashboard-pro-v3 .dashboard-pro-mission > .dashboard-pro-badge,
+html[data-study-frame]:not([data-study-frame="padrao"]) .dashboard-pro-v3 .dashboard-pro-mission > .dashboard-pro-badge {
+  color: #0b1220;
+}
