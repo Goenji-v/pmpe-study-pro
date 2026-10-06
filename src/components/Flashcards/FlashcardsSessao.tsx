@@ -7,6 +7,7 @@ import type {
   QuestaoFlashcard,
   ResultadoQuestaoFlashcard,
 } from "../../types/flashcards";
+import type { AvaliacaoSRS } from "../../utils/repeticaoEspacada";
 import Flashcard from "./Flashcard";
 import Resultado from "./Resultado";
 
@@ -64,7 +65,7 @@ export default function FlashcardsSessao({
     [resultados]
   );
 
-  async function marcar(acertou: boolean) {
+  async function marcar(avaliacao: AvaliacaoSRS) {
     if (!questaoAtual || salvando || idsRespondidos.has(questaoAtual.id)) {
       return;
     }
@@ -77,7 +78,7 @@ export default function FlashcardsSessao({
         questaoId: questaoAtual.id,
         materia: pacote.materia,
         topico: pacote.topico,
-        acertou,
+        avaliacao,
         modalidade: "flashcards",
       });
 
@@ -86,7 +87,7 @@ export default function FlashcardsSessao({
         ...atuais,
         {
           questao: questaoAtual,
-          acertou,
+          acertou: avaliacao !== "dificil",
         },
       ]);
 
@@ -161,7 +162,7 @@ export default function FlashcardsSessao({
             ← Tópicos
           </button>
           <h3>{pacote.topico}</h3>
-          <p>{pacote.materia} · Flashcards</p>
+          <p>{pacote.materia} · Flashcards com repetição espaçada</p>
         </div>
 
         <button
@@ -200,24 +201,40 @@ export default function FlashcardsSessao({
       />
 
       {virado && (
-        <div className="flashcards-avaliacao" aria-label="Avaliar resposta">
-          <button
-            type="button"
-            className="flashcards-errei"
-            onClick={() => void marcar(false)}
-            disabled={salvando}
-          >
-            ✕ Errei
-          </button>
-          <button
-            type="button"
-            className="flashcards-acertei"
-            onClick={() => void marcar(true)}
-            disabled={salvando}
-          >
-            ✓ Acertei
-          </button>
-        </div>
+        <>
+          <p className="flashcards-srs-instrucao">
+            Como foi lembrar? Isso define quando este cartão volta.
+          </p>
+          <div className="flashcards-avaliacao" aria-label="Avaliar dificuldade">
+            <button
+              type="button"
+              className="flashcards-dificil"
+              onClick={() => void marcar("dificil")}
+              disabled={salvando}
+            >
+              🔴 Difícil
+              <small>rever amanhã</small>
+            </button>
+            <button
+              type="button"
+              className="flashcards-medio"
+              onClick={() => void marcar("medio")}
+              disabled={salvando}
+            >
+              🟡 Médio
+              <small>intervalo normal</small>
+            </button>
+            <button
+              type="button"
+              className="flashcards-facil"
+              onClick={() => void marcar("facil")}
+              disabled={salvando}
+            >
+              🟢 Fácil
+              <small>intervalo maior</small>
+            </button>
+          </div>
+        </>
       )}
 
       {erro && (
