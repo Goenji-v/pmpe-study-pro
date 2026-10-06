@@ -1,0 +1,86 @@
+PASTA: IA_STUDY_PRO
+DOCUMENTAÇÃO DO FUNCIONAMENTO REAL DA IA DO STUDY PRO
+
+Base do levantamento:
+Goenji-v/pmpe-study-pro
+main @ 98a3c2a8c4536156936c758cab9ef6112007a123
+Data: 06/10/2026
+
+OBJETIVO
+Guardar, em texto, o comportamento real de tudo que se relaciona à inteligência artificial e aos motores inteligentes do Study Pro.
+
+REGRAS DESTA DOCUMENTAÇÃO
+1. Nada aqui foi descrito apenas “pelo nome da tela”.
+2. As funções foram conferidas no código.
+3. Quando existe chamada a modelo generativo, está marcado como IA GENERATIVA.
+4. Quando é fórmula/regra TypeScript/JavaScript, está marcado como MOTOR INTELIGENTE LOCAL.
+5. Filas, retry, persistência, validação e catálogo estão marcados como INFRA IA.
+6. Chaves, tokens, secrets e credenciais não estão documentados.
+7. Função que não foi encontrada no código não é atribuída ao sistema.
+
+ARQUIVOS
+
+01_MAPA_COMPLETO_IA_STUDY_PRO.txt
+- visão funcional completa;
+- explica cada módulo;
+- explica o fluxo de ponta a ponta;
+- separa IA generativa de cálculo local;
+- registra inclusive o que a IA NÃO faz hoje.
+
+02_PROMPT_CONTEXTO_COMPLETO_IA_STUDY_PRO.txt
+- prompt pronto para copiar em outro chat;
+- descreve o comportamento atual da IA;
+- inclui regras que devem ser preservadas ao modificar o projeto;
+- serve para dar contexto a outro desenvolvedor/IA sem enviar credenciais.
+
+03_INDICE_TECNICO_ARQUIVOS_E_FUNCOES.txt
+- responde “qual código faz o quê?”;
+- lista arquivo;
+- lista função;
+- descreve a responsabilidade comprovada daquela função.
+
+CLASSIFICAÇÕES USADAS
+
+[IA GENERATIVA]
+O código chama um modelo para gerar, interpretar, extrair, estruturar, revisar, resolver ou classificar conteúdo.
+
+[MOTOR INTELIGENTE LOCAL]
+O código calcula o resultado com regra/fórmula própria. Não há decisão aberta do modelo.
+
+[INFRA IA]
+Código necessário para a IA funcionar com confiabilidade: jobs, fila, retry, fallback, JSON, checkpoints, catálogo, segurança, autenticação e retomada.
+
+[UI]
+A tela organiza o fluxo e chama os serviços, mas não é por si só a inteligência.
+
+MÓDULOS COBERTOS
+- Questões IA;
+- segunda revisão e auditoria das questões;
+- catálogo/reaproveitamento;
+- Central de Gerações;
+- resolução e resultado;
+- revisão adaptativa;
+- cronograma IA;
+- planejamento adaptativo;
+- Coach IA;
+- Central de Inteligência;
+- Insights;
+- Relatório Inteligente;
+- Edital Inteligente;
+- leitura/importação de curso por mídia;
+- Simulado PDF;
+- diagnóstico local do simulado;
+- análise administrativa de prova oficial;
+- Flashcards adaptativos;
+- Redação;
+- retry/fallback;
+- parser de JSON;
+- segurança e controle de uso.
+
+OBSERVAÇÃO IMPORTANTE SOBRE REDAÇÃO
+No código analisado, Redação possui treino, rascunho, cronômetro, retomada e integração com o plano. A IA do cronograma pode agendar Redação. Porém não foi encontrada chamada generativa que leia o texto da redação para corrigir, dar nota ou reescrever. Por isso esta pasta não afirma que essa função existe.
+
+OBSERVAÇÃO IMPORTANTE SOBRE “INTELIGENTE”
+Ter “IA” ou “Inteligente” no nome da tela não significa automaticamente uso de modelo. A documentação usa o comportamento do código como fonte de verdade.
+
+FIM.

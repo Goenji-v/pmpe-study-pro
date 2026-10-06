@@ -1,0 +1,875 @@
+STUDY PRO — ÍNDICE TÉCNICO DA IA POR ARQUIVO E FUNÇÃO
+Fonte: código real do projeto.
+Objetivo: responder “qual código faz o quê?” sem interpretação livre.
+
+LEGENDA
+[G] = IA generativa
+[L] = lógica/motor local
+[I] = infraestrutura da IA
+[UI] = interface/orquestração
+
+======================================================================
+A. GERAÇÃO DE QUESTÕES
+======================================================================
+
+[UI] src/pages/GerarSimuladoIA/GerarSimuladoIA.tsx
+FUNÇÃO: gerarSimulado
+FAZ:
+- valida seleção da matéria/assunto/semana/banca/quantidade;
+- cria ou retoma uma operação persistida;
+- consulta catálogo para reaproveitar questões;
+- chama geração apenas para o que falta;
+- trata multiassunto em blocos;
+- consolida e embaralha o resultado;
+- opcionalmente publica novas questões;
+- salva o caderno atual;
+- registra progresso da atividade;
+- preserva operação em caso de erro.
+
+[I/G] src/services/gemini.ts
+FUNÇÃO: iniciarGeracaoQuestoesIA
+FAZ:
+- prepara o contexto de geração;
+- cria/recupera um job persistente;
+- envia assunto, banca, quantidade e lista de enunciados a evitar.
+
+FUNÇÃO: aguardarGeracaoQuestoesIA
+FAZ:
+- consulta o job até concluir/errar;
+- verifica quantidade;
+- transforma a resposta em QuestaoIA válida;
+- permite acompanhamento prolongado via job no servidor.
+
+FUNÇÃO: gerarQuestoesIA
+FAZ:
+- combina iniciar + aguardar.
+
+FUNÇÃO LOCAL DE NORMALIZAÇÃO DAS QUESTÕES
+FAZ:
+- exige enunciado;
+- exige A–E;
+- rejeita alternativas repetidas;
+- exige gabarito A–E;
+- exige explicação;
+- exige fonte;
+- rejeita duplicação de enunciado no mesmo lote.
+
+[G] server/promptQuestoesIA.ts
+FUNÇÃO: montarPromptGeracaoQuestoesIA
+FAZ:
+- constrói o prompt editorial;
+- injeta conteúdo, banca, quantidade, data de referência e itens a evitar;
+- impõe formato A–E;
+- impõe uma resposta correta;
+- exige fonte/auditoria;
+- define perfil editorial AOCP/PMPE;
+- proíbe cópia/paráfrase e repetição de habilidade;
+- inclui regras específicas por disciplina.
+
+[I/G] server/processarGeracaoPersistente.ts
+FUNÇÃO: agendarJobGeracaoIA
+FAZ:
+- coloca o job numa fila por usuário;
+- impede o mesmo job de ser agendado duas vezes no mesmo processo.
+
+FUNÇÃO: processarJobGeracaoIA
+FAZ:
+- reivindica o job com lease;
+- atualiza etapa/progresso;
+- chama geração inicial;
+- exige quantidade exata;
+- chama revisão independente;
+- executa validador local;
+- se o lote for reprovado, envia motivo para nova correção;
+- salva resultado apenas após aprovação;
+- marca job como erro se não passar.
+
+FUNÇÃO: gerarLote
+FAZ:
+- chama o modelo com retry/fallback;
+- parseia JSON;
+- exige lista de questões.
+
+[G/L] src/services/revisaoQuestoesIAUtils.ts
+FUNÇÃO: montarPromptRevisaoQuestoesIA
+FAZ:
+- cria o prompt da segunda revisão;
+- manda resolver novamente as questões;
+- manda conferir unicidade, fonte, fatos, norma e explicação;
+- manda substituir questão duvidosa em vez de improvisar.
+
+FUNÇÃO: validarLoteRevisado
+FAZ:
+- exige quantidade exata;
+- valida auditoria editorial de cada item;
+- valida repetição semântica.
+
+FUNÇÃO: validarAuditoriaEditorial
+FAZ:
+- exige APROVADA;
+- exige confiança alta;
+- exige exatamente uma alternativa correta;
+- exige fonte primária;
+- exige justificativa de unicidade;
+- exige data de referência;
+- exige norma/dispositivo em contexto jurídico.
+
+FUNÇÃO: validarRepeticaoSemantica
+FAZ:
+- compara enunciados do lote;
+- rejeita similaridade acima do limite definido.
+
+======================================================================
+B. FILA, RETRY, JSON E PROGRESSO
+======================================================================
+
+[I] server/retryGemini.ts
+FUNÇÃO: executarComFallbackGemini
+FAZ:
+- executa tentativas no modelo atual;
+- reconhece falhas temporárias;
+- troca para modelo reserva quando permitido;
+- propaga erro final se nenhuma tentativa funcionar.
+
+FUNÇÃO: obterStatusErro
+FAZ:
+- extrai status numérico seguro do erro.
+
+[I] server/jsonIa.ts
+CLASSE/FUNÇÕES DE PARSE
+FAZEM:
+- remover blocos de código;
+- remover BOM;
+- localizar JSON completo no texto;
+- corrigir vírgulas finais recuperáveis;
+- lançar erro específico se a resposta continuar inválida.
+
+[I] server/modelosGemini.ts
+FUNÇÃO: resolverModelosGemini
+FAZ:
+- resolve modelo principal e reserva a partir da configuração.
+
+FUNÇÃO: parametrosExtracaoGemini
+FAZ:
+- define parâmetros de extração adequados ao modelo selecionado.
+
+[I/UI] src/components/GeracaoIADrawer/GeracaoIADrawer.tsx
+COMPONENTE: GeracaoIADrawer
+FAZ:
+- lê atividade local;
+- consulta jobs do servidor periodicamente;
+- combina progresso local e remoto;
+- mostra geração em andamento, pronta ou erro;
+- abre resultado;
+- volta ao gerador;
+- permite dispensar o card local.
+
+======================================================================
+C. CATÁLOGO DE QUESTÕES
+======================================================================
+
+[I] src/services/catalogoQuestoesIAService.ts
+FUNÇÃO: selecionarDoCatalogoIA
+FAZ:
+- busca candidatas compatíveis;
+- consulta IDs já respondidos quando a preferência exige;
+- seleciona para reaproveitamento.
+
+FUNÇÃO: selecionarDoCatalogoParaSimuladoIA
+FAZ:
+- faz reaproveitamento para vários conteúdos do simulado.
+
+FUNÇÃO: salvarQuestoesGeradasNoCatalogo
+FAZ:
+- valida cada questão;
+- calcula fingerprint;
+- solicita publicação segura;
+- confirma a questão devolvida pelo fingerprint;
+- falha se alguma não puder ser confirmada.
+
+FUNÇÃO: registrarRespostasQuestoesIA
+FAZ:
+- registra resposta do usuário;
+- registra se foi correta;
+- só tenta registrar questões com ID válido de catálogo.
+
+[I/L] src/services/catalogoQuestoesIAUtils.ts
+FUNÇÃO: normalizarChaveIA
+FAZ:
+- normaliza texto para comparação.
+
+FUNÇÃO: chaveConteudoQuestaoIA
+FAZ:
+- cria chave por conteúdo.
+
+FUNÇÃO: assinaturaCadernoIA
+FAZ:
+- cria assinatura do conjunto de questões.
+
+FUNÇÃO: selecionarQuestoesParaReuso
+FAZ:
+- aplica preferência de reutilização.
+
+FUNÇÃO: fingerprintQuestaoIA
+FAZ:
+- gera fingerprint estável da questão.
+
+FUNÇÃO: reconciliarQuestoesComCatalogo
+FAZ:
+- relaciona questões locais com versões do catálogo.
+
+======================================================================
+D. RESOLUÇÃO E RESULTADO DE QUESTÕES IA
+======================================================================
+
+[UI/L] src/pages/ResolverSimuladoIA/ResolverSimuladoIA.tsx
+FUNÇÃO: restaurarRascunho
+FAZ:
+- recupera respostas, questão atual, marcações e alternativas eliminadas.
+
+FUNÇÃO: responder
+FAZ:
+- grava a alternativa escolhida.
+
+FUNÇÃO: alternarAlternativaEliminada
+FAZ:
+- marca/desmarca alternativa como eliminada.
+
+FUNÇÃO: finalizarSimulado
+FAZ:
+- confirma existência de brancos;
+- monta resultado;
+- registra desempenho no App;
+- salva resultado/histórico;
+- atualiza revisão;
+- encerra rascunho;
+- informa sincronização.
+
+FUNÇÃO: registrarDesempenhoNoApp
+FAZ:
+- cria registros de questões;
+- cria registro de simulado quando aplicável;
+- remove “não estudado” do diagnóstico;
+- trata “chutei/não sei” como falta de domínio seguro;
+- calcula diagnóstico por assunto;
+- aplica revisões adaptativas;
+- conclui a revisão original quando o treino veio diretamente dela.
+
+FUNÇÃO: treinarErros
+FAZ:
+- cria novo caderno com erros/brancos/respostas inseguras;
+- exclui itens “não estudado”.
+
+[L] src/utils/resultadoQuestoesIA.ts
+FUNÇÃO: calcularResultadoQuestoesIA
+FAZ:
+- calcula certas, erradas, em branco e percentual.
+
+FUNÇÃO: calcularDiagnosticoQuestoesIA
+FAZ:
+- agrupa por matéria/módulo/assunto;
+- calcula certas/erradas/brancos;
+- calcula percentual;
+- ordena pontos mais fracos primeiro.
+
+FUNÇÃO: criarRegistrosQuestoesIA
+FAZ:
+- transforma resultado em registros compatíveis com o histórico geral.
+
+FUNÇÃO: criarSimuladoIA
+FAZ:
+- transforma sessão de tipo simulado em registro de Simulado.
+
+FUNÇÃO: aplicarRevisoesDoResultadoIA
+FAZ:
+- localiza referência canônica do assunto;
+- chama revisão adaptativa;
+- contabiliza revisões criadas/atualizadas/sem referência.
+
+======================================================================
+E. REVISÃO ADAPTATIVA
+======================================================================
+
+[L] src/utils/revisaoAdaptativa.ts
+FUNÇÃO: planejarRevisaoPendente
+FAZ:
+- escolhe orientação com base no resultado existente;
+- sem amostra suficiente, recomenda teoria + 10 questões.
+
+FUNÇÃO: orientarRevisaoPorResultado
+FAZ:
+- <50% -> teoria + questões;
+- 50–69% -> revisão curta + questões;
+- 70–79% -> questões + revisão espaçada;
+- >=80% -> ciclo normal.
+
+FUNÇÃO: diagnosticarRevisaoAdaptativa
+FAZ:
+- exige amostra mínima;
+- <40% -> urgente/hoje;
+- 40–59% -> prioritária/+1 dia;
+- 60–74% -> antecipada/+2 dias;
+- >=75% -> sem antecipação por baixo desempenho.
+
+FUNÇÃO: aplicarRevisaoAdaptativa
+FAZ:
+- procura revisão pendente equivalente;
+- antecipa se necessário;
+- preserva resultado mais crítico;
+- atualiza existente ou cria nova;
+- evita duplicação por referência.
+
+FUNÇÃO: aplicarRevisaoPorDuvida
+FAZ:
+- cria/antecipa revisão quando há registro explícito de dúvida.
+
+[L] src/utils/revisoes.ts
+FUNÇÕES DE CONCLUSÃO/AGENDA
+FAZEM:
+- aplicar ciclo espaçado;
+- tratar Difícil/Médio/Fácil;
+- concluir revisão;
+- calcular próxima etapa/data;
+- preservar nota medida por Questões IA;
+- impedir que avaliação manual reaproveite nota velha.
+
+======================================================================
+F. CRONOGRAMA IA
+======================================================================
+
+[UI] src/pages/CronogramaIA/CronogramaIA.tsx
+FUNÇÃO: gerar
+FAZ:
+- valida tempo e perfil;
+- monta dados reais do usuário;
+- injeta prioridade e distribuição adaptativa;
+- envia questões/sessões/revisões/simulados/missões;
+- chama gerarCronogramaIA;
+- guarda resultado atual/histórico.
+
+FUNÇÃO: aprovarCronograma
+FAZ:
+- marca cronograma como aprovado.
+
+FUNÇÃO: iniciarTarefa
+FAZ:
+- converte tarefa do cronograma em prefill da Central de Estudos;
+- tenta vincular revisão e missão real.
+
+FUNÇÃO: alternarAutomacao
+FAZ:
+- ativa/pausa ajuste semanal local.
+
+FUNÇÃO: desfazerAjuste
+FAZ:
+- desativa ajuste e restaura matéria anterior.
+
+[G/I] src/services/cronogramaIAService.ts
+FUNÇÃO: gerarCronogramaIA
+FAZ:
+- enriquece dados com mentoria;
+- pede cronograma à IA;
+- valida resposta;
+- salva cronograma.
+
+FUNÇÃO: enriquecerComTrilhaMentoria
+FAZ:
+- lê trilha/mentoria;
+- injeta assuntos pendentes;
+- injeta reforços;
+- injeta regras do mentor;
+- atualiza metas usadas como contexto;
+- preserva outras missões.
+
+FUNÇÃO: validarCronogramaGerado
+FAZ:
+- exige tarefas;
+- valida dia;
+- valida duração;
+- valida tipo;
+- rejeita missionId inventado;
+- limita 5 tarefas/dia;
+- impede exceder minutos/dia.
+
+FUNÇÃO: salvarCronograma
+FAZ:
+- salva cronograma validado na conta.
+
+FUNÇÃO: aprovarCronogramaIA
+FAZ:
+- grava aprovadoEm no cronograma salvo.
+
+FUNÇÃO: excluirCronogramaIA
+FAZ:
+- exclui somente cronograma do usuário atual.
+
+[G] backend do cronograma em server/index.ts
+FAZ:
+- constrói prompt com perfil, metas, distribuição, atividades e missões;
+- pede plano para hoje ou 7 dias;
+- restringe tipos;
+- manda priorizar atrasos, vencimentos próximos e matérias fracas;
+- manda manter todas as matérias;
+- manda respeitar tempo;
+- manda usar IDs de missões existentes.
+
+======================================================================
+G. MOTOR ADAPTATIVO DO PLANO
+======================================================================
+
+[L] src/utils/adaptacaoPlano.ts
+FUNÇÃO: calcularDiagnosticoSemanalPlano
+FAZ:
+- analisa janela de 14 dias;
+- reúne matérias de questões/sessões/revisões;
+- calcula prioridade/confiança;
+- retorna matéria mais prioritária.
+
+FUNÇÃO: calcularDistribuicaoAdaptativaSemanal
+FAZ:
+- dá pelo menos 1 bloco a cada matéria;
+- aumenta score por nota baixa;
+- aumenta por revisão atrasada;
+- aumenta por revisão próxima;
+- aumenta por sessão incompleta;
+- aumenta por dúvida;
+- distribui blocos extras por prioridade.
+
+FUNÇÃO: adaptarMissaoFlexivel
+FAZ:
+- troca missão flexível pela matéria/assunto prioritário;
+- registra motivo da adaptação.
+
+[L] src/utils/cronogramaAdaptativo.ts
+FUNÇÃO: gerarRelatorioMensal
+FAZ:
+- resume mês para ajuste de prioridade.
+
+FUNÇÃO: criarAjusteControlado
+FAZ:
+- cria ajuste somente com evidência mínima;
+- aponta matéria crítica;
+- nunca remove matérias.
+
+======================================================================
+H. COACH IA
+======================================================================
+
+[UI] src/pages/IACoach/IACoach.tsx
+FUNÇÃO: gerarAnaliseIA
+FAZ:
+- junta métricas locais reais;
+- envia prontidão, desempenho, tempo, revisões, matérias, críticos e metas;
+- salva diagnóstico retornado;
+- mostra erro se a análise falhar.
+
+FUNÇÃO: executarAcaoIA
+FAZ:
+- revisão -> rota Revisões;
+- questões/simulado -> Gerador IA;
+- matéria/assunto -> Materiais filtrados.
+
+[G] src/services/iaCoachService.ts
+FUNÇÃO: gerarDiagnosticoCoach
+FAZ:
+- envia os dados consolidados;
+- exige resposta válida;
+- salva o último diagnóstico localmente.
+
+FUNÇÃO: carregarUltimoDiagnosticoComMeta
+FAZ:
+- recupera diagnóstico e data.
+
+FUNÇÃO: limparUltimoDiagnostico
+FAZ:
+- remove a análise salva.
+
+[G] backend do Coach em server/index.ts
+FUNÇÃO: validarDadosCoach
+FAZ:
+- normaliza os dados recebidos;
+- limita listas de matérias/assuntos.
+
+FUNÇÃO: montarPromptCoach
+FAZ:
+- instrui o modelo a não inventar;
+- pede plano objetivo do dia;
+- injeta métricas e metas;
+- exige 3–5 ações;
+- limita prioridade e tipo.
+
+FUNÇÃO: normalizarDiagnostico
+FAZ:
+- limita 5 ações;
+- normaliza prioridade;
+- normaliza duração;
+- normaliza quantidade de questões;
+- normaliza tipo;
+- aplica textos padrão seguros quando faltarem campos.
+
+======================================================================
+I. CENTRAL DE INTELIGÊNCIA
+======================================================================
+
+[L] src/services/inteligencia/calcularCentralInteligencia.ts
+FUNÇÃO: calcularCentralInteligencia
+FAZ:
+- calcula hoje/semana/total;
+- revisões atrasadas/hoje;
+- matérias/assuntos/bancas;
+- fortes/fracos/esquecidos;
+- prontidão;
+- nota projetada;
+- índice de projeção;
+- missões.
+
+FUNÇÃO: calcularIndiceProntidao
+FAZ:
+- 35% questões;
+- 20% simulados;
+- 20% tempo;
+- 15% frequência;
+- 10% confiança da amostra;
+- desconta revisões atrasadas.
+
+FUNÇÃO: gerarMissoes
+FAZ:
+- monta missões locais a partir dos riscos e pendências.
+
+======================================================================
+J. INSIGHTS DO COACH
+======================================================================
+
+[L] src/services/inteligencia/calcularInsightsCoach.ts
+FUNÇÃO: calcularInsightsCoach
+FAZ:
+- compara 7 dias atuais vs 7 anteriores;
+- calcula variações;
+- calcula progresso de metas;
+- calcula confiança;
+- gera leitura local do momento;
+- identifica atividade mais recente.
+
+======================================================================
+K. RELATÓRIO INTELIGENTE
+======================================================================
+
+[L] src/services/inteligencia/relatorioInteligenteService.ts
+FUNÇÃO: gerarRelatorioInteligente
+FAZ:
+- compara semanas;
+- calcula matérias;
+- identifica melhor/crítica/esquecida;
+- conta revisões atrasadas;
+- calcula índice de consistência;
+- monta recomendações;
+- monta resumo executivo.
+
+FUNÇÃO: montarRecomendacoes
+FAZ:
+- cria ações com base em tendência, matéria crítica, esquecimento e atrasos.
+
+FUNÇÃO: gerarResumoExecutivo
+FAZ:
+- resume a situação usando regras locais.
+
+======================================================================
+L. EDITAL INTELIGENTE
+======================================================================
+
+[UI/I] src/services/editalInteligenteService.ts
+FUNÇÃO: analisarPdfEdital
+FAZ:
+- valida PDF;
+- converte para análise;
+- envia contexto concurso/banca/cargo;
+- normaliza resposta;
+- rejeita análise sem matérias.
+
+FUNÇÃO: enviarPdfEdital
+FAZ:
+- salva o PDF no armazenamento do usuário.
+
+FUNÇÃO: validarPdfEdital
+FAZ:
+- exige extensão PDF;
+- exige arquivo não vazio;
+- exige tamanho permitido;
+- confere cabeçalho real do PDF.
+
+[G/I] server/secureEntry.ts
+FUNÇÃO: analisarEdital
+FAZ:
+- valida conteúdo real do PDF;
+- constrói prompt;
+- tenta análise assistida por pesquisa;
+- se necessário, usa extração estruturada;
+- preserva cargo-alvo;
+- devolve análise normalizada.
+
+FUNÇÃO: analisarEditalEstruturado
+FAZ:
+- executa extração com retry/fallback;
+- exige resposta estruturada.
+
+[G/L] server/editalInteligente.ts
+FUNÇÃO: montarPromptAnaliseEdital
+FAZ:
+- manda extrair somente conteúdo real;
+- filtra cargo;
+- organiza matérias/assuntos;
+- proíbe invenção;
+- permite pesquisa apenas para prioridade;
+- define prioridade/incidência.
+
+FUNÇÃO: normalizarRespostaAnaliseEdital
+FAZ:
+- normaliza campos;
+- deduplica;
+- limita volume;
+- restringe prioridade/incidência.
+
+[I] server/editalAnaliseRobusta.ts
+FUNÇÃO: interpretarRespostaAnaliseEdital
+FAZ:
+- parseia JSON robustamente;
+- passa pela normalização oficial do edital.
+
+======================================================================
+M. IMPORTAÇÃO DE CURSO POR MÍDIA
+======================================================================
+
+[G] server/cursoMidia.ts
+FUNÇÃO: analisarCursoPorMidia
+FAZ:
+- cria prompt para ler screenshots/fotos/PDF;
+- envia arquivos ao modelo;
+- usa retry/fallback;
+- parseia resposta;
+- normaliza estrutura.
+
+FUNÇÃO: normalizarAnaliseCursoMidia
+FAZ:
+- normaliza nome do curso;
+- normaliza matérias;
+- normaliza categoria;
+- normaliza módulos;
+- normaliza aulas;
+- deduplica;
+- normaliza URLs sem inventá-las.
+
+[G/I] server/secureEntry.ts
+FUNÇÃO: analisarCursoMidia
+FAZ:
+- valida quantidade de arquivos;
+- valida tipos permitidos;
+- confere assinatura real dos arquivos;
+- confere tamanho individual/total;
+- chama analisarCursoPorMidia;
+- devolve estrutura.
+
+======================================================================
+N. SIMULADO PDF
+======================================================================
+
+[UI/I] src/services/simuladoPdfAnaliseService.ts
+FAZ:
+- iniciar job;
+- consultar job;
+- cancelar/excluir processo;
+- normalizar resultado para a tela.
+
+[G/I] server/processarSimuladoPdfPersistente.ts
+FUNÇÃO: agendarJobAnaliseSimuladoPdf
+FAZ:
+- impede duplicidade local de execução;
+- inicia processamento persistente.
+
+FUNÇÃO INTERNA processar
+FAZ:
+- reivindica job;
+- recupera estado parcial;
+- extrai gabarito comentado se houver;
+- executa pipeline questão a questão;
+- salva checkpoints;
+- recusa conclusão se houver pendências;
+- finaliza em 100% somente quando pronto;
+- preserva parcial em caso de erro.
+
+FUNÇÃO: extrairGabaritoComentado
+FAZ:
+- lê gabarito do próprio PDF comentado;
+- não corrige com conhecimento externo;
+- preserva anuladas;
+- omite número sem confirmação.
+
+FUNÇÃO: extrairQuestoesBasicasComRecuperacao
+FAZ:
+- tenta extrair grupo de questões;
+- usa subdivisão quando necessário.
+
+FUNÇÃO: extrairQuestoesBasicas
+FAZ:
+- extrai texto/alternativas;
+- não resolve;
+- não classifica;
+- omite ilegível;
+- mede confiança de leitura.
+
+FUNÇÃO: resolverQuestaoExtraida
+FAZ:
+- resolve uma questão por vez;
+- usa apenas texto extraído + eventual gabarito confirmado;
+- classifica matéria/módulo/assunto/subassunto;
+- retorna dificuldade/gabarito/comentário/norma/dispositivo/confiança/status;
+- marca baixa confiança como revisar.
+
+FUNÇÃO: aplicarGabaritoComentado
+FAZ:
+- faz gabarito externo prevalecer;
+- preserva anulada;
+- reduz confiança quando havia PDF comentado mas aquele item não foi confirmado.
+
+FUNÇÃO: calcularProgressoRetomadaSimuladoPdf
+FAZ:
+- calcula progresso a partir das questões já prontas.
+
+FUNÇÃO: resultadoSimuladoPdfPrecisaRetomar
+FAZ:
+- verifica se todas as questões esperadas realmente estão prontas.
+
+FUNÇÃO: executarAnaliseSimuladoComSubdivisao
+FAZ:
+- se JSON de um grupo falhar, divide o grupo em partes menores e tenta recuperar.
+
+[I/L] server/simuladoPdfPipeline.ts
+FUNÇÃO: executarPipelineQuestaoAPorQuestao
+FAZ:
+- separa extração de resolução;
+- aproveita estado anterior;
+- identifica pendentes;
+- salva a cada avanço;
+- retorna itens prontos e pendentes.
+
+======================================================================
+O. DIAGNÓSTICO DE SIMULADO STUDY PRO
+======================================================================
+
+[L] src/utils/analiseSimuladoStudyPro.ts
+FUNÇÃO: analisarSimuladoStudyPro
+FAZ:
+- normaliza questões;
+- corrige cada item;
+- calcula matérias;
+- calcula assuntos;
+- calcula resumo;
+- gera caderno de erros;
+- gera lista ainda não estudado;
+- gera plano de revisão;
+- calcula dificuldade;
+- calcula evolução;
+- gera recomendação final.
+
+FUNÇÃO: gerarPlanoRevisao
+FAZ:
+- seleciona assunto com erro/branco/chute/<80%;
+- ordena por prioridade;
+- limita prioridades;
+- evita repetição muito semelhante;
+- limita excesso de uma matéria.
+
+FUNÇÃO: gerarRecomendacaoFinal
+FAZ:
+- mantém cronograma normal;
+- prioriza fracos;
+- recomenda teoria abaixo de 50%;
+- revisão curta entre 50–69%;
+- mantém não estudado no avanço normal.
+
+======================================================================
+P. ANÁLISE ADMINISTRATIVA DE PROVA OFICIAL
+======================================================================
+
+[G/I] server/index.ts
+FLUXO DE ANÁLISE DE PROVA
+FAZ:
+- exige contexto administrativo;
+- recebe prova + eventual gabarito;
+- extrai gabarito definitivo;
+- analisa questões em blocos;
+- recupera faltantes;
+- mapeia ao edital-alvo;
+- retorna resultado para curadoria.
+
+PROMPT DE GABARITO
+FAZ:
+- transcreve A–E;
+- reconhece anuladas;
+- proíbe corrigir gabarito oficial pela memória da IA.
+
+PROMPT DE ANÁLISE DE BLOCO
+FAZ:
+- preserva enunciado/alternativas;
+- mapeia matéria/módulo/assunto/subassunto;
+- classifica compatibilidade;
+- aponta norma/dispositivo;
+- aponta desatualização/controvérsia;
+- nunca aprova automaticamente;
+- devolve “pendente” quando aparentemente válida.
+
+======================================================================
+Q. FLASHCARDS
+======================================================================
+
+[L] src/utils/flashcardsAdaptativo.ts
+FUNÇÃO: calcularDesempenhoPacote
+FAZ:
+- calcula tentativas/acertos/percentual.
+
+FUNÇÃO: recomendarEstudoFlashcards
+FAZ:
+- 0 tentativas -> flashcards;
+- <50% -> teoria + flashcards;
+- 50–79% -> flashcards;
+- >=80% -> quiz.
+
+======================================================================
+R. REDAÇÃO
+======================================================================
+
+[UI/L] src/components/CentralRedacaoBridge/CentralRedacaoBridge.tsx
+FAZ:
+- inicializa Redação;
+- restaura rascunho;
+- salva tema/objetivo/observação;
+- inicia treino;
+- exibe cronômetro;
+- pausa/continua;
+- registra finalização.
+
+[CONCLUSÃO DO MAPEAMENTO]
+Não foi encontrada função neste fluxo que envie o texto da redação para um modelo generativo corrigir, dar nota ou reescrever.
+
+======================================================================
+S. SEGURANÇA E CONTROLE DE USO DA IA
+======================================================================
+
+[I] server/secureEntry.ts
+FAZ:
+- valida sessão do usuário antes do uso de IA;
+- aplica limites de uso;
+- separa consultas leves de jobs de operações pesadas;
+- valida arquivos de importação;
+- encaminha apenas requisições autorizadas ao núcleo interno.
+
+[I] src/services/apiAutenticada.ts
+FAZ:
+- exige sessão válida;
+- faz chamada autenticada;
+- repete falhas temporárias em fluxos permitidos;
+- transforma erros de limite/alta demanda em mensagens compreensíveis.
+
+NOTA:
+Este índice não contém chaves, tokens, secrets nem valores de credenciais.
+
+FIM DO ÍNDICE TÉCNICO.
