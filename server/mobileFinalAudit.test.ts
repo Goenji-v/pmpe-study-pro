@@ -28,6 +28,7 @@ test("auditoria mobile cobre Redação, Simulado PDF e desbloqueio do menu", asy
 
   assert.match(navegacao, /keyboard\.press\("Escape"\)/);
   assert.match(navegacao, /setViewportSize\(\{ width: 1024, height: 768 \}\)/);
+  assert.match(navegacao, /page\.mouse\.click\(350, 370\)/);
   assert.match(navegacao, /not\.toHaveClass\(\/menu-mobile-aberto\/\)/);
 });
 
@@ -44,4 +45,21 @@ test("workflow mobile espera a versão de produção e roda a suíte completa", 
   assert.match(workflow, /mobile-complete-audit\.spec\.ts/);
   assert.match(workflow, /mobile-secondary\.spec\.ts/);
   assert.match(workflow, /mobile-visual-audit\.spec\.ts/);
+});
+
+
+test("Redação é seletor nativo e auditoria visual tem tempo compatível com screenshots", async () => {
+  const [central, visual] = await Promise.all([
+    readFile("src/pages/CentralEstudos/CentralEstudos.tsx", "utf8"),
+    readFile("e2e/mobile-visual-audit.spec.ts", "utf8"),
+  ]);
+
+  const inicio = central.indexOf("const TIPOS_ATIVIDADE_CENTRAL");
+  const fim = central.indexOf("] as const;", inicio);
+  assert.ok(inicio >= 0 && fim > inicio);
+
+  const tipos = central.slice(inicio, fim);
+  assert.match(tipos, /tipo:\s*"redacao"/);
+  assert.equal((tipos.match(/tipo:\s*"redacao"/g) ?? []).length, 1);
+  assert.match(visual, /test\.setTimeout\(180_000\)/);
 });
