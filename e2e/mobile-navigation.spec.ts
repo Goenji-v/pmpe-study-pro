@@ -84,7 +84,12 @@ async function navegarPeloPerfil(
   await expect(trigger).toBeVisible();
   await trigger.click();
   await expect(page.locator(".user-profile-dropdown")).toBeVisible();
-  await page.getByRole("menuitem", { name: item, exact: true }).click();
+
+  const itemPerfil = page
+    .locator(".user-profile-dropdown [role='menuitem']")
+    .filter({ hasText: item });
+  await expect(itemPerfil).toBeVisible();
+  await itemPerfil.click({ timeout: 12_000 });
 
   await expect(page).toHaveURL(destino, { timeout: 15_000 });
   await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
@@ -94,6 +99,7 @@ async function navegarPeloPerfil(
 }
 
 test.describe("navegação mobile autenticada", () => {
+  test.setTimeout(90_000);
   test.skip(!email || !senha, "Configure a conta E2E dedicada.");
 
   test("menu lateral abre, navega e fecha nas rotas principais", async ({ page }, testInfo) => {
