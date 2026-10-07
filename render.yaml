@@ -26,3 +26,13 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: STUDY_STORAGE_WORKER_URL
+        value: https://study-pro-storage.studypro-storage.workers.dev
+      - key: STUDY_STORAGE_BUCKET
+        value: study-pro-private
+      - key: STUDY_STORAGE_PRIVATE_KEY_B64
+        sync: false
+      - key: STUDY_STORAGE_MAX_FILE_BYTES
+        value: 5368709120
+      - key: STUDY_STORAGE_CHUNK_BYTES
+        value: 33554432
