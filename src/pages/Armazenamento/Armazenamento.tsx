@@ -8,7 +8,6 @@ import {
 import {
   ExternalLink,
   FileText,
-  HardDrive,
   Link2,
   LockKeyhole,
   Play,
