@@ -1,71 +1,98 @@
 # Study Pro Storage
 
-Camada privada e independente de provedor para vídeos, PDFs, imagens e outros arquivos do Study Pro.
+Camada privada para vídeos, PDFs, imagens e anexos do Study Pro.
 
-## Arquitetura
+## Arquitetura atual
 
 ```
 Study Pro (React)
-  -> API autenticada do Study Pro
-     -> valida o usuário Supabase
-     -> gera uma URL temporária de upload/leitura
-  -> arquivo vai direto do navegador para um provedor S3 compatível
-  -> metadados e progresso ficam no Supabase com RLS por usuário
+  -> API autenticada do Study Pro (Render)
+     -> valida sessão Supabase
+     -> valida que a chave pertence ao user_id
+     -> gera token temporário assinado com ECDSA P-256
+  -> Cloudflare Worker study-pro-storage
+     -> verifica a assinatura com a chave pública
+     -> acessa o R2 por binding interno
+  -> R2 study-pro-private
+
+Supabase
+  -> metadados
+  -> vínculo com matéria/assunto
+  -> progresso do vídeo
+  -> RLS por usuário
 ```
 
-O arquivo grande não atravessa a Vercel nem o servidor Express. Isso permite vídeos de vários GB sem aumentar o payload da aplicação.
+Não existem credenciais S3 no navegador. O bucket permanece sem acesso público.
+
+## Upload de arquivos grandes
+
+O navegador usa upload multipart através do Worker:
+
+1. cria uma sessão multipart;
+2. divide o arquivo em blocos de 32 MiB;
+3. envia até 3 blocos em paralelo;
+4. cada bloco possui até 3 tentativas;
+5. conclui o multipart com os ETags;
+6. a API confirma o tamanho do objeto antes de registrar no banco.
+
+O limite configurado é 5 GiB por arquivo. Um vídeo de 3 GB entra nesse fluxo.
+
+## Reprodução
+
+A API só libera uma URL temporária depois de confirmar que o `object_key` está sob o namespace do usuário autenticado.
+
+O Worker suporta HTTP Range para permitir seek/avanço em vídeos grandes sem baixar o arquivo inteiro.
 
 ## Privacidade
 
 - `study_storage_files.user_id` é o dono do arquivo.
-- A tabela usa RLS e só permite CRUD quando `auth.uid() = user_id`.
-- O progresso de vídeo usa chave estrangeira composta `(file_id, user_id)`, impedindo gravar progresso em arquivo de outra conta.
-- Os caminhos físicos começam em `<user_id>/private/`.
-- A API confere esse prefixo antes de gerar URLs temporárias.
-- Credenciais S3 ficam apenas no backend. Nunca usar variáveis `VITE_*` para segredos do Storage.
-- O bucket físico deve ser privado.
+- RLS restringe SELECT/INSERT/UPDATE/DELETE a `auth.uid() = user_id`.
+- `study_storage_video_progress` também é isolada por usuário.
+- objetos seguem `<user_id>/private/YYYY/MM/<uuid>-arquivo.ext`.
+- tokens do Worker incluem somente `key` e `exp`, são assinados pelo backend e expiram.
+- o Worker conhece somente a chave pública.
+- a chave privada fica apenas no backend.
+- o bucket R2 permanece privado.
 
-## Provedores
+## Infra atual
 
-A implementação usa API S3 compatível. Pode começar em Cloudflare R2 e depois migrar para MinIO ou outro servidor S3 compatível sem mudar o frontend.
+- Bucket R2: `study-pro-private`
+- Worker: `study-pro-storage`
+- Endpoint Worker: `https://study-pro-storage.studypro-storage.workers.dev`
+- Backend preview: `https://pmpe-study-pro-api-storage-preview.onrender.com`
+- Frontend preview: branch `feat/study-pro-storage`
 
-Variáveis do backend:
+## Variáveis do backend
 
 ```
-STUDY_STORAGE_ENDPOINT=
-STUDY_STORAGE_REGION=auto
-STUDY_STORAGE_BUCKET=
-STUDY_STORAGE_ACCESS_KEY_ID=
-STUDY_STORAGE_SECRET_ACCESS_KEY=
+STUDY_STORAGE_WORKER_URL=https://study-pro-storage.studypro-storage.workers.dev
+STUDY_STORAGE_BUCKET=study-pro-private
+STUDY_STORAGE_PRIVATE_KEY_B64=<segredo do backend>
 STUDY_STORAGE_MAX_FILE_BYTES=5368709120
+STUDY_STORAGE_CHUNK_BYTES=33554432
 ```
 
-## R2
+Nunca colocar `STUDY_STORAGE_PRIVATE_KEY_B64` em variável `VITE_*`.
 
-Para R2, crie um bucket privado e uma credencial limitada apenas ao bucket do Study Pro. O bucket precisa permitir CORS para os domínios oficiais/preview usados no upload direto via navegador.
-
-A primeira versão usa PUT único e aceita até 5 GiB por arquivo. Um vídeo de 3 GB entra nesse fluxo. O próximo passo para maior tolerância a quedas de internet é multipart/resumable upload.
-
-## MinIO / servidor próprio
-
-O mesmo serviço pode apontar para um endpoint MinIO HTTPS. O backend só precisa receber o novo endpoint, região/bucket e credenciais. Os registros no Supabase continuam iguais.
-
-## Estado desta implementação
+## Estado
 
 Pronto:
-- modelo de dados privado;
-- RLS por dono;
-- progresso de vídeos;
-- API para upload, validação, leitura e exclusão;
-- presigned URLs S3 v4;
-- interface "Meu armazenamento";
-- player com retomada do ponto assistido;
-- vínculo opcional com matéria/assunto;
-- upload direto com porcentagem.
+- bucket privado;
+- Worker + binding R2;
+- autenticação assimétrica;
+- upload multipart;
+- retry;
+- progresso de upload;
+- leitura com Range;
+- exclusão;
+- tabelas/RLS no Supabase;
+- central `/armazenamento`;
+- player e retomada;
+- vínculo matéria/assunto;
+- API de preview isolada.
 
-Dependente de configuração externa:
-- criar/escolher o primeiro bucket S3;
-- cadastrar as credenciais no backend;
-- configurar CORS do bucket;
-- validar upload real de um vídeo grande;
-- opcionalmente evoluir para multipart/resumable.
+Antes do merge:
+- testar um upload pequeno no preview;
+- testar reprodução/seek;
+- testar exclusão;
+- depois testar uma live grande.
