@@ -6,17 +6,30 @@ import {
   useState,
 } from "react";
 import {
+  ExternalLink,
   FileText,
   HardDrive,
-  Image as ImageIcon,
+  Link2,
   LockKeyhole,
   Play,
   Trash2,
   UploadCloud,
   Video,
 } from "lucide-react";
+import {
+  useNavigate,
+} from "react-router-dom";
 
 import { useApp } from "../../context/AppContext";
+import {
+  adicionarAulaPrivada,
+  listarAulasPrivadas,
+  obterEmbedUrlAula,
+  removerAulaPrivada,
+  temAcessoBibliotecaPrivada,
+  type PrivateLesson,
+  type PrivateLessonSource,
+} from "../../services/privateLessonsService";
 import {
   atualizarDuracaoVideoStudyStorage,
   enviarArquivoStudyStorage,
@@ -34,7 +47,17 @@ import {
 import "./Armazenamento.css";
 
 export default function Armazenamento() {
+  const navigate = useNavigate();
   const { materias } = useApp();
+
+  const [acesso, setAcesso] =
+    useState<boolean | null>(null);
+  const [aulas, setAulas] =
+    useState<PrivateLesson[]>([]);
+  const [aulaAtual, setAulaAtual] =
+    useState<PrivateLesson | null>(null);
+  const [embedUrl, setEmbedUrl] =
+    useState("");
 
   const [status, setStatus] =
     useState<StudyStorageStatus | null>(null);
@@ -42,43 +65,73 @@ export default function Armazenamento() {
     useState<StudyStorageFile[]>([]);
   const [progressos, setProgressos] =
     useState<Record<string, StudyStorageProgress>>({});
-  const [arquivoUpload, setArquivoUpload] =
-    useState<File | null>(null);
-  const [materia, setMateria] = useState("");
-  const [assunto, setAssunto] = useState("");
-  const [percentualUpload, setPercentualUpload] =
-    useState<number | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [carregando, setCarregando] = useState(true);
-  const [mensagem, setMensagem] = useState("");
-  const [erro, setErro] = useState("");
   const [videoAtual, setVideoAtual] =
     useState<StudyStorageFile | null>(null);
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrl, setVideoUrl] =
+    useState("");
   const ultimoSegundoSalvo = useRef(0);
+
+  const [sourceType, setSourceType] =
+    useState<PrivateLessonSource>("google_drive");
+  const [titulo, setTitulo] =
+    useState("");
+  const [sourceUrl, setSourceUrl] =
+    useState("");
+  const [materia, setMateria] =
+    useState("");
+  const [assunto, setAssunto] =
+    useState("");
+  const [salvandoLink, setSalvandoLink] =
+    useState(false);
+
+  const [arquivoUpload, setArquivoUpload] =
+    useState<File | null>(null);
+  const [percentualUpload, setPercentualUpload] =
+    useState<number | null>(null);
+  const [enviando, setEnviando] =
+    useState(false);
+
+  const [carregando, setCarregando] =
+    useState(true);
+  const [erro, setErro] = useState("");
+  const [mensagem, setMensagem] =
+    useState("");
 
   const totalBytes = useMemo(
     () =>
       arquivos.reduce(
-        (total, arquivo) => total + arquivo.sizeBytes,
+        (total, arquivo) =>
+          total + arquivo.sizeBytes,
         0
       ),
     [arquivos]
   );
 
   const carregar = useCallback(async () => {
-    try {
-      setCarregando(true);
-      setErro("");
+    setCarregando(true);
+    setErro("");
 
-      const [estado, lista, listaProgressos] =
+    try {
+      const permitido =
+        await temAcessoBibliotecaPrivada();
+
+      setAcesso(permitido);
+
+      if (!permitido) {
+        navigate("/", {
+          replace: true,
+        });
+        return;
+      }
+
+      const [aulasPrivadas, lista, listaProgressos] =
         await Promise.all([
-          obterStatusStudyStorage(),
+          listarAulasPrivadas(),
           listarArquivosStudyStorage(),
           listarProgressosStudyStorage(),
         ]);
 
-      setStatus(estado);
+      setAulas(aulasPrivadas);
       setArquivos(lista);
       setProgressos(
         Object.fromEntries(
@@ -88,20 +141,119 @@ export default function Armazenamento() {
           ])
         )
       );
+
+      try {
+        setStatus(
+          await obterStatusStudyStorage()
+        );
+      } catch {
+        setStatus(null);
+      }
     } catch (falha) {
       setErro(obterMensagemErro(falha));
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
 
+  async function salvarLink() {
+    try {
+      setSalvandoLink(true);
+      setErro("");
+      setMensagem("");
+
+      const nova =
+        await adicionarAulaPrivada({
+          sourceType,
+          title: titulo,
+          sourceUrl,
+          materia:
+            materia || undefined,
+          assunto:
+            assunto || undefined,
+        });
+
+      setAulas((atuais) => [
+        nova,
+        ...atuais,
+      ]);
+      setTitulo("");
+      setSourceUrl("");
+      setAssunto("");
+      setMensagem(
+        "Aula adicionada à sua biblioteca privada."
+      );
+    } catch (falha) {
+      setErro(
+        obterMensagemErro(falha)
+      );
+    } finally {
+      setSalvandoLink(false);
+    }
+  }
+
+  function assistirLink(
+    aula: PrivateLesson
+  ) {
+    try {
+      setErro("");
+      setVideoAtual(null);
+      setVideoUrl("");
+      setEmbedUrl(
+        obterEmbedUrlAula(aula)
+      );
+      setAulaAtual(aula);
+    } catch (falha) {
+      setErro(
+        obterMensagemErro(falha)
+      );
+    }
+  }
+
+  async function excluirLink(
+    aula: PrivateLesson
+  ) {
+    if (
+      !window.confirm(
+        `Remover "${aula.title}" da sua biblioteca?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await removerAulaPrivada(
+        aula.id
+      );
+      setAulas((atuais) =>
+        atuais.filter(
+          (item) =>
+            item.id !== aula.id
+        )
+      );
+
+      if (
+        aulaAtual?.id === aula.id
+      ) {
+        setAulaAtual(null);
+        setEmbedUrl("");
+      }
+    } catch (falha) {
+      setErro(
+        obterMensagemErro(falha)
+      );
+    }
+  }
+
   async function enviarArquivo() {
     if (!arquivoUpload) {
-      setErro("Escolha um arquivo para enviar.");
+      setErro(
+        "Escolha um arquivo para enviar."
+      );
       return;
     }
 
@@ -111,25 +263,31 @@ export default function Armazenamento() {
       setEnviando(true);
       setPercentualUpload(0);
 
-      const novo = await enviarArquivoStudyStorage({
-        arquivo: arquivoUpload,
-        materia: materia || undefined,
-        assunto: assunto || undefined,
-        onProgress: setPercentualUpload,
-      });
+      const novo =
+        await enviarArquivoStudyStorage({
+          arquivo:
+            arquivoUpload,
+          materia:
+            materia || undefined,
+          assunto:
+            assunto || undefined,
+          onProgress:
+            setPercentualUpload,
+        });
 
       setArquivos((atuais) => [
         novo,
         ...atuais,
       ]);
       setArquivoUpload(null);
-      setAssunto("");
       setPercentualUpload(100);
       setMensagem(
         "Arquivo salvo no seu armazenamento privado."
       );
     } catch (falha) {
-      setErro(obterMensagemErro(falha));
+      setErro(
+        obterMensagemErro(falha)
+      );
     } finally {
       setEnviando(false);
     }
@@ -141,13 +299,20 @@ export default function Armazenamento() {
     try {
       setErro("");
       const url =
-        await obterUrlPrivadaStudyStorage(arquivo);
+        await obterUrlPrivadaStudyStorage(
+          arquivo
+        );
 
-      if (arquivo.kind === "video") {
+      if (
+        arquivo.kind === "video"
+      ) {
+        setAulaAtual(null);
+        setEmbedUrl("");
         setVideoAtual(arquivo);
         setVideoUrl(url);
         ultimoSegundoSalvo.current =
-          progressos[arquivo.id]?.positionSeconds || 0;
+          progressos[arquivo.id]
+            ?.positionSeconds || 0;
         return;
       }
 
@@ -157,7 +322,9 @@ export default function Armazenamento() {
         "noopener,noreferrer"
       );
     } catch (falha) {
-      setErro(obterMensagemErro(falha));
+      setErro(
+        obterMensagemErro(falha)
+      );
     }
   }
 
@@ -173,20 +340,27 @@ export default function Armazenamento() {
     }
 
     try {
-      setErro("");
-      await excluirArquivoStudyStorage(arquivo);
+      await excluirArquivoStudyStorage(
+        arquivo
+      );
       setArquivos((atuais) =>
         atuais.filter(
-          (item) => item.id !== arquivo.id
+          (item) =>
+            item.id !== arquivo.id
         )
       );
 
-      if (videoAtual?.id === arquivo.id) {
+      if (
+        videoAtual?.id ===
+        arquivo.id
+      ) {
         setVideoAtual(null);
         setVideoUrl("");
       }
     } catch (falha) {
-      setErro(obterMensagemErro(falha));
+      setErro(
+        obterMensagemErro(falha)
+      );
     }
   }
 
@@ -196,19 +370,30 @@ export default function Armazenamento() {
   ) {
     if (!videoAtual) return;
 
-    const atual = Math.floor(video.currentTime || 0);
-    const duracao = Number.isFinite(video.duration)
-      ? Math.floor(video.duration)
-      : undefined;
+    const atual = Math.floor(
+      video.currentTime || 0
+    );
+    const duracao =
+      Number.isFinite(
+        video.duration
+      )
+        ? Math.floor(
+            video.duration
+          )
+        : undefined;
 
     if (
       !forcar &&
-      Math.abs(atual - ultimoSegundoSalvo.current) < 15
+      Math.abs(
+        atual -
+          ultimoSegundoSalvo.current
+      ) < 15
     ) {
       return;
     }
 
-    ultimoSegundoSalvo.current = atual;
+    ultimoSegundoSalvo.current =
+      atual;
 
     try {
       await salvarProgressoVideoStudyStorage(
@@ -217,23 +402,33 @@ export default function Armazenamento() {
         duracao
       );
 
-      const registro: StudyStorageProgress = {
-        fileId: videoAtual.id,
-        positionSeconds: atual,
-        durationSeconds: duracao,
-        completed:
-          Boolean(duracao) &&
-          atual >= Math.max(0, Number(duracao) - 15),
-        updatedAt: new Date().toISOString(),
-      };
-
-      setProgressos((atuais) => ({
-        ...atuais,
-        [videoAtual.id]: registro,
-      }));
+      setProgressos(
+        (atuais) => ({
+          ...atuais,
+          [videoAtual.id]: {
+            fileId:
+              videoAtual.id,
+            positionSeconds:
+              atual,
+            durationSeconds:
+              duracao,
+            completed:
+              Boolean(duracao) &&
+              atual >=
+                Math.max(
+                  0,
+                  Number(duracao) -
+                    15
+                ),
+            updatedAt:
+              new Date()
+                .toISOString(),
+          },
+        })
+      );
     } catch (falha) {
       console.warn(
-        "Falha ao salvar progresso do vídeo:",
+        "Falha ao salvar progresso:",
         falha
       );
     }
@@ -245,16 +440,22 @@ export default function Armazenamento() {
     if (!videoAtual) return;
 
     const salvo =
-      progressos[videoAtual.id]?.positionSeconds || 0;
+      progressos[videoAtual.id]
+        ?.positionSeconds || 0;
 
     if (
       salvo > 0 &&
-      salvo < video.duration - 5
+      salvo <
+        video.duration - 5
     ) {
       video.currentTime = salvo;
     }
 
-    if (Number.isFinite(video.duration)) {
+    if (
+      Number.isFinite(
+        video.duration
+      )
+    ) {
       void atualizarDuracaoVideoStudyStorage(
         videoAtual.id,
         video.duration
@@ -262,26 +463,49 @@ export default function Armazenamento() {
     }
   }
 
+  if (
+    acesso === null ||
+    carregando
+  ) {
+    return (
+      <div
+        className="study-storage-vazio"
+        role="status"
+      >
+        Carregando sua biblioteca privada...
+      </div>
+    );
+  }
+
+  if (!acesso) return null;
+
   return (
     <div className="study-storage-page">
       <section className="study-storage-hero">
         <div>
           <span className="study-storage-kicker">
             <LockKeyhole size={16} />
-            PRIVADO POR CONTA
+            SOMENTE SUA CONTA
           </span>
-          <h1>Study Pro Storage</h1>
+          <h1>Minhas aulas</h1>
           <p>
-            Seus vídeos, PDFs e imagens ficam vinculados ao
-            seu usuário. Outros alunos não recebem acesso nem
-            a listagem dos seus arquivos.
+            Guarde seus vídeos no Google Drive ou use um link
+            do YouTube. O Study Pro só organiza e abre tudo
+            aqui dentro. O R2 continua disponível como opção.
           </p>
         </div>
 
         <div className="study-storage-resumo">
-          <HardDrive size={24} />
-          <strong>{formatarBytes(totalBytes)}</strong>
-          <span>{arquivos.length} arquivo(s)</span>
+          <Video size={24} />
+          <strong>
+            {aulas.length +
+              arquivos.filter(
+                (item) =>
+                  item.kind ===
+                  "video"
+              ).length}
+          </strong>
+          <span>aula(s) cadastrada(s)</span>
         </div>
       </section>
 
@@ -299,34 +523,62 @@ export default function Armazenamento() {
 
       <section className="study-storage-upload-card">
         <div className="study-storage-card-title">
-          <UploadCloud size={22} />
+          <Link2 size={22} />
           <div>
-            <h2>Enviar arquivo</h2>
+            <h2>Adicionar aula por link</h2>
             <p>
-              O arquivo grande vai direto ao provedor de
-              armazenamento e não atravessa a Vercel.
+              Suba o vídeo no Drive uma vez e cole o link aqui.
+              Depois basta clicar em Assistir.
             </p>
           </div>
         </div>
 
-        {!status?.configured && !carregando && (
-          <div className="study-storage-provider-pendente">
-            A estrutura do Study Pro Storage está pronta.
-            O Worker privado ainda não está disponível
-            para liberar os uploads.
-          </div>
-        )}
-
-        <div className="study-storage-form">
+        <div className="study-storage-form study-storage-form-links">
           <label>
-            Arquivo
-            <input
-              type="file"
-              accept=".mp4,.webm,.pdf,.png,.jpg,.jpeg,.webp,.txt,.doc,.docx"
-              disabled={!status?.configured || enviando}
+            Fonte
+            <select
+              value={sourceType}
               onChange={(evento) =>
-                setArquivoUpload(
-                  evento.target.files?.[0] || null
+                setSourceType(
+                  evento.target.value as PrivateLessonSource
+                )
+              }
+            >
+              <option value="google_drive">
+                Google Drive
+              </option>
+              <option value="youtube">
+                YouTube
+              </option>
+            </select>
+          </label>
+
+          <label>
+            Título
+            <input
+              value={titulo}
+              placeholder="Ex.: Live - Direitos Sociais"
+              onChange={(evento) =>
+                setTitulo(
+                  evento.target.value
+                )
+              }
+            />
+          </label>
+
+          <label>
+            Link
+            <input
+              value={sourceUrl}
+              placeholder={
+                sourceType ===
+                "google_drive"
+                  ? "Cole o link do arquivo no Google Drive"
+                  : "Cole o link do vídeo no YouTube"
+              }
+              onChange={(evento) =>
+                setSourceUrl(
+                  evento.target.value
                 )
               }
             />
@@ -336,22 +588,25 @@ export default function Armazenamento() {
             Matéria
             <select
               value={materia}
-              disabled={enviando}
               onChange={(evento) =>
-                setMateria(evento.target.value)
+                setMateria(
+                  evento.target.value
+                )
               }
             >
               <option value="">
                 Sem vínculo
               </option>
-              {materias.map((item) => (
-                <option
-                  key={item.id}
-                  value={item.nome}
-                >
-                  {item.nome}
-                </option>
-              ))}
+              {materias.map(
+                (item) => (
+                  <option
+                    key={item.id}
+                    value={item.nome}
+                  >
+                    {item.nome}
+                  </option>
+                )
+              )}
             </select>
           </label>
 
@@ -359,188 +614,278 @@ export default function Armazenamento() {
             Assunto
             <input
               value={assunto}
-              disabled={enviando}
-              placeholder="Ex.: Confederação do Equador"
+              placeholder="Ex.: Direitos Sociais"
               onChange={(evento) =>
-                setAssunto(evento.target.value)
+                setAssunto(
+                  evento.target.value
+                )
               }
             />
           </label>
         </div>
 
-        {arquivoUpload && (
-          <div className="study-storage-arquivo-selecionado">
-            <strong>{arquivoUpload.name}</strong>
-            <span>
-              {formatarBytes(arquivoUpload.size)}
-            </span>
-          </div>
-        )}
-
-        {percentualUpload !== null && (
-          <div className="study-storage-upload-progress">
-            <div>
-              <span>Upload</span>
-              <strong>{percentualUpload}%</strong>
-            </div>
-            <progress
-              max={100}
-              value={percentualUpload}
-            />
-          </div>
-        )}
-
         <button
           type="button"
           className="study-storage-upload-button"
           disabled={
-            !status?.configured ||
-            !arquivoUpload ||
-            enviando
+            salvandoLink ||
+            !titulo.trim() ||
+            !sourceUrl.trim()
           }
-          onClick={() => void enviarArquivo()}
+          onClick={() =>
+            void salvarLink()
+          }
         >
-          <UploadCloud size={18} />
-          {enviando
-            ? "Enviando..."
-            : "Enviar para meu armazenamento"}
+          <Link2 size={18} />
+          {salvandoLink
+            ? "Salvando..."
+            : "Adicionar às minhas aulas"}
         </button>
-
-        {status && (
-          <small className="study-storage-limite">
-            Limite atual por arquivo:{" "}
-            {formatarBytes(status.maxFileBytes)}
-          </small>
-        )}
       </section>
 
-      {videoAtual && videoUrl && (
+      {(aulaAtual &&
+        embedUrl) && (
         <section className="study-storage-player-card">
           <div className="study-storage-player-heading">
             <div>
-              <span>ASSISTINDO</span>
-              <h2>{videoAtual.fileName}</h2>
+              <span>
+                {aulaAtual.sourceType ===
+                "google_drive"
+                  ? "GOOGLE DRIVE"
+                  : "YOUTUBE"}
+              </span>
+              <h2>
+                {aulaAtual.title}
+              </h2>
               <p>
-                {[videoAtual.materia, videoAtual.assunto]
+                {[
+                  aulaAtual.materia,
+                  aulaAtual.assunto,
+                ]
                   .filter(Boolean)
-                  .join(" • ") || "Arquivo privado"}
+                  .join(" • ") ||
+                  "Aula privada"}
               </p>
             </div>
+
             <button
               type="button"
               onClick={() => {
-                setVideoAtual(null);
-                setVideoUrl("");
+                setAulaAtual(null);
+                setEmbedUrl("");
               }}
             >
               Fechar
             </button>
           </div>
 
-          <video
-            key={videoAtual.id}
-            className="study-storage-player"
-            src={videoUrl}
-            controls
-            playsInline
-            onLoadedMetadata={(evento) =>
-              prepararVideo(evento.currentTarget)
+          <iframe
+            className="study-storage-embed"
+            src={embedUrl}
+            title={
+              aulaAtual.title
             }
-            onTimeUpdate={(evento) =>
-              void salvarProgresso(
-                evento.currentTarget
-              )
-            }
-            onPause={(evento) =>
-              void salvarProgresso(
-                evento.currentTarget,
-                true
-              )
-            }
-            onEnded={(evento) =>
-              void salvarProgresso(
-                evento.currentTarget,
-                true
-              )
-            }
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
           />
         </section>
       )}
 
+      {videoAtual &&
+        videoUrl && (
+          <section className="study-storage-player-card">
+            <div className="study-storage-player-heading">
+              <div>
+                <span>STUDY PRO STORAGE</span>
+                <h2>
+                  {videoAtual.fileName}
+                </h2>
+                <p>
+                  {[
+                    videoAtual.materia,
+                    videoAtual.assunto,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ") ||
+                    "Arquivo privado"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setVideoAtual(null);
+                  setVideoUrl("");
+                }}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <video
+              key={videoAtual.id}
+              className="study-storage-player"
+              src={videoUrl}
+              controls
+              playsInline
+              onLoadedMetadata={(
+                evento
+              ) =>
+                prepararVideo(
+                  evento.currentTarget
+                )
+              }
+              onTimeUpdate={(
+                evento
+              ) =>
+                void salvarProgresso(
+                  evento.currentTarget
+                )
+              }
+              onPause={(
+                evento
+              ) =>
+                void salvarProgresso(
+                  evento.currentTarget,
+                  true
+                )
+              }
+              onEnded={(
+                evento
+              ) =>
+                void salvarProgresso(
+                  evento.currentTarget,
+                  true
+                )
+              }
+            />
+          </section>
+        )}
+
       <section className="study-storage-lista-card">
         <div className="study-storage-lista-heading">
           <div>
-            <h2>Meus arquivos</h2>
+            <h2>Minha biblioteca</h2>
             <p>
-              Cada conta consulta apenas os próprios registros.
+              Drive e YouTube ficam como atalhos privados; R2
+              aparece junto quando houver arquivo salvo.
             </p>
           </div>
         </div>
 
-        {carregando ? (
+        {aulas.length === 0 &&
+        arquivos.length === 0 ? (
           <div className="study-storage-vazio">
-            Carregando armazenamento...
-          </div>
-        ) : arquivos.length === 0 ? (
-          <div className="study-storage-vazio">
-            Nenhum arquivo privado salvo ainda.
+            Nenhuma aula cadastrada ainda.
           </div>
         ) : (
           <div className="study-storage-grid">
-            {arquivos.map((arquivo) => {
-              const progresso =
-                progressos[arquivo.id];
-              const percentual =
-                obterPercentualProgresso(
-                  progresso,
-                  arquivo
-                );
-
-              return (
+            {aulas.map(
+              (aula) => (
                 <article
-                  key={arquivo.id}
+                  key={aula.id}
                   className="study-storage-item"
                 >
                   <div className="study-storage-item-icon">
-                    {iconeArquivo(arquivo.kind)}
+                    {aula.sourceType ===
+                    "youtube" ? (
+                      <Play size={22} />
+                    ) : (
+                      <ExternalLink size={22} />
+                    )}
                   </div>
 
                   <div className="study-storage-item-corpo">
-                    <strong title={arquivo.fileName}>
-                      {arquivo.fileName}
+                    <strong>
+                      {aula.title}
                     </strong>
                     <span>
-                      {formatarBytes(arquivo.sizeBytes)}
-                      {arquivo.materia
-                        ? ` • ${arquivo.materia}`
+                      {aula.sourceType ===
+                      "google_drive"
+                        ? "Google Drive"
+                        : "YouTube"}
+                      {aula.materia
+                        ? ` • ${aula.materia}`
                         : ""}
                     </span>
-                    {arquivo.assunto && (
-                      <span>{arquivo.assunto}</span>
+                    {aula.assunto && (
+                      <span>
+                        {aula.assunto}
+                      </span>
                     )}
-
-                    {arquivo.kind === "video" &&
-                      percentual !== null && (
-                        <div className="study-storage-item-progress">
-                          <progress
-                            max={100}
-                            value={percentual}
-                          />
-                          <small>
-                            {percentual}% assistido
-                          </small>
-                        </div>
-                      )}
                   </div>
 
                   <div className="study-storage-item-acoes">
                     <button
                       type="button"
                       onClick={() =>
-                        void abrirArquivo(arquivo)
+                        assistirLink(
+                          aula
+                        )
                       }
                     >
-                      {arquivo.kind === "video" ? (
+                      <Play size={16} />
+                      Assistir
+                    </button>
+                    <button
+                      type="button"
+                      className="perigo"
+                      onClick={() =>
+                        void excluirLink(
+                          aula
+                        )
+                      }
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </article>
+              )
+            )}
+
+            {arquivos.map(
+              (arquivo) => (
+                <article
+                  key={arquivo.id}
+                  className="study-storage-item"
+                >
+                  <div className="study-storage-item-icon">
+                    {arquivo.kind ===
+                    "video" ? (
+                      <Video size={22} />
+                    ) : (
+                      <FileText size={22} />
+                    )}
+                  </div>
+
+                  <div className="study-storage-item-corpo">
+                    <strong>
+                      {arquivo.fileName}
+                    </strong>
+                    <span>
+                      Study Pro Storage
+                      {arquivo.materia
+                        ? ` • ${arquivo.materia}`
+                        : ""}
+                    </span>
+                    {arquivo.assunto && (
+                      <span>
+                        {arquivo.assunto}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="study-storage-item-acoes">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void abrirArquivo(
+                          arquivo
+                        )
+                      }
+                    >
+                      {arquivo.kind ===
+                      "video" ? (
                         <>
                           <Play size={16} />
                           Assistir
@@ -553,57 +898,107 @@ export default function Armazenamento() {
                     <button
                       type="button"
                       className="perigo"
-                      aria-label={`Excluir ${arquivo.fileName}`}
                       onClick={() =>
-                        void excluirArquivo(arquivo)
+                        void excluirArquivo(
+                          arquivo
+                        )
                       }
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
                 </article>
-              );
-            })}
+              )
+            )}
           </div>
         )}
       </section>
+
+      <details className="study-storage-upload-card study-storage-opcional">
+        <summary>
+          <span>
+            <UploadCloud size={18} />
+            Upload direto para o R2 (opcional)
+          </span>
+          <small>
+            {status?.configured
+              ? `${formatarBytes(totalBytes)} usados nesta área`
+              : "Pode usar Drive normalmente sem isso"}
+          </small>
+        </summary>
+
+        <p className="study-storage-opcional-texto">
+          Use apenas quando preferir guardar o arquivo no
+          Study Pro Storage em vez do Google Drive.
+        </p>
+
+        <div className="study-storage-form">
+          <label>
+            Arquivo
+            <input
+              type="file"
+              accept=".mp4,.webm,.pdf,.png,.jpg,.jpeg,.webp,.txt,.doc,.docx"
+              disabled={
+                !status?.configured ||
+                enviando
+              }
+              onChange={(evento) =>
+                setArquivoUpload(
+                  evento.target.files?.[0] ||
+                    null
+                )
+              }
+            />
+          </label>
+        </div>
+
+        {percentualUpload !==
+          null && (
+          <div className="study-storage-upload-progress">
+            <div>
+              <span>Upload</span>
+              <strong>
+                {percentualUpload}%
+              </strong>
+            </div>
+            <progress
+              max={100}
+              value={
+                percentualUpload
+              }
+            />
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="study-storage-upload-button"
+          disabled={
+            !status?.configured ||
+            !arquivoUpload ||
+            enviando
+          }
+          onClick={() =>
+            void enviarArquivo()
+          }
+        >
+          <UploadCloud size={18} />
+          {enviando
+            ? "Enviando..."
+            : "Enviar para R2"}
+        </button>
+      </details>
     </div>
   );
 }
 
-function iconeArquivo(
-  kind: StudyStorageFile["kind"]
+function formatarBytes(
+  bytes: number
 ) {
-  if (kind === "video") return <Video size={22} />;
-  if (kind === "image") return <ImageIcon size={22} />;
-  return <FileText size={22} />;
-}
-
-function obterPercentualProgresso(
-  progresso: StudyStorageProgress | undefined,
-  arquivo: StudyStorageFile
-) {
-  if (!progresso) return 0;
-
-  const duracao =
-    progresso.durationSeconds ||
-    arquivo.durationSeconds;
-
-  if (!duracao) return null;
-
-  return Math.max(
-    0,
-    Math.min(
-      100,
-      Math.round(
-        (progresso.positionSeconds / duracao) * 100
-      )
-    )
-  );
-}
-
-function formatarBytes(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes <= 0) {
+  if (
+    !Number.isFinite(bytes) ||
+    bytes <= 0
+  ) {
     return "0 B";
   }
 
@@ -617,15 +1012,21 @@ function formatarBytes(bytes: number) {
   const indice = Math.min(
     unidades.length - 1,
     Math.floor(
-      Math.log(bytes) / Math.log(1024)
+      Math.log(bytes) /
+        Math.log(1024)
     )
   );
-  const valor = bytes / 1024 ** indice;
+  const valor =
+    bytes /
+    1024 ** indice;
 
-  return `${valor.toLocaleString("pt-BR", {
-    maximumFractionDigits:
-      indice >= 3 ? 2 : 1,
-  })} ${unidades[indice]}`;
+  return `${valor.toLocaleString(
+    "pt-BR",
+    {
+      maximumFractionDigits:
+        indice >= 3 ? 2 : 1,
+    }
+  )} ${unidades[indice]}`;
 }
 
 function obterMensagemErro(
