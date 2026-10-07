@@ -313,7 +313,7 @@
   background:
     linear-gradient(90deg, rgba(2, 10, 20, .96) 0%, rgba(2, 10, 20, .80) 25%, rgba(2, 10, 20, .18) 53%, rgba(2, 10, 20, .20) 72%, rgba(2, 10, 20, .58) 100%),
     radial-gradient(circle at 72% 56%, var(--showcase-glow), transparent 31%),
-    url("../../assets/hero.png") center / cover no-repeat,
+    url("/assets/pmpe-hero-bg.webp") center 42% / cover no-repeat,
     linear-gradient(135deg, #06101e 0%, #0b1d33 46%, #4c2d16 75%, #0c1726 100%);
   box-shadow:
     0 20px 52px rgba(0, 0, 0, .24),
