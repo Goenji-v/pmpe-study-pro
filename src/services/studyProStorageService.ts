@@ -55,7 +55,9 @@ type ApiUpload = {
   provider?: string;
   bucket?: string;
   objectKey?: string;
-  uploadUrl?: string;
+  workerUrl?: string;
+  token?: string;
+  chunkSizeBytes?: number;
   expiresIn?: number;
   arquivo?: {
     fileName?: string;
@@ -181,35 +183,47 @@ export async function enviarArquivoStudyStorage(
     arquivo: File;
     materia?: string;
     assunto?: string;
-    onProgress?: (percentual: number) => void;
+    onProgress?: (
+      percentual: number
+    ) => void;
   }
 ): Promise<StudyStorageFile> {
-  const usuario = await exigirUsuario();
+  const usuario =
+    await exigirUsuario();
 
-  const preparacaoResposta = await fetchApiAutenticada(
-    criarUrlApi("/api/storage/uploads"),
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        fileName: dados.arquivo.name,
-        mimeType:
-          dados.arquivo.type ||
-          "application/octet-stream",
-        sizeBytes: dados.arquivo.size,
-      }),
-    }
-  );
+  const preparacaoResposta =
+    await fetchApiAutenticada(
+      criarUrlApi(
+        "/api/storage/uploads"
+      ),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          fileName:
+            dados.arquivo.name,
+          mimeType:
+            dados.arquivo.type ||
+            "application/octet-stream",
+          sizeBytes:
+            dados.arquivo.size,
+        }),
+      }
+    );
 
   const preparacao =
-    await lerJson<ApiUpload>(preparacaoResposta);
+    await lerJson<ApiUpload>(
+      preparacaoResposta
+    );
 
   if (
     !preparacaoResposta.ok ||
     !preparacao.sucesso ||
-    !preparacao.uploadUrl ||
+    !preparacao.workerUrl ||
+    !preparacao.token ||
     !preparacao.objectKey ||
     !preparacao.bucket ||
     !preparacao.provider ||
@@ -221,33 +235,57 @@ export async function enviarArquivoStudyStorage(
     );
   }
 
-  await enviarDiretoAoStorage(
-    preparacao.uploadUrl,
-    dados.arquivo,
-    dados.onProgress
-  );
+  await enviarMultipartWorker({
+    workerUrl:
+      preparacao.workerUrl,
+    token:
+      preparacao.token,
+    objectKey:
+      preparacao.objectKey,
+    chunkSizeBytes:
+      Math.max(
+        8 * 1024 * 1024,
+        Number(
+          preparacao.chunkSizeBytes
+        ) ||
+          32 * 1024 * 1024
+      ),
+    arquivo:
+      dados.arquivo,
+    onProgress:
+      dados.onProgress,
+  });
 
   const confirmacaoResposta =
     await fetchApiAutenticada(
-      criarUrlApi("/api/storage/complete"),
+      criarUrlApi(
+        "/api/storage/complete"
+      ),
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type":
+            "application/json",
         },
         body: JSON.stringify({
-          objectKey: preparacao.objectKey,
-          sizeBytes: dados.arquivo.size,
+          objectKey:
+            preparacao.objectKey,
+          sizeBytes:
+            dados.arquivo.size,
         }),
       }
     );
 
-  const confirmacao = await lerJson<{
-    sucesso?: boolean;
-    erro?: string;
-  }>(confirmacaoResposta);
+  const confirmacao =
+    await lerJson<{
+      sucesso?: boolean;
+      erro?: string;
+    }>(confirmacaoResposta);
 
-  if (!confirmacaoResposta.ok || !confirmacao.sucesso) {
+  if (
+    !confirmacaoResposta.ok ||
+    !confirmacao.sucesso
+  ) {
     throw new Error(
       confirmacao.erro ||
       "O arquivo foi enviado, mas não pôde ser confirmado."
@@ -256,54 +294,74 @@ export async function enviarArquivoStudyStorage(
 
   const registro = {
     user_id: usuario.id,
-    provider: preparacao.provider,
-    bucket: preparacao.bucket,
-    object_key: preparacao.objectKey,
-    file_name: dados.arquivo.name,
+    provider:
+      preparacao.provider,
+    bucket:
+      preparacao.bucket,
+    object_key:
+      preparacao.objectKey,
+    file_name:
+      dados.arquivo.name,
     mime_type:
       dados.arquivo.type ||
       "application/octet-stream",
-    size_bytes: dados.arquivo.size,
-    kind: preparacao.arquivo.kind,
+    size_bytes:
+      dados.arquivo.size,
+    kind:
+      preparacao.arquivo.kind,
     visibility: "private",
-    materia: dados.materia?.trim() || null,
-    assunto: dados.assunto?.trim() || null,
+    materia:
+      dados.materia?.trim() ||
+      null,
+    assunto:
+      dados.assunto?.trim() ||
+      null,
     status: "ready",
     metadata: {
-      source: "study-pro-storage",
+      source:
+        "study-pro-storage",
+      transport:
+        "cloudflare-worker-multipart",
     },
-    updated_at: new Date().toISOString(),
+    updated_at:
+      new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
-    .from("study_storage_files")
-    .insert(registro)
-    .select([
-      "id",
-      "user_id",
-      "provider",
-      "bucket",
-      "object_key",
-      "file_name",
-      "mime_type",
-      "size_bytes",
-      "kind",
-      "materia",
-      "assunto",
-      "duration_seconds",
-      "status",
-      "created_at",
-    ].join(","))
-    .single();
+  const { data, error } =
+    await supabase
+      .from(
+        "study_storage_files"
+      )
+      .insert(registro)
+      .select([
+        "id",
+        "user_id",
+        "provider",
+        "bucket",
+        "object_key",
+        "file_name",
+        "mime_type",
+        "size_bytes",
+        "kind",
+        "materia",
+        "assunto",
+        "duration_seconds",
+        "status",
+        "created_at",
+      ].join(","))
+      .single();
 
   if (error || !data) {
-    await tentarRemoverObjeto(preparacao.objectKey);
+    await tentarRemoverObjeto(
+      preparacao.objectKey
+    );
     throw new Error(
       `O arquivo chegou ao armazenamento, mas não foi registrado: ${error?.message || "erro desconhecido"}`
     );
   }
 
   dados.onProgress?.(100);
+
   return converterArquivo(
     data as unknown as RegistroArquivo
   );
@@ -455,62 +513,366 @@ export async function atualizarDuracaoVideoStudyStorage(
   }
 }
 
-function enviarDiretoAoStorage(
-  url: string,
-  arquivo: File,
-  onProgress?: (percentual: number) => void
+async function enviarMultipartWorker(
+  dados: {
+    workerUrl: string;
+    token: string;
+    objectKey: string;
+    chunkSizeBytes: number;
+    arquivo: File;
+    onProgress?: (
+      percentual: number
+    ) => void;
+  }
 ) {
-  return new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url, true);
-    xhr.setRequestHeader(
-      "Content-Type",
-      arquivo.type || "application/octet-stream"
+  const urlInit =
+    criarUrlWorkerBrowser(
+      dados.workerUrl,
+      "/v1/upload/init",
+      {
+        key: dados.objectKey,
+        contentType:
+          dados.arquivo.type ||
+          "application/octet-stream",
+      }
     );
 
-    xhr.upload.onprogress = (evento) => {
-      if (!evento.lengthComputable) return;
-      const percentual = Math.max(
-        0,
-        Math.min(
-          99,
-          Math.round(
-            (evento.loaded / evento.total) * 100
-          )
-        )
-      );
-      onProgress?.(percentual);
-    };
+  const init =
+    await requisicaoWorkerJson<{
+      uploadId?: string;
+      erro?: string;
+    }>(
+      urlInit,
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            `Bearer ${dados.token}`,
+        },
+      }
+    );
 
-    xhr.onerror = () => {
-      reject(
-        new Error(
-          "A conexão caiu durante o upload. O arquivo não foi registrado."
-        )
-      );
-    };
+  if (!init.uploadId) {
+    throw new Error(
+      init.erro ||
+      "O armazenamento não iniciou o upload."
+    );
+  }
 
-    xhr.onabort = () => {
-      reject(
-        new Error("O upload foi cancelado.")
-      );
-    };
+  const uploadId =
+    init.uploadId;
+  const totalPartes =
+    Math.ceil(
+      dados.arquivo.size /
+        dados.chunkSizeBytes
+    );
+  const partes: Array<{
+    partNumber: number;
+    etag: string;
+  }> = [];
+  let proximaParte = 1;
+  let bytesConcluidos = 0;
 
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-        return;
+  try {
+    const quantidadeParalela =
+      Math.min(
+        3,
+        totalPartes
+      );
+
+    await Promise.all(
+      Array.from(
+        {
+          length:
+            quantidadeParalela,
+        },
+        async () => {
+          while (true) {
+            const partNumber =
+              proximaParte++;
+            if (
+              partNumber >
+              totalPartes
+            ) {
+              return;
+            }
+
+            const inicio =
+              (partNumber - 1) *
+              dados.chunkSizeBytes;
+            const fim =
+              Math.min(
+                dados.arquivo.size,
+                inicio +
+                  dados.chunkSizeBytes
+              );
+            const blob =
+              dados.arquivo.slice(
+                inicio,
+                fim
+              );
+
+            const parte =
+              await enviarParteComRetry(
+                {
+                  workerUrl:
+                    dados.workerUrl,
+                  token:
+                    dados.token,
+                  objectKey:
+                    dados.objectKey,
+                  uploadId,
+                  partNumber,
+                  blob,
+                }
+              );
+
+            partes.push(parte);
+            bytesConcluidos +=
+              blob.size;
+
+            const percentual =
+              Math.max(
+                0,
+                Math.min(
+                  99,
+                  Math.round(
+                    (
+                      bytesConcluidos /
+                      dados.arquivo
+                        .size
+                    ) *
+                      100
+                  )
+                )
+              );
+
+            dados.onProgress?.(
+              percentual
+            );
+          }
+        }
+      )
+    );
+
+    partes.sort(
+      (a, b) =>
+        a.partNumber -
+        b.partNumber
+    );
+
+    const urlComplete =
+      criarUrlWorkerBrowser(
+        dados.workerUrl,
+        "/v1/upload/complete",
+        {
+          key:
+            dados.objectKey,
+          uploadId,
+        }
+      );
+
+    const complete =
+      await requisicaoWorkerJson<{
+        key?: string;
+        erro?: string;
+      }>(
+        urlComplete,
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${dados.token}`,
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            parts: partes,
+          }),
+        }
+      );
+
+    if (!complete.key) {
+      throw new Error(
+        complete.erro ||
+        "O armazenamento não concluiu o upload."
+      );
+    }
+  } catch (erro) {
+    const urlAbort =
+      criarUrlWorkerBrowser(
+        dados.workerUrl,
+        "/v1/upload/abort",
+        {
+          key:
+            dados.objectKey,
+          uploadId,
+        }
+      );
+
+    try {
+      await fetch(
+        urlAbort,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization:
+              `Bearer ${dados.token}`,
+          },
+        }
+      );
+    } catch {
+      // Limpeza de melhor esforço.
+    }
+
+    throw erro;
+  }
+}
+
+async function enviarParteComRetry(
+  dados: {
+    workerUrl: string;
+    token: string;
+    objectKey: string;
+    uploadId: string;
+    partNumber: number;
+    blob: Blob;
+  }
+) {
+  let ultimoErro:
+    Error | null = null;
+
+  for (
+    let tentativa = 1;
+    tentativa <= 3;
+    tentativa++
+  ) {
+    try {
+      const url =
+        criarUrlWorkerBrowser(
+          dados.workerUrl,
+          "/v1/upload/part",
+          {
+            key:
+              dados.objectKey,
+            uploadId:
+              dados.uploadId,
+            partNumber:
+              dados.partNumber,
+          }
+        );
+
+      const parte =
+        await requisicaoWorkerJson<{
+          partNumber?: number;
+          etag?: string;
+          erro?: string;
+        }>(
+          url,
+          {
+            method: "PUT",
+            headers: {
+              Authorization:
+                `Bearer ${dados.token}`,
+              "Content-Type":
+                "application/octet-stream",
+            },
+            body: dados.blob,
+          }
+        );
+
+      if (
+        !parte.etag ||
+        !parte.partNumber
+      ) {
+        throw new Error(
+          parte.erro ||
+          "Parte não confirmada."
+        );
       }
 
-      reject(
-        new Error(
-          `O armazenamento recusou o upload (HTTP ${xhr.status}).`
-        )
-      );
-    };
+      return {
+        partNumber:
+          parte.partNumber,
+        etag:
+          parte.etag,
+      };
+    } catch (erro) {
+      ultimoErro =
+        erro instanceof Error
+          ? erro
+          : new Error(
+              "Falha no upload."
+            );
 
-    xhr.send(arquivo);
-  });
+      if (tentativa < 3) {
+        await new Promise(
+          (resolve) =>
+            window.setTimeout(
+              resolve,
+              tentativa * 800
+            )
+        );
+      }
+    }
+  }
+
+  throw (
+    ultimoErro ||
+    new Error(
+      "Falha no upload."
+    )
+  );
+}
+
+function criarUrlWorkerBrowser(
+  workerUrl: string,
+  rota: string,
+  params: Record<
+    string,
+    string | number
+  >
+) {
+  const url = new URL(
+    rota,
+    `${workerUrl.replace(
+      /\/+$/,
+      ""
+    )}/`
+  );
+
+  for (
+    const [chave, valor]
+    of Object.entries(params)
+  ) {
+    url.searchParams.set(
+      chave,
+      String(valor)
+    );
+  }
+
+  return url.toString();
+}
+
+async function requisicaoWorkerJson<T>(
+  url: string,
+  init: RequestInit
+): Promise<T> {
+  const resposta =
+    await fetch(url, init);
+  const corpo =
+    await lerJson<T & {
+      erro?: string;
+    }>(resposta);
+
+  if (!resposta.ok) {
+    throw new Error(
+      corpo.erro ||
+      `O armazenamento respondeu HTTP ${resposta.status}.`
+    );
+  }
+
+  return corpo;
 }
 
 async function tentarRemoverObjeto(
