@@ -35,6 +35,7 @@ import {
 import "./Sidebar.css";
 import { useContextoComercial } from "../../hooks/useContextoComercial";
 import { PARCERIAS_VISIVEIS } from "../../config/recursos";
+import { temAcessoBibliotecaPrivada } from "../../services/privateLessonsService";
 
 type Icone = ComponentType<{ size?: number; strokeWidth?: number }>;
 type GrupoId = "planejamento" | "estudos" | "pratica" | "parceiro";
@@ -107,9 +108,22 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+  const [temBibliotecaPrivada, setTemBibliotecaPrivada] = useState(false);
   const [grupoAberto, setGrupoAberto] = useState<GrupoId | null>(() =>
     obterGrupoDaRota(location.pathname)
   );
+
+  useEffect(() => {
+    let ativo = true;
+
+    void temAcessoBibliotecaPrivada().then((permitido) => {
+      if (ativo) setTemBibliotecaPrivada(permitido);
+    });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (location.pathname === "/estatisticas") {
@@ -235,7 +249,9 @@ export default function Sidebar() {
             <ItemMenu to="/cursos" texto="Meus Cursos" icone={CoursesIcon} onNavigate={() => setMenuMobileAberto(false)} />
             <ItemMenu to="/estudos" texto="Conteúdos" icone={LibraryIcon} onNavigate={() => setMenuMobileAberto(false)} />
             <ItemMenu to="/materiais" texto="Materiais" icone={MaterialsIcon} onNavigate={() => setMenuMobileAberto(false)} />
-            <ItemMenu to="/armazenamento" texto="Meu armazenamento" icone={MaterialsIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            {temBibliotecaPrivada && (
+              <ItemMenu to="/armazenamento" texto="Minhas aulas" icone={MaterialsIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            )}
             <ItemMenu to="/revisoes" texto="Revisões" icone={ReviewsIcon} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
