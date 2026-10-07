@@ -33,7 +33,8 @@ import {
 import {
   chavePertenceAoUsuario,
   criarChavePrivada,
-  criarUrlAssinadaS3,
+  criarTokenStudyStorage,
+  criarUrlWorkerStudyStorage,
   obterConfiguracaoStudyStorage,
   validarPedidoUpload,
   verificarObjetoStudyStorage,
@@ -142,7 +143,10 @@ app.get(
       bucket: studyStorageConfig.configured
         ? studyStorageConfig.bucket
         : null,
-      maxFileBytes: studyStorageConfig.maxFileBytes,
+      maxFileBytes:
+        studyStorageConfig.maxFileBytes,
+      chunkSizeBytes:
+        studyStorageConfig.chunkSizeBytes,
     });
   }
 );
@@ -151,39 +155,51 @@ app.post(
   "/api/storage/uploads",
   (req, res) => {
     try {
-      const userId = obterUsuarioStudyStorage(req);
+      const userId =
+        obterUsuarioStudyStorage(req);
 
-      if (!studyStorageConfig.configured) {
+      if (
+        !studyStorageConfig.configured
+      ) {
         res.status(503).json({
           sucesso: false,
           erro:
-            "O provedor físico do Study Pro Storage ainda não foi configurado.",
+            "O Study Pro Storage ainda não foi configurado.",
         });
         return;
       }
 
-      const arquivo = validarPedidoUpload(
-        req.body ?? {},
-        studyStorageConfig
-      );
-      const objectKey = criarChavePrivada(
-        userId,
-        arquivo.fileName
-      );
-      const expiresIn = 4 * 60 * 60;
-      const uploadUrl = criarUrlAssinadaS3(
-        studyStorageConfig,
-        "PUT",
-        objectKey,
-        expiresIn
-      );
+      const arquivo =
+        validarPedidoUpload(
+          req.body ?? {},
+          studyStorageConfig
+        );
+      const objectKey =
+        criarChavePrivada(
+          userId,
+          arquivo.fileName
+        );
+      const expiresIn =
+        4 * 60 * 60;
+      const token =
+        criarTokenStudyStorage(
+          studyStorageConfig,
+          objectKey,
+          expiresIn
+        );
 
       res.json({
         sucesso: true,
-        provider: studyStorageConfig.provider,
-        bucket: studyStorageConfig.bucket,
+        provider:
+          studyStorageConfig.provider,
+        bucket:
+          studyStorageConfig.bucket,
         objectKey,
-        uploadUrl,
+        workerUrl:
+          studyStorageConfig.workerUrl,
+        token,
+        chunkSizeBytes:
+          studyStorageConfig.chunkSizeBytes,
         expiresIn,
         arquivo,
       });
@@ -203,21 +219,29 @@ app.post(
   "/api/storage/complete",
   async (req, res) => {
     try {
-      const userId = obterUsuarioStudyStorage(req);
+      const userId =
+        obterUsuarioStudyStorage(req);
       const objectKey = String(
         req.body?.objectKey || ""
       ).trim();
-      const expectedSize = Math.floor(
-        Number(req.body?.sizeBytes) || 0
-      );
+      const expectedSize =
+        Math.floor(
+          Number(
+            req.body?.sizeBytes
+          ) || 0
+        );
 
       if (
         !objectKey ||
-        !chavePertenceAoUsuario(userId, objectKey)
+        !chavePertenceAoUsuario(
+          userId,
+          objectKey
+        )
       ) {
         res.status(403).json({
           sucesso: false,
-          erro: "Arquivo não pertence a este usuário.",
+          erro:
+            "Arquivo não pertence a este usuário.",
         });
         return;
       }
@@ -231,7 +255,8 @@ app.post(
       if (
         expectedSize > 0 &&
         remoto.sizeBytes !== null &&
-        remoto.sizeBytes !== expectedSize
+        remoto.sizeBytes !==
+          expectedSize
       ) {
         res.status(409).json({
           sucesso: false,
@@ -243,8 +268,10 @@ app.post(
 
       res.json({
         sucesso: true,
-        provider: studyStorageConfig.provider,
-        bucket: studyStorageConfig.bucket,
+        provider:
+          studyStorageConfig.provider,
+        bucket:
+          studyStorageConfig.bucket,
         objectKey,
         remoto,
       });
@@ -264,29 +291,42 @@ app.post(
   "/api/storage/access",
   (req, res) => {
     try {
-      const userId = obterUsuarioStudyStorage(req);
+      const userId =
+        obterUsuarioStudyStorage(req);
       const objectKey = String(
         req.body?.objectKey || ""
       ).trim();
 
       if (
         !objectKey ||
-        !chavePertenceAoUsuario(userId, objectKey)
+        !chavePertenceAoUsuario(
+          userId,
+          objectKey
+        )
       ) {
         res.status(403).json({
           sucesso: false,
-          erro: "Arquivo não pertence a este usuário.",
+          erro:
+            "Arquivo não pertence a este usuário.",
         });
         return;
       }
 
-      const expiresIn = 6 * 60 * 60;
-      const url = criarUrlAssinadaS3(
-        studyStorageConfig,
-        "GET",
-        objectKey,
-        expiresIn
-      );
+      const expiresIn =
+        6 * 60 * 60;
+      const token =
+        criarTokenStudyStorage(
+          studyStorageConfig,
+          objectKey,
+          expiresIn
+        );
+      const url =
+        criarUrlWorkerStudyStorage(
+          studyStorageConfig,
+          "/v1/object",
+          objectKey,
+          token
+        );
 
       res.json({
         sucesso: true,
@@ -309,35 +349,51 @@ app.post(
   "/api/storage/remove",
   async (req, res) => {
     try {
-      const userId = obterUsuarioStudyStorage(req);
+      const userId =
+        obterUsuarioStudyStorage(req);
       const objectKey = String(
         req.body?.objectKey || ""
       ).trim();
 
       if (
         !objectKey ||
-        !chavePertenceAoUsuario(userId, objectKey)
+        !chavePertenceAoUsuario(
+          userId,
+          objectKey
+        )
       ) {
         res.status(403).json({
           sucesso: false,
-          erro: "Arquivo não pertence a este usuário.",
+          erro:
+            "Arquivo não pertence a este usuário.",
         });
         return;
       }
 
-      const url = criarUrlAssinadaS3(
-        studyStorageConfig,
-        "DELETE",
-        objectKey,
-        300
-      );
-      const resposta = await fetch(url, {
-        method: "DELETE",
-      });
+      const token =
+        criarTokenStudyStorage(
+          studyStorageConfig,
+          objectKey,
+          300
+        );
+      const url =
+        criarUrlWorkerStudyStorage(
+          studyStorageConfig,
+          "/v1/object",
+          objectKey,
+          token
+        );
+      const resposta =
+        await fetch(url, {
+          method: "DELETE",
+        });
 
-      if (!resposta.ok && resposta.status !== 404) {
+      if (
+        !resposta.ok &&
+        resposta.status !== 404
+      ) {
         throw new Error(
-          `O provedor recusou a exclusão (HTTP ${resposta.status}).`
+          `O armazenamento recusou a exclusão (HTTP ${resposta.status}).`
         );
       }
 
