@@ -62,6 +62,26 @@ export default function Dashboard() {
     setAtualizacaoPlano,
   ] = useState(0);
 
+  const temasHero = [
+    { id: "ouro", label: "Ouro", icon: "☀" },
+    { id: "aurora", label: "Aurora", icon: "✦" },
+    { id: "claro", label: "Claro", icon: "●" },
+    { id: "campo", label: "Campo", icon: "♣" },
+    { id: "prata", label: "Prata Tática", icon: "◆" },
+    { id: "vermelho", label: "Vermelho Operacional", icon: "●" },
+  ] as const;
+
+  type TemaHero = (typeof temasHero)[number]["id"];
+
+  const [temaHero, setTemaHero] = useState<TemaHero>(() => {
+    const salvo = window.localStorage.getItem("studypro-preview-hero-theme");
+    return temasHero.some((tema) => tema.id === salvo) ? (salvo as TemaHero) : "ouro";
+  });
+
+  const [dataProvaHero, setDataProvaHero] = useState(() =>
+    window.localStorage.getItem("studypro-preview-data-prova") || "2027-02-15"
+  );
+
   const planoCalendario = useMemo(
     () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false),
     [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo]
@@ -598,6 +618,49 @@ function iniciarProximaAulaPortugues() {
   const nomeCurto = (configuracoes.nomeUsuario || "Estudante").trim().split(/\s+/)[0];
   const minutosSemanaAtual = estatisticasPeriodos.find((item) => item.rotulo === "Semana")?.minutos ?? 0;
 
+  const diasParaProvaHero = useMemo(() => {
+    const hojeCalendario = new Date();
+    hojeCalendario.setHours(0, 0, 0, 0);
+    const alvo = new Date(`${dataProvaHero}T00:00:00`);
+    if (Number.isNaN(alvo.getTime())) return 0;
+    return Math.max(0, Math.ceil((alvo.getTime() - hojeCalendario.getTime()) / 86_400_000));
+  }, [dataProvaHero]);
+
+  const dataProvaHeroTexto = useMemo(() => {
+    const alvo = new Date(`${dataProvaHero}T00:00:00`);
+    if (Number.isNaN(alvo.getTime())) return "Defina a data";
+    return alvo.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  }, [dataProvaHero]);
+
+  function selecionarTemaHero(tema: TemaHero) {
+    setTemaHero(tema);
+    window.localStorage.setItem("studypro-preview-hero-theme", tema);
+  }
+
+  function definirDataProvaHero() {
+    const novaData = window.prompt(
+      "Data da prova (AAAA-MM-DD)",
+      dataProvaHero
+    );
+
+    if (!novaData) return;
+
+    const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(novaData) &&
+      !Number.isNaN(new Date(`${novaData}T00:00:00`).getTime());
+
+    if (!dataValida) {
+      window.alert("Use o formato AAAA-MM-DD. Ex.: 2027-02-15");
+      return;
+    }
+
+    setDataProvaHero(novaData);
+    window.localStorage.setItem("studypro-preview-data-prova", novaData);
+  }
+
   return (
     <section className="dashboard-container dashboard-pro-v3">
       <header className="dashboard-pro-header">
@@ -611,6 +674,58 @@ function iniciarProximaAulaPortugues() {
           <div className="dashboard-pro-date">▣ {formatarDataLongaDashboard(new Date())}</div>
         </div>
       </header>
+
+      <section className={`dashboard-showcase dashboard-showcase--${temaHero}`}>
+        <button
+          type="button"
+          className="dashboard-showcase-search"
+          onClick={() => navigate("/buscar", { state: { focoBusca: true } })}
+        >
+          <span className="dashboard-showcase-search-icon">⌕</span>
+          <span>Buscar assuntos, aulas, questões...</span>
+        </button>
+
+        <div className="dashboard-showcase-top-actions" aria-label="Ações rápidas">
+          <button type="button" aria-label="Notificações">♧</button>
+          <span className="dashboard-showcase-shield" aria-hidden="true">♜</span>
+        </div>
+
+        <div className="dashboard-showcase-themes" aria-label="Temas do Study Pro">
+          {temasHero.map((tema) => (
+            <button
+              type="button"
+              key={tema.id}
+              className={temaHero === tema.id ? "active" : ""}
+              onClick={() => selecionarTemaHero(tema.id)}
+              aria-pressed={temaHero === tema.id}
+            >
+              <span className={`theme-dot theme-dot--${tema.id}`}>{tema.icon}</span>
+              <small>{tema.label}</small>
+            </button>
+          ))}
+        </div>
+
+        <div className="dashboard-showcase-copy">
+          <span>{saudacao},</span>
+          <strong>Guerreiro!</strong>
+          <p>“Disciplina hoje, farda amanhã.”</p>
+        </div>
+
+        <button
+          type="button"
+          className="dashboard-showcase-exam"
+          onClick={definirDataProvaHero}
+          title="Clique para alterar a data da prova"
+        >
+          <span className="dashboard-showcase-exam-title">▣ {configuracoes.concurso || "PMPE 2026"}</span>
+          <span className="dashboard-showcase-exam-count">
+            <strong>{diasParaProvaHero}</strong>
+            <span><b>dias</b> para a prova</span>
+          </span>
+          <small>{dataProvaHeroTexto}</small>
+          <em>Clique para alterar</em>
+        </button>
+      </section>
 
       <section className="dashboard-pro-hero">
         <article className="dashboard-pro-mission">
