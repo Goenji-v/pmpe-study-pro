@@ -312,8 +312,8 @@ export default function Armazenamento() {
         {!status?.configured && !carregando && (
           <div className="study-storage-provider-pendente">
             A estrutura do Study Pro Storage está pronta.
-            Falta somente conectar o primeiro provedor físico
-            S3 compatível para liberar os uploads.
+            O Worker privado ainda não está disponível
+            para liberar os uploads.
           </div>
         )}
 
