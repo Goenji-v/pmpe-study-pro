@@ -1,7 +1,7 @@
 import {
-  createHash,
-  createHmac,
+  createPrivateKey,
   randomUUID,
+  sign as assinar,
 } from "node:crypto";
 
 export type StudyStorageKind =
@@ -12,18 +12,17 @@ export type StudyStorageKind =
   | "other";
 
 export type StudyStorageConfig = {
-  provider: "s3-compatible";
+  provider: "cloudflare-worker-r2";
   configured: boolean;
-  endpoint: string;
-  region: string;
+  workerUrl: string;
   bucket: string;
-  accessKeyId: string;
-  secretAccessKey: string;
+  privateKeyB64: string;
   maxFileBytes: number;
+  chunkSizeBytes: number;
 };
 
 const LIMITE_PADRAO_BYTES = 5 * 1024 * 1024 * 1024;
-const LIMITE_MAXIMO_SINGLE_PUT_BYTES = 5 * 1024 * 1024 * 1024;
+const CHUNK_PADRAO_BYTES = 32 * 1024 * 1024;
 
 const MIMES_PERMITIDOS = new Set([
   "video/mp4",
@@ -40,32 +39,49 @@ const MIMES_PERMITIDOS = new Set([
 export function obterConfiguracaoStudyStorage(
   env: NodeJS.ProcessEnv = process.env
 ): StudyStorageConfig {
-  const endpoint = String(env.STUDY_STORAGE_ENDPOINT || "").trim().replace(/\/+$/, "");
-  const region = String(env.STUDY_STORAGE_REGION || "auto").trim() || "auto";
-  const bucket = String(env.STUDY_STORAGE_BUCKET || "").trim();
-  const accessKeyId = String(env.STUDY_STORAGE_ACCESS_KEY_ID || "").trim();
-  const secretAccessKey = String(env.STUDY_STORAGE_SECRET_ACCESS_KEY || "").trim();
+  const workerUrl = String(
+    env.STUDY_STORAGE_WORKER_URL || ""
+  )
+    .trim()
+    .replace(/\/+$/, "");
+  const bucket = String(
+    env.STUDY_STORAGE_BUCKET || "study-pro-private"
+  ).trim();
+  const privateKeyB64 = String(
+    env.STUDY_STORAGE_PRIVATE_KEY_B64 || ""
+  ).trim();
 
-  const limiteInformado = Number(env.STUDY_STORAGE_MAX_FILE_BYTES);
+  const limiteInformado = Number(
+    env.STUDY_STORAGE_MAX_FILE_BYTES
+  );
   const maxFileBytes =
-    Number.isFinite(limiteInformado) && limiteInformado > 0
-      ? Math.min(Math.floor(limiteInformado), LIMITE_MAXIMO_SINGLE_PUT_BYTES)
+    Number.isFinite(limiteInformado) &&
+    limiteInformado > 0
+      ? Math.floor(limiteInformado)
       : LIMITE_PADRAO_BYTES;
 
+  const chunkInformado = Number(
+    env.STUDY_STORAGE_CHUNK_BYTES
+  );
+  const chunkSizeBytes =
+    Number.isFinite(chunkInformado) &&
+    chunkInformado >= 8 * 1024 * 1024 &&
+    chunkInformado <= 64 * 1024 * 1024
+      ? Math.floor(chunkInformado)
+      : CHUNK_PADRAO_BYTES;
+
   return {
-    provider: "s3-compatible",
+    provider: "cloudflare-worker-r2",
     configured: Boolean(
-      endpoint &&
+      workerUrl &&
       bucket &&
-      accessKeyId &&
-      secretAccessKey
+      privateKeyB64
     ),
-    endpoint,
-    region,
+    workerUrl,
     bucket,
-    accessKeyId,
-    secretAccessKey,
+    privateKeyB64,
     maxFileBytes,
+    chunkSizeBytes,
   };
 }
 
@@ -85,10 +101,14 @@ export function validarPedidoUpload(
     typeof dados.mimeType === "string"
       ? dados.mimeType.trim().toLowerCase()
       : "";
-  const sizeBytes = Math.floor(Number(dados.sizeBytes));
+  const sizeBytes = Math.floor(
+    Number(dados.sizeBytes)
+  );
 
   if (!fileName || fileName.includes("\0")) {
-    throw new Error("Nome do arquivo inválido.");
+    throw new Error(
+      "Nome do arquivo inválido."
+    );
   }
 
   if (!MIMES_PERMITIDOS.has(mimeType)) {
@@ -97,8 +117,13 @@ export function validarPedidoUpload(
     );
   }
 
-  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
-    throw new Error("O tamanho do arquivo é inválido.");
+  if (
+    !Number.isFinite(sizeBytes) ||
+    sizeBytes <= 0
+  ) {
+    throw new Error(
+      "O tamanho do arquivo é inválido."
+    );
   }
 
   if (sizeBytes > config.maxFileBytes) {
@@ -121,12 +146,19 @@ export function criarChavePrivada(
   agora = new Date()
 ) {
   if (!uuidValido(userId)) {
-    throw new Error("Usuário inválido para o armazenamento.");
+    throw new Error(
+      "Usuário inválido para o armazenamento."
+    );
   }
 
-  const ano = String(agora.getUTCFullYear());
-  const mes = String(agora.getUTCMonth() + 1).padStart(2, "0");
-  const nomeSeguro = sanitizarNomeArquivo(fileName);
+  const ano = String(
+    agora.getUTCFullYear()
+  );
+  const mes = String(
+    agora.getUTCMonth() + 1
+  ).padStart(2, "0");
+  const nomeSeguro =
+    sanitizarNomeArquivo(fileName);
 
   return [
     userId,
@@ -141,111 +173,131 @@ export function chavePertenceAoUsuario(
   userId: string,
   objectKey: string
 ) {
-  if (!uuidValido(userId)) return false;
-  return objectKey.startsWith(`${userId}/private/`);
+  if (!uuidValido(userId)) {
+    return false;
+  }
+
+  return objectKey.startsWith(
+    `${userId}/private/`
+  );
 }
 
-export function criarUrlAssinadaS3(
+export function criarTokenStudyStorage(
   config: StudyStorageConfig,
-  metodo: "GET" | "PUT" | "HEAD" | "DELETE",
   objectKey: string,
   expiresSeconds: number,
   agora = new Date()
 ) {
   if (!config.configured) {
     throw new Error(
-      "O provedor físico do Study Pro Storage ainda não foi configurado."
+      "O Study Pro Storage ainda não foi configurado."
     );
   }
 
-  const expira = Math.max(60, Math.min(604800, Math.floor(expiresSeconds)));
-  const endpoint = new URL(config.endpoint);
-  if (endpoint.search || endpoint.hash) {
-    throw new Error("STUDY_STORAGE_ENDPOINT não pode conter query ou fragmento.");
+  const exp = Math.floor(
+    agora.getTime() / 1000
+  ) + Math.max(
+    60,
+    Math.min(
+      24 * 60 * 60,
+      Math.floor(expiresSeconds)
+    )
+  );
+
+  const payload = Buffer
+    .from(
+      JSON.stringify({
+        key: objectKey,
+        exp,
+      }),
+      "utf8"
+    )
+    .toString("base64url");
+
+  const privateKey =
+    createPrivateKey({
+      key: Buffer.from(
+        config.privateKeyB64,
+        "base64"
+      ),
+      format: "der",
+      type: "pkcs8",
+    });
+
+  const signature = assinar(
+    "sha256",
+    Buffer.from(payload, "utf8"),
+    {
+      key: privateKey,
+      dsaEncoding: "ieee-p1363",
+    }
+  ).toString("base64url");
+
+  return `${payload}.${signature}`;
+}
+
+export function criarUrlWorkerStudyStorage(
+  config: StudyStorageConfig,
+  rota: string,
+  objectKey: string,
+  token: string,
+  extras?: Record<string, string | number>
+) {
+  if (!config.workerUrl) {
+    throw new Error(
+      "Worker do Study Pro Storage não configurado."
+    );
   }
 
-  const dataCompleta = formatarAmzDate(agora);
-  const dataCurta = dataCompleta.slice(0, 8);
-  const escopo = `${dataCurta}/${config.region}/s3/aws4_request`;
-  const host = endpoint.host;
-
-  const basePath = endpoint.pathname.replace(/\/+$/, "");
-  const canonicalUri = [
-    basePath,
-    config.bucket,
-    ...objectKey.split("/"),
-  ]
-    .filter(Boolean)
-    .map((parte, indice) =>
-      indice === 0 && parte.startsWith("/")
-        ? parte
-        : codificarRfc3986(parte)
-    )
-    .join("/")
-    .replace(/^([^/])/, "/$1");
-
-  const parametros: Array<[string, string]> = [
-    ["X-Amz-Algorithm", "AWS4-HMAC-SHA256"],
-    ["X-Amz-Credential", `${config.accessKeyId}/${escopo}`],
-    ["X-Amz-Date", dataCompleta],
-    ["X-Amz-Expires", String(expira)],
-    ["X-Amz-SignedHeaders", "host"],
-  ];
-
-  const canonicalQuery = parametros
-    .map(([chave, valor]) => [
-      codificarRfc3986(chave),
-      codificarRfc3986(valor),
-    ] as const)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([chave, valor]) => `${chave}=${valor}`)
-    .join("&");
-
-  const canonicalHeaders = `host:${host}\n`;
-  const payloadHash = "UNSIGNED-PAYLOAD";
-  const canonicalRequest = [
-    metodo,
-    canonicalUri,
-    canonicalQuery,
-    canonicalHeaders,
-    "host",
-    payloadHash,
-  ].join("\n");
-
-  const stringToSign = [
-    "AWS4-HMAC-SHA256",
-    dataCompleta,
-    escopo,
-    sha256Hex(canonicalRequest),
-  ].join("\n");
-
-  const signingKey = obterChaveAssinatura(
-    config.secretAccessKey,
-    dataCurta,
-    config.region,
-    "s3"
+  const url = new URL(
+    rota,
+    `${config.workerUrl}/`
   );
-  const assinatura = hmacHex(signingKey, stringToSign);
+  url.searchParams.set(
+    "key",
+    objectKey
+  );
+  url.searchParams.set(
+    "token",
+    token
+  );
 
-  endpoint.pathname = canonicalUri;
-  endpoint.search = `${canonicalQuery}&X-Amz-Signature=${assinatura}`;
+  for (
+    const [chave, valor]
+    of Object.entries(extras || {})
+  ) {
+    url.searchParams.set(
+      chave,
+      String(valor)
+    );
+  }
 
-  return endpoint.toString();
+  return url.toString();
 }
 
 export async function verificarObjetoStudyStorage(
   config: StudyStorageConfig,
   objectKey: string
 ) {
-  const url = criarUrlAssinadaS3(
-    config,
-    "HEAD",
-    objectKey,
-    300
+  const token =
+    criarTokenStudyStorage(
+      config,
+      objectKey,
+      300
+    );
+  const url =
+    criarUrlWorkerStudyStorage(
+      config,
+      "/v1/object",
+      objectKey,
+      token
+    );
+  const resposta = await fetch(
+    url,
+    {
+      method: "HEAD",
+    }
   );
-  const resposta = await fetch(url, {
-    method: "HEAD",
-  });
 
   if (!resposta.ok) {
     throw new Error(
@@ -254,27 +306,47 @@ export async function verificarObjetoStudyStorage(
   }
 
   const tamanho = Number(
-    resposta.headers.get("content-length") || 0
+    resposta.headers.get(
+      "content-length"
+    ) || 0
   );
 
   return {
     sizeBytes:
-      Number.isFinite(tamanho) && tamanho >= 0
+      Number.isFinite(tamanho) &&
+      tamanho >= 0
         ? tamanho
         : null,
     mimeType:
-      resposta.headers.get("content-type") || null,
+      resposta.headers.get(
+        "content-type"
+      ) || null,
     etag:
-      resposta.headers.get("etag") || null,
+      resposta.headers.get(
+        "etag"
+      ) || null,
   };
 }
 
 export function inferirTipoArquivo(
   mimeType: string
 ): StudyStorageKind {
-  if (mimeType.startsWith("video/")) return "video";
-  if (mimeType === "application/pdf") return "pdf";
-  if (mimeType.startsWith("image/")) return "image";
+  if (
+    mimeType.startsWith("video/")
+  ) {
+    return "video";
+  }
+  if (
+    mimeType ===
+    "application/pdf"
+  ) {
+    return "pdf";
+  }
+  if (
+    mimeType.startsWith("image/")
+  ) {
+    return "image";
+  }
   if (
     mimeType.startsWith("text/") ||
     mimeType.includes("word")
@@ -284,13 +356,20 @@ export function inferirTipoArquivo(
   return "other";
 }
 
-function sanitizarNomeArquivo(nome: string) {
+function sanitizarNomeArquivo(
+  nome: string
+) {
   const partes = nome.split(".");
   const extensao =
     partes.length > 1
-      ? String(partes.pop() || "")
+      ? String(
+          partes.pop() || ""
+        )
           .toLowerCase()
-          .replace(/[^a-z0-9]/g, "")
+          .replace(
+            /[^a-z0-9]/g,
+            ""
+          )
           .slice(0, 12)
       : "";
 
@@ -298,66 +377,30 @@ function sanitizarNomeArquivo(nome: string) {
     partes
       .join(".")
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9_-]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 140) || "arquivo";
+      .replace(
+        /[\u0300-\u036f]/g,
+        ""
+      )
+      .replace(
+        /[^a-zA-Z0-9_-]+/g,
+        "-"
+      )
+      .replace(
+        /^-+|-+$/g,
+        ""
+      )
+      .slice(0, 140) ||
+    "arquivo";
 
-  return extensao ? `${base}.${extensao}` : base;
+  return extensao
+    ? `${base}.${extensao}`
+    : base;
 }
 
-function uuidValido(valor: string) {
+function uuidValido(
+  valor: string
+) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     valor
   );
-}
-
-function formatarAmzDate(data: Date) {
-  return data
-    .toISOString()
-    .replace(/[:-]|\.\d{3}/g, "");
-}
-
-function codificarRfc3986(valor: string) {
-  return encodeURIComponent(valor).replace(
-    /[!'()*]/g,
-    (caractere) =>
-      `%${caractere.charCodeAt(0).toString(16).toUpperCase()}`
-  );
-}
-
-function sha256Hex(valor: string) {
-  return createHash("sha256")
-    .update(valor, "utf8")
-    .digest("hex");
-}
-
-function hmac(
-  chave: Buffer | string,
-  valor: string
-) {
-  return createHmac("sha256", chave)
-    .update(valor, "utf8")
-    .digest();
-}
-
-function hmacHex(
-  chave: Buffer | string,
-  valor: string
-) {
-  return createHmac("sha256", chave)
-    .update(valor, "utf8")
-    .digest("hex");
-}
-
-function obterChaveAssinatura(
-  segredo: string,
-  data: string,
-  region: string,
-  servico: string
-) {
-  const kDate = hmac(`AWS4${segredo}`, data);
-  const kRegion = hmac(kDate, region);
-  const kService = hmac(kRegion, servico);
-  return hmac(kService, "aws4_request");
 }
