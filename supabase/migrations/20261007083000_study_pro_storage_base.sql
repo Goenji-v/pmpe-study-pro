@@ -89,6 +89,9 @@ create table if not exists public.study_storage_video_progress (
     on delete cascade
 );
 
+create index if not exists study_storage_video_progress_user_idx
+  on public.study_storage_video_progress (user_id);
+
 alter table public.study_storage_video_progress enable row level security;
 
 revoke all on table public.study_storage_video_progress from anon;
