@@ -31,6 +31,14 @@ import {
   agendarJobGeracaoIA,
 } from "./processarGeracaoPersistente.ts";
 import {
+  chavePertenceAoUsuario,
+  criarChavePrivada,
+  criarUrlAssinadaS3,
+  obterConfiguracaoStudyStorage,
+  validarPedidoUpload,
+  verificarObjetoStudyStorage,
+} from "./studyProStorage.ts";
+import {
   agendarJobAnaliseSimuladoPdf,
   calcularProgressoRetomadaSimuladoPdf,
   ehJobSimuladoPdf,
@@ -58,6 +66,9 @@ const internalProxySecret =
 
 const supabaseServerKey =
   process.env.SUPABASE_ANON_KEY?.trim() || "";
+
+const studyStorageConfig =
+  obterConfiguracaoStudyStorage(process.env);
 
 if (!apiKey) {
   throw new Error(
@@ -120,6 +131,246 @@ app.get(
     });
   }
 );
+
+app.get(
+  "/api/storage/status",
+  (_req, res) => {
+    res.json({
+      sucesso: true,
+      configured: studyStorageConfig.configured,
+      provider: studyStorageConfig.provider,
+      bucket: studyStorageConfig.configured
+        ? studyStorageConfig.bucket
+        : null,
+      maxFileBytes: studyStorageConfig.maxFileBytes,
+    });
+  }
+);
+
+app.post(
+  "/api/storage/uploads",
+  (req, res) => {
+    try {
+      const userId = obterUsuarioStudyStorage(req);
+
+      if (!studyStorageConfig.configured) {
+        res.status(503).json({
+          sucesso: false,
+          erro:
+            "O provedor físico do Study Pro Storage ainda não foi configurado.",
+        });
+        return;
+      }
+
+      const arquivo = validarPedidoUpload(
+        req.body ?? {},
+        studyStorageConfig
+      );
+      const objectKey = criarChavePrivada(
+        userId,
+        arquivo.fileName
+      );
+      const expiresIn = 4 * 60 * 60;
+      const uploadUrl = criarUrlAssinadaS3(
+        studyStorageConfig,
+        "PUT",
+        objectKey,
+        expiresIn
+      );
+
+      res.json({
+        sucesso: true,
+        provider: studyStorageConfig.provider,
+        bucket: studyStorageConfig.bucket,
+        objectKey,
+        uploadUrl,
+        expiresIn,
+        arquivo,
+      });
+    } catch (erro) {
+      res.status(400).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível preparar o upload.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/storage/complete",
+  async (req, res) => {
+    try {
+      const userId = obterUsuarioStudyStorage(req);
+      const objectKey = String(
+        req.body?.objectKey || ""
+      ).trim();
+      const expectedSize = Math.floor(
+        Number(req.body?.sizeBytes) || 0
+      );
+
+      if (
+        !objectKey ||
+        !chavePertenceAoUsuario(userId, objectKey)
+      ) {
+        res.status(403).json({
+          sucesso: false,
+          erro: "Arquivo não pertence a este usuário.",
+        });
+        return;
+      }
+
+      const remoto =
+        await verificarObjetoStudyStorage(
+          studyStorageConfig,
+          objectKey
+        );
+
+      if (
+        expectedSize > 0 &&
+        remoto.sizeBytes !== null &&
+        remoto.sizeBytes !== expectedSize
+      ) {
+        res.status(409).json({
+          sucesso: false,
+          erro:
+            "O upload foi interrompido antes de enviar o arquivo completo.",
+        });
+        return;
+      }
+
+      res.json({
+        sucesso: true,
+        provider: studyStorageConfig.provider,
+        bucket: studyStorageConfig.bucket,
+        objectKey,
+        remoto,
+      });
+    } catch (erro) {
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível confirmar o arquivo.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/storage/access",
+  (req, res) => {
+    try {
+      const userId = obterUsuarioStudyStorage(req);
+      const objectKey = String(
+        req.body?.objectKey || ""
+      ).trim();
+
+      if (
+        !objectKey ||
+        !chavePertenceAoUsuario(userId, objectKey)
+      ) {
+        res.status(403).json({
+          sucesso: false,
+          erro: "Arquivo não pertence a este usuário.",
+        });
+        return;
+      }
+
+      const expiresIn = 6 * 60 * 60;
+      const url = criarUrlAssinadaS3(
+        studyStorageConfig,
+        "GET",
+        objectKey,
+        expiresIn
+      );
+
+      res.json({
+        sucesso: true,
+        url,
+        expiresIn,
+      });
+    } catch (erro) {
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível liberar o arquivo.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/storage/remove",
+  async (req, res) => {
+    try {
+      const userId = obterUsuarioStudyStorage(req);
+      const objectKey = String(
+        req.body?.objectKey || ""
+      ).trim();
+
+      if (
+        !objectKey ||
+        !chavePertenceAoUsuario(userId, objectKey)
+      ) {
+        res.status(403).json({
+          sucesso: false,
+          erro: "Arquivo não pertence a este usuário.",
+        });
+        return;
+      }
+
+      const url = criarUrlAssinadaS3(
+        studyStorageConfig,
+        "DELETE",
+        objectKey,
+        300
+      );
+      const resposta = await fetch(url, {
+        method: "DELETE",
+      });
+
+      if (!resposta.ok && resposta.status !== 404) {
+        throw new Error(
+          `O provedor recusou a exclusão (HTTP ${resposta.status}).`
+        );
+      }
+
+      res.json({
+        sucesso: true,
+      });
+    } catch (erro) {
+      res.status(500).json({
+        sucesso: false,
+        erro:
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível excluir o arquivo.",
+      });
+    }
+  }
+);
+
+function obterUsuarioStudyStorage(
+  req: Request
+) {
+  const userId = String(
+    req.header("x-study-user-id") || ""
+  ).trim();
+
+  if (!userId) {
+    throw new Error(
+      "Sessão inválida para acessar o armazenamento."
+    );
+  }
+
+  return userId;
+}
 
 app.get(
   "/api/modelos",
