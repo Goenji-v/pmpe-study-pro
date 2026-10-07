@@ -7,6 +7,7 @@ const AuthenticatedApp = lazy(() => import("./AuthenticatedApp"));
 const TermosUso = lazy(() => import("./pages/Legal/TermosUso"));
 const PoliticaPrivacidade = lazy(() => import("./pages/Legal/PoliticaPrivacidade"));
 const Demo = lazy(() => import("./pages/Demo/Demo"));
+const PreviewIdeias = lazy(() => import("./pages/PreviewIdeias/PreviewIdeias"));
 
 function CarregandoRota() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/termos" element={<TermosUso />} />
           <Route path="/privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/demo" element={<Demo />} />
+          <Route path="/preview-ideias" element={<PreviewIdeias />} />
           <Route path="/*" element={<AuthenticatedApp />} />
         </Routes>
       </Suspense>
