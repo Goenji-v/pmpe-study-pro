@@ -69,6 +69,7 @@ const ROTAS_GRUPOS: Record<GrupoId, string[]> = {
     "/cursos",
     "/curso-mentoria",
     "/materiais",
+    "/armazenamento",
     "/estudos",
     "/conteudos",
     "/revisoes",
@@ -234,6 +235,7 @@ export default function Sidebar() {
             <ItemMenu to="/cursos" texto="Meus Cursos" icone={CoursesIcon} onNavigate={() => setMenuMobileAberto(false)} />
             <ItemMenu to="/estudos" texto="Conteúdos" icone={LibraryIcon} onNavigate={() => setMenuMobileAberto(false)} />
             <ItemMenu to="/materiais" texto="Materiais" icone={MaterialsIcon} onNavigate={() => setMenuMobileAberto(false)} />
+            <ItemMenu to="/armazenamento" texto="Meu armazenamento" icone={MaterialsIcon} onNavigate={() => setMenuMobileAberto(false)} />
             <ItemMenu to="/revisoes" texto="Revisões" icone={ReviewsIcon} onNavigate={() => setMenuMobileAberto(false)} />
           </GrupoMenu>
 
