@@ -22,6 +22,11 @@ const fonteCorrecao = readFileSync(
   "utf8"
 );
 
+const fonteCentralEstudos = readFileSync(
+  new URL("../src/pages/CentralEstudos/CentralEstudos.tsx", import.meta.url),
+  "utf8"
+);
+
 test("job persistente submete o lote a revisão semântica independente", () => {
   assert.match(fonteProcessador, /montarPromptRevisaoQuestoesIA/);
   assert.match(fonteProcessador, /validarLoteRevisado/);
@@ -89,3 +94,19 @@ test("revisão mostra a decisão adaptativa e as três datas de retorno", () => 
   assert.match(fonteRevisoes, /Rever teoria/);
   assert.match(fonteRevisoes, /Fazer questões/);
 });
+
+test("trocar para Questões dentro de revisão vinculada preserva o vínculo", () => {
+  assert.match(
+    fonteCentralEstudos,
+    /estado\.revisaoId &&[\s\S]*estado\.tipo === "revisao"/
+  );
+  assert.match(
+    fonteCentralEstudos,
+    /tipo === "questoes"[\s\S]*formatoRevisao: "questoes"/
+  );
+  assert.match(
+    fonteCentralEstudos,
+    /Revisão vinculada preservada\. Formato alterado para Questões\./
+  );
+});
+
