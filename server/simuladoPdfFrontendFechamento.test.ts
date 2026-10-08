@@ -131,6 +131,8 @@ test("atividade semanal abre a sala dedicada do Simulado PDF", async () => {
 
   assert.match(plano, /guardarRascunhoSimuladoPdf/);
   assert.match(plano, /navigate\("\/simulado-pdf"\)/);
+  assert.match(plano, /simuladoDomingoConcluido[\s\S]*navigate\("\/simulados"\)/);
+  assert.match(plano, /Ver diagnóstico/);
   assert.match(
     app,
     /<Route path="\/simulado-pdf" element={<SimuladoPdf \/>}/
