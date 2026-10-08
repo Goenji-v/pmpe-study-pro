@@ -1,4 +1,5 @@
 import { armazenamentoLocalDaConta as localStorage } from "./armazenamentoConta";
+import type { MarcacaoQuestaoSimulado } from "../utils/analiseSimuladoStudyPro";
 import type { AnaliseSimuladoPdf } from "./simuladoPdfAnaliseService";
 
 export type ProcessoSimuladoPdfPersistido = {
@@ -9,6 +10,7 @@ export type ProcessoSimuladoPdfPersistido = {
   dia?: number;
   missaoId?: string;
   respostas: Record<string, string>;
+  marcacoes: Record<string, MarcacaoQuestaoSimulado>;
   questaoAtual: number;
   segundos: number;
   pausado: boolean;
@@ -61,6 +63,10 @@ export function carregarProcessoSimuladoPdf(): ProcessoSimuladoPdfPersistido | n
       respostas:
         item.respostas && typeof item.respostas === "object"
           ? (item.respostas as Record<string, string>)
+          : {},
+      marcacoes:
+        item.marcacoes && typeof item.marcacoes === "object"
+          ? (item.marcacoes as Record<string, MarcacaoQuestaoSimulado>)
           : {},
       questaoAtual: Math.max(1, Number(item.questaoAtual) || 1),
       segundos: Math.max(0, Math.round(Number(item.segundos) || 0)),
