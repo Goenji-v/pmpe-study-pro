@@ -35,6 +35,10 @@ import {
 } from "../../utils/conteudosSemana";
 
 import {
+  gerarMateriasDoPlano,
+} from "../../utils/materiasDoPlano";
+
+import {
   definirTipoSessaoQuestoesIAAtiva,
   registrarQuestoesAtuaisComoCaderno,
 } from "../../services/cadernosSimuladosIAService";
@@ -208,12 +212,59 @@ export default function GerarSimuladoIA() {
     [materias, materiaSelecionada]
   );
 
-  const modulosDisponiveis = useMemo(
+  const materiaDoEdital = useMemo(
     () =>
-      materiaAtual
-        ? listarModulosDaMateria(materiaAtual)
-        : [],
-    [materiaAtual]
+      gerarMateriasDoPlano().find(
+        (materia) =>
+          normalizarTexto(materia.nome) ===
+          normalizarTexto(materiaSelecionada)
+      ),
+    [materiaSelecionada]
+  );
+
+  const modulosDisponiveis = useMemo(
+    () => {
+      if (!materiaAtual) return [];
+
+      const modulosAtuais = listarModulosDaMateria(materiaAtual);
+      const assuntosEdital = materiaDoEdital
+        ? listarModulosDaMateria(materiaDoEdital)
+            .flatMap((modulo) => modulo.assuntos)
+        : [];
+
+      if (assuntosEdital.length === 0) {
+        return modulosAtuais;
+      }
+
+      const nomesEdital = new Set(
+        assuntosEdital.map((assunto) =>
+          normalizarTexto(assunto.nome)
+        )
+      );
+
+      const modulosExtras = modulosAtuais
+        .map((modulo) => ({
+          ...modulo,
+          assuntos: modulo.assuntos.filter(
+            (assunto) =>
+              !nomesEdital.has(
+                normalizarTexto(assunto.nome)
+              )
+          ),
+        }))
+        .filter((modulo) => modulo.assuntos.length > 0);
+
+      return [
+        {
+          id: `edital:${materiaAtual.id}`,
+          nome: "Edital PMPE",
+          ordem: -1,
+          assuntos: assuntosEdital,
+        },
+        ...modulosExtras,
+      ];
+    },
+    [materiaAtual, materiaDoEdital]
   );
 
   const opcoesAssuntos = useMemo<AssuntoSelecionavel[]>(
@@ -1051,8 +1102,8 @@ export default function GerarSimuladoIA() {
                 <div>
                   <h2>Subassuntos</h2>
                   <p>
-                    Marque um ou mais tópicos da mesma matéria. Eles podem estar
-                    em módulos diferentes.
+                    Os tópicos do edital aparecem primeiro. Você também pode
+                    marcar conteúdos extras do curso, sem duplicidades.
                   </p>
                 </div>
 
