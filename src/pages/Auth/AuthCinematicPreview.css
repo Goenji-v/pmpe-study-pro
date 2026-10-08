@@ -244,65 +244,6 @@
 }
 
 
-
-/* Troca visual da "caveira"/elmo central pela marca SP oficial do projeto. */
-.auth-pagina .auth-apresentacao::before {
-  content: "";
-  position: absolute;
-  z-index: 2;
-  left: 46%;
-  top: 52%;
-  width: min(39vw, 610px);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  background:
-    radial-gradient(circle,
-      rgba(3,4,7,.98) 0 38%,
-      rgba(8,3,7,.94) 49%,
-      rgba(94,0,16,.48) 61%,
-      rgba(255,25,48,.12) 70%,
-      transparent 78%);
-  filter: blur(.2px);
-}
-
-.auth-pagina .auth-apresentacao::after {
-  content: "";
-  position: absolute;
-  z-index: 3;
-  left: 46%;
-  top: 52%;
-  width: min(27vw, 430px);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  background: url("/assets/study-pro-sp-red.svg") center / contain no-repeat;
-  filter:
-    drop-shadow(0 22px 24px rgba(0,0,0,.72))
-    drop-shadow(0 0 28px rgba(255,22,47,.42));
-}
-
-@media (max-width: 980px) {
-  .auth-pagina .auth-apresentacao::before,
-  .auth-pagina .auth-apresentacao::after {
-    left: 42%;
-  }
-}
-
-@media (max-width: 640px) {
-  .auth-pagina .auth-apresentacao::before {
-    left: 52%;
-    top: 62%;
-    width: 250px;
-  }
-
-  .auth-pagina .auth-apresentacao::after {
-    left: 52%;
-    top: 62%;
-    width: 165px;
-  }
-}
-
 /* Notebook ultrawide: mantém a composição inteira em vez de recortar o topo. */
 @media (min-width: 981px) and (max-aspect-ratio: 16 / 8) {
   .auth-pagina .auth-apresentacao {
