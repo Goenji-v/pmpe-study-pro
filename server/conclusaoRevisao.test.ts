@@ -8,6 +8,7 @@ import {
   criarProximaRevisao,
   INTERVALOS_REVISAO_DIAS,
   preverProximaRevisaoPorDesempenho,
+  recuperarConclusoesRevisaoPorSessoesOrfas,
   resolverAvaliacaoRevisao,
   sessaoExigeResultadoQuestoes,
 } from "../src/utils/revisoes.ts";
@@ -283,3 +284,78 @@ test("resultado medido fora do cronômetro é preservado na próxima revisão", 
   assert.equal(proxima.etapa, 2);
   assert.equal(new Date(proxima.dataPrevista).getDate(), 5);
 });
+
+test("recupera revisão recente concluída em sessão de questões que perdeu o vínculo", () => {
+  const sessaoOrfa: SessaoEstudo = {
+    id: "sessao-orfa",
+    tipo: "questoes",
+    materia: revisao.materia,
+    materiaId: revisao.materiaId,
+    moduloId: revisao.moduloId,
+    assunto: revisao.assunto,
+    assuntoId: revisao.assuntoId,
+    objetivo: "Revisar Fonemas",
+    observacao: "Revisão etapa 2 · Teoria + 10 questões",
+    minutos: 18,
+    quantidadeQuestoes: 10,
+    quantidadeAcertos: 7,
+    quantidadeErros: 3,
+    data: new Date(2026, 8, 2, 12, 30).toISOString(),
+    finalizadaEm: new Date(2026, 8, 2, 12, 30).toISOString(),
+  };
+
+  const resultado = recuperarConclusoesRevisaoPorSessoesOrfas({
+    revisoes: [revisao],
+    sessoes: [sessaoOrfa],
+    limiteDiario: 2,
+    agora: new Date(2026, 8, 2, 13),
+  });
+
+  assert.equal(resultado.recuperadas.length, 1);
+  assert.deepEqual(resultado.recuperadas[0], {
+    revisaoId: revisao.id,
+    sessaoId: sessaoOrfa.id,
+  });
+
+  const concluida = resultado.revisoes.find((item) => item.id === revisao.id)!;
+  assert.equal(concluida.concluida, true);
+  assert.equal(concluida.sessaoId, sessaoOrfa.id);
+  assert.equal(concluida.desempenho, "media");
+  assert.equal(concluida.certas, 7);
+  assert.equal(concluida.erradas, 3);
+
+  const proxima = resultado.revisoes.find((item) => !item.concluida)!;
+  assert.equal(proxima.etapa, 2);
+});
+
+test("não recupera sessão comum de questões sem marcador exato da revisão", () => {
+  const sessaoComum: SessaoEstudo = {
+    id: "sessao-comum",
+    tipo: "questoes",
+    materia: revisao.materia,
+    materiaId: revisao.materiaId,
+    moduloId: revisao.moduloId,
+    assunto: revisao.assunto,
+    assuntoId: revisao.assuntoId,
+    objetivo: "Treinar Fonemas",
+    observacao: "Questões extras",
+    minutos: 18,
+    quantidadeQuestoes: 10,
+    quantidadeAcertos: 7,
+    quantidadeErros: 3,
+    data: new Date(2026, 8, 2, 12, 30).toISOString(),
+    finalizadaEm: new Date(2026, 8, 2, 12, 30).toISOString(),
+  };
+
+  const resultado = recuperarConclusoesRevisaoPorSessoesOrfas({
+    revisoes: [revisao],
+    sessoes: [sessaoComum],
+    limiteDiario: 2,
+    agora: new Date(2026, 8, 2, 13),
+  });
+
+  assert.equal(resultado.recuperadas.length, 0);
+  assert.equal(resultado.revisoes[0], revisao);
+  assert.equal(resultado.revisoes[0].concluida, false);
+});
+

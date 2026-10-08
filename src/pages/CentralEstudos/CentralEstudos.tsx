@@ -442,6 +442,35 @@ const [
 
     setMensagem("");
 
+    if (
+      estado.revisaoId &&
+      estado.tipo === "revisao"
+    ) {
+      if (tipo === "questoes") {
+        atualizarDados({
+          formatoRevisao: "questoes",
+        });
+        setMensagem(
+          "Revisão vinculada preservada. Formato alterado para Questões."
+        );
+        return;
+      }
+
+      if (tipo === "aula") {
+        atualizarDados({
+          formatoRevisao: "teoria",
+        });
+        setMensagem(
+          "Revisão vinculada preservada. Formato alterado para Teoria."
+        );
+        return;
+      }
+
+      if (tipo === "revisao") {
+        return;
+      }
+    }
+
     if (tipo !== "simulado") {
       atualizarDados({
         tipo,

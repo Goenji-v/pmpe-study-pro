@@ -14,6 +14,7 @@ import {
   concluirRevisaoNaLista,
   formatarDataRevisao,
   preverProximaRevisaoPorDesempenho,
+  recuperarConclusoesRevisaoPorSessoesOrfas,
   statusDaRevisao,
   redistribuirRevisoesPendentes,
   reagendarRevisao,
@@ -42,7 +43,7 @@ function chaveRevisoesIA(userId: string) {
 }
 
 export default function Revisoes() {
-  const { materias, revisoes, setRevisoes, configuracoes } = useApp();
+  const { materias, revisoes, setRevisoes, sessoes, configuracoes } = useApp();
   const { usuario } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -68,6 +69,32 @@ export default function Revisoes() {
     };
   }, [usuario, revisoes, materias, configuracoes.metaRevisoesDiaria, setRevisoes, showToast]);
   /* oxlint-enable react-hooks/exhaustive-deps */
+
+  useEffect(() => {
+    const recuperacao = recuperarConclusoesRevisaoPorSessoesOrfas({
+      revisoes,
+      sessoes,
+      limiteDiario: configuracoes.metaRevisoesDiaria,
+    });
+
+    if (recuperacao.recuperadas.length === 0) {
+      return;
+    }
+
+    setRevisoes(recuperacao.revisoes);
+    showToast(
+      recuperacao.recuperadas.length === 1
+        ? "Recuperei uma revisão concluída por questões que havia perdido o vínculo."
+        : `Recuperei ${recuperacao.recuperadas.length} revisões concluídas por questões que haviam perdido o vínculo.`,
+      "success"
+    );
+  }, [
+    configuracoes.metaRevisoesDiaria,
+    revisoes,
+    sessoes,
+    setRevisoes,
+    showToast,
+  ]);
 
   function importarRevisoesIA() {
     if (!usuario) return;
