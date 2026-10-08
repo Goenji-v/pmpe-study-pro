@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useState,
   type FormEvent,
 } from "react";
@@ -25,7 +24,6 @@ import {
 
 import "./Auth.css";
 import "./AuthCinematicPreview.css";
-import { LOGIN_BG_DATA, LOGIN_LOGO_DATA } from "./loginPreviewAssets";
 import { PARCERIAS_VISIVEIS } from "../../config/recursos";
 import AuthHero from "./AuthHero";
 import {
@@ -47,17 +45,6 @@ const EMAIL_LEMBRADO_CHAVE = "pmpe-study-pro-email";
 const ORIGEM_AUTH_PRODUCAO = "https://pmpe-study-pro-two.vercel.app";
 
 export default function Auth() {
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty("--study-login-bg", `url("${LOGIN_BG_DATA}")`);
-    root.style.setProperty("--study-login-logo", `url("${LOGIN_LOGO_DATA}")`);
-
-    return () => {
-      root.style.removeProperty("--study-login-bg");
-      root.style.removeProperty("--study-login-logo");
-    };
-  }, []);
-
   const {
     usuario,
     carregando,
