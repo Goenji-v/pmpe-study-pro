@@ -37,5 +37,8 @@ test("CORS preserva desenvolvimento local sem abrir produção", async () => {
   assert.match(codigo, /localhost/);
   assert.match(codigo, /127\\\.0\\\.0\\\.1/);
   assert.match(codigo, /192\\\.168/);
-  assert.match(codigo, /local \|\| origensPermitidas\.has\(origem\)/);
+  assert.match(
+    codigo,
+    /local \|\|[\s\S]*origensPermitidas\.has\(origem\) \|\|[\s\S]*origemPreviewVercelStudyPro\(origem\)/
+  );
 });
