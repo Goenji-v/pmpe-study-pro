@@ -22,7 +22,7 @@ import { useApp } from "../../context/AppContext";
 import type { Simulado } from "../../types";
 import {
   analisarSimuladoStudyPro,
-  type MarcacaoQuestaoSimulado,
+  type MarcacaoQuestaoSimulado as TipoMarcacaoQuestaoSimulado,
   type QuestaoAnaliseSimulado,
 } from "../../utils/analiseSimuladoStudyPro";
 import {
@@ -112,7 +112,7 @@ export default function SimuladoPdf() {
   const [respostas, setRespostas] =
     useState<Record<string, string>>({});
   const [marcacoes, setMarcacoes] =
-    useState<Record<string, MarcacaoQuestaoSimulado>>({});
+    useState<Record<string, TipoMarcacaoQuestaoSimulado>>({});
   const [questaoAtual, setQuestaoAtual] = useState(1);
   const [analise, setAnalise] =
     useState<AnaliseSimuladoPdf | null>(null);
@@ -925,7 +925,7 @@ export default function SimuladoPdf() {
 
   function marcarQuestao(
     numero: number,
-    valor: MarcacaoQuestaoSimulado
+    valor: TipoMarcacaoQuestaoSimulado
   ) {
     if (finalizado || pausado) return;
 
