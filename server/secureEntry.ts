@@ -53,6 +53,20 @@ const origensPermitidas = new Set(
   ]
 );
 
+function origemPreviewVercelStudyPro(origem: string) {
+  try {
+    const { protocol, hostname } = new URL(origem);
+    if (protocol !== "https:") return false;
+
+    return (
+      /^pmpe-study-[a-z0-9-]+-pmpe-study-pro\.vercel\.app$/i.test(hostname) ||
+      /^pmpe-study-pro-git-[a-z0-9-]+-pmpe-study-pro\.vercel\.app$/i.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 const janelaGeralMs = 10 * 60 * 1000;
 const limiteGeral = 60;
 const janelaImportacaoMs = 60 * 60 * 1000;
@@ -91,7 +105,11 @@ app.use(
         origem
       );
 
-      if (local || origensPermitidas.has(origem)) {
+      if (
+        local ||
+        origensPermitidas.has(origem) ||
+        origemPreviewVercelStudyPro(origem)
+      ) {
         callback(null, true);
         return;
       }
