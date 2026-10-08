@@ -23,9 +23,14 @@
     linear-gradient(90deg, rgba(2,3,7,.02) 0%, rgba(2,3,7,.04) 42%, rgba(2,3,7,.68) 78%, rgba(2,3,7,.84) 100%),
     linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.20)),
     url("/assets/login-cinematic-bg.webp") !important;
-  background-repeat: no-repeat !important;
-  background-position: center center !important;
-  background-size: cover !important;
+  /*
+   * Desktop/notebook: preserva a altura inteira da arte.
+   * Evita o "zoom" do cover, que ampliava a imagem, deixava serrilhada
+   * e ainda cortava a logo/céu no topo em telas bem largas.
+   */
+  background-repeat: no-repeat, no-repeat, no-repeat !important;
+  background-position: center, center, left top !important;
+  background-size: 100% 100%, 100% 100%, auto 100% !important;
 }
 
 .auth-pagina .auth-hero-fundo,
@@ -238,6 +243,27 @@
   color: rgba(255,255,255,.47) !important;
 }
 
+
+/* Notebook ultrawide: mantém a composição inteira em vez de recortar o topo. */
+@media (min-width: 981px) and (max-aspect-ratio: 16 / 8) {
+  .auth-pagina .auth-apresentacao {
+    background-position: center, center, left top !important;
+    background-size: 100% 100%, 100% 100%, auto 100% !important;
+  }
+}
+
+@media (min-width: 981px) and (min-aspect-ratio: 16 / 8) {
+  .auth-pagina .auth-apresentacao {
+    background-position: center, center, left top !important;
+    background-size: 100% 100%, 100% 100%, auto 100% !important;
+  }
+
+  .auth-pagina .auth-formulario-area {
+    width: min(43vw, 620px) !important;
+    padding-right: clamp(28px, 3.2vw, 56px) !important;
+  }
+}
+
 /* Tablet: a cena continua visível e o card fica sobre o lado direito. */
 @media (max-width: 980px) {
   .auth-pagina .auth-formulario-area {
@@ -246,7 +272,8 @@
   }
 
   .auth-pagina .auth-apresentacao {
-    background-position: 42% center !important;
+    background-position: center, center, left top !important;
+    background-size: 100% 100%, 100% 100%, auto 100% !important;
   }
 }
 
@@ -270,9 +297,9 @@
     background-image:
       linear-gradient(180deg, rgba(0,0,0,.02) 0%, rgba(0,0,0,.00) 55%, rgba(4,5,9,.92) 100%),
       url("/assets/login-cinematic-bg.webp") !important;
-    background-repeat: no-repeat !important;
-    background-position: center top !important;
-    background-size: 100% auto !important;
+    background-repeat: no-repeat, no-repeat !important;
+    background-position: center, center top !important;
+    background-size: 100% 100%, 100% auto !important;
     border: 0 !important;
   }
 
