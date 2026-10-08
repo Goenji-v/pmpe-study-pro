@@ -107,10 +107,8 @@ export default function AnaliseSimuladoStudyPro({
           itens
             .filter(
               (item) =>
-                !(
-                  item.origem === origem &&
-                  item.tentativaId === tentativaId
-                )
+                item.origem === origem &&
+                item.tentativaId !== tentativaId
             )
             .map((item) => resumirAnaliseParaHistorico(item.analise))
         );
