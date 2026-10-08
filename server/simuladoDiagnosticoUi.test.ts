@@ -33,3 +33,16 @@ test("diagnóstico continua usando somente o plano condensado como contador de p
     /<strong>\{analise\.planoRevisao\.length\}<\/strong>/
   );
 });
+
+test("evolução do diagnóstico compara somente simulados da mesma origem", async () => {
+  const codigo = await readFile(
+    "src/components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro.tsx",
+    "utf8"
+  );
+
+  assert.match(
+    codigo,
+    /item\.origem === origem &&[\s\S]*item\.tentativaId !== tentativaId/
+  );
+});
+
