@@ -65,3 +65,13 @@ test("proxy público envia cabeçalhos defensivos e não cacheia respostas", asy
   assert.match(codigo, /Referrer-Policy/);
   assert.match(codigo, /Cache-Control", "no-store"/);
 });
+
+test("proxy público autoriza somente previews Vercel do projeto Study Pro", async () => {
+  const codigo = await readFile("server/secureEntry.ts", "utf8");
+
+  assert.match(codigo, /origemPreviewVercelStudyPro/);
+  assert.match(codigo, /pmpe-study-\[a-z0-9-\]\+-pmpe-study-pro\\\.vercel\\\.app/);
+  assert.match(codigo, /pmpe-study-pro-git-\[a-z0-9-\]\+-pmpe-study-pro\\\.vercel\\\.app/);
+  assert.doesNotMatch(codigo, /\*\.vercel\.app/);
+});
+
