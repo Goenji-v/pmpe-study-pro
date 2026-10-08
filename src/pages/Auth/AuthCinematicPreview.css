@@ -22,7 +22,7 @@
   background-image:
     linear-gradient(90deg, rgba(2,3,7,.02) 0%, rgba(2,3,7,.04) 42%, rgba(2,3,7,.68) 78%, rgba(2,3,7,.84) 100%),
     linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.20)),
-    url("/assets/login-futurista-study-pro-pmpe.webp") !important;
+    var(--study-login-bg, none) !important;
   /*
    * Desktop/notebook: preserva a altura inteira da arte.
    * Evita o "zoom" do cover, que ampliava a imagem, deixava serrilhada
@@ -89,7 +89,7 @@
   width: 190px !important;
   height: 150px !important;
   margin: -8px auto 2px !important;
-  background: url("/assets/study-pro-sp-logo-red.webp") center / contain no-repeat !important;
+  background: var(--study-login-logo, none) center / contain no-repeat !important;
   filter: drop-shadow(0 10px 26px rgba(255, 20, 43, .26)) !important;
 }
 
@@ -296,7 +296,7 @@
     background-color: #030407 !important;
     background-image:
       linear-gradient(180deg, rgba(0,0,0,.02) 0%, rgba(0,0,0,.00) 55%, rgba(4,5,9,.92) 100%),
-      url("/assets/login-futurista-study-pro-pmpe.webp") !important;
+      var(--study-login-bg, none) !important;
     background-repeat: no-repeat, no-repeat !important;
     background-position: center, 28% top !important;
     background-size: 100% 100%, auto 100% !important;
