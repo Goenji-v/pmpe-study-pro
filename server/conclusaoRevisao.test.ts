@@ -355,7 +355,7 @@ test("não recupera sessão comum de questões sem marcador exato da revisão", 
   });
 
   assert.equal(resultado.recuperadas.length, 0);
-  assert.equal(resultado.revisoes, resultado.revisoes);
+  assert.equal(resultado.revisoes[0], revisao);
   assert.equal(resultado.revisoes[0].concluida, false);
 });
 
