@@ -205,6 +205,7 @@ export function concluirRevisaoNaLista(params: {
   resultadoMedido?: {
     certas: number;
     erradas: number;
+    sessaoId?: string;
   };
 }): Revisao[] {
   const {
@@ -232,7 +233,7 @@ export function concluirRevisaoNaLista(params: {
         }
       : resultadoMedido
         ? {
-            sessaoId: undefined,
+            sessaoId: resultadoMedido.sessaoId,
             certas: resultadoMedido.certas,
             erradas: resultadoMedido.erradas,
           }
@@ -248,6 +249,159 @@ export function concluirRevisaoNaLista(params: {
   const atualizadas = revisoes.map((item) => item.id === revisaoId ? concluida : item);
   const proxima = criarProximaRevisao(concluida, atualizadas, limiteDiario, agora, proximaId);
   return proxima ? [proxima, ...atualizadas] : atualizadas;
+}
+
+const JANELA_RECUPERACAO_REVISAO_MS = 72 * 60 * 60 * 1000;
+
+function normalizarComparacao(valor: string | undefined) {
+  return String(valor ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function sessaoOrfaCorrespondeARevisao(
+  revisao: Revisao,
+  sessao: SessaoEstudo,
+  agora: Date
+) {
+  if (
+    sessao.tipo !== "questoes" ||
+    sessao.revisaoId ||
+    !Number.isInteger(sessao.quantidadeQuestoes) ||
+    !Number.isInteger(sessao.quantidadeAcertos) ||
+    !Number.isInteger(sessao.quantidadeErros) ||
+    (sessao.quantidadeQuestoes ?? 0) < 1 ||
+    (sessao.quantidadeAcertos ?? -1) < 0 ||
+    (sessao.quantidadeErros ?? -1) < 0 ||
+    (sessao.quantidadeAcertos ?? 0) + (sessao.quantidadeErros ?? 0) !==
+      sessao.quantidadeQuestoes
+  ) {
+    return false;
+  }
+
+  const finalizadaEm = new Date(
+    sessao.finalizadaEm ?? sessao.data
+  ).getTime();
+  const criadaEm = new Date(revisao.dataCriacao).getTime();
+  const agoraMs = agora.getTime();
+
+  if (
+    !Number.isFinite(finalizadaEm) ||
+    !Number.isFinite(criadaEm) ||
+    finalizadaEm < criadaEm ||
+    finalizadaEm > agoraMs ||
+    agoraMs - finalizadaEm > JANELA_RECUPERACAO_REVISAO_MS
+  ) {
+    return false;
+  }
+
+  const materiaCompativel =
+    sessao.materiaId && revisao.materiaId
+      ? sessao.materiaId === revisao.materiaId
+      : normalizarComparacao(sessao.materia) ===
+        normalizarComparacao(revisao.materia);
+  const assuntoCompativel =
+    sessao.assuntoId && revisao.assuntoId
+      ? sessao.assuntoId === revisao.assuntoId
+      : normalizarComparacao(sessao.assunto) ===
+        normalizarComparacao(revisao.assunto);
+  const moduloCompativel =
+    !sessao.moduloId ||
+    !revisao.moduloId ||
+    sessao.moduloId === revisao.moduloId;
+
+  if (!materiaCompativel || !assuntoCompativel || !moduloCompativel) {
+    return false;
+  }
+
+  const objetivoEsperado = normalizarComparacao(
+    `Revisar ${revisao.assunto}`
+  );
+  const observacaoEsperada = `revisao etapa ${revisao.etapa}`;
+
+  return (
+    normalizarComparacao(sessao.objetivo) === objetivoEsperado &&
+    normalizarComparacao(sessao.observacao).startsWith(
+      observacaoEsperada
+    )
+  );
+}
+
+export function recuperarConclusoesRevisaoPorSessoesOrfas(params: {
+  revisoes: Revisao[];
+  sessoes: SessaoEstudo[];
+  limiteDiario: number;
+  agora?: Date;
+}) {
+  const agora = params.agora ?? new Date();
+  const sessoesDisponiveis = [...params.sessoes]
+    .sort(
+      (a, b) =>
+        new Date(b.finalizadaEm ?? b.data).getTime() -
+        new Date(a.finalizadaEm ?? a.data).getTime()
+    );
+  const sessoesUsadas = new Set<string>();
+  const recuperadas: Array<{
+    revisaoId: string;
+    sessaoId: string;
+  }> = [];
+  let revisoesAtualizadas = params.revisoes;
+
+  for (const revisao of params.revisoes.filter(
+    (item) => !item.concluida
+  )) {
+    const sessao = sessoesDisponiveis.find(
+      (item) =>
+        !sessoesUsadas.has(item.id) &&
+        sessaoOrfaCorrespondeARevisao(revisao, item, agora)
+    );
+
+    if (!sessao) continue;
+
+    const desempenho = avaliarRevisaoPorQuestoes(
+      sessao.quantidadeQuestoes,
+      sessao.quantidadeAcertos
+    );
+
+    if (!desempenho) continue;
+
+    const proximaId =
+      `${sessao.id}:revisao:${revisao.id}:recuperada`;
+
+    revisoesAtualizadas = concluirRevisaoNaLista({
+      revisoes: revisoesAtualizadas,
+      revisaoId: revisao.id,
+      desempenho,
+      limiteDiario: params.limiteDiario,
+      agora: new Date(sessao.finalizadaEm ?? sessao.data),
+      proximaId,
+      resultadoMedido: {
+        certas: sessao.quantidadeAcertos as number,
+        erradas: sessao.quantidadeErros as number,
+        sessaoId: sessao.id,
+      },
+    });
+
+    const concluida = revisoesAtualizadas.find(
+      (item) => item.id === revisao.id
+    );
+
+    if (concluida?.concluida) {
+      sessoesUsadas.add(sessao.id);
+      recuperadas.push({
+        revisaoId: revisao.id,
+        sessaoId: sessao.id,
+      });
+    }
+  }
+
+  return {
+    revisoes: revisoesAtualizadas,
+    recuperadas,
+  };
 }
 
 export function reagendarRevisao(revisao: Revisao, dias: number): Revisao {
