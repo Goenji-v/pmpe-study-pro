@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import "./Auth.css";
+import "./AuthCinematicPreview.css";
 import { PARCERIAS_VISIVEIS } from "../../config/recursos";
 import AuthHero from "./AuthHero";
 import {
@@ -273,7 +274,7 @@ export default function Auth() {
 
             <h2>
               {modo === "login"
-                ? "Entrar"
+                ? "Bem-vindo de volta"
                 : modo === "cadastro"
                   ? "Cadastro"
                   : "Recuperar senha"}
@@ -281,7 +282,7 @@ export default function Auth() {
 
             <p>
               {modo === "login"
-                ? "Use seu e-mail e senha para continuar."
+                ? "Acesse sua conta e continue evoluindo"
                 : modo === "cadastro"
                   ? "Crie sua conta para manter seus dados sincronizados."
                   : "Informe o e-mail cadastrado para recuperar o acesso."}
