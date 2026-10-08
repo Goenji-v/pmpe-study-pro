@@ -17,11 +17,12 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
+import MarcacaoQuestaoSimulado from "../../components/AnaliseSimuladoStudyPro/MarcacaoQuestaoSimulado";
 import { useApp } from "../../context/AppContext";
 import type { Simulado } from "../../types";
 import {
   analisarSimuladoStudyPro,
-  type MarcacaoQuestaoSimulado,
+  type MarcacaoQuestaoSimulado as TipoMarcacaoQuestaoSimulado,
   type QuestaoAnaliseSimulado,
 } from "../../utils/analiseSimuladoStudyPro";
 import {
@@ -110,6 +111,8 @@ export default function SimuladoPdf() {
   const [segundos, setSegundos] = useState(0);
   const [respostas, setRespostas] =
     useState<Record<string, string>>({});
+  const [marcacoes, setMarcacoes] =
+    useState<Record<string, TipoMarcacaoQuestaoSimulado>>({});
   const [questaoAtual, setQuestaoAtual] = useState(1);
   const [analise, setAnalise] =
     useState<AnaliseSimuladoPdf | null>(null);
@@ -284,6 +287,7 @@ export default function SimuladoPdf() {
         dia: proximo.dia,
         missaoId: proximo.missaoId,
         respostas: {},
+        marcacoes: {},
         questaoAtual: 1,
         segundos: 0,
         pausado: false,
@@ -424,6 +428,7 @@ export default function SimuladoPdf() {
         dia: rascunho.dia,
         missaoId: rascunho.missaoId,
         respostas,
+        marcacoes,
         questaoAtual,
         segundos: segundosAtuais,
         pausado,
@@ -452,6 +457,7 @@ export default function SimuladoPdf() {
       questaoAtual,
       rascunho,
       respostas,
+      marcacoes,
       segundos,
     ]
   );
@@ -466,6 +472,7 @@ export default function SimuladoPdf() {
     progressoAnalise,
     questaoAtual,
     respostas,
+    marcacoes,
     persistirEstadoAtual,
   ]);
 
@@ -617,7 +624,7 @@ export default function SimuladoPdf() {
       data: criadoEm,
       questoes: questoesResultado,
       respostas: respostasResultado,
-      marcacoes: {},
+      marcacoes,
     });
 
     // Garante um relatório completo antes de depender da montagem do
@@ -665,6 +672,7 @@ export default function SimuladoPdf() {
     questoesResultado,
     rascunho,
     respostasResultado,
+    marcacoes,
   ]);
 
   useEffect(() => {
@@ -783,6 +791,7 @@ export default function SimuladoPdf() {
       );
       setCriadoEm(processo.criadoEm);
       setRespostas(processo.respostas);
+      setMarcacoes(processo.marcacoes ?? {});
       setQuestaoAtual(
         Math.max(
           1,
@@ -914,6 +923,19 @@ export default function SimuladoPdf() {
     );
   }
 
+  function marcarQuestao(
+    numero: number,
+    valor: TipoMarcacaoQuestaoSimulado
+  ) {
+    if (finalizado || pausado) return;
+
+    const questaoId = "pdf-" + numero;
+    setMarcacoes((atuais) => ({
+      ...atuais,
+      [questaoId]: valor,
+    }));
+  }
+
   function finalizar() {
     if (
       estadoAnalise === "concluida" &&
@@ -961,6 +983,7 @@ export default function SimuladoPdf() {
     setEstadoAnalise("parado");
     setProgressoAnalise(0);
     setRespostas({});
+    setMarcacoes({});
     setSegundos(0);
     setAnotacoesIniciais(undefined);
   }
@@ -1292,12 +1315,7 @@ export default function SimuladoPdf() {
           data={criadoEm}
           questoes={questoesResultado}
           respostas={respostasResultado}
-          marcacoes={
-            {} as Record<
-              string,
-              MarcacaoQuestaoSimulado
-            >
-          }
+          marcacoes={marcacoes}
         />
       </main>
     );
@@ -1513,6 +1531,12 @@ export default function SimuladoPdf() {
               depois que você finalizar.
             </small>
           </div>
+
+          <MarcacaoQuestaoSimulado
+            valor={marcacoes["pdf-" + questaoAtual] ?? "normal"}
+            disabled={pausado || finalizado}
+            onChange={(valor) => marcarQuestao(questaoAtual, valor)}
+          />
 
           <div className="gabarito-lista">
             {Array.from(

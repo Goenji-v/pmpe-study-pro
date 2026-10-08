@@ -778,10 +778,13 @@ export default function PlanoEstudos() {
                   <div className="plano-domingo-acao-missao">
                     <button
                       type="button"
-                      onClick={iniciarSimuladoPdfDomingo}
-                      disabled={simuladoDomingoConcluido}
+                      onClick={
+                        simuladoDomingoConcluido
+                          ? () => navigate("/simulados")
+                          : iniciarSimuladoPdfDomingo
+                      }
                     >
-                      {simuladoDomingoConcluido ? "Simulado concluído" : "Analisar e começar simulado"}
+                      {simuladoDomingoConcluido ? "Ver diagnóstico" : "Analisar e começar simulado"}
                     </button>
                   </div>
                   </article>

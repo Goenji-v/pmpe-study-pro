@@ -39,7 +39,7 @@ test("histórico de simulados exibe diagnósticos PDF salvos e reabríveis", asy
   assert.match(codigo, /listarAnalisesSimulados/);
   assert.match(
     codigo,
-    /item\.origem !== "pdf"/
+    /item\.origem === "pdf"/
   );
   assert.match(
     codigo,
@@ -114,7 +114,11 @@ test("frontend não aceita diagnóstico PDF com questões sem gabarito confiáve
   );
   assert.match(
     simulados,
-    /resumo\.totalValidas >= minimoConfiavel/
+    /const diagnosticoParcial = confiabilidade < 80/
+  );
+  assert.match(
+    simulados,
+    /Diagnóstico parcial/
   );
 });
 
@@ -127,6 +131,8 @@ test("atividade semanal abre a sala dedicada do Simulado PDF", async () => {
 
   assert.match(plano, /guardarRascunhoSimuladoPdf/);
   assert.match(plano, /navigate\("\/simulado-pdf"\)/);
+  assert.match(plano, /simuladoDomingoConcluido[\s\S]*navigate\("\/simulados"\)/);
+  assert.match(plano, /Ver diagnóstico/);
   assert.match(
     app,
     /<Route path="\/simulado-pdf" element={<SimuladoPdf \/>}/
@@ -171,3 +177,25 @@ test("fechamento do PDF persiste o diagnóstico antes de depender da tela de rel
     /new Event\("pmpe-simulado-pdf-finalizado"\)/
   );
 });
+
+test("simulado PDF preserva marcações cognitivas na retomada e no diagnóstico", async () => {
+  const [simuladoPdf, persistencia] = await Promise.all([
+    readFile(
+      "src/pages/SimuladoPdf/SimuladoPdf.tsx",
+      "utf8"
+    ),
+    readFile(
+      "src/services/simuladoPdfPersistencia.ts",
+      "utf8"
+    ),
+  ]);
+
+  assert.match(simuladoPdf, /<MarcacaoQuestaoSimulado/);
+  assert.match(simuladoPdf, /setMarcacoes\(processo\.marcacoes \?\? \{\}\)/);
+  assert.match(simuladoPdf, /marcacoes=\{marcacoes\}/);
+  assert.match(
+    persistencia,
+    /marcacoes: Record<string, MarcacaoQuestaoSimulado>/
+  );
+});
+

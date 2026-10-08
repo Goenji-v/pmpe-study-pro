@@ -103,16 +103,7 @@ export default function Simulados() {
 
         setAnalisesPdf(
           itens
-            .filter((item) => {
-              if (item.origem !== "pdf") return false;
-
-              const resumo = item.analise.resumo;
-              const minimoConfiavel = Math.ceil(
-                resumo.totalQuestoes * 0.8
-              );
-
-              return resumo.totalValidas >= minimoConfiavel;
-            })
+            .filter((item) => item.origem === "pdf")
             .sort(
               (a, b) =>
                 Date.parse(b.atualizadoEm) -
@@ -826,6 +817,13 @@ export default function Simulados() {
           <div className="simulados-pdf-lista">
             {analisesPdf.map((registro) => {
               const resumo = registro.analise.resumo;
+              const confiabilidade =
+                resumo.totalQuestoes > 0
+                  ? Math.round(
+                      (resumo.totalValidas / resumo.totalQuestoes) * 100
+                    )
+                  : 0;
+              const diagnosticoParcial = confiabilidade < 80;
               const aberto =
                 diagnosticoPdfAberto === registro.tentativaId;
               const gabaritoAberto =
@@ -859,7 +857,7 @@ export default function Simulados() {
 
                   <div className="simulado-pdf-historico-metricas">
                     <span>
-                      Questões: {resumo.totalQuestoes}
+                      Válidas: {resumo.totalValidas}/{resumo.totalQuestoes}
                     </span>
                     <span className="simulado-bom">
                       Acertos: {resumo.totalAcertos}
@@ -953,6 +951,18 @@ export default function Simulados() {
 
                   {aberto && (
                     <div className="simulado-pdf-diagnostico-salvo">
+                      {diagnosticoParcial && (
+                        <div className="simulado-pdf-diagnostico-alerta">
+                          <strong>Diagnóstico parcial</strong>
+                          <p>
+                            {resumo.totalValidas} de {resumo.totalQuestoes} questões
+                            tiveram gabarito confiável ({confiabilidade}%).
+                            O resultado continua salvo, mas os pontos fracos devem ser
+                            lidos considerando essa cobertura.
+                          </p>
+                        </div>
+                      )}
+
                       <div className="simulado-pdf-diagnostico-recomendacao">
                         <strong>Recomendação</strong>
                         <p>{registro.analise.recomendacaoFinal}</p>
@@ -966,7 +976,9 @@ export default function Simulados() {
                             .map((materia) => (
                               <span key={materia.materia}>
                                 {materia.materia}
-                                <b>{materia.aproveitamento}%</b>
+                                <b>
+                                  {materia.aproveitamento}% · {materia.avaliadas} aval.
+                                </b>
                               </span>
                             ))}
                         </div>
@@ -994,9 +1006,72 @@ export default function Simulados() {
                               ))
                           )}
                         </div>
+
+                        <div>
+                          <strong>Assuntos mais sensíveis</strong>
+                          {registro.analise.assuntos
+                            .filter((item) => item.avaliadas > 0)
+                            .slice(0, 8)
+                            .map((item) => (
+                              <span key={item.chave}>
+                                {item.materia} · {item.assuntoEspecifico}
+                                <b>{item.percentual}% · {item.prioridadeIndice}/100</b>
+                              </span>
+                            ))}
+                        </div>
+
+                        <div>
+                          <strong>Leitura do resultado</strong>
+                          <span>
+                            Melhor matéria
+                            <b>
+                              {resumo.melhorMateria
+                                ? resumo.melhorMateria.materia + " · " +
+                                  resumo.melhorMateria.aproveitamento + "%"
+                                : "—"}
+                            </b>
+                          </span>
+                          <span>
+                            Pior matéria
+                            <b>
+                              {resumo.piorMateria
+                                ? resumo.piorMateria.materia + " · " +
+                                  resumo.piorMateria.aproveitamento + "%"
+                                : "—"}
+                            </b>
+                          </span>
+                          <span>
+                            Acertos por chute
+                            <b>{resumo.totalAcertosPorChute}</b>
+                          </span>
+                          <span>
+                            Ainda não estudado
+                            <b>{resumo.totalNaoEstudadas}</b>
+                          </span>
+                          <span>
+                            Em branco
+                            <b>{resumo.totalNaoRespondidas}</b>
+                          </span>
+                        </div>
                       </div>
 
+                      {registro.analise.evolucao.length > 0 && (
+                        <div className="simulado-pdf-diagnostico-evolucao">
+                          <strong>Evolução em simulados PDF</strong>
+                          {registro.analise.evolucao.slice(0, 8).map((item) => (
+                            <span key={item.materia}>
+                              {item.materia}
+                              <b>{item.rotulo}</b>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="simulado-pdf-diagnostico-rodape">
+                        <span>
+                          Cobertura confiável:{" "}
+                          <strong>{confiabilidade}%</strong>
+                        </span>
                         <span>
                           Caderno de erros:{" "}
                           <strong>
