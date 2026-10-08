@@ -528,6 +528,23 @@
   border-top: 1px solid #334155;
 }
 
+.simulado-pdf-diagnostico-alerta {
+  padding: 14px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: 11px;
+}
+
+.simulado-pdf-diagnostico-alerta strong {
+  color: #f8c76a;
+}
+
+.simulado-pdf-diagnostico-alerta p {
+  margin: 7px 0 0;
+  color: #d7c7a2;
+  line-height: 1.55;
+}
+
 .simulado-pdf-diagnostico-recomendacao {
   padding: 14px;
   background: #111c2d;
@@ -577,6 +594,31 @@
 
 .simulado-pdf-diagnostico-grid b {
   flex: 0 0 auto;
+  color: #f8fafc;
+}
+
+.simulado-pdf-diagnostico-evolucao {
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+  background: #111827;
+  border: 1px solid #2d3f56;
+  border-radius: 11px;
+}
+
+.simulado-pdf-diagnostico-evolucao > strong {
+  color: #e2e8f0;
+}
+
+.simulado-pdf-diagnostico-evolucao span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #aebfd0;
+  font-size: 12px;
+}
+
+.simulado-pdf-diagnostico-evolucao b {
   color: #f8fafc;
 }
 
