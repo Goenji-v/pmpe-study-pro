@@ -267,9 +267,23 @@ function sessaoOrfaCorrespondeARevisao(
   sessao: SessaoEstudo,
   agora: Date
 ) {
+  const revisaoVinculada =
+    sessao.tipo === "revisao" &&
+    sessao.revisaoId === revisao.id &&
+    (revisaoCorrespondeASessao(revisao, sessao) ||
+      // Recuperação restrita: IDs da grade podem ter mudado após a sessão.
+      // Exige revisão vinculada explicitamente e nomes de matéria, assunto
+      // e módulo compatíveis; não afrouxa a conclusão online.
+      (Boolean(sessao.materia && sessao.assunto && revisao.materia && revisao.assunto) &&
+        normalizarComparacao(sessao.materia) === normalizarComparacao(revisao.materia) &&
+        normalizarComparacao(sessao.assunto) === normalizarComparacao(revisao.assunto) &&
+        (!sessao.modulo || !revisao.modulo ||
+          normalizarComparacao(sessao.modulo) === normalizarComparacao(revisao.modulo))));
+  const sessaoOrfa =
+    sessao.tipo === "questoes" && !sessao.revisaoId;
+
   if (
-    sessao.tipo !== "questoes" ||
-    sessao.revisaoId ||
+    (!revisaoVinculada && !sessaoOrfa) ||
     !Number.isInteger(sessao.quantidadeQuestoes) ||
     !Number.isInteger(sessao.quantidadeAcertos) ||
     !Number.isInteger(sessao.quantidadeErros) ||
@@ -316,6 +330,10 @@ function sessaoOrfaCorrespondeARevisao(
   if (!materiaCompativel || !assuntoCompativel || !moduloCompativel) {
     return false;
   }
+
+  // Se o ID explícito da revisão foi preservado, a conclusão pode ser
+  // restaurada sem depender da observação textual da sessão.
+  if (revisaoVinculada) return true;
 
   const objetivoEsperado = normalizarComparacao(
     `Revisar ${revisao.assunto}`
