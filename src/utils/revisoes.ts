@@ -412,11 +412,7 @@ export function recuperarConclusoesRevisaoPorSessoesOrfas(params: {
             erradas: sessao.quantidadeErros as number,
             sessaoId: sessao.id,
           } }
-        : { resultadoMedido: {
-            certas: 0,
-            erradas: 0,
-            sessaoId: sessao.id,
-          } }),
+        : {}),
     });
 
     const concluida = revisoesAtualizadas.find(
