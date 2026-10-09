@@ -185,35 +185,12 @@ export function resolverAvaliacaoRevisao(params: {
   );
 }
 
-export function revisaoCorrespondeASessao(
-  revisao: Revisao,
-  sessao: Pick<SessaoEstudo, "tipo" | "revisaoId" | "materiaId" | "moduloId" | "assuntoId" | "materia" | "modulo" | "assunto">
-) {
-  if (sessao.tipo !== "revisao" || revisao.id !== sessao.revisaoId) return false;
-
-  // IDs de conteúdo podem mudar quando um edital é migrado/canonizado.
-  // O ID da revisão é obrigatório; quando a referência mudou, confira
-  // os nomes para não concluir uma revisão de outro assunto.
-  const igual = (a?: string, b?: string) =>
-    String(a ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ").trim().toLowerCase() ===
-    String(b ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ").trim().toLowerCase();
-
-  const materiaConfere = Boolean(
-    (sessao.materiaId && revisao.materiaId && sessao.materiaId === revisao.materiaId) ||
-    (sessao.materia && revisao.materia && igual(sessao.materia, revisao.materia))
-  );
-  const assuntoConfere = Boolean(
-    (sessao.assuntoId && revisao.assuntoId && sessao.assuntoId === revisao.assuntoId) ||
-    (sessao.assunto && revisao.assunto && igual(sessao.assunto, revisao.assunto))
-  );
-  const moduloConfere =
-    !sessao.moduloId || !revisao.moduloId ||
-    sessao.moduloId === revisao.moduloId ||
-    Boolean(sessao.modulo && revisao.modulo && igual(sessao.modulo, revisao.modulo));
-
-  return materiaConfere && assuntoConfere && moduloConfere;
+export function revisaoCorrespondeASessao(revisao: Revisao, sessao: Pick<SessaoEstudo, "tipo" | "revisaoId" | "materiaId" | "moduloId" | "assuntoId" | "materia" | "assunto">) {
+  const igual = (a: string, b: string) => a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() === b.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  return sessao.tipo === "revisao" && revisao.id === sessao.revisaoId &&
+    (sessao.materiaId ? sessao.materiaId === revisao.materiaId : igual(sessao.materia, revisao.materia)) &&
+    (sessao.assuntoId ? sessao.assuntoId === revisao.assuntoId : igual(sessao.assunto, revisao.assunto)) &&
+    (!sessao.moduloId || !revisao.moduloId || sessao.moduloId === revisao.moduloId);
 }
 
 /** Conclusão e próxima revisão entram juntas na mesma atualização do estado. */
@@ -293,7 +270,15 @@ function sessaoOrfaCorrespondeARevisao(
   const revisaoVinculada =
     sessao.tipo === "revisao" &&
     sessao.revisaoId === revisao.id &&
-    revisaoCorrespondeASessao(revisao, sessao);
+    (revisaoCorrespondeASessao(revisao, sessao) ||
+      // Recuperação restrita: IDs da grade podem ter mudado após a sessão.
+      // Exige revisão vinculada explicitamente e nomes de matéria, assunto
+      // e módulo compatíveis; não afrouxa a conclusão online.
+      (Boolean(sessao.materia && sessao.assunto && revisao.materia && revisao.assunto) &&
+        normalizarComparacao(sessao.materia) === normalizarComparacao(revisao.materia) &&
+        normalizarComparacao(sessao.assunto) === normalizarComparacao(revisao.assunto) &&
+        (!sessao.modulo || !revisao.modulo ||
+          normalizarComparacao(sessao.modulo) === normalizarComparacao(revisao.modulo))));
   const sessaoOrfa =
     sessao.tipo === "questoes" && !sessao.revisaoId;
 
