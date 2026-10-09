@@ -91,9 +91,11 @@ export function criarProximaRevisao(
   agora = new Date(),
   id: string = crypto.randomUUID()
 ): Revisao | null {
-  const repetir = revisaoAtual.desempenho === "dificil" || revisaoAtual.desempenho === "media";
-  if (!repetir && revisaoAtual.etapa >= 5) return null;
-  const proximaEtapa = repetir ? revisaoAtual.etapa : (revisaoAtual.etapa + 1) as EtapaRevisao;
+  // Finalizar uma etapa sempre a encerra, independentemente da nota.
+  // O desempenho controla apenas a data do próximo ciclo: uma nota baixa
+  // não reabre a mesma etapa como se ela não tivesse sido concluída.
+  if (revisaoAtual.etapa >= 5) return null;
+  const proximaEtapa = (revisaoAtual.etapa + 1) as EtapaRevisao;
 
   const jaExiste = revisoesExistentes.some(
     (item) =>
@@ -282,16 +284,21 @@ function sessaoOrfaCorrespondeARevisao(
   const sessaoOrfa =
     sessao.tipo === "questoes" && !sessao.revisaoId;
 
+  if (!revisaoVinculada && !sessaoOrfa) return false;
+
+  // Revisão de teoria finalizada também é um resultado válido, sem
+  // quantidade de questões. Questões seguem exigindo placar consistente.
+  const exigePlacar = sessaoOrfa || sessao.formatoRevisao === "questoes";
   if (
-    (!revisaoVinculada && !sessaoOrfa) ||
-    !Number.isInteger(sessao.quantidadeQuestoes) ||
+    exigePlacar &&
+    (!Number.isInteger(sessao.quantidadeQuestoes) ||
     !Number.isInteger(sessao.quantidadeAcertos) ||
     !Number.isInteger(sessao.quantidadeErros) ||
     (sessao.quantidadeQuestoes ?? 0) < 1 ||
     (sessao.quantidadeAcertos ?? -1) < 0 ||
     (sessao.quantidadeErros ?? -1) < 0 ||
     (sessao.quantidadeAcertos ?? 0) + (sessao.quantidadeErros ?? 0) !==
-      sessao.quantidadeQuestoes
+      sessao.quantidadeQuestoes)
   ) {
     return false;
   }
@@ -327,7 +334,7 @@ function sessaoOrfaCorrespondeARevisao(
     !revisao.moduloId ||
     sessao.moduloId === revisao.moduloId;
 
-  if (!materiaCompativel || !assuntoCompativel || !moduloCompativel) {
+  if (!revisaoVinculada && (!materiaCompativel || !assuntoCompativel || !moduloCompativel)) {
     return false;
   }
 
@@ -379,10 +386,13 @@ export function recuperarConclusoesRevisaoPorSessoesOrfas(params: {
 
     if (!sessao) continue;
 
-    const desempenho = avaliarRevisaoPorQuestoes(
-      sessao.quantidadeQuestoes,
-      sessao.quantidadeAcertos
-    );
+    const desempenho =
+      sessao.tipo === "revisao" && sessao.formatoRevisao !== "questoes"
+        ? sessao.avaliacaoRevisao ?? null
+        : avaliarRevisaoPorQuestoes(
+            sessao.quantidadeQuestoes,
+            sessao.quantidadeAcertos
+          );
 
     if (!desempenho) continue;
 
@@ -396,11 +406,17 @@ export function recuperarConclusoesRevisaoPorSessoesOrfas(params: {
       limiteDiario: params.limiteDiario,
       agora: new Date(sessao.finalizadaEm ?? sessao.data),
       proximaId,
-      resultadoMedido: {
-        certas: sessao.quantidadeAcertos as number,
-        erradas: sessao.quantidadeErros as number,
-        sessaoId: sessao.id,
-      },
+      ...(Number.isInteger(sessao.quantidadeQuestoes)
+        ? { resultadoMedido: {
+            certas: sessao.quantidadeAcertos as number,
+            erradas: sessao.quantidadeErros as number,
+            sessaoId: sessao.id,
+          } }
+        : { resultadoMedido: {
+            certas: 0,
+            erradas: 0,
+            sessaoId: sessao.id,
+          } }),
     });
 
     const concluida = revisoesAtualizadas.find(
