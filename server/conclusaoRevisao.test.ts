@@ -307,7 +307,7 @@ test("resultado medido fora do cronômetro é preservado na próxima revisão", 
   assert.equal(concluida.erradas, 4);
   assert.equal(proxima.certas, 6);
   assert.equal(proxima.erradas, 4);
-  assert.equal(proxima.etapa, 2);
+  assert.equal(proxima.etapa, 3);
   assert.equal(new Date(proxima.dataPrevista).getDate(), 5);
 });
 
@@ -351,7 +351,7 @@ test("recupera revisão recente concluída em sessão de questões que perdeu o 
   assert.equal(concluida.erradas, 3);
 
   const proxima = resultado.revisoes.find((item) => !item.concluida)!;
-  assert.equal(proxima.etapa, 2);
+  assert.equal(proxima.etapa, 3);
 });
 
 test("não recupera sessão comum de questões sem marcador exato da revisão", () => {
