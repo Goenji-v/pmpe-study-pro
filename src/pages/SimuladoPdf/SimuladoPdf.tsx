@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
 import { useApp } from "../../context/AppContext";
 import type { Simulado } from "../../types";
+import { contarResultadoSimuladoPdf } from "../../utils/contagemSimuladoPdf";
 import {
   analisarSimuladoStudyPro,
   type MarcacaoQuestaoSimulado,
@@ -485,27 +486,8 @@ export default function SimuladoPdf() {
   useEffect(() => {
     if (!finalizado || !analise || !rascunho) return;
 
-    const questoesValidas = analise.questoes.filter(
-      (item) =>
-        item.status === "valida" &&
-        Boolean(item.gabarito) &&
-        item.confianca >= 50
-    );
-    const certas = questoesValidas.filter(
-      (item) =>
-        respostas[String(item.numero)] === item.gabarito
-    ).length;
-    const emBranco = questoesValidas.filter(
-      (item) => !respostas[String(item.numero)]
-    ).length;
-    const erradas = Math.max(
-      0,
-      questoesValidas.length - certas - emBranco
-    );
-    const anuladas = Math.max(
-      0,
-      analise.totalQuestoes - questoesValidas.length
-    );
+    const { certas, erradas, emBranco, anuladas } =
+      contarResultadoSimuladoPdf(analise, respostas);
 
     const registro: Simulado = {
       id: "pdf-" + rascunho.id,
