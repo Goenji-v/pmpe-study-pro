@@ -15,6 +15,12 @@ import {
 import { executarComFallbackGemini } from "./retryGemini.ts";
 import { executarPipelineQuestaoAPorQuestao } from "./simuladoPdfPipeline.ts";
 import { validarGabaritoExplicitoDoCaderno } from "./gabaritoExplicitoPdf.ts";
+import {
+  assuntoHistoricoDaAlternativaConfirmada,
+  materiaDoNumero,
+  validarSecoesDisciplinasDoPdf,
+  type SecaoDisciplinaPdf,
+} from "./estruturaDisciplinasSimuladoPdf.ts";
 
 export type QuestaoSimuladoPdfProcessada = {
   numero: number;
@@ -425,6 +431,39 @@ async function processar(
       }
     }
 
+    // A disciplina vem do cabeçalho real do PDF, não da resposta
+    // isolada da IA; sem estrutura comprovada, mantém fallback anterior.
+    let secoesDisciplinas: SecaoDisciplinaPdf[] = [];
+    try {
+      await atualizar(
+        "gerando",
+        12,
+        "Identificando as divisões de disciplinas impressas no caderno."
+      );
+      secoesDisciplinas = await extrairSecoesDisciplinasDoCaderno(
+        dependencias.ai,
+        modelos,
+        payload.prova,
+        payload.totalInformado
+      );
+      if (secoesDisciplinas.length > 0) {
+        alertas.push(
+          `Disciplinas confirmadas pelas seções do PDF: ${secoesDisciplinas.map((secao) => `${secao.materia} (Q${secao.inicio}–${secao.fim})`).join("; ")}.`
+        );
+      } else {
+        alertas.push(
+          "O PDF não permitiu confirmar toda a divisão por disciplina; nesses casos a IA classifica cada questão individualmente."
+        );
+      }
+    } catch (erroSecoes) {
+      console.warn("[simulado-pdf-job] estrutura de disciplinas não confirmada", {
+        erro: erroSecoes instanceof Error ? erroSecoes.message : String(erroSecoes),
+      });
+      alertas.push(
+        "Não foi possível confirmar os cabeçalhos de disciplina do PDF; classificação individual mantida."
+      );
+    }
+
     const resultadoAnterior = obterResultadoParcial(
       job.resultado,
       payload.totalInformado
@@ -449,7 +488,8 @@ async function processar(
           questao,
           gabaritoComentado.get(questao.numero),
           Boolean(payload.comentado),
-          fonteGabaritoConfirmado
+          fonteGabaritoConfirmado,
+          materiaDoNumero(secoesDisciplinas, questao.numero)
         ),
       salvar: async ({
         fase,
@@ -493,14 +533,30 @@ async function processar(
 
     const questoes = Array.from(porNumero.values())
       .sort((a, b) => a.numero - b.numero)
-      .map((questao) =>
-        aplicarGabaritoComentado(
+      .map((questao) => {
+        const corrigida = aplicarGabaritoComentado(
           questao,
           gabaritoComentado.get(questao.numero),
           Boolean(payload.comentado),
           fonteGabaritoConfirmado
-        )
-      );
+        );
+        const materiaDocumento = materiaDoNumero(secoesDisciplinas, questao.numero);
+        const materia = materiaDocumento ?? corrigida.materia;
+        const assuntoDocumental = assuntoHistoricoDaAlternativaConfirmada({
+          materia,
+          enunciado: corrigida.enunciado,
+          alternativas: corrigida.alternativas,
+          gabarito: corrigida.gabarito,
+          gabaritoConfirmado: gabaritoComentado.has(questao.numero) && corrigida.status === "valida",
+        });
+        return {
+          ...corrigida,
+          materia,
+          ...(assuntoDocumental
+            ? { assunto: assuntoDocumental, subassunto: undefined }
+            : {}),
+        };
+      });
 
     await atualizar(
       "salvando",
@@ -627,6 +683,39 @@ export async function extrairGabaritoComentado(
  * Lê SOMENTE a seção explícita de gabarito do próprio caderno PDF.
  * O modelo não pode resolver nem inferir respostas ausentes.
  */
+/**
+ * Identifica APENAS cabeçalhos explícitos e respectivos intervalos no PDF.
+ * Validação rejeita seções ausentes, sobrepostas ou não consecutivas.
+ */
+export async function extrairSecoesDisciplinasDoCaderno(
+  ai: GoogleGenAI,
+  modelos: string[],
+  arquivo: ArquivoPayload,
+  totalEsperado: number
+): Promise<SecaoDisciplinaPdf[]> {
+  const resposta = await gerarJsonComPdfs(
+    ai,
+    modelos,
+    [
+      `Leia o caderno de prova anexado, com ${totalEsperado} questões.`,
+      "Sua tarefa é identificar os CABEÇALHOS LITERAIS de disciplinas que aparecem no PDF e o intervalo de números de questões coberto por cada um.",
+      "Procure nomes como LÍNGUA PORTUGUESA, HISTÓRIA DE PERNAMBUCO, RACIOCÍNIO LÓGICO etc., mas NÃO suponha que esses nomes existam neste documento.",
+      "As divisões são definidas pelo cabeçalho impresso, NÃO pelo tema isolado das questões. Se uma questão de combinação está dentro de RACIOCÍNIO LÓGICO, ela pertence a essa disciplina.",
+      "Preserve exatamente o título da matéria impresso, inclusive matérias combinadas (ex.: DIREITOS HUMANOS E LEGISLAÇÃO EXTRAVAGANTE).",
+      "Devolva início e fim de cada seção (inteiros). Os intervalos devem ser consecutivos, sem sobreposição e somar o total informado.",
+      "Cada campo cabecalho deve conter a transcrição LITERAL do cabeçalho visível (sem completar texto que não foi possível ler).",
+      "Se algum cabeçalho ou limite for incerto, não invente uma divisão: retorne secoes=[].",
+      "NÃO resolva questões, NÃO classifique assuntos e NÃO infira a matéria pelo conteúdo.",
+      "Retorne SOMENTE JSON válido neste formato:",
+      '{"secoes":[{"inicio":1,"fim":10,"materia":"LÍNGUA PORTUGUESA","cabecalho":"LÍNGUA PORTUGUESA"}]}',
+    ].join("\\n"),
+    [arquivo],
+    8192,
+    "divisões de disciplinas do caderno PDF"
+  );
+  return validarSecoesDisciplinasDoPdf(resposta, totalEsperado);
+}
+
 export async function extrairGabaritoExplicitoDoCaderno(
   ai: GoogleGenAI,
   modelos: string[],
@@ -775,7 +864,8 @@ export async function resolverQuestaoExtraida(
   questao: QuestaoSimuladoPdfProcessada,
   gabaritoConhecido: ItemGabarito | undefined,
   temComentado: boolean,
-  fonteGabaritoConfirmado: "comentado" | "prova" = "comentado"
+  fonteGabaritoConfirmado: "comentado" | "prova" = "comentado",
+  materiaDoCaderno: string | null = null
 ): Promise<QuestaoSimuladoPdfProcessada> {
   const prompt = [
     "Você está na etapa de RESOLUÇÃO E CLASSIFICAÇÃO de uma única questão já extraída.",
@@ -784,11 +874,16 @@ export async function resolverQuestaoExtraida(
     `Número: ${questao.numero}`,
     `Enunciado: ${questao.enunciado}`,
     `Alternativas: ${JSON.stringify(questao.alternativas)}`,
+    materiaDoCaderno
+      ? `DISCIPLINA COMPROVADA PELO CABEÇALHO DO CADERNO: ${materiaDoCaderno}. Mantenha exatamente este nome de matéria; não a substitua por subáreas, como Matemática, Direito Penal ou Direito Administrativo.`
+      : "A disciplina do cabeçalho não foi confirmada; classifique com cautela.",
     gabaritoConhecido
       ? `Gabarito externo confirmado: ${JSON.stringify(gabaritoConhecido)}`
       : "Não existe gabarito externo confirmado; resolva a questão com cuidado.",
     "",
     "Retorne matéria, módulo, assunto, subassunto, dificuldade, gabarito, comentário, norma, dispositivo, confiança e status.",
+    "No assunto/subassunto, indique o TEMA CONCRETO realmente cobrado. Evite rótulos vagos (Brasil Colônia, Brasil Império, Primeiro Reinado, Direito Penal) quando a resposta correta identifica um evento, movimento, lei ou conceito específico.",
+    "Se o enunciado pedir a identificação de um movimento histórico, a resposta confirmada e a alternativa correspondente ajudam a identificar o assunto específico.",
     "Se houver gabarito externo confirmado, ele prevalece.",
     "Se houver dúvida real sem fonte confirmada, use status revisar e confiança abaixo de 50.",
     "Retorne somente JSON válido:",
@@ -862,7 +957,7 @@ export async function resolverQuestaoExtraida(
 
       const resolvida: QuestaoSimuladoPdfProcessada = {
         ...questao,
-        materia: textoSeguro(
+        materia: materiaDoCaderno ?? textoSeguro(
           item.materia,
           "Não classificada"
         ),
