@@ -298,13 +298,7 @@ const [
     prefillAplicadoRef.current = true;
 
     prepararSessao({
-      materia: materia?.nome ?? prefill.materia,
-      materiaId: materia?.id ?? prefill.materiaId,
-      modulo: modulo?.nome ?? prefill.modulo,
-      moduloId: modulo?.id ?? prefill.moduloId,
-      assunto: assunto?.nome ?? prefill.assunto,
-      assuntoId: assunto?.id ?? prefill.assuntoId,
-      tipo:
+      materia: prefill.revisaoId && prefill.tipo === "revisao"\n        ? prefill.materia\n        : materia?.nome ?? prefill.materia,\n      materiaId: prefill.revisaoId && prefill.tipo === "revisao"\n        ? prefill.materiaId\n        : materia?.id ?? prefill.materiaId,\n      modulo: prefill.revisaoId && prefill.tipo === "revisao"\n        ? prefill.modulo\n        : modulo?.nome ?? prefill.modulo,\n      moduloId: prefill.revisaoId && prefill.tipo === "revisao"\n        ? prefill.moduloId\n        : modulo?.id ?? prefill.moduloId,\n      assunto: prefill.revisaoId && prefill.tipo === "revisao"\n        ? prefill.assunto\n        : assunto?.nome ?? prefill.assunto,\n      assuntoId: prefill.revisaoId && prefill.tipo === "revisao"\n        ? prefill.assuntoId\n        : assunto?.id ?? prefill.assuntoId,\n      tipo:
         prefill.tipo === "estudo"
           ? "aula"
           : prefill.tipo,
