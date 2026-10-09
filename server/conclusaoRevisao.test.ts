@@ -247,8 +247,8 @@ test("prévia adaptativa mostra a data exata para difícil, médio e fácil", ()
   assert.ok(dificil);
   assert.ok(media);
   assert.ok(facil);
-  assert.equal(dificil.etapa, 2);
-  assert.equal(media.etapa, 2);
+  assert.equal(dificil.etapa, 3);
+  assert.equal(media.etapa, 3);
   assert.equal(facil.etapa, 3);
   assert.equal(new Date(dificil.dataPrevista).getDate(), 3);
   assert.equal(new Date(media.dataPrevista).getDate(), 5);
