@@ -14,7 +14,7 @@ export type QuestaoSimuladoPdfAnalisada = {
   comentario: string;
   norma?: string;
   dispositivo?: string;
-  fonteGabarito: "comentado" | "ia";
+  fonteGabarito: "comentado" | "prova" | "ia";
   confianca: number;
   status: "valida" | "revisar" | "anulada";
 };
