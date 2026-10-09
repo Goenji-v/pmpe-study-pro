@@ -209,6 +209,8 @@ export function concluirRevisaoNaLista(params: {
     erradas: number;
     sessaoId?: string;
   };
+  /** ID da sessão já finalizada, inclusive revisão teórica sem placar. */
+  sessaoIdRecuperacao?: string;
 }): Revisao[] {
   const {
     revisoes,
@@ -219,6 +221,7 @@ export function concluirRevisaoNaLista(params: {
     proximaId,
     sessao,
     resultadoMedido,
+    sessaoIdRecuperacao,
   } = params;
   const atual = revisoes.find((item) => item.id === revisaoId);
   if (!atual || atual.concluida || (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
@@ -243,7 +246,7 @@ export function concluirRevisaoNaLista(params: {
             // Avaliação manual não é uma nova medição objetiva. Limpar o placar
             // evita que a próxima revisão reutilize acertos/erros de uma sessão
             // anterior e recomende teoria/questões com base em uma nota velha.
-            sessaoId: undefined,
+            sessaoId: sessaoIdRecuperacao,
             certas: undefined,
             erradas: undefined,
           }),
@@ -406,6 +409,7 @@ export function recuperarConclusoesRevisaoPorSessoesOrfas(params: {
       limiteDiario: params.limiteDiario,
       agora: new Date(sessao.finalizadaEm ?? sessao.data),
       proximaId,
+      sessaoIdRecuperacao: sessao.id,
       ...(Number.isInteger(sessao.quantidadeQuestoes)
         ? { resultadoMedido: {
             certas: sessao.quantidadeAcertos as number,
