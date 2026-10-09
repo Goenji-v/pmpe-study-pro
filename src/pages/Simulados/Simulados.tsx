@@ -24,6 +24,10 @@ import {
   montarMeuGabarito,
 } from "../../utils/gabaritoSimulado";
 import {
+  questoesDoAssuntoSalvo,
+  rotuloStatusQuestaoSalva,
+} from "../../utils/diagnosticoHistoricoPdf";
+import {
   listarAnalisesSimulados,
   type AnaliseSimuladoSalva,
 } from "../../services/analisesSimuladosService";
@@ -995,6 +999,93 @@ export default function Simulados() {
                           )}
                         </div>
                       </div>
+
+                      <section
+                        className="simulado-pdf-assuntos-salvos"
+                        aria-label="Diagnóstico por disciplina, assunto e questão"
+                      >
+                        <h3>Desempenho por assunto e questão</h3>
+                        <p>
+                          Abra uma disciplina, depois um assunto, para conferir
+                          os números das questões, suas respostas e os erros.
+                          A classificação dos assuntos foi extraída do PDF
+                          automaticamente e pode precisar de conferência.
+                        </p>
+
+                        {registro.analise.materias.map((materia) => (
+                          <details
+                            className="simulado-pdf-assuntos-disciplina"
+                            key={materia.materia}
+                          >
+                            <summary>
+                              <strong>{materia.materia}</strong>
+                              <span>
+                                {materia.acertos}/{materia.avaliadas} acertos ·
+                                {" "}{materia.aproveitamento}% ·
+                                {" "}{materia.erros} erros ·
+                                {" "}{materia.naoRespondidas} em branco
+                              </span>
+                            </summary>
+                            <div className="simulado-pdf-assuntos-conteudo">
+                              {registro.analise.assuntos
+                                .filter((item) => item.materia === materia.materia)
+                                .map((assunto) => (
+                                  <details
+                                    className="simulado-pdf-assuntos-topico"
+                                    key={assunto.chave}
+                                  >
+                                    <summary>
+                                      <strong>{assunto.assunto}</strong>
+                                      <span>
+                                        {assunto.acertos}/{assunto.avaliadas}
+                                        {" "}acertos · {assunto.percentual}% ·
+                                        {" "}{assunto.erros} erros ·
+                                        {" "}{assunto.naoRespondidas} em branco
+                                      </span>
+                                    </summary>
+                                    <ul className="simulado-pdf-questoes-assunto">
+                                      {questoesDoAssuntoSalvo(
+                                        registro.analise.correcao,
+                                        assunto
+                                      ).map((questao) => (
+                                        <li
+                                          key={questao.id}
+                                          data-status={questao.status}
+                                        >
+                                          <strong>Q{questao.numero}</strong>
+                                          <span>
+                                            {questao.subassunto
+                                              ? `${questao.subassunto} · `
+                                              : ""}
+                                            Marcada: {questao.respostaAluno || "—"}
+                                            {" "}· Gabarito: {questao.gabarito || "—"}
+                                          </span>
+                                          <em>{rotuloStatusQuestaoSalva(questao.status)}</em>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                ))}
+                            </div>
+                          </details>
+                        ))}
+
+                        {registro.analise.evolucao.length > 0 && (
+                          <div className="simulado-pdf-evolucao-salva">
+                            <h4>Evolução em relação ao simulado anterior</h4>
+                            {registro.analise.evolucao.map((item) => (
+                              <div key={item.materia}>
+                                <strong>{item.materia}</strong>
+                                <span>
+                                  {item.anterior}% → {item.atual}% ·
+                                  {" "}{item.variacaoPp > 0 ? "+" : ""}
+                                  {item.variacaoPp} p.p.
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </section>
 
                       <div className="simulado-pdf-diagnostico-rodape">
                         <span>
