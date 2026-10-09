@@ -14,6 +14,7 @@ import {
 } from "./geracaoPersistente.ts";
 import { executarComFallbackGemini } from "./retryGemini.ts";
 import { executarPipelineQuestaoAPorQuestao } from "./simuladoPdfPipeline.ts";
+import { validarGabaritoExplicitoDoCaderno } from "./gabaritoExplicitoPdf.ts";
 
 export type QuestaoSimuladoPdfProcessada = {
   numero: number;
@@ -28,7 +29,7 @@ export type QuestaoSimuladoPdfProcessada = {
   comentario: string;
   norma?: string;
   dispositivo?: string;
-  fonteGabarito: "comentado" | "ia";
+  fonteGabarito: "comentado" | "prova" | "ia";
   confianca: number;
   status: "valida" | "revisar" | "anulada";
   etapaPipeline?: "extraida" | "resolvida";
@@ -355,6 +356,7 @@ async function processar(
     );
 
     let gabaritoComentado = new Map<number, ItemGabarito>();
+    const fonteGabaritoConfirmado: "comentado" | "prova" = payload.comentado ? "comentado" : "prova";
     const alertas: string[] = [];
 
     if (payload.comentado) {
@@ -385,6 +387,42 @@ async function processar(
           `O PDF comentado não confirmou ${faltantes.length} questão(ões). Nesses itens, a IA usou a prova como referência e reduziu a confiança.`
         );
       }
+    } else {
+      // O próprio caderno pode conter um GABARITO ao final (como o Simulado 04).
+      // Antes de pedir à IA para resolver, tenta transcrever APENAS a lista
+      // expressa no documento. Uma transcrição parcial/incerta é descartada.
+      try {
+        await atualizar(
+          "gerando",
+          10,
+          "Procurando gabarito explícito no próprio PDF."
+        );
+        const extraidoDoCaderno = await extrairGabaritoExplicitoDoCaderno(
+          dependencias.ai,
+          modelos,
+          payload.prova,
+          payload.totalInformado
+        );
+        gabaritoComentado = new Map(
+          extraidoDoCaderno.map((item) => [item.numero, item] as const)
+        );
+        if (gabaritoComentado.size > 0) {
+          alertas.push(
+            `Gabarito explícito encontrado no caderno: ${gabaritoComentado.size}/${payload.totalInformado} questões. A transcrição do PDF prevalece sobre respostas geradas pela IA.`
+          );
+        } else {
+          alertas.push(
+            "O sistema não confirmou um quadro de gabarito quase completo no caderno; respostas sem gabarito documental continuam identificadas como geradas pela IA."
+          );
+        }
+      } catch (erroGabarito) {
+        console.warn("[simulado-pdf-job] sem gabarito explícito confirmado", {
+          erro: erroGabarito instanceof Error ? erroGabarito.message : String(erroGabarito),
+        });
+        alertas.push(
+          "Não foi possível confirmar o gabarito impresso no caderno. As respostas sem confirmação serão identificadas como geradas pela IA."
+        );
+      }
     }
 
     const resultadoAnterior = obterResultadoParcial(
@@ -410,7 +448,8 @@ async function processar(
           modelos,
           questao,
           gabaritoComentado.get(questao.numero),
-          Boolean(payload.comentado)
+          Boolean(payload.comentado),
+          fonteGabaritoConfirmado
         ),
       salvar: async ({
         fase,
@@ -458,7 +497,8 @@ async function processar(
         aplicarGabaritoComentado(
           questao,
           gabaritoComentado.get(questao.numero),
-          Boolean(payload.comentado)
+          Boolean(payload.comentado),
+          fonteGabaritoConfirmado
         )
       );
 
@@ -583,6 +623,38 @@ export async function extrairGabaritoComentado(
   });
 }
 
+/**
+ * Lê SOMENTE a seção explícita de gabarito do próprio caderno PDF.
+ * O modelo não pode resolver nem inferir respostas ausentes.
+ */
+export async function extrairGabaritoExplicitoDoCaderno(
+  ai: GoogleGenAI,
+  modelos: string[],
+  arquivo: ArquivoPayload,
+  totalEsperado: number
+): Promise<ItemGabarito[]> {
+  const resposta = await gerarJsonComPdfs(
+    ai,
+    modelos,
+    [
+      `Examine o PDF de uma prova com ${totalEsperado} questões.`,
+      "Procure uma seção explícita intitulada GABARITO, QUADRO DE RESPOSTAS ou equivalente, geralmente nas últimas páginas.",
+      "Transcreva SOMENTE as respostas dessa seção; NÃO resolva questões nem use conhecimento externo.",
+      "Respostas isoladas no enunciado (ex.: Gabarito: B perto da questão 32) NÃO são um quadro completo.",
+      "Se NÃO houver seção explícita de gabarito, retorne secaoGabaritoEncontrada=false e itens=[].",
+      "Não invente letras, não complete lacunas e não repita números.",
+      "Cada resposta deve ser apenas A, B, C, D ou E; questão anulada usa resposta vazia.",
+      "Preencha cabecalho com o título literal da seção. Use exatamente o número impresso em cada questão.",
+      "Retorne SOMENTE JSON válido neste formato:",
+      '{"secaoGabaritoEncontrada":true,"cabecalho":"GABARITO 04","itens":[{"numero":1,"resposta":"B","anulada":false}]}',
+    ].join("\n"),
+    [arquivo],
+    16384,
+    "gabarito explícito do próprio caderno PDF"
+  );
+  return validarGabaritoExplicitoDoCaderno(resposta, totalEsperado);
+}
+
 export async function extrairQuestoesBasicasComRecuperacao(
   ai: GoogleGenAI,
   modelos: string[],
@@ -702,7 +774,8 @@ export async function resolverQuestaoExtraida(
   modelos: string[],
   questao: QuestaoSimuladoPdfProcessada,
   gabaritoConhecido: ItemGabarito | undefined,
-  temComentado: boolean
+  temComentado: boolean,
+  fonteGabaritoConfirmado: "comentado" | "prova" = "comentado"
 ): Promise<QuestaoSimuladoPdfProcessada> {
   const prompt = [
     "Você está na etapa de RESOLUÇÃO E CLASSIFICAÇÃO de uma única questão já extraída.",
@@ -830,7 +903,8 @@ export async function resolverQuestaoExtraida(
       return aplicarGabaritoComentado(
         resolvida,
         gabaritoConhecido,
-        temComentado
+        temComentado,
+        fonteGabaritoConfirmado
       );
     } catch (erro) {
       ultimoErro = erro;
@@ -1282,7 +1356,8 @@ async function analisarBloco(
 function aplicarGabaritoComentado(
   questao: QuestaoSimuladoPdfProcessada,
   gabarito: ItemGabarito | undefined,
-  temComentado: boolean
+  temComentado: boolean,
+  fonteGabaritoConfirmado: "comentado" | "prova" = "comentado"
 ) {
   if (!gabarito) {
     if (temComentado && questao.fonteGabarito !== "comentado") {
@@ -1305,7 +1380,7 @@ function aplicarGabaritoComentado(
     return {
       ...questao,
       gabarito: "",
-      fonteGabarito: "comentado",
+      fonteGabarito: fonteGabaritoConfirmado,
       confianca: Math.max(questao.confianca, gabarito.confianca),
       status: "anulada",
     } satisfies QuestaoSimuladoPdfProcessada;
@@ -1314,7 +1389,7 @@ function aplicarGabaritoComentado(
   return {
     ...questao,
     gabarito: gabarito.resposta,
-    fonteGabarito: "comentado",
+    fonteGabarito: fonteGabaritoConfirmado,
     confianca: Math.max(questao.confianca, gabarito.confianca),
     status: "valida",
   } satisfies QuestaoSimuladoPdfProcessada;
