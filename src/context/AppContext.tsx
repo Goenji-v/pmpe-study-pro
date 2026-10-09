@@ -24,7 +24,7 @@ import {
 } from "../utils/materiasDoPlano";
 
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
-import { criarPrimeiraRevisao } from "../utils/revisoes";
+import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
 import { deveAplicarMigracaoEstruturalRemota } from "../utils/migracaoEstruturalConta";
@@ -1060,6 +1060,29 @@ function EstadoDaConta({
   // novamente após cada autosave bem-sucedido (salvando -> sincronizado) e,
   // ao reconciliar o histórico, podia alterar o estado outra vez e iniciar um
   // novo autosave em sequência.
+  // Recupera conclusões confirmadas assim que a nuvem termina de hidratar.
+  // Desempenho, Histórico e Revisões passam a ler o mesmo estado, sem
+  // depender de o aluno visitar a página de Revisões primeiro.
+  useEffect(() => {
+    if (!usuarioId || statusNuvem !== "sincronizado" || !nuvemInicializadaRef.current || hidratandoRef.current) {
+      return;
+    }
+    const recuperacao = recuperarConclusoesRevisaoPorSessoesOrfas({
+      revisoes,
+      sessoes,
+      limiteDiario: configuracoes.metaRevisoesDiaria,
+    });
+    if (recuperacao.recuperadas.length === 0) return;
+    // Atualização funcional protege contra alterações ocorridas desde a leitura.
+    setRevisoes((anteriores) =>
+      recuperarConclusoesRevisaoPorSessoesOrfas({
+        revisoes: anteriores,
+        sessoes,
+        limiteDiario: configuracoes.metaRevisoesDiaria,
+      }).revisoes
+    );
+  }, [usuarioId, statusNuvem, revisoes, sessoes, configuracoes.metaRevisoesDiaria, setRevisoes]);
+
   const importacaoInicialResultadosIARef =
     useRef<string | null>(null);
 
