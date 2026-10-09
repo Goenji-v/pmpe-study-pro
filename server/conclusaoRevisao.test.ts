@@ -102,16 +102,42 @@ test("concluir a sessão guarda seu vínculo e resultado e agenda a próxima eta
   assert.deepEqual(concluirRevisaoNaLista({ ...parametros, revisoes: lista }), resultado);
 });
 
-test("dificuldade repete a etapa até a última; fácil encerra o ciclo na etapa 5", () => {
-  for (const [desempenho, dia] of [["media", 5], ["dificil", 3]] as const) {
-    const resultado = concluirRevisaoNaLista({ ...parametros, desempenho, revisoes: [{ ...revisao, etapa: 5 }] });
+test("nota baixa conclui etapa e cria apenas próxima etapa futura", () => {
+  for (const [acertos, esperado] of [[0, "dificil"], [1, "dificil"], [6, "media"]] as const) {
+    const desempenho = avaliarRevisaoPorQuestoes(10, acertos);
+    assert.equal(desempenho, esperado);
+    const resultado = concluirRevisaoNaLista({
+      ...parametros,
+      desempenho: desempenho!,
+      revisoes: [revisao],
+      sessao: { ...sessao, quantidadeQuestoes: 10, quantidadeAcertos: acertos, quantidadeErros: 10 - acertos },
+    });
+    const concluida = resultado.find((item) => item.id === revisao.id)!;
+    assert.equal(concluida.concluida, true);
+    assert.equal(concluida.certas, acertos);
     assert.equal(resultado.length, 2);
-    assert.equal(resultado[0].etapa, 5);
-    assert.equal(new Date(resultado[0].dataPrevista).getDate(), dia);
+    assert.equal(resultado[0].etapa, 3);
+    assert.notEqual(resultado[0].id, revisao.id);
+    assert.ok(new Date(resultado[0].dataPrevista).getTime() > agora.getTime());
+    assert.equal(concluirRevisaoNaLista({ ...parametros, revisoes: resultado }), resultado);
   }
-  const resultado = concluirRevisaoNaLista({ ...parametros, revisoes: [{ ...revisao, etapa: 5 }] });
-  assert.equal(resultado.length, 1);
-  assert.equal(resultado[0].concluida, true);
+  for (const desempenho of ["facil", "media", "dificil"] as const) {
+    const resultado = concluirRevisaoNaLista({ ...parametros, desempenho, revisoes: [{ ...revisao, etapa: 5 }] });
+    assert.equal(resultado.length, 1);
+    assert.equal(resultado[0].concluida, true);
+  }
+});
+
+test("revisão de teoria finalizada sem questões é recuperada pelo ID", () => {
+  const teorica = { ...sessao, id: "teoria-1", formatoRevisao: "teoria" as const,
+    quantidadeQuestoes: undefined, quantidadeAcertos: undefined, quantidadeErros: undefined,
+    avaliacaoRevisao: "media" as const, finalizadaEm: agora.toISOString() };
+  const recuperacao = recuperarConclusoesRevisaoPorSessoesOrfas({
+    revisoes: [revisao], sessoes: [teorica], limiteDiario: 2, agora,
+  });
+  assert.equal(recuperacao.recuperadas.length, 1);
+  assert.equal(recuperacao.revisoes.find((item) => item.id === revisao.id)?.concluida, true);
+  assert.equal(recuperacao.revisoes.find((item) => item.id === revisao.id)?.certas, undefined);
 });
 
 test("ciclo normal usa 1, 5, 7, 14 e 30 dias", () => {
@@ -221,8 +247,8 @@ test("prévia adaptativa mostra a data exata para difícil, médio e fácil", ()
   assert.ok(dificil);
   assert.ok(media);
   assert.ok(facil);
-  assert.equal(dificil.etapa, 2);
-  assert.equal(media.etapa, 2);
+  assert.equal(dificil.etapa, 3);
+  assert.equal(media.etapa, 3);
   assert.equal(facil.etapa, 3);
   assert.equal(new Date(dificil.dataPrevista).getDate(), 3);
   assert.equal(new Date(media.dataPrevista).getDate(), 5);
@@ -281,7 +307,7 @@ test("resultado medido fora do cronômetro é preservado na próxima revisão", 
   assert.equal(concluida.erradas, 4);
   assert.equal(proxima.certas, 6);
   assert.equal(proxima.erradas, 4);
-  assert.equal(proxima.etapa, 2);
+  assert.equal(proxima.etapa, 3);
   assert.equal(new Date(proxima.dataPrevista).getDate(), 5);
 });
 
@@ -325,7 +351,7 @@ test("recupera revisão recente concluída em sessão de questões que perdeu o 
   assert.equal(concluida.erradas, 3);
 
   const proxima = resultado.revisoes.find((item) => !item.concluida)!;
-  assert.equal(proxima.etapa, 2);
+  assert.equal(proxima.etapa, 3);
 });
 
 test("não recupera sessão comum de questões sem marcador exato da revisão", () => {
