@@ -290,9 +290,15 @@ function sessaoOrfaCorrespondeARevisao(
   sessao: SessaoEstudo,
   agora: Date
 ) {
+  const revisaoVinculada =
+    sessao.tipo === "revisao" &&
+    sessao.revisaoId === revisao.id &&
+    revisaoCorrespondeASessao(revisao, sessao);
+  const sessaoOrfa =
+    sessao.tipo === "questoes" && !sessao.revisaoId;
+
   if (
-    sessao.tipo !== "questoes" ||
-    sessao.revisaoId ||
+    (!revisaoVinculada && !sessaoOrfa) ||
     !Number.isInteger(sessao.quantidadeQuestoes) ||
     !Number.isInteger(sessao.quantidadeAcertos) ||
     !Number.isInteger(sessao.quantidadeErros) ||
@@ -339,6 +345,10 @@ function sessaoOrfaCorrespondeARevisao(
   if (!materiaCompativel || !assuntoCompativel || !moduloCompativel) {
     return false;
   }
+
+  // Se o ID explícito da revisão foi preservado, a conclusão pode ser
+  // restaurada sem depender da observação textual da sessão.
+  if (revisaoVinculada) return true;
 
   const objetivoEsperado = normalizarComparacao(
     `Revisar ${revisao.assunto}`
