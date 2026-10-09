@@ -39,6 +39,7 @@ export function validarSecoesDisciplinasDoPdf(
     const materia = typeof secao.materia === "string" ? secao.materia.trim().replace(/\s+/g, " ") : "";
     const cabecalho = typeof secao.cabecalho === "string" ? secao.cabecalho.trim() : "";
     if (
+      typeof inicio !== "number" || typeof fim !== "number" ||
       !Number.isInteger(inicio) || !Number.isInteger(fim) ||
       Number(inicio) < 1 || Number(fim) > totalQuestoes ||
       Number(fim) < Number(inicio) ||
