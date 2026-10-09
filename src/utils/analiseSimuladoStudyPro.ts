@@ -1148,6 +1148,12 @@ function materiaCanonica(
   if (/^matematica\b/.test(materia)) {
     return "Matemática";
   }
+  // Quando o próprio caderno reúne DH e Legislação Extravagante numa
+  // disciplina de dez questões, não reduzir todas elas a "Direitos Humanos".
+  // Os temas legais continuam diferenciados pelo assunto/subassunto.
+  if (/direitos humanos/.test(materia) && /legislacao.*extravagante/.test(materia)) {
+    return "Direitos Humanos e Legislação Extravagante";
+  }
   if (/direitos humanos/.test(materia)) {
     return "Direitos Humanos";
   }
