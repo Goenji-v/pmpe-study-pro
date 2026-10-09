@@ -138,6 +138,13 @@ test("revisão de teoria finalizada sem questões é recuperada pelo ID", () => 
   assert.equal(recuperacao.recuperadas.length, 1);
   assert.equal(recuperacao.revisoes.find((item) => item.id === revisao.id)?.concluida, true);
   assert.equal(recuperacao.revisoes.find((item) => item.id === revisao.id)?.certas, undefined);
+  assert.equal(recuperacao.revisoes.find((item) => item.id === revisao.id)?.sessaoId, "teoria-1");
+  // Atualizar outra vez não cria uma segunda revisão futura.
+  const segunda = recuperarConclusoesRevisaoPorSessoesOrfas({
+    revisoes: recuperacao.revisoes, sessoes: [teorica], limiteDiario: 2, agora,
+  });
+  assert.equal(segunda.recuperadas.length, 0);
+  assert.equal(segunda.revisoes, recuperacao.revisoes);
 });
 
 test("ciclo normal usa 1, 5, 7, 14 e 30 dias", () => {
