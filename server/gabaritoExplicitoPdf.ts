@@ -34,6 +34,7 @@ export function validarGabaritoExplicitoDoCaderno(
 
   const porNumero = new Map<number, ItemGabaritoDocumento>();
   const conflitos = new Set<number>();
+  let encontrouItemInvalido = false;
 
   for (const bruto of raiz.itens) {
     if (!bruto || typeof bruto !== "object" || Array.isArray(bruto)) continue;
@@ -47,7 +48,10 @@ export function validarGabaritoExplicitoDoCaderno(
       numero > totalQuestoes ||
       (!anulada && !/^[A-E]$/.test(resposta)) ||
       (anulada && resposta !== "")
-    ) continue;
+    ) {
+      encontrouItemInvalido = true;
+      continue;
+    }
 
     const candidato = {
       numero,
@@ -75,7 +79,7 @@ export function validarGabaritoExplicitoDoCaderno(
     totalQuestoes,
     Math.max(5, Math.ceil(totalQuestoes * 0.95))
   );
-  if (conflitos.size > 0 || porNumero.size < minimoConfiavel) return [];
+  if (encontrouItemInvalido || conflitos.size > 0 || porNumero.size < minimoConfiavel) return [];
 
   return [...porNumero.values()].sort((a, b) => a.numero - b.numero);
 }
