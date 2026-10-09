@@ -492,7 +492,15 @@ export default function SimuladoPdf() {
     const registro: Simulado = {
       id: "pdf-" + rascunho.id,
       nome,
-      banca: comentado ? "PDF comentado" : "Gabarito IA",
+      banca: comentado
+        ? "PDF comentado"
+        : analise.questoes.every((item) =>
+            item.status === "anulada" || item.fonteGabarito === "prova"
+          )
+          ? "Gabarito do próprio PDF"
+          : analise.questoes.some((item) => item.fonteGabarito === "prova")
+            ? "Gabarito misto (PDF/IA)"
+            : "Gabarito IA",
       certas,
       erradas,
       anuladas,
