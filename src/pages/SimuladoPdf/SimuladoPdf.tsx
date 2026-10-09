@@ -495,9 +495,12 @@ export default function SimuladoPdf() {
       (item) =>
         respostas[String(item.numero)] === item.gabarito
     ).length;
+    const emBranco = questoesValidas.filter(
+      (item) => !respostas[String(item.numero)]
+    ).length;
     const erradas = Math.max(
       0,
-      questoesValidas.length - certas
+      questoesValidas.length - certas - emBranco
     );
     const anuladas = Math.max(
       0,
@@ -511,6 +514,8 @@ export default function SimuladoPdf() {
       certas,
       erradas,
       anuladas,
+      emBranco,
+      totalQuestoes: analise.totalQuestoes,
       minutos: Math.max(1, Math.ceil(segundos / 60)),
       observacao:
         "Simulado realizado pelo leitor de PDF do Study Pro.",
