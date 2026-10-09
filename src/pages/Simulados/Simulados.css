@@ -592,6 +592,135 @@
   color: #e2e8f0;
 }
 
+.simulado-pdf-assuntos-salvos {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.simulado-pdf-assuntos-salvos h3,
+.simulado-pdf-evolucao-salva h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #e2e8f0;
+}
+
+.simulado-pdf-assuntos-salvos > p {
+  margin: 0 0 5px;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.simulado-pdf-assuntos-disciplina,
+.simulado-pdf-assuntos-topico {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #111c2d;
+}
+
+.simulado-pdf-assuntos-topico {
+  background: #0d1725;
+  border-color: #263a50;
+}
+
+.simulado-pdf-assuntos-disciplina > summary,
+.simulado-pdf-assuntos-topico > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: #e2e8f0;
+}
+
+.simulado-pdf-assuntos-disciplina > summary:focus-visible,
+.simulado-pdf-assuntos-topico > summary:focus-visible {
+  outline: 2px solid #7cc4ff;
+  outline-offset: -2px;
+}
+
+.simulado-pdf-assuntos-disciplina > summary span,
+.simulado-pdf-assuntos-topico > summary span {
+  color: #a9bdcf;
+  font-size: 12px;
+}
+
+.simulado-pdf-assuntos-conteudo {
+  display: grid;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.simulado-pdf-questoes-assunto {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.simulado-pdf-questoes-assunto li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 9px 10px;
+  background: #172439;
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.simulado-pdf-questoes-assunto li > span {
+  flex: 1 1 190px;
+  overflow-wrap: anywhere;
+}
+
+.simulado-pdf-questoes-assunto li strong {
+  color: #f8fafc;
+}
+
+.simulado-pdf-questoes-assunto li em {
+  font-style: normal;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.simulado-pdf-questoes-assunto li[data-status="erro"] em {
+  color: #fca5a5;
+}
+
+.simulado-pdf-questoes-assunto li[data-status="acerto"] em,
+.simulado-pdf-questoes-assunto li[data-status="acerto_chute"] em {
+  color: #86efac;
+}
+
+.simulado-pdf-evolucao-salva {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #334155;
+  padding-top: 12px;
+}
+
+.simulado-pdf-evolucao-salva > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.simulado-pdf-evolucao-salva > div strong {
+  color: #e2e8f0;
+}
+
 @media (max-width: 1200px) and (min-width: 951px) {
   .simulados-central-acoes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
