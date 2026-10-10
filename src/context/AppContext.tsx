@@ -25,6 +25,8 @@ import {
 
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
+import { adicionarErrosSimuladoARevisao } from "../utils/revisaoSimuladoStudyPro";
+import { listarAnalisesSimulados } from "../services/analisesSimuladosService";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
 import { deveAplicarMigracaoEstruturalRemota } from "../utils/migracaoEstruturalConta";
@@ -1148,6 +1150,62 @@ function EstadoDaConta({
     configuracoes,
     missoesConcluidas,
   ]);
+
+  // Ao entrar na conta, reconcilia automaticamente o diagnóstico recente
+  // do simulado com a agenda após a hidratação. Cobre a situação em que
+  // o aluno fecha o resultado logo depois de finalizar, sem visitar Revisões.
+  // Não reprocessa análises antigas nem reescreve a agenda via SQL.
+  const revisaoSimuladoRecenteRef = useRef<string | null>(null);
+  const usuarioDaSincronizacaoRef = useRef(userId);
+  useEffect(() => {
+    usuarioDaSincronizacaoRef.current = userId;
+  }, [userId]);
+
+  useEffect(() => {
+    if (
+      !usuarioId ||
+      statusNuvem !== "sincronizado" ||
+      !nuvemInicializadaRef.current ||
+      hidratandoRef.current ||
+      dadosAtuaisRef.current.materias.length === 0 ||
+      revisaoSimuladoRecenteRef.current === userId
+    ) return;
+
+    revisaoSimuladoRecenteRef.current = userId;
+    void listarAnalisesSimulados(12)
+      .then((analises) => {
+        if (usuarioDaSincronizacaoRef.current !== userId) return;
+        const agora = Date.now();
+        const ultima = analises.find((item) => {
+          if (item.origem !== "pdf" && item.origem !== "oficial") return false;
+          const criacao = Date.parse(item.criadoEm);
+          return Number.isFinite(criacao) &&
+            criacao <= agora &&
+            agora - criacao <= 48 * 60 * 60 * 1000 &&
+            item.analise.planoRevisao?.length > 0;
+        });
+        if (!ultima) return;
+
+        setRevisoes((anteriores) => {
+          const resultado = adicionarErrosSimuladoARevisao({
+            revisoes: anteriores,
+            materias: dadosAtuaisRef.current.materias,
+            analise: ultima.analise,
+            limiteDiario: dadosAtuaisRef.current.configuracoes.metaRevisoesDiaria,
+          });
+          return resultado.criadas + resultado.atualizadas > 0
+            ? resultado.revisoes
+            : anteriores;
+        });
+      })
+      .catch((erro) => {
+        if (usuarioDaSincronizacaoRef.current === userId) {
+          revisaoSimuladoRecenteRef.current = null;
+        }
+        console.warn("Não foi possível reconciliar revisões do último simulado:", erro);
+      });
+  }, [usuarioId, userId, statusNuvem, materias.length, setRevisoes]);
+
 
   useEffect(() => {
     if (userId === "sem-usuario" || statusNuvem !== "sincronizado") {

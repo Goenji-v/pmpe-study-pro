@@ -67,7 +67,7 @@ export default function AnaliseSimuladoStudyPro({
   somenteLeitura?: boolean;
 }) {
   const navigate = useNavigate();
-  const { materias, revisoes, setRevisoes } = useApp();
+  const { materias, revisoes, setRevisoes, configuracoes, statusNuvem } = useApp();
   const [historico, setHistorico] = useState<HistoricoAnaliseSimulado[]>([]);
   const [motivosErro, setMotivosErro] = useState<
     Record<string, MotivoErroSimulado | undefined>
@@ -224,6 +224,10 @@ export default function AnaliseSimuladoStudyPro({
     if (
       !historicoCarregado ||
       !agendarAutomaticamente ||
+      somenteLeitura ||
+      !persistir ||
+      statusNuvem !== "sincronizado" ||
+      materias.length === 0 ||
       analise.planoRevisao.length === 0
     ) return;
 
@@ -231,13 +235,17 @@ export default function AnaliseSimuladoStudyPro({
     if (revisaoAutomaticaRef.current === chaveExecucao) return;
     revisaoAutomaticaRef.current = chaveExecucao;
 
-    setRevisoes((anteriores) =>
-      adicionarErrosSimuladoARevisao({
+    setRevisoes((anteriores) => {
+      const resultado = adicionarErrosSimuladoARevisao({
         revisoes: anteriores,
         materias,
         analise,
-      }).revisoes
-    );
+        limiteDiario: configuracoes.metaRevisoesDiaria,
+      });
+      return resultado.criadas + resultado.atualizadas > 0
+        ? resultado.revisoes
+        : anteriores;
+    });
   }, [
     analise,
     assinaturaPlanoRevisao,
@@ -246,6 +254,10 @@ export default function AnaliseSimuladoStudyPro({
     setRevisoes,
     tentativaId,
     agendarAutomaticamente,
+    somenteLeitura,
+    persistir,
+    statusNuvem,
+    configuracoes.metaRevisoesDiaria,
   ]);
 
   function adicionarARevisao() {
@@ -258,21 +270,32 @@ export default function AnaliseSimuladoStudyPro({
       revisoes,
       materias,
       analise,
+      limiteDiario: configuracoes.metaRevisoesDiaria,
     });
 
-    setRevisoes(resultado.revisoes);
+    setRevisoes((anteriores) => {
+      const resultado = adicionarErrosSimuladoARevisao({
+        revisoes: anteriores,
+        materias,
+        analise,
+        limiteDiario: configuracoes.metaRevisoesDiaria,
+      });
+      return resultado.criadas + resultado.atualizadas > 0
+        ? resultado.revisoes
+        : anteriores;
+    });
 
     const total = resultado.criadas + resultado.atualizadas;
     if (total > 0) {
       setMensagem(
-        `${resultado.criadas} revisão(ões) criada(s) e ${resultado.atualizadas} atualizada(s). O primeiro retorno fica para 1 dia e o ciclo segue 1, 5, 7, 14 e 30 dias.`
+        `${resultado.criadas} revisão(ões) criada(s) e ${resultado.atualizadas} atualizada(s), respeitando a capacidade diária quando houver espaço. ${resultado.semReferencia ? `${resultado.semReferencia} assunto(s) podem ser revisados por questões IA, sem aula vinculada.` : ""} O ciclo segue 1, 5, 7, 14 e 30 dias conforme o desempenho.`
       );
       return;
     }
 
     if (resultado.semReferencia > 0) {
       setMensagem(
-        "Os erros foram analisados, mas alguns assuntos ainda não foram ligados ao conteúdo do edital."
+        "As prioridades estão na agenda, mas alguns assuntos não têm aula correspondente na grade. Você pode revisá-los por questões IA."
       );
       return;
     }
