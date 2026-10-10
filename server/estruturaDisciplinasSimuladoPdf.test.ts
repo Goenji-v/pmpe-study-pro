@@ -5,6 +5,8 @@ import {
   validarSecoesDisciplinasDoPdf,
   materiaDoNumero,
   assuntoHistoricoDaAlternativaConfirmada,
+  assuntoDeDocumentoCitadoNoEnunciado,
+  subassuntoDeDocumentoCitadoNoEnunciado,
 } from "./estruturaDisciplinasSimuladoPdf.ts";
 import { analisarSimuladoStudyPro } from "../src/utils/analiseSimuladoStudyPro.ts";
 
@@ -154,4 +156,77 @@ test("pipeline real consulta seções do PDF e fixa a matéria na resolução e 
   assert.match(codigo, /materiaDoNumero\(secoesDisciplinas, questao\.numero\)/);
   assert.match(codigo, /materia: materiaDoCaderno \?\? textoSeguro/);
   assert.match(codigo, /assuntoHistoricoDaAlternativaConfirmada/);
+});
+
+test("QA novo: questão 54 DUDH identifica documento e o artigo III pelo gabarito confirmado", () => {
+  const enunciado = "A Declaração Universal dos Direitos Humanos prevê, no artigo III, que todo ser humano tem direito";
+  const alternativas = [
+    { id: "A", texto: "à vida, à liberdade e à democracia" },
+    { id: "B", texto: "à vida, à família e ao trabalho" },
+    { id: "C", texto: "à vida, à saúde e ao trabalho" },
+    { id: "D", texto: "à vida, à segurança pessoal e ao pleno emprego" },
+    { id: "E", texto: "à vida, à liberdade e à segurança pessoal" },
+  ];
+  assert.equal(
+    assuntoDeDocumentoCitadoNoEnunciado(enunciado),
+    "Declaração Universal dos Direitos Humanos (DUDH)"
+  );
+  assert.equal(
+    subassuntoDeDocumentoCitadoNoEnunciado({
+      enunciado,
+      alternativas,
+      gabarito: "E",
+      gabaritoConfirmado: true,
+    }),
+    "Artigo III — direito à vida, à liberdade e à segurança pessoal"
+  );
+  assert.equal(
+    subassuntoDeDocumentoCitadoNoEnunciado({
+      enunciado, alternativas, gabarito: "E", gabaritoConfirmado: false,
+    }), null
+  );
+  assert.equal(
+    subassuntoDeDocumentoCitadoNoEnunciado({
+      enunciado, alternativas, gabarito: "D", gabaritoConfirmado: true,
+    }), null
+  );
+});
+
+test("QA novo: questão 55 ECA não fica só como Crimes em espécie", () => {
+  const enunciado = "É considerado crime previsto pelo Estatuto da Criança e do Adolescente (Lei nº 8069/90):";
+  const alternativas = [
+    { id: "A", texto: "vender, fornecer ainda que gratuitamente ou entregar, de qualquer forma, a criança ou adolescente arma, munição ou explosivo" },
+    { id: "B", texto: "anunciar peças teatrais, filmes ou quaisquer representações" },
+  ];
+  assert.equal(
+    assuntoDeDocumentoCitadoNoEnunciado(enunciado),
+    "Estatuto da Criança e do Adolescente (ECA)"
+  );
+  assert.equal(
+    subassuntoDeDocumentoCitadoNoEnunciado({
+      enunciado, alternativas, gabarito: "A", gabaritoConfirmado: true,
+    }),
+    "Venda, fornecimento ou entrega de armas, munições ou explosivos a criança ou adolescente"
+  );
+  assert.equal(
+    subassuntoDeDocumentoCitadoNoEnunciado({
+      enunciado, alternativas, gabarito: "A", gabaritoConfirmado: false,
+    }), null
+  );
+  assert.equal(
+    assuntoDeDocumentoCitadoNoEnunciado("É considerado crime previsto na legislação especial:"),
+    null
+  );
+  assert.equal(
+    subassuntoDeDocumentoCitadoNoEnunciado({
+      enunciado: "É considerado crime previsto na legislação especial:",
+      alternativas, gabarito: "A", gabaritoConfirmado: true,
+    }), null
+  );
+});
+
+test("pipeline documental mantém assunto e subassunto específicos juntos", async () => {
+  const codigo = await readFile("server/processarSimuladoPdfPersistente.ts", "utf8");
+  assert.match(codigo, /subassuntoDeDocumentoCitadoNoEnunciado/);
+  assert.match(codigo, /subassunto: subassuntoNormativo \?\? undefined/);
 });

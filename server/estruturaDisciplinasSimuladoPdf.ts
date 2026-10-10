@@ -111,5 +111,50 @@ export function assuntoDeDocumentoCitadoNoEnunciado(enunciado: string): string |
   if (/declaracao universal d[oa]s direitos humanos(?:\s*\(dudh\))?|\bdudh\b/.test(texto)) {
     return "Declaração Universal dos Direitos Humanos (DUDH)";
   }
+  if (/estatuto da crianca e do adolescente|\blei\s*n[ºo.]?\s*8\.?069\/(?:19)?90\b|\beca\b/.test(texto)) {
+    return "Estatuto da Criança e do Adolescente (ECA)";
+  }
+  return null;
+}
+
+
+/**
+ * Especifica o dispositivo cobrado APENAS quando o enunciado cita a
+ * norma e a alternativa confirmada pelo documento contém o conteúdo.
+ * Nunca deduz uma resposta/um artigo a partir do número da questão.
+ */
+export function subassuntoDeDocumentoCitadoNoEnunciado(params: {
+  enunciado: string;
+  alternativas: Array<{ id: string; texto: string }>;
+  gabarito: string;
+  gabaritoConfirmado: boolean;
+}): string | null {
+  if (!params.gabaritoConfirmado) return null;
+  const documento = assuntoDeDocumentoCitadoNoEnunciado(params.enunciado);
+  if (!documento) return null;
+  const letra = params.gabarito.trim().toUpperCase();
+  if (!/^[A-E]$/.test(letra)) return null;
+  const alternativa = params.alternativas.find((item) => item.id.trim().toUpperCase() === letra);
+  if (!alternativa) return null;
+  const enunciado = normalizarTexto(params.enunciado);
+  const texto = normalizarTexto(alternativa.texto);
+
+  if (
+    documento === "Declaração Universal dos Direitos Humanos (DUDH)" &&
+    /(?:artigo|art\.?)\s*(?:iii|3(?:º|o)?)/.test(enunciado) &&
+    /vida/.test(texto) && /liberdade/.test(texto) && /seguranca pessoal/.test(texto)
+  ) {
+    return "Artigo III — direito à vida, à liberdade e à segurança pessoal";
+  }
+
+  if (
+    documento === "Estatuto da Criança e do Adolescente (ECA)" &&
+    /(?:vender|fornecer|entregar)/.test(texto) &&
+    /(?:arma|municao|explosiv)/.test(texto) &&
+    /(?:crianca|adolescente)/.test(texto)
+  ) {
+    return "Venda, fornecimento ou entrega de armas, munições ou explosivos a criança ou adolescente";
+  }
+
   return null;
 }

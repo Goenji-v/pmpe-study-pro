@@ -18,6 +18,7 @@ import { validarGabaritoExplicitoDoCaderno } from "./gabaritoExplicitoPdf.ts";
 import {
   assuntoHistoricoDaAlternativaConfirmada,
   assuntoDeDocumentoCitadoNoEnunciado,
+  subassuntoDeDocumentoCitadoNoEnunciado,
   materiaDoNumero,
   validarSecoesDisciplinasDoPdf,
   type SecaoDisciplinaPdf,
@@ -543,20 +544,28 @@ async function processar(
         );
         const materiaDocumento = materiaDoNumero(secoesDisciplinas, questao.numero);
         const materia = materiaDocumento ?? corrigida.materia;
-        const assuntoDocumental = assuntoDeDocumentoCitadoNoEnunciado(
-          corrigida.enunciado
-        ) ?? assuntoHistoricoDaAlternativaConfirmada({
+        const gabaritoConfirmado = gabaritoComentado.has(questao.numero) && corrigida.status === "valida";
+        const assuntoNormativo = assuntoDeDocumentoCitadoNoEnunciado(corrigida.enunciado);
+        const assuntoDocumental = assuntoNormativo ?? assuntoHistoricoDaAlternativaConfirmada({
           materia,
           enunciado: corrigida.enunciado,
           alternativas: corrigida.alternativas,
           gabarito: corrigida.gabarito,
-          gabaritoConfirmado: gabaritoComentado.has(questao.numero) && corrigida.status === "valida",
+          gabaritoConfirmado,
         });
+        const subassuntoNormativo = assuntoNormativo
+          ? subassuntoDeDocumentoCitadoNoEnunciado({
+              enunciado: corrigida.enunciado,
+              alternativas: corrigida.alternativas,
+              gabarito: corrigida.gabarito,
+              gabaritoConfirmado,
+            })
+          : null;
         return {
           ...corrigida,
           materia,
           ...(assuntoDocumental
-            ? { assunto: assuntoDocumental, subassunto: undefined }
+            ? { assunto: assuntoDocumental, subassunto: subassuntoNormativo ?? undefined }
             : {}),
         };
       });
