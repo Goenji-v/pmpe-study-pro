@@ -480,8 +480,12 @@ test("QA real anterior: 60 questões, 9 divergências no gabarito e 11 rótulos 
   assert.equal(gabaritoConfirmado.length, 60);
   assert.equal(anterior.filter((item) => item.g !== gabaritoOficial[item.n - 1]).length, 9);
   assert.equal(new Set(anterior.map((item) => item.materia)).size, 11);
+  // No relatório antigo "Português" era a forma abreviada aceita
+  // para Língua Portuguesa. Na prova o cabeçalho completo é mantido.
   assert.equal(anterior.filter((item) =>
-    item.materia === materiasImpressas[Math.floor((item.n - 1) / 10)]
+    item.materia === (item.n <= 10
+      ? "Português"
+      : materiasImpressas[Math.floor((item.n - 1) / 10)])
   ).length, 34);
   assert.equal(anterior.filter((item) =>
     item.n >= 11 && item.n <= 20 && item.materia === "História de Pernambuco"
