@@ -230,6 +230,15 @@ export default function Revisoes() {
   }
 
   function abrirRevisao(revisao: Revisao) {
+    if (revisao.origemSimulado?.vinculo === "sem_conteudo") {
+      showToast(
+        "Esse assunto veio do simulado, mas ainda não possui aula vinculada ao edital. Vou abrir questões IA sem apontar uma aula incorreta.",
+        "info"
+      );
+      abrirQuestoesIA(revisao);
+      return;
+    }
+
     const dados = obterDadosCanonicos(revisao);
     const plano = planejarRevisaoPendente(revisao);
     const formatoRecomendado =
