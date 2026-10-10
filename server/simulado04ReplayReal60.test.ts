@@ -4,6 +4,7 @@ import { analisarSimuladoStudyPro } from "../src/utils/analiseSimuladoStudyPro.t
 import { validarGabaritoExplicitoDoCaderno } from "./gabaritoExplicitoPdf.ts";
 import {
   assuntoHistoricoDaAlternativaConfirmada,
+  assuntoDeDocumentoCitadoNoEnunciado,
   validarSecoesDisciplinasDoPdf,
   materiaDoNumero,
 } from "./estruturaDisciplinasSimuladoPdf.ts";
@@ -512,28 +513,38 @@ test("dry-run: corrigir somente a associação documental gera seis disciplinas 
     const materia = materiaDoNumero(secoes, item.n)!;
     const gabarito = gabaritoConfirmado[item.n - 1].resposta;
     let assunto = item.assunto;
-    if (item.n === 18 || item.n === 19) {
+    if (item.n === 16 || item.n === 18 || item.n === 19) {
       const encontrado = assuntoHistoricoDaAlternativaConfirmada({
         materia,
-        enunciado: item.n === 18
-          ? "Considerando estas informações, elas se referem à"
-          : "O texto acima refere-se a:",
+        enunciado: item.n === 16
+          ? "Como foi denominada esta guerra:"
+          : item.n === 18
+            ? "Considerando estas informações, elas se referem à"
+            : "O texto acima refere-se a:",
         alternativas: [
-          { id: "A", texto: item.n === 18 ? "Confederação do Equador." : "Revolução Liberal" },
+          { id: "A", texto: item.n === 16
+            ? "Guerra dos Mascates"
+            : item.n === 18 ? "Confederação do Equador." : "Revolução Liberal" },
           { id: "B", texto: item.n === 19 ? "Confederação do Equador." : "Insurreição Pernambucana." },
         ],
         gabarito,
         gabaritoConfirmado: true,
       });
-      assert.equal(encontrado, "Confederação do Equador");
+      assert.equal(encontrado, item.n === 16 ? "Guerra dos Mascates" : "Confederação do Equador");
       assunto = encontrado!;
+    }
+    if (item.n === 54) {
+      assunto = assuntoDeDocumentoCitadoNoEnunciado(
+        "Entre os Artigos da Declaração Universal dos Direitos Humanos (10 de dezembro de 1948), consta que"
+      ) ?? assunto;
+      assert.equal(assunto, "Declaração Universal dos Direitos Humanos (DUDH)");
     }
     return {
       id: `qa-${item.n}`,
       numero: item.n,
       materia,
       assunto,
-      subassunto: item.n === 18 || item.n === 19 ? undefined : item.subassunto,
+      subassunto: [16,18,19,54].includes(item.n) ? undefined : item.subassunto,
       dificuldade: "Média" as const,
       enunciado: `Questão ${item.n} — teste com metadados`,
       alternativas: "ABCDE".split("").map(id => ({ id, texto: `Letra ${id}` })),
@@ -560,4 +571,6 @@ test("dry-run: corrigir somente a associação documental gera seis disciplinas 
   for (const numero of [18,19]) {
     assert.equal(diagnostico.correcao[numero-1].assunto, "Confederação do Equador");
   }
+  assert.equal(diagnostico.correcao[15].assunto, "Guerra dos Mascates");
+  assert.equal(diagnostico.correcao[53].assunto, "Declaração Universal dos Direitos Humanos (DUDH)");
 });
