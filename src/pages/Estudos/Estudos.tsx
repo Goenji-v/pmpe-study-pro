@@ -742,7 +742,7 @@ export default function Estudos() {
                                   <span>⏱ {m.minutos} min</span>
                                   <span>❓ {m.totalQuestoes} questões</span>
                                   {m.totalQuestoes > 0 && <span>◎ {m.aproveitamento}%</span>}
-                                  {m.revisoesPendentes > 0 && <span>↻ {m.revisoesPendentes} revisão{m.revisoesPendentes === 1 ? "" : "ões"}</span>}
+                                  {m.revisoesPendentes > 0 && <span>↻ {m.revisoesPendentes} {m.revisoesPendentes === 1 ? "revisão" : "revisões"}</span>}
                                 </div>
                               );
                             })()}
