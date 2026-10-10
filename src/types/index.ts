@@ -402,6 +402,14 @@ export type Revisao = {
   /** Sinal que antecipou a revisão fora do ciclo normal. */
   motivoAdaptativo?: "duvida" | "baixo_desempenho";
   reagendadaEm?: string;
+  /** Origem rastreável da revisão extraordinária criada após simulado. */
+  origemSimulado?: {
+    tentativaId: string;
+    materiaDiagnostico: string;
+    assuntoDiagnostico: string;
+    /** Sem conteúdo = permite questões IA, sem fabricar vínculo com videoaula. */
+    vinculo: "conteudo" | "sem_conteudo";
+  };
 };
 
 export interface QuestaoIA {
