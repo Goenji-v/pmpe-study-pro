@@ -235,14 +235,17 @@ export default function AnaliseSimuladoStudyPro({
     if (revisaoAutomaticaRef.current === chaveExecucao) return;
     revisaoAutomaticaRef.current = chaveExecucao;
 
-    setRevisoes((anteriores) =>
-      adicionarErrosSimuladoARevisao({
+    setRevisoes((anteriores) => {
+      const resultado = adicionarErrosSimuladoARevisao({
         revisoes: anteriores,
         materias,
         analise,
         limiteDiario: configuracoes.metaRevisoesDiaria,
-      }).revisoes
-    );
+      });
+      return resultado.criadas + resultado.atualizadas > 0
+        ? resultado.revisoes
+        : anteriores;
+    });
   }, [
     analise,
     assinaturaPlanoRevisao,
@@ -270,14 +273,17 @@ export default function AnaliseSimuladoStudyPro({
       limiteDiario: configuracoes.metaRevisoesDiaria,
     });
 
-    setRevisoes((anteriores) =>
-      adicionarErrosSimuladoARevisao({
+    setRevisoes((anteriores) => {
+      const resultado = adicionarErrosSimuladoARevisao({
         revisoes: anteriores,
         materias,
         analise,
         limiteDiario: configuracoes.metaRevisoesDiaria,
-      }).revisoes
-    );
+      });
+      return resultado.criadas + resultado.atualizadas > 0
+        ? resultado.revisoes
+        : anteriores;
+    });
 
     const total = resultado.criadas + resultado.atualizadas;
     if (total > 0) {
