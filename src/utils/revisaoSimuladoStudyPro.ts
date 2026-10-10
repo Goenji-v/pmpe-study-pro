@@ -19,6 +19,7 @@ export type ResultadoAdicionarRevisoesSimulado = {
  * genérica (ex.: "Economia Açucareira" -> aula de História arbitrária).
  */
 const ALIASES_VERIFICADOS: Record<string, string> = {
+  "direito constitucional::nacionalidade": "Direito de Nacionalidade",
   "direito constitucional::elegibilidade": "Direitos Políticos e partidos políticos",
   "raciocinio logico::logica de argumentacao": "Lógica argumentativa",
   "informatica::microsoft windows 10": "Windows - Parte III: Nomes, símbolos proibidos, painel de controle, novidades do Windows 10",
