@@ -85,7 +85,7 @@ export function assuntoHistoricoDaAlternativaConfirmada(params: {
   if (!params.gabaritoConfirmado) return null;
   if (!/historia|cultura pernambucana/.test(normalizarTexto(params.materia))) return null;
   const enunciado = normalizarTexto(params.enunciado);
-  if (!/(?:refere[ -]?se|referem[ -]?se|se referem?|corresponde(?:m)? ao movimento|identifique o movimento|qual (?:foi|e) o movimento)/.test(enunciado)) {
+  if (!/(?:refere[ -]?se|referem[ -]?se|se referem?|corresponde(?:m)? ao movimento|identifique o movimento|qual (?:foi|e) o movimento|como (?:foi|era|e) denominad[ao]|como (?:se )?cham(?:ou|ava))/.test(enunciado)) {
     return null;
   }
   const gabarito = params.gabarito.trim().toUpperCase();
@@ -99,4 +99,17 @@ export function assuntoHistoricoDaAlternativaConfirmada(params: {
     !/^(?:confedera[cç][aã]o|revolu[cç][aã]o|guerra (?:do|dos|de|da)|insurrei[cç][aã]o|revolta (?:do|dos|de|da)|quilombo (?:do|dos|de|da)|movimento |patrim[oô]nio vivo)/i.test(titulo)
   ) return null;
   return titulo;
+}
+
+/**
+ * Identifica um documento normativo explicitamente nomeado no enunciado.
+ * Regras estritas: não inventa fonte com base apenas na alternativa ou
+ * em palavras soltas como "direitos fundamentais".
+ */
+export function assuntoDeDocumentoCitadoNoEnunciado(enunciado: string): string | null {
+  const texto = normalizarTexto(enunciado);
+  if (/declaracao universal d[oa]s direitos humanos(?:\s*\(dudh\))?|\bdudh\b/.test(texto)) {
+    return "Declaração Universal dos Direitos Humanos (DUDH)";
+  }
+  return null;
 }
