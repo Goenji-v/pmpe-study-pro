@@ -17,6 +17,7 @@ import { executarPipelineQuestaoAPorQuestao } from "./simuladoPdfPipeline.ts";
 import { validarGabaritoExplicitoDoCaderno } from "./gabaritoExplicitoPdf.ts";
 import {
   assuntoHistoricoDaAlternativaConfirmada,
+  assuntoDeDocumentoCitadoNoEnunciado,
   materiaDoNumero,
   validarSecoesDisciplinasDoPdf,
   type SecaoDisciplinaPdf,
@@ -542,7 +543,9 @@ async function processar(
         );
         const materiaDocumento = materiaDoNumero(secoesDisciplinas, questao.numero);
         const materia = materiaDocumento ?? corrigida.materia;
-        const assuntoDocumental = assuntoHistoricoDaAlternativaConfirmada({
+        const assuntoDocumental = assuntoDeDocumentoCitadoNoEnunciado(
+          corrigida.enunciado
+        ) ?? assuntoHistoricoDaAlternativaConfirmada({
           materia,
           enunciado: corrigida.enunciado,
           alternativas: corrigida.alternativas,
