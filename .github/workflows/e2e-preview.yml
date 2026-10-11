@@ -1,4 +1,4 @@
-name: E2E Preview v1.1
+name: E2E Public Runtime v1.1
 
 on:
   pull_request:
@@ -13,12 +13,14 @@ permissions:
   contents: read
 
 jobs:
-  e2e-preview:
-    name: Navegação pública, login e responsividade
+  e2e-public:
+    name: Rotas públicas, login e responsividade
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      E2E_BASE_URL: https://pmpe-study-pro-git-release-studio-flow-11-qa-pmpe-study-pro.vercel.app
+      # A prévia Vercel exige SSO e não pode ser acessada anonimamente pelo Playwright.
+      # Testes de navegação pública usam o site oficial sem submeter dados ou alterar registros.
+      E2E_BASE_URL: https://pmpe-study-pro-two.vercel.app
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -39,7 +41,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: e2e-preview-diagnostico-${{ github.run_number }}
+          name: e2e-public-diagnostico-${{ github.run_number }}
           path: |
             playwright-report
             test-results
