@@ -3,6 +3,7 @@ import type {
   Revisao,
   SessaoEstudo,
 } from "../types";
+import { chaveMateriaEquivalente } from "./materiasEquivalentes";
 
 export type FiltroDesempenho = {
   inicio?: Date;
@@ -46,7 +47,7 @@ function correspondeEscopo(
   const materia = normalizarFiltro(filtro.materia);
   const assunto = normalizarFiltro(filtro.assunto);
 
-  if (materia && normalizarFiltro(item.materia) !== materia) return false;
+  if (materia && chaveMateriaEquivalente(item.materia) !== chaveMateriaEquivalente(filtro.materia)) return false;
   if (assunto && normalizarFiltro(item.assunto) !== assunto) return false;
   return true;
 }
