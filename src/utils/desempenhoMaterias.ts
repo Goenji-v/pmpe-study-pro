@@ -30,6 +30,7 @@ const GRUPOS_EQUIVALENTES: string[][] = [
   ["portugues", "lingua portuguesa"],
   [
     "rlm",
+    "r l m",
     "raciocinio logico",
     "raciocinio logico e matematica",
     "raciocinio logico matematico",
