@@ -12,11 +12,11 @@ const GRUPOS_EQUIVALENTES: string[][] = [
 export function normalizarNomeMateria(texto = "") {
   return texto
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
-    .replace(/\\s+/g, " ");
+    .replace(/ +/g, " ");
 }
 
 const ALIASES = new Map<string, string>();
