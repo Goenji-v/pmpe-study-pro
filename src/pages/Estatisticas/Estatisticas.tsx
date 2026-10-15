@@ -113,7 +113,6 @@ export default function Estatisticas() {
 
   const assuntosDisponiveis = useMemo(() => {
     if (!materiaSelecionada) return [];
-    const materiaNormalizada = normalizarFiltro(materiaSelecionada);
     const mapa = new Map<string, string>();
 
     questoes
