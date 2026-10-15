@@ -420,3 +420,57 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Formulário de cadastro acessível em telas baixas: mantém a ação principal visível. */
+@media (min-width: 1051px) {
+  .materiais-cadastro {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 88px);
+    min-height: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .materiais-cadastro > h2,
+  .materiais-cadastro > .materiais-modos,
+  .materiais-cadastro > .materiais-salvar {
+    flex-shrink: 0;
+  }
+
+  .materiais-formulario {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2px 5px 10px 0;
+    scrollbar-gutter: stable;
+  }
+
+  .materiais-salvar {
+    position: sticky;
+    bottom: 0;
+    margin-top: 10px;
+    box-shadow: 0 -8px 16px rgba(30, 41, 59, 0.92);
+  }
+}
+
+@media (max-height: 760px) and (min-width: 1051px) {
+  .materiais-cadastro {
+    max-height: calc(100vh - 76px);
+    top: 10px;
+    padding: 15px;
+  }
+
+  .materiais-cadastro h2 {
+    margin-bottom: 10px;
+  }
+
+  .materiais-modos {
+    margin-bottom: 10px;
+  }
+
+  .materiais-formulario {
+    gap: 10px;
+  }
+}
