@@ -56,7 +56,7 @@ const CHAVE_POR_NOME = new Map<string, string>(
 /** Rótulos consistentes para as matérias que agrupamos por equivalência. */
 const NOME_CANONICO_POR_CHAVE = new Map<string, string>([
   ["portugues", "Português"],
-  ["rlm", "Raciocínio Lógico e Matemática"],
+  ["rlm", "RLM"],
   ["constitucional", "Direito Constitucional"],
   ["legislacao extravagante", "Legislação Extravagante"],
   ["informatica", "Informática"],
