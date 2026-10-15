@@ -34,13 +34,12 @@ const GRUPOS_EQUIVALENTES: string[][] = [
     "raciocinio logico e matematica",
     "raciocinio logico matematico",
     "raciocinio logico-matematico",
+    "matematica e raciocinio logico",
   ],
   ["constitucional", "direito constitucional"],
   [
     "legislacao extravagante",
     "leis extravagantes",
-    "legislacao especial",
-    "leis especiais",
   ],
   ["informatica", "nocoes de informatica"],
   ["administrativo", "direito administrativo"],
@@ -54,11 +53,24 @@ const CHAVE_POR_NOME = new Map<string, string>(
   )
 );
 
+/** Rótulos consistentes para as matérias que agrupamos por equivalência. */
+const NOME_CANONICO_POR_CHAVE = new Map<string, string>([
+  ["portugues", "Português"],
+  ["rlm", "Raciocínio Lógico e Matemática"],
+  ["constitucional", "Direito Constitucional"],
+  ["legislacao extravagante", "Legislação Extravagante"],
+  ["informatica", "Informática"],
+  ["administrativo", "Direito Administrativo"],
+  ["penal", "Direito Penal"],
+  ["processual penal", "Direito Processual Penal"],
+]);
+
 function semAcentoEmMinusculas(texto: string): string {
   return texto
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -109,9 +121,11 @@ export function calcularDesempenhoPorMateria(
   return [...grupos.values()]
     .map((grupo) => {
       const total = grupo.certas + grupo.erradas;
-      const [materia] = [...grupo.nomes.entries()].sort(
+      const [nomeMaisUsado] = [...grupo.nomes.entries()].sort(
         (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR")
       )[0];
+      const chave = chaveDaMateria(nomeMaisUsado);
+      const materia = NOME_CANONICO_POR_CHAVE.get(chave) ?? nomeMaisUsado;
 
       return {
         materia,
