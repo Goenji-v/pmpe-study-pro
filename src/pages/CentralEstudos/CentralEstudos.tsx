@@ -1724,6 +1724,9 @@ const [
                     {BANCAS_CONCURSO.map((nomeBanca) => (
                       <option key={nomeBanca} value={nomeBanca} />
                     ))}
+                    {estado.tipo === "revisao" && (
+                      <option value="Aleatórias" />
+                    )}
                   </datalist>
                 </label>
               )}
