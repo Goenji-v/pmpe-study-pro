@@ -361,7 +361,8 @@ async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
   let consulta = supabase
     .from("questoes_catalogo")
     .select(CAMPOS_CATALOGO_TREINO)
-    .eq("origem", "ia")
+    // Reutiliza questões válidas de IA, provas oficiais e simulados de terceiros.
+    .in("origem", ["ia", "prova_oficial", "simulado_terceiro"])
     .eq("status", "ativa")
     .eq("compatibilidade_edital", "direta")
     .eq("concurso_alvo", filtros.concursoAlvo?.trim() || "PMPE")
