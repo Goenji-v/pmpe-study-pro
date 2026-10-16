@@ -19,11 +19,12 @@ export type ClassificacaoDesempenho =
   | "sem-dados";
 
 export function normalizarFiltro(texto = "") {
-  return texto
+  const valor = texto
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
+  return valor === "lingua portuguesa" ? "portugues" : valor;
 }
 
 export function estaNoPeriodo(
