@@ -165,7 +165,9 @@ app.use((req, res) => {
   );
 
   requisicao.on("error", (erro) => {
-    console.error("Falha no proxy seguro da API:", erro);
+    // Remove quebras de linha para impedir injeção de linhas falsas no log.
+    const mensagemSegura = String(erro?.message ?? erro).replace(/[\r\n]+/g, " ").slice(0, 500);
+    console.error("Falha no proxy seguro da API:", mensagemSegura);
     capturarErroServidor(erro, {
       area: "proxy-seguro",
       metodo: req.method,
