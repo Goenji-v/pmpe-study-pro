@@ -912,7 +912,7 @@ const [
 
         banca:
           banca.trim() ||
-          undefined,
+          "Banca aleatória",
 
         dificuldade:
           exigeQuestoes && estado.tipo !== "revisao"
