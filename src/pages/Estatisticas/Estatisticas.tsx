@@ -105,7 +105,12 @@ export default function Estatisticas() {
     const mapa = new Map<string, string>();
     questoes.forEach((item) => {
       const chave = normalizarFiltro(item.materia);
-      if (chave && !mapa.has(chave)) mapa.set(chave, item.materia.trim());
+      if (!chave) return;
+      if (chave === "portugues") {
+        mapa.set(chave, "Português");
+      } else if (!mapa.has(chave)) {
+        mapa.set(chave, item.materia.trim());
+      }
     });
     return [...mapa.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [questoes]);
