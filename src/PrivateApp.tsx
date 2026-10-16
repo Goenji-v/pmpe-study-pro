@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Navigate,
   Route,
@@ -102,6 +102,17 @@ function ConteudoPrivado() {
   const [geradorIAMontado, setGeradorIAMontado] = useState(paginaGeradorIA);
   const [geradorIAInstancia, setGeradorIAInstancia] = useState(0);
   const geradorIAMontadoRef = useRef(paginaGeradorIA);
+  const posicoesScrollRef = useRef(new Map<string, number>());
+  const pathnameAnteriorRef = useRef(location.pathname);
+
+  useLayoutEffect(() => {
+    const pathnameAnterior = pathnameAnteriorRef.current;
+    posicoesScrollRef.current.set(pathnameAnterior, window.scrollY);
+
+    const posicaoSalva = posicoesScrollRef.current.get(location.pathname) ?? 0;
+    window.scrollTo({ top: posicaoSalva, behavior: "auto" });
+    pathnameAnteriorRef.current = location.pathname;
+  }, [location.key, location.pathname]);
 
   useEffect(() => {
     if (!paginaGeradorIA) return;
