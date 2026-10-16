@@ -35,12 +35,17 @@ export type EvolucaoMensal = {
   redacoes: number;
 };
 
-const normalizar = (texto = "") =>
-  texto
+const normalizar = (texto = "") => {
+  const valor = texto
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
+  return valor === "lingua portuguesa" ? "portugues" : valor;
+};
+
+const nomeCanonicoMateria = (nome: string) =>
+  normalizar(nome) === "portugues" ? "Português" : nome.trim();
 
 const percentual = (certas: number, erradas: number) =>
   certas + erradas === 0
@@ -68,7 +73,7 @@ export function consolidarPorMateria(params: {
   const mapa = new Map<string, LinhaDesempenho>();
   const obter = (nome: string) => {
     const chave = normalizar(nome);
-    if (!mapa.has(chave)) mapa.set(chave, baseMateria(nome));
+    if (!mapa.has(chave)) mapa.set(chave, baseMateria(nomeCanonicoMateria(nome)));
     return mapa.get(chave)!;
   };
 

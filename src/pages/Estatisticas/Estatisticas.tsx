@@ -105,7 +105,12 @@ export default function Estatisticas() {
     const mapa = new Map<string, string>();
     questoes.forEach((item) => {
       const chave = normalizarFiltro(item.materia);
-      if (chave && !mapa.has(chave)) mapa.set(chave, item.materia.trim());
+      if (!chave) return;
+      if (chave === "portugues") {
+        mapa.set(chave, "Português");
+      } else if (!mapa.has(chave)) {
+        mapa.set(chave, item.materia.trim());
+      }
     });
     return [...mapa.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [questoes]);
@@ -224,6 +229,10 @@ export default function Estatisticas() {
     ? metricasGerais.revisoesConcluidas
     : revisoesClassificadas;
   const redacoes = sessoesFiltradas.filter((item) => item.tipo === "redacao");
+  const minutosRedacao = redacoes.reduce(
+    (total, item) => total + (Number(item.minutos) || 0),
+    0
+  );
   const possuiDados =
     resumoExibido.total + minutos + revisoesFeitas + simuladosFiltrados.length > 0;
 
@@ -399,6 +408,7 @@ export default function Estatisticas() {
         <Card titulo="Revisões realizadas" valor={String(revisoesFeitas)} />
         <Card titulo="Simulados" valor={String(simuladosFiltrados.length)} detalhe={materiaSelecionada ? "Simulados gerais não entram no filtro por matéria." : undefined} />
         <Card titulo="Redações" valor={String(redacoes.length)} />
+        <Card titulo="Horas de redação" valor={`${(minutosRedacao / 60).toFixed(1)}h`} detalhe={`${minutosRedacao} min registrados`} />
       </div>
 
       {possuiDados && evolucao.length > 0 && (
