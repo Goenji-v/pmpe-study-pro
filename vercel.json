@@ -71,6 +71,18 @@
         {
           "key": "Strict-Transport-Security",
           "value": "max-age=31536000"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://pmpe-study-pro-two.vercel.app"
         }
       ]
     }
