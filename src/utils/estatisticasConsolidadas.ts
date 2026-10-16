@@ -6,6 +6,7 @@ import type {
   Simulado,
 } from "../types";
 import { calcularMetricasConsolidadas } from "./metricasConsolidadas";
+import { chaveMateriaEquivalente, rotuloMateriaEquivalente } from "./materiasEquivalentes";
 
 export type LinhaDesempenho = {
   chave: string;
@@ -67,8 +68,8 @@ export function consolidarPorMateria(params: {
 }): LinhaDesempenho[] {
   const mapa = new Map<string, LinhaDesempenho>();
   const obter = (nome: string) => {
-    const chave = normalizar(nome);
-    if (!mapa.has(chave)) mapa.set(chave, baseMateria(nome));
+    const chave = chaveMateriaEquivalente(nome);
+    if (!mapa.has(chave)) mapa.set(chave, baseMateria(rotuloMateriaEquivalente(nome)));
     return mapa.get(chave)!;
   };
 
@@ -126,10 +127,11 @@ export function consolidarPorAssunto(params: {
     modulo: string | undefined,
     assunto: string
   ) => {
-    const chave = `${normalizar(materia)}::${normalizar(modulo)}::${normalizar(assunto)}`;
+    const materiaCanonica = rotuloMateriaEquivalente(materia);
+    const chave = `${chaveMateriaEquivalente(materia)}::${normalizar(modulo)}::${normalizar(assunto)}`;
     if (!mapa.has(chave)) {
       mapa.set(chave, {
-        ...baseMateria(materia),
+        ...baseMateria(materiaCanonica),
         chave,
         modulo: modulo || "Geral",
         assunto,

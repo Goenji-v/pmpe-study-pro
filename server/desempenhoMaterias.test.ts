@@ -41,6 +41,8 @@ test("junta nomes equivalentes de Português em uma única matéria", () => {
 test("não funde matérias diferentes só por terem uma palavra em comum", () => {
   assert.notEqual(chaveDaMateria("Direito Penal Militar"), chaveDaMateria("Direito Penal"));
   assert.equal(chaveDaMateria("RLM"), chaveDaMateria("Raciocínio Lógico e Matemática"));
+  assert.equal(chaveDaMateria("R.L.M."), chaveDaMateria("Raciocínio Lógico e Matemática"));
+  assert.equal(chaveDaMateria("Legislação   Extravagante"), chaveDaMateria("Legislação-Extravagante"));
   assert.equal(chaveDaMateria("Leis Extravagantes"), chaveDaMateria("Legislação Extravagante"));
   assert.equal(chaveDaMateria("   "), "");
   assert.equal(chaveDaMateria(undefined), "");

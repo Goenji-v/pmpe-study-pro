@@ -17,6 +17,7 @@ import "./Estatisticas.css";
 
 import { useApp } from "../../context/AppContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { chaveMateriaEquivalente, rotuloMateriaEquivalente } from "../../utils/materiasEquivalentes";
 import {
   consolidarEvolucaoMensal,
   consolidarPorAssunto,
@@ -104,19 +105,18 @@ export default function Estatisticas() {
   const materiasDisponiveis = useMemo(() => {
     const mapa = new Map<string, string>();
     questoes.forEach((item) => {
-      const chave = normalizarFiltro(item.materia);
-      if (chave && !mapa.has(chave)) mapa.set(chave, item.materia.trim());
+      const chave = chaveMateriaEquivalente(item.materia);
+      if (chave && !mapa.has(chave)) mapa.set(chave, rotuloMateriaEquivalente(item.materia));
     });
     return [...mapa.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [questoes]);
 
   const assuntosDisponiveis = useMemo(() => {
     if (!materiaSelecionada) return [];
-    const materiaNormalizada = normalizarFiltro(materiaSelecionada);
     const mapa = new Map<string, string>();
 
     questoes
-      .filter((item) => normalizarFiltro(item.materia) === materiaNormalizada)
+      .filter((item) => chaveMateriaEquivalente(item.materia) === chaveMateriaEquivalente(materiaSelecionada))
       .forEach((item) => {
         const chave = normalizarFiltro(item.assunto);
         if (chave && !mapa.has(chave)) mapa.set(chave, item.assunto.trim());
