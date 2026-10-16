@@ -224,6 +224,10 @@ export default function Estatisticas() {
     ? metricasGerais.revisoesConcluidas
     : revisoesClassificadas;
   const redacoes = sessoesFiltradas.filter((item) => item.tipo === "redacao");
+  const minutosRedacao = redacoes.reduce(
+    (total, item) => total + (Number(item.minutos) || 0),
+    0
+  );
   const possuiDados =
     resumoExibido.total + minutos + revisoesFeitas + simuladosFiltrados.length > 0;
 
@@ -399,6 +403,7 @@ export default function Estatisticas() {
         <Card titulo="Revisões realizadas" valor={String(revisoesFeitas)} />
         <Card titulo="Simulados" valor={String(simuladosFiltrados.length)} detalhe={materiaSelecionada ? "Simulados gerais não entram no filtro por matéria." : undefined} />
         <Card titulo="Redações" valor={String(redacoes.length)} />
+        <Card titulo="Horas de redação" valor={`${(minutosRedacao / 60).toFixed(1)}h`} detalhe={`${minutosRedacao} min registrados`} />
       </div>
 
       {possuiDados && evolucao.length > 0 && (
