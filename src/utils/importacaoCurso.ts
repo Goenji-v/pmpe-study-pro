@@ -2,6 +2,7 @@ import type { Assunto, AulaAssunto, Materia, Modulo } from "../types";
 import { classificarOrigemCurso, identificarDisciplina, origemDaAula } from "./classificacaoCurso";
 import type { AnaliseEdital } from "../types/editalInteligente";
 import { unificarGradeEditalCursos } from "./uniaoGradeEstudos";
+import { urlSegura } from "./urlSegura";
 import type {
   CapturaCurso,
   CursoAula,
@@ -811,7 +812,7 @@ function pareceAula(texto: string) { return /\b(aula|videoaula|v[ií]deo|parte\s
 function limparNomeModulo(texto: string, materia: string) { const limpo = limparTexto(texto).replace(/^\s*(m[oó]dulo|unidade|bloco|cap[ií]tulo|trilha|disciplina)\s*\d*\s*[-:–—]?\s*/i, "").trim(); return !limpo || slugCurso(limpo) === slugCurso(materia) ? "Geral" : limpo.slice(0, 160); }
 function limparTexto(valor: string) { return String(valor || "").replace(/\s+/g, " ").trim(); }
 function normalizarUrl(url?: string) { if (typeof url !== "string" || url.length > 2000) return undefined; try { const x = new URL(url); if (!/^https?:$/.test(x.protocol) || x.username || x.password) return undefined; x.hash = ""; return x.href; } catch { return undefined; } }
-function resolverUrl(href?: string, base?: string) { if (!href || href.startsWith("javascript:") || href.startsWith("#")) return undefined; try { return base ? new URL(href, base).href : /^https?:\/\//i.test(href) ? href : undefined; } catch { return undefined; } }
+function resolverUrl(href?: string, base?: string) { if (!href || href.trim().startsWith("#")) return undefined; return urlSegura(href, base && urlSegura(base) ? base : undefined); }
 function removerExtensao(nome: string) { return nome.replace(/\.(html?|mhtml|mht|json|txt)$/i, ""); }
 function ehCapturaCurso(valor: unknown): valor is CapturaCurso {
   if (!valor || typeof valor !== "object") return false;

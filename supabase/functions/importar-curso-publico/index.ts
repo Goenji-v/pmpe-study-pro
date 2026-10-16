@@ -110,10 +110,11 @@ async function buscarHtmlSeguro(inicial: URL) {
 }
 
 function extrairEstrutura(htmlOriginal: string, origem: URL) {
-  const html = htmlOriginal
-    .replace(/<script\b[\s\S]*?<\/script>/gi, "")
-    .replace(/<style\b[\s\S]*?<\/style>/gi, "")
-    .replace(/<!--([\s\S]*?)-->/g, "");
+  const html = removerAteEstabilizar(htmlOriginal, [
+    /<script\b[\s\S]*?<\/script\b[^>]*>/gi,
+    /<style\b[\s\S]*?<\/style\b[^>]*>/gi,
+    /<!--[\s\S]*?--!?>/g,
+  ]);
   const tituloDocumento = limparTexto((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || ""));
   const nome = limparTexto((html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || "")) || tituloDocumento || origem.hostname;
   const resultado: { nome: string; descricao: string; disciplinas: Array<{ titulo: string; descricao: string; modulos: Array<{ titulo: string; descricao: string; aulas: Array<{ titulo: string; descricao: string; tipo: string; url: string; duracaoMinutos: null }> }> }> } = {
@@ -171,8 +172,23 @@ function extrairEstrutura(htmlOriginal: string, origem: URL) {
   return resultado;
 }
 
+function removerAteEstabilizar(valor: string, padroes: RegExp[], troca = "") {
+  let atual = valor;
+  for (let i = 0; i < 10; i++) {
+    const proximo = padroes.reduce((texto, padrao) => texto.replace(padrao, troca), atual);
+    if (proximo === atual) break;
+    atual = proximo;
+  }
+  return atual;
+}
+
 function limparTexto(valor: string) {
-  return decodificarEntidades(valor.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+  const semTags = removerAteEstabilizar(valor, [/<[^>]*>/g], " ");
+  // Entidades decodificadas podem formar novas tags; remove de novo e descarta "<" ou ">" soltos.
+  return removerAteEstabilizar(decodificarEntidades(semTags), [/<[^>]*>/g], " ")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function decodificarEntidades(valor: string) {

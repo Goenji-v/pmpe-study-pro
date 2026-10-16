@@ -29,6 +29,8 @@ import type { ModoEstudoFlashcard } from "../../types/flashcards";
 import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
 import { aplicarCursosAtivosNasMaterias } from "../../utils/importacaoCurso";
 
+import { urlSegura } from "../../utils/urlSegura";
+
 import "./Estudos.css";
 
 type EditorAssunto = {
@@ -836,7 +838,7 @@ export default function Estudos() {
                                         />
                                         <span className={aula.concluida ? "concluida" : ""}>{indice + 1}. {aula.nome}</span>
                                       </label>
-                                      {aula.url && <button type="button" onClick={() => window.open(aula.url, "_blank", "noopener,noreferrer")}>Abrir aula</button>}
+                                      {urlSegura(aula.url) && <button type="button" onClick={() => window.open(urlSegura(aula.url), "_blank", "noopener,noreferrer")}>Abrir aula</button>}
                                     </div>
                                   ))}
                                 </section>
@@ -1002,8 +1004,11 @@ function EditorAssuntoModal({
   const [novaTarefaTipo, setNovaTarefaTipo] = useState<TipoTarefaAssunto>("questoes");
 
   function adicionarLink() {
-    const url = linkUrl.trim();
-    if (!url) return;
+    const url = urlSegura(linkUrl);
+    if (!url) {
+      if (linkUrl.trim()) window.alert("Link inválido. Use um endereço começando com http:// ou https://");
+      return;
+    }
 
     const material: MaterialAssunto = {
       id: crypto.randomUUID(),
@@ -1024,7 +1029,7 @@ function EditorAssuntoModal({
     setAulas((anteriores) => [...anteriores, {
       id: criarIdUnico(`${assunto.id}-${nomeAula}`),
       nome: nomeAula,
-      url: novaAulaUrl.trim() || undefined,
+      url: urlSegura(novaAulaUrl),
       ordem: anteriores.length,
       concluida: false,
     }]);
@@ -1153,9 +1158,13 @@ function EditorAssuntoModal({
         <div className="conteudos-materiais-lista">
           {materiais.map((material) => (
             <article key={material.id}>
-              <a href={material.url} target="_blank" rel="noreferrer">
-                {material.nome}
-              </a>
+              {urlSegura(material.url) ? (
+                <a href={urlSegura(material.url)} target="_blank" rel="noopener noreferrer">
+                  {material.nome}
+                </a>
+              ) : (
+                <span>{material.nome}</span>
+              )}
               <button
                 type="button"
                 onClick={() =>
