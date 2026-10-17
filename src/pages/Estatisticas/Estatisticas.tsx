@@ -17,6 +17,7 @@ import "./Estatisticas.css";
 
 import { useApp } from "../../context/AppContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { chaveDaMateria } from "../../utils/desempenhoMaterias";
 import {
   consolidarEvolucaoMensal,
   consolidarPorAssunto,
@@ -103,27 +104,27 @@ export default function Estatisticas() {
 
   const materiasDisponiveis = useMemo(() => {
     const mapa = new Map<string, string>();
-    questoes.forEach((item) => {
-      const chave = normalizarFiltro(item.materia);
+    [...questoes, ...sessoes, ...revisoes].forEach((item) => {
+      const chave = chaveDaMateria(item.materia);
       if (chave && !mapa.has(chave)) mapa.set(chave, item.materia.trim());
     });
     return [...mapa.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [questoes]);
+  }, [questoes, sessoes, revisoes]);
 
   const assuntosDisponiveis = useMemo(() => {
     if (!materiaSelecionada) return [];
-    const materiaNormalizada = normalizarFiltro(materiaSelecionada);
+    const materiaNormalizada = chaveDaMateria(materiaSelecionada);
     const mapa = new Map<string, string>();
 
-    questoes
-      .filter((item) => normalizarFiltro(item.materia) === materiaNormalizada)
+    [...questoes, ...sessoes, ...revisoes]
+      .filter((item) => chaveDaMateria(item.materia) === materiaNormalizada)
       .forEach((item) => {
         const chave = normalizarFiltro(item.assunto);
         if (chave && !mapa.has(chave)) mapa.set(chave, item.assunto.trim());
       });
 
     return [...mapa.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [questoes, materiaSelecionada]);
+  }, [questoes, sessoes, revisoes, materiaSelecionada]);
 
   const questoesFiltradas = useMemo(
     () => filtrarQuestoesDesempenho(questoes, filtro),
@@ -224,6 +225,10 @@ export default function Estatisticas() {
     ? metricasGerais.revisoesConcluidas
     : revisoesClassificadas;
   const redacoes = sessoesFiltradas.filter((item) => item.tipo === "redacao");
+  const minutosRedacao = redacoes.reduce((total, item) => {
+    const duracao = Number(item.minutos);
+    return total + (Number.isFinite(duracao) && duracao > 0 ? duracao : 0);
+  }, 0);
   const possuiDados =
     resumoExibido.total + minutos + revisoesFeitas + simuladosFiltrados.length > 0;
 
@@ -399,6 +404,7 @@ export default function Estatisticas() {
         <Card titulo="Revisões realizadas" valor={String(revisoesFeitas)} />
         <Card titulo="Simulados" valor={String(simuladosFiltrados.length)} detalhe={materiaSelecionada ? "Simulados gerais não entram no filtro por matéria." : undefined} />
         <Card titulo="Redações" valor={String(redacoes.length)} />
+        <Card titulo="Horas de redação" valor={`${(minutosRedacao / 60).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}h`} detalhe="Tempo registrado nas sessões de redação do filtro atual." />
       </div>
 
       {possuiDados && evolucao.length > 0 && (

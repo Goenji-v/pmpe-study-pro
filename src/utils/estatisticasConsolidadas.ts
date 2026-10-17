@@ -6,6 +6,7 @@ import type {
   Simulado,
 } from "../types";
 import { calcularMetricasConsolidadas } from "./metricasConsolidadas";
+import { chaveDaMateria } from "./desempenhoMaterias";
 
 export type LinhaDesempenho = {
   chave: string;
@@ -48,7 +49,7 @@ const percentual = (certas: number, erradas: number) =>
     : Math.round((certas / (certas + erradas)) * 100);
 
 const baseMateria = (materia: string): LinhaDesempenho => ({
-  chave: normalizar(materia),
+  chave: chaveDaMateria(materia),
   materia,
   minutos: 0,
   aulas: 0,
@@ -67,7 +68,7 @@ export function consolidarPorMateria(params: {
 }): LinhaDesempenho[] {
   const mapa = new Map<string, LinhaDesempenho>();
   const obter = (nome: string) => {
-    const chave = normalizar(nome);
+    const chave = chaveDaMateria(nome);
     if (!mapa.has(chave)) mapa.set(chave, baseMateria(nome));
     return mapa.get(chave)!;
   };
@@ -126,7 +127,7 @@ export function consolidarPorAssunto(params: {
     modulo: string | undefined,
     assunto: string
   ) => {
-    const chave = `${normalizar(materia)}::${normalizar(modulo)}::${normalizar(assunto)}`;
+    const chave = `${chaveDaMateria(materia)}::${normalizar(modulo)}::${normalizar(assunto)}`;
     if (!mapa.has(chave)) {
       mapa.set(chave, {
         ...baseMateria(materia),
