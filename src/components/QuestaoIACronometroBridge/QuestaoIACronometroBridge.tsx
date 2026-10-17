@@ -169,7 +169,8 @@ export default function QuestaoIACronometroBridge() {
 
     const iniciada = iniciar(dados);
     if (iniciada) {
-      sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO);
+      // Preserve a origem da revisão até o resultado final ser registrado.
+      // ResolverSimuladoIA precisa do revisaoId para concluir a revisão correta.
       setFinalizadaNestaTela(false);
     }
   }
