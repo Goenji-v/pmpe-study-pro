@@ -389,9 +389,26 @@ async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
     );
   }
 
-  return ((data ?? []) as LinhaCatalogoIA[])
-    .filter((linha) => ehQuestaoValida(linha))
-    .map(converterLinha);
+  const linhas = (data ?? []) as LinhaCatalogoIA[];
+  const validas = linhas.filter(ehQuestaoValida);
+
+  // Diagnóstico sem conteúdo de questões ou identificadores: ajuda a distinguir
+  // catálogo vazio de registros descartados pela validação.
+  if (import.meta.env.DEV) {
+    console.debug("[Simulado IA] Consulta ao catálogo", {
+      materia: filtros.materia,
+      assunto: filtros.assunto,
+      banca: filtros.banca,
+      concursoAlvo: filtros.concursoAlvo?.trim() || "PMPE",
+      dificuldade: filtros.dificuldade,
+      moduloFiltrado: Boolean(filtros.modulo?.trim()),
+      candidatasRetornadas: linhas.length,
+      candidatasValidas: validas.length,
+      descartadasPorValidacao: linhas.length - validas.length,
+    });
+  }
+
+  return validas.map(converterLinha);
 }
 
 export async function listarIdsRespondidos() {
