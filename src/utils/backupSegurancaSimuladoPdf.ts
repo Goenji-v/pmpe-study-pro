@@ -52,13 +52,13 @@ export function lerBackupSegurancaSimuladoPdf(texto: string): BackupSegurancaSim
   if (!ehRegistro(p) ||
       typeof p.id !== "string" || !/^[\w-]{8,128}$/.test(p.id) ||
       typeof p.nome !== "string" || p.nome.length < 1 || p.nome.length > 250 ||
-      !Number.isInteger(p.totalQuestoes) || p.totalQuestoes < 1 || p.totalQuestoes > 200 ||
-      !Number.isInteger(p.questaoAtual) || p.questaoAtual < 1 || p.questaoAtual > p.totalQuestoes ||
-      !Number.isSafeInteger(p.segundos) || p.segundos < 0 ||
+      !ehInteiro(p.totalQuestoes) || p.totalQuestoes < 1 || p.totalQuestoes > 200 ||
+      !ehInteiro(p.questaoAtual) || p.questaoAtual < 1 || p.questaoAtual > p.totalQuestoes ||
+      !ehInteiroSeguro(p.segundos) || p.segundos < 0 ||
       typeof p.pausado !== "boolean" || typeof p.finalizado !== "boolean" ||
       typeof p.finalizarQuandoPronto !== "boolean" ||
       !["analisando", "concluida", "erro"].includes(String(p.estadoAnalise)) ||
-      !Number.isFinite(p.progressoAnalise) || p.progressoAnalise < 0 || p.progressoAnalise > 100 ||
+      !ehNumeroFinito(p.progressoAnalise) || p.progressoAnalise < 0 || p.progressoAnalise > 100 ||
       typeof p.criadoEm !== "string" || !Number.isFinite(Date.parse(p.criadoEm)) ||
       typeof p.atualizadoEm !== "string" || !Number.isFinite(Date.parse(p.atualizadoEm)) ||
       !ehRegistro(p.respostas)) {
@@ -72,10 +72,10 @@ export function lerBackupSegurancaSimuladoPdf(texto: string): BackupSegurancaSim
     }
   }
 
-  if (p.semana !== undefined && (!Number.isInteger(p.semana) || p.semana < 0)) {
+  if (p.semana !== undefined && (!ehInteiro(p.semana) || p.semana < 0)) {
     throw new Error("Semana inválida no backup.");
   }
-  if (p.dia !== undefined && (!Number.isInteger(p.dia) || p.dia < 0)) {
+  if (p.dia !== undefined && (!ehInteiro(p.dia) || p.dia < 0)) {
     throw new Error("Dia inválido no backup.");
   }
   if (p.missaoId !== undefined && typeof p.missaoId !== "string") {
@@ -115,4 +115,16 @@ export function lerBackupSegurancaSimuladoPdf(texto: string): BackupSegurancaSim
 
 function ehRegistro(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function ehInteiro(v: unknown): v is number {
+  return typeof v === "number" && Number.isInteger(v);
+}
+
+function ehInteiroSeguro(v: unknown): v is number {
+  return typeof v === "number" && Number.isSafeInteger(v);
+}
+
+function ehNumeroFinito(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
 }
