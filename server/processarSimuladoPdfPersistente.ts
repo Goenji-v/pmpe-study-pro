@@ -12,7 +12,7 @@ import {
   type ContextoSupabaseJob,
   type JobGeracaoIA,
 } from "./geracaoPersistente.ts";
-import { executarComFallbackGemini } from "./retryGemini.ts";
+import { executarComFallbackGemini, exigirTextoRespostaGemini } from "./retryGemini.ts";
 import { executarPipelineQuestaoAPorQuestao } from "./simuladoPdfPipeline.ts";
 import { validarGabaritoExplicitoDoCaderno } from "./gabaritoExplicitoPdf.ts";
 import {
@@ -1510,8 +1510,8 @@ async function gerarJsonTexto(
   rotulo: string
 ) {
   const resposta = await executarComFallbackGemini(
-    (modeloAtual) =>
-      ai.models.generateContent({
+    async (modeloAtual) => {
+      const resposta = await ai.models.generateContent({
         model: modeloAtual,
         contents: [
           {
@@ -1524,7 +1524,9 @@ async function gerarJsonTexto(
           responseMimeType: "application/json",
           maxOutputTokens,
         },
-      }),
+      });
+      return exigirTextoRespostaGemini(resposta.text, rotulo);
+    },
     {
       rotulo,
       modelos,
@@ -1568,16 +1570,7 @@ async function gerarJsonTexto(
     }
   );
 
-  if (!resposta.text) {
-    throw new Error(
-      `A IA não retornou a leitura de ${rotulo}.`
-    );
-  }
-
-  return parsearJsonDaIA(
-    resposta.text,
-    rotulo
-  );
+  return parsearJsonDaIA(resposta, rotulo);
 }
 
 async function gerarJsonComPdfs(
@@ -1589,8 +1582,8 @@ async function gerarJsonComPdfs(
   rotulo: string
 ) {
   const resposta = await executarComFallbackGemini(
-    (modeloAtual) =>
-      ai.models.generateContent({
+    async (modeloAtual) => {
+      const resposta = await ai.models.generateContent({
         model: modeloAtual,
         contents: [
           {
@@ -1611,7 +1604,9 @@ async function gerarJsonComPdfs(
           responseMimeType: "application/json",
           maxOutputTokens,
         },
-      }),
+      });
+      return exigirTextoRespostaGemini(resposta.text, rotulo);
+    },
     {
       rotulo,
       modelos,
@@ -1649,11 +1644,7 @@ async function gerarJsonComPdfs(
     }
   );
 
-  if (!resposta.text) {
-    throw new Error(`A IA não retornou a leitura de ${rotulo}.`);
-  }
-
-  return parsearJsonDaIA(resposta.text, rotulo);
+  return parsearJsonDaIA(resposta, rotulo);
 }
 
 export async function executarBlocosSimuladoPdfPersistentes(args: {
