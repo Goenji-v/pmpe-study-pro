@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { armazenamentoLocalDaConta as storage } from '../../services/armazenamentoConta';
 import type { PedidoPdf } from '../../services/leitorMaterial';
 import type { AnotacoesPdf } from '../../pages/SimuladoPdf/PdfAnotavel';
-import '../../pages/SimuladoPdf/SimuladoPdf.css';
 import './LeitorMaterial.css';
 const PdfAnotavel = lazy(() => import('../../pages/SimuladoPdf/PdfAnotavel'));
 export default function LeitorMaterial() {
