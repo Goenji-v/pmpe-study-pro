@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   Pause,
   Play,
   RefreshCcw,
@@ -56,6 +57,7 @@ import {
 import PdfAnotavel, {
   type AnotacoesPdf,
 } from "./PdfAnotavel";
+import { criarBackupSegurancaSimuladoPdf } from "../../utils/backupSegurancaSimuladoPdf";
 import "./SimuladoPdf.css";
 
 const LETRAS = ["A", "B", "C", "D", "E"];
@@ -138,6 +140,10 @@ export default function SimuladoPdf() {
   const [restaurando, setRestaurando] = useState(false);
   const [reiniciandoAnalise, setReiniciandoAnalise] =
     useState(false);
+  const [faltaPdfRecuperacao, setFaltaPdfRecuperacao] = useState(false);
+  const [avisoRecuperacao, setAvisoRecuperacao] = useState("");
+  const [pdfReanexado, setPdfReanexado] = useState<File | null>(null);
+  const [comentadoReanexado, setComentadoReanexado] = useState<File | null>(null);
   const resultadoPersistidoRef = useRef("");
   const [salvandoResultadoFinal, setSalvandoResultadoFinal] =
     useState(false);
@@ -718,11 +724,40 @@ export default function SimuladoPdf() {
     });
   }
 
+  const baixarBackup = useCallback(async (processo: ProcessoSimuladoPdfPersistido) => {
+    try {
+      const anotacoes = await carregarAnotacoesSimuladoPdf(processo.id).catch(() => null);
+      const backup = criarBackupSegurancaSimuladoPdf(processo, anotacoes);
+      const arquivo = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(arquivo);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `study-pro-backup-simulado-${processo.id.slice(0, 8)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      window.alert("Não foi possível baixar o backup. O processo não foi alterado.");
+    }
+  }, []);
+
+  function baixarBackupAtual() {
+    persistirEstadoAtual();
+    const processo = carregarProcessoSimuladoPdf();
+    if (!processo || processo.id !== rascunho?.id) {
+      window.alert("Não foi possível localizar o processo salvo para backup.");
+      return;
+    }
+    void baixarBackup(processo);
+  }
+
   async function continuarProcessoAnterior() {
     const processo = processoRecuperavel;
     if (!processo) return;
 
     setRestaurando(true);
+    setAvisoRecuperacao("");
 
     try {
       const [arquivos, analiseSalva, anotacoesSalvas] =
@@ -734,21 +769,36 @@ export default function SimuladoPdf() {
           ),
         ]);
 
-      if (!arquivos?.caderno) {
-        await excluirProcessoSimuladoPdf(processo.id);
-        setProcessoRecuperavel(null);
-        window.alert(
-          "O processo foi encontrado, mas o PDF não estava mais salvo neste aparelho. Inicie o simulado novamente."
+      const cadernoRecuperado = arquivos?.caderno ?? pdfReanexado;
+      if (!cadernoRecuperado) {
+        setFaltaPdfRecuperacao(true);
+        setAvisoRecuperacao(
+          "O PDF não foi encontrado neste aparelho. Suas respostas, tempo e processo continuam guardados. Reanexe o caderno ORIGINAL para continuar."
         );
         return;
       }
 
+      if (!arquivos?.caderno) {
+        const ehPdf = cadernoRecuperado.type === "application/pdf" ||
+          cadernoRecuperado.name.toLowerCase().endsWith(".pdf");
+        if (!ehPdf || !cadernoRecuperado.size || cadernoRecuperado.size > 12 * 1024 * 1024) {
+          setAvisoRecuperacao("Selecione o PDF original de até 12 MB. Nenhum dado foi alterado.");
+          return;
+        }
+        await salvarArquivosSimuladoPdf({
+          processoId: processo.id,
+          caderno: cadernoRecuperado,
+          comentado: comentadoReanexado ?? arquivos?.comentado ?? null,
+        });
+      }
+
+      setFaltaPdfRecuperacao(false);
       const proximo: RascunhoSimuladoPdf = {
         id: processo.id,
         nome: processo.nome,
         totalQuestoes: processo.totalQuestoes,
-        caderno: arquivos.caderno,
-        comentado: arquivos.comentado,
+        caderno: cadernoRecuperado,
+        comentado: comentadoReanexado ?? arquivos?.comentado ?? null,
         semana: processo.semana,
         dia: processo.dia,
         missaoId: processo.missaoId,
@@ -840,12 +890,9 @@ export default function SimuladoPdf() {
         );
       }
     } catch (erro) {
-      setEstadoAnalise("erro");
-      setErroAnalise(
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível recuperar o simulado."
-      );
+      setAvisoRecuperacao(erro instanceof Error
+        ? `Recuperação interrompida sem excluir dados: ${erro.message}`
+        : "Não foi possível recuperar o simulado. Seus dados continuam preservados.");
     } finally {
       setRestaurando(false);
     }
@@ -854,6 +901,9 @@ export default function SimuladoPdf() {
   async function excluirProcessoAnterior() {
     const processo = processoRecuperavel;
     if (!processo) return;
+    if (!window.confirm(
+      "Excluir definitivamente este simulado, suas respostas e anotações? Faça o backup antes. Esta ação não pode ser desfeita."
+    )) return;
 
     setRestaurando(true);
 
@@ -1028,6 +1078,26 @@ export default function SimuladoPdf() {
             </div>
           </div>
 
+          {(avisoRecuperacao || faltaPdfRecuperacao) && (
+            <div className="simulado-pdf-resgate-aviso" role="alert">
+              <p>{avisoRecuperacao}</p>
+              {faltaPdfRecuperacao && (
+                <>
+                  <label>
+                    Reanexar o mesmo caderno PDF (obrigatório)
+                    <input type="file" accept="application/pdf,.pdf"
+                      onChange={(e) => setPdfReanexado(e.target.files?.[0] ?? null)} />
+                  </label>
+                  <label>
+                    PDF comentado original (se havia, reanexe também)
+                    <input type="file" accept="application/pdf,.pdf"
+                      onChange={(e) => setComentadoReanexado(e.target.files?.[0] ?? null)} />
+                  </label>
+                  <small>Não use uma prova diferente: a retomada utiliza as respostas originais.</small>
+                </>
+              )}
+            </div>
+          )}
           <div className="simulado-pdf-retomar-acoes">
             <button
               type="button"
@@ -1045,6 +1115,10 @@ export default function SimuladoPdf() {
                   : "Continuar de onde parou"}
             </button>
 
+            <button type="button" className="backup" disabled={restaurando}
+              onClick={() => void baixarBackup(processoRecuperavel)}>
+              <Download size={18} /> Baixar backup
+            </button>
             <button
               type="button"
               className="excluir"
@@ -1057,6 +1131,7 @@ export default function SimuladoPdf() {
               Excluir processo
             </button>
           </div>
+          <small>Backup das respostas, cronômetro e anotações disponíveis. O PDF não está incluído: guarde o arquivo original separadamente.</small>
         </section>
       </main>
     );
@@ -1386,6 +1461,11 @@ export default function SimuladoPdf() {
         </div>
 
         <div className="cronometro">
+          <button type="button" className="backup" onClick={baixarBackupAtual}
+            title="Baixar respostas e cronômetro (sem PDF)">
+            <Download size={16} />
+            <span>Backup</span>
+          </button>
           <strong>
             {formatarTempo(segundos)}
           </strong>
