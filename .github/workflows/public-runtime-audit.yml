@@ -44,6 +44,9 @@ jobs:
       - name: Auditar runtime público em produção
         run: npx playwright test e2e/public-runtime-health.spec.ts --project=desktop-chrome
 
+      - name: Validar painéis e preferência de marcações do PR
+        run: npx playwright test e2e/perfis-pdf-regression.spec.ts --project=desktop-chrome
+
       - name: Build local para auditoria do login
         env:
           VITE_SUPABASE_URL: https://example.supabase.co

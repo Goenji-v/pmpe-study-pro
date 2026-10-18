@@ -526,4 +526,6 @@
   }
 }
 
-.conteudos-nome-perfil{display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer}.conteudos-nome-perfil small{font-size:11px;color:#7dd3fc;white-space:nowrap}
+.conteudos-assunto-item button.conteudos-nome-perfil{padding:0;border-radius:0;flex-wrap:wrap;display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer}.conteudos-nome-perfil small{font-size:11px;color:#7dd3fc;white-space:nowrap}
+
+.conteudos-nome-perfil:hover small{text-decoration:underline}.conteudos-nome-perfil:focus-visible{outline:2px solid #7dd3fc;outline-offset:5px}

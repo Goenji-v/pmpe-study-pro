@@ -1,3 +1,4 @@
+import "./SimuladoPdf.css";
 import {
   Eraser,
   FileCheck2,

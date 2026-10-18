@@ -1,1 +1,15 @@
-.leitor-material{width:min(1200px,96vw);max-width:96vw;height:92dvh;max-height:96dvh;border:1px solid #475569;border-radius:20px;padding:20px;background:var(--bg-card,#101e33);color:var(--text-primary,#e2e8f0);overflow:auto}.leitor-material::backdrop{background:#020617cc}.leitor-material>header{display:flex;align-items:start;justify-content:space-between;gap:16px}.leitor-material h2{margin:6px 0}.leitor-material button,.leitor-aviso a{padding:10px 16px;border-radius:10px}.leitor-aviso{padding:18px;background:#854d0e33;border-radius:12px}.leitor-aviso a{display:inline-block}.leitor-material .pdf-area{max-height:70dvh}.leitor-material small{color:#7dd3fc;letter-spacing:.12em}
+.leitor-material{position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(1200px,96vw);max-width:96vw;height:92dvh;max-height:96dvh;border:1px solid #475569;border-radius:20px;padding:20px;background:var(--bg-card,#101e33);color:var(--text-primary,#e2e8f0);overflow:hidden}
+.leitor-material[open]{display:flex;flex-direction:column;gap:16px}
+.leitor-material::backdrop{background:#020617cc}
+.leitor-material>header{display:flex;flex:0 0 auto;align-items:start;justify-content:space-between;gap:16px}
+.leitor-material>header>div{min-width:0}
+.leitor-material h2{margin:6px 0;overflow-wrap:anywhere}
+.leitor-material>header p{line-height:1.45}
+.leitor-material>header button,.leitor-aviso a{padding:10px 16px;border:1px solid #475569;border-radius:10px;background:#1e293b;color:#e2e8f0;flex-shrink:0;cursor:pointer}
+.leitor-aviso{padding:18px;background:#854d0e33;border-radius:12px;max-height:28dvh;overflow:auto;flex:0 0 auto}
+.leitor-aviso a{display:inline-block}
+.leitor-material .pdf-anotavel{flex:1;min-height:0;height:auto;overflow:hidden}
+.leitor-material .pdf-toolbar{flex-shrink:0}
+.leitor-material .pdf-area{min-height:0;max-height:none;overscroll-behavior:contain}
+.leitor-material small{color:#7dd3fc;letter-spacing:.12em}
+@media(max-width:600px){.leitor-material{padding:12px}.leitor-material>header{gap:8px}.leitor-material h2{font-size:20px}.leitor-material>header p{font-size:12px}}

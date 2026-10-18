@@ -52,6 +52,12 @@ export default function Configuracoes() {
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
   }
 
+  function alterarPersistenciaPdf(salvar: boolean) {
+    atualizarCampo('salvarMarcacoesPdf', salvar);
+    setConfiguracoes(anterior => ({ ...anterior, salvarMarcacoesPdf: salvar }));
+    showToast('Preferência de marcações salva.', 'success');
+  }
+
   function atualizarRitmoDiario(valor: number) {
     const ritmo = Math.max(1, Math.min(4, valor));
     setFormulario((anterior) => ({
@@ -331,7 +337,7 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
           </div>
         </div>
 
-        <section className="configuracoes-card"><h2 id="config-leitura">Leitura de PDFs</h2><label className="configuracoes-checkbox"><input type="checkbox" checked={formulario.salvarMarcacoesPdf === true} onChange={e => atualizarCampo('salvarMarcacoesPdf',e.target.checked)}/><span>Salvar minhas marcações nos PDFs dos materiais</span></label><p className="configuracoes-ajuda">Ativado: caneta e marca-texto ficam salvos neste aparelho para sua conta. Desativado: as marcações desta leitura são descartadas ao fechar. Os rascunhos de simulados mantêm seu funcionamento próprio.</p></section>
+        <section className="configuracoes-card"><h2 id="config-leitura">Leitura de PDFs</h2><label className="configuracoes-checkbox"><input type="checkbox" checked={formulario.salvarMarcacoesPdf === true} onChange={e => alterarPersistenciaPdf(e.target.checked)}/><span>Salvar minhas marcações nos PDFs dos materiais</span></label><p className="configuracoes-ajuda">Esta opção é salva automaticamente. Ativado: caneta e marca-texto ficam salvos neste aparelho para sua conta. Desativado: as marcações desta leitura são descartadas ao fechar. Os rascunhos de simulados mantêm seu funcionamento próprio.</p></section>
         <div className="configuracoes-card">
           <h2 id="config-aparencia">Aparência</h2>
           <div className="configuracoes-form-group">
