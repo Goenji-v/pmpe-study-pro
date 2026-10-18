@@ -282,10 +282,8 @@ export default function Dashboard() {
   // O cronômetro atualiza o Dashboard continuamente. Evita recalcular
   // todo o histórico de questões a cada segundo ou mudança visual.
   const metricasHoje = useMemo(() => {
-    const inicioHojeMetricas = new Date();
-    inicioHojeMetricas.setHours(0, 0, 0, 0);
-    const fimHojeMetricas = new Date();
-    fimHojeMetricas.setHours(23, 59, 59, 999);
+    const inicioHojeMetricas = new Date(`${hoje}T00:00:00`);
+    const fimHojeMetricas = new Date(`${hoje}T23:59:59.999`);
     return calcularMetricasConsolidadas({
       questoes,
       sessoes,
