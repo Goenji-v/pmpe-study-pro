@@ -2,11 +2,15 @@ import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 
 import "./CentralDesempenho.css";
 
-import Estatisticas from "../Estatisticas/Estatisticas";
-import HistoricoSessoes from "../HistoricoSessoes/HistoricoSessoes";
-import EstatisticasSessoes from "../EstatisticasSessoes/EstatisticasSessoes";
-import EstatisticasSimuladoIA from "../EstatisticasSimuladoIA/EstatisticasSimuladoIA";
-import SimuladosOficiaisDesempenho from "../../components/SimuladosOficiaisDesempenho/SimuladosOficiaisDesempenho";
+import { lazy, Suspense } from "react";
+
+const Estatisticas = lazy(() => import("../Estatisticas/Estatisticas"));
+const HistoricoSessoes = lazy(() => import("../HistoricoSessoes/HistoricoSessoes"));
+const EstatisticasSessoes = lazy(() => import("../EstatisticasSessoes/EstatisticasSessoes"));
+const EstatisticasSimuladoIA = lazy(() => import("../EstatisticasSimuladoIA/EstatisticasSimuladoIA"));
+const SimuladosOficiaisDesempenho = lazy(
+  () => import("../../components/SimuladosOficiaisDesempenho/SimuladosOficiaisDesempenho")
+);
 
 type AbaDesempenho =
   | "geral"
@@ -73,6 +77,7 @@ export default function CentralDesempenho() {
       </div>
 
       <div className="central-desempenho-conteudo">
+        <Suspense fallback={<p role="status" aria-live="polite">Carregando indicadores de desempenho…</p>}>
         {abaAtiva === "geral" && (
           <>
             <Estatisticas />
@@ -83,6 +88,7 @@ export default function CentralDesempenho() {
         {abaAtiva === "historico" && <HistoricoSessoes />}
         {abaAtiva === "sessoes" && <EstatisticasSessoes />}
         {abaAtiva === "ia" && <EstatisticasSimuladoIA />}
+        </Suspense>
       </div>
     </section>
   );
