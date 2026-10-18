@@ -889,6 +889,45 @@
   cursor: wait;
 }
 
+.simulado-pdf-retomar-acoes {
+  flex-wrap: wrap;
+}
+
+.simulado-pdf-retomar-acoes .backup {
+  color: #d4edff;
+  border: 1px solid #517ca4;
+  background: #183756;
+}
+
+.simulado-pdf-resgate-aviso {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  color: #edf5ff;
+  border: 1px solid #d49c54;
+  background: #302616;
+  border-radius: 12px;
+}
+
+.simulado-pdf-resgate-aviso p {
+  margin: 0;
+}
+
+.simulado-pdf-resgate-aviso label {
+  display: grid;
+  gap: 6px;
+}
+
+.simulado-pdf-resgate-aviso input[type="file"] {
+  max-width: 100%;
+}
+
+.simulado-pdf-resgate-aviso small,
+.simulado-pdf-retomar > small {
+  color: #b5cee3;
+  line-height: 1.45;
+}
+
 @media (max-width: 620px) {
   .simulado-pdf-retomar {
     padding: 20px 14px;
