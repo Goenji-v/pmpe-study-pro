@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
+import { useMemo, type ReactElement, type ReactNode } from "react";
 import {
   Bar,
   BarChart,
@@ -82,11 +83,11 @@ const CORES_MESES = [
 
 export default function Estatisticas() {
   const { materias, questoes, sessoes, revisoes, simulados } = useApp();
-  const [periodo, setPeriodo] = useState<PeriodoFiltro>("tudo");
-  const [inicioPersonalizado, setInicioPersonalizado] = useState("");
-  const [fimPersonalizado, setFimPersonalizado] = useState("");
-  const [materiaSelecionada, setMateriaSelecionada] = useState("");
-  const [assuntoSelecionado, setAssuntoSelecionado] = useState("");
+  const [periodo, setPeriodo] = useEstadoNavegacao<PeriodoFiltro>("estatisticas:periodo", "tudo");
+  const [inicioPersonalizado, setInicioPersonalizado] = useEstadoNavegacao("estatisticas:inicio", "");
+  const [fimPersonalizado, setFimPersonalizado] = useEstadoNavegacao("estatisticas:fim", "");
+  const [materiaSelecionada, setMateriaSelecionada] = useEstadoNavegacao("estatisticas:materia", "");
+  const [assuntoSelecionado, setAssuntoSelecionado] = useEstadoNavegacao("estatisticas:assunto", "");
 
   const intervalo = useMemo(
     () => obterIntervalo(periodo, inicioPersonalizado, fimPersonalizado),

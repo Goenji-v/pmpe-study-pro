@@ -1,3 +1,4 @@
+import { chaveDaMateria } from "./desempenhoMaterias";
 import type {
   RegistroQuestao,
   Revisao,
@@ -66,16 +67,16 @@ export function calcularDiagnosticoSemanalPlano(params: {
 
   const nomes = new Map<string, string>();
   for (const nome of params.materiasDisponiveis ?? []) {
-    if (nome && !ehMateriaOperacional(nome)) nomes.set(normalizar(nome), nome);
+    if (nome && !ehMateriaOperacional(nome)) nomes.set(chaveDaMateria(nome), nome);
   }
   for (const item of params.questoes) {
-    if (item.materia && !ehMateriaOperacional(item.materia)) nomes.set(normalizar(item.materia), item.materia);
+    if (item.materia && !ehMateriaOperacional(item.materia)) nomes.set(chaveDaMateria(item.materia), item.materia);
   }
   for (const item of params.sessoes) {
-    if (item.materia && !ehMateriaOperacional(item.materia)) nomes.set(normalizar(item.materia), item.materia);
+    if (item.materia && !ehMateriaOperacional(item.materia)) nomes.set(chaveDaMateria(item.materia), item.materia);
   }
   for (const item of params.revisoes) {
-    if (item.materia && !ehMateriaOperacional(item.materia)) nomes.set(normalizar(item.materia), item.materia);
+    if (item.materia && !ehMateriaOperacional(item.materia)) nomes.set(chaveDaMateria(item.materia), item.materia);
   }
 
   const materias = Array.from(nomes.values())
@@ -123,10 +124,10 @@ export function calcularDistribuicaoAdaptativaSemanal(params: {
 
   const totalBlocos = Math.max(nomes.length, Math.round(params.totalBlocos));
   const porMateria = new Map(
-    params.diagnostico.materias.map((item) => [normalizar(item.materia), item])
+    params.diagnostico.materias.map((item) => [chaveDaMateria(item.materia), item])
   );
   const distribuicao = nomes.map((materia) => {
-    const diagnostico = porMateria.get(normalizar(materia));
+    const diagnostico = porMateria.get(chaveDaMateria(materia));
     const percentual = diagnostico?.percentualAcertos;
     let score = diagnostico?.prioridade ?? 10;
 
@@ -199,7 +200,7 @@ export function adaptarMissaoFlexivel<T extends {
   if (!flexivel || !diagnostico.materiaPrioritaria) return missao;
 
   const dados = diagnostico.materias.find(
-    (item) => normalizar(item.materia) === normalizar(diagnostico.materiaPrioritaria as string)
+    (item) => chaveDaMateria(item.materia) === chaveDaMateria(diagnostico.materiaPrioritaria as string)
   );
 
   const assuntoReforco =
@@ -243,14 +244,14 @@ function analisarMateria(
   fim: Date,
   agora: Date
 ): DiagnosticoMateriaSemanal {
-  const chave = normalizar(materia);
+  const chave = chaveDaMateria(materia);
   const questoesMateria = questoes.filter(
-    (item) => normalizar(item.materia) === chave && dentroDaJanela(item.data, inicio, fim)
+    (item) => chaveDaMateria(item.materia) === chave && dentroDaJanela(item.data, inicio, fim)
   );
   const sessoesMateria = sessoes.filter(
-    (item) => normalizar(item.materia) === chave && dentroDaJanela(item.data, inicio, fim)
+    (item) => chaveDaMateria(item.materia) === chave && dentroDaJanela(item.data, inicio, fim)
   );
-  const revisoesDaMateria = revisoes.filter((item) => normalizar(item.materia) === chave);
+  const revisoesDaMateria = revisoes.filter((item) => chaveDaMateria(item.materia) === chave);
   const hojeData = inicioDoDia(agora);
   const hoje = hojeData.getTime();
   const limiteProximas = fimDoDia(adicionarDiasLocais(hojeData, 2)).getTime();
@@ -284,7 +285,7 @@ function analisarMateria(
     (item) => item.conteudoConcluido === false
   ).length;
 
-  const ultimaData = [...questoesMateria.map((item) => item.data), ...sessoesMateria.map((item) => item.data)]
+  const ultimaData = [...questoesMateria.map((item) => item.data), ...sessoesMateria.map((item) => item.data), ...revisoesDaMateria.filter(item => item.concluida && item.dataConclusao).map(item => item.dataConclusao!)]
     .map(dataValida)
     .filter((item): item is Date => Boolean(item))
     .sort((a, b) => b.getTime() - a.getTime())[0];

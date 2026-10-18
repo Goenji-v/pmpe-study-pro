@@ -1,6 +1,4 @@
-import {
-  useState,
-} from "react";
+import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 
 import "./CentralDesempenho.css";
 
@@ -20,8 +18,8 @@ export default function CentralDesempenho() {
   const [
     abaAtiva,
     setAbaAtiva,
-  ] = useState<AbaDesempenho>(
-    "geral"
+  ] = useEstadoNavegacao<AbaDesempenho>(
+    "desempenho:aba", "geral"
   );
 
   return (

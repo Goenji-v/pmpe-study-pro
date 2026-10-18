@@ -543,9 +543,7 @@ export default function ResolverSimuladoIA() {
       setResultadoFinal(novoResultado);
       setFinalizado(true);
       sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
-      if (registroApp.revisaoConcluidaDireta) {
-        accountSessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
-      }
+      accountSessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
 
       const respondidas = novoResultado.certas + novoResultado.erradas;
       const registroSimulado =
@@ -641,7 +639,12 @@ export default function ResolverSimuladoIA() {
       : undefined;
 
     const origemRevisaoDireta = carregarOrigemRevisaoQuestoes();
-    const revisaoDireta = origemRevisaoDireta
+    // Um marcador de outra revisão nunca pode substituir a sessão em andamento.
+    const origemCompativel = !cronometroAtivo || (
+      sessaoAtiva.tipo === "revisao" &&
+      sessaoAtiva.revisaoId === origemRevisaoDireta?.revisaoId
+    );
+    const revisaoDireta = origemRevisaoDireta && origemCompativel
       ? revisoes.find(
           (item) =>
             !item.concluida &&
@@ -868,6 +871,7 @@ export default function ResolverSimuladoIA() {
     }
 
     limparCadernoSimuladoIAAtivo();
+    accountSessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
     sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
     definirTipoSessaoQuestoesIAAtiva("questoes");
     setTipoSessao("questoes");
@@ -932,6 +936,7 @@ export default function ResolverSimuladoIA() {
     localStorage.removeItem(
       CHAVE_QUESTOES_IA
     );
+    accountSessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
     sessionStorage.removeItem(CHAVE_RASCUNHO_QUESTOES_IA);
 
     setQuestoes([]);
@@ -1652,9 +1657,14 @@ function carregarOrigemRevisaoQuestoes() {
       criadoEm?: string;
     };
 
-    return valor.revisaoId?.trim()
-      ? valor
-      : null;
+    const criadaEm = valor.criadoEm ? new Date(valor.criadoEm).getTime() : 0;
+    const idade = Date.now() - criadaEm;
+    if (typeof valor.revisaoId === "string" && valor.revisaoId.trim() &&
+      criadaEm > 0 && idade >= 0 && idade <= 6 * 60 * 60 * 1000) {
+      return valor;
+    }
+    accountSessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
+    return null;
   } catch {
     accountSessionStorage.removeItem(
       CHAVE_ORIGEM_REVISAO_QUESTOES

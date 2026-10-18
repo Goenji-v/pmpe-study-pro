@@ -1,3 +1,4 @@
+import { correspondeFiltroCatalogo, filtroMateriaCatalogo } from "./filtrosCatalogoIA";
 import { supabase } from "../lib/supabase";
 import type { Dificuldade, OrigemQuestao, QuestaoIA } from "../types/index";
 import {
@@ -358,40 +359,32 @@ export async function registrarRespostasQuestoesIA(
 }
 
 async function buscarCandidatas(filtros: FiltrosCatalogoIA) {
-  let consulta = supabase
-    .from("questoes_catalogo")
-    .select(CAMPOS_CATALOGO_TREINO)
-    // Reutiliza questões válidas de IA, provas oficiais e simulados de terceiros.
-    .in("origem", ["ia", "prova_oficial", "simulado_terceiro"])
-    .eq("status", "ativa")
-    .eq("compatibilidade_edital", "direta")
-    .eq("concurso_alvo", filtros.concursoAlvo?.trim() || "PMPE")
-    .eq("materia_chave", normalizarChaveIA(filtros.materia))
-    .eq("assunto_chave", normalizarChaveIA(filtros.assunto))
-    .eq("banca_chave", normalizarChaveIA(filtros.banca))
-    .limit(1000);
+  const linhas: LinhaCatalogoIA[] = [];
+  const tamanhoPagina = 500;
+  // Paginação estável evita perder candidatas quando o catálogo passa de 1.000.
+  for (let inicio = 0; ; inicio += tamanhoPagina) {
+    let consulta = supabase
+      .from("questoes_catalogo")
+      .select(CAMPOS_CATALOGO_TREINO)
+      .in("origem", ["ia", "prova_oficial", "simulado_terceiro"])
+      .eq("status", "ativa")
+      .eq("compatibilidade_edital", "direta")
+      .eq("concurso_alvo", filtros.concursoAlvo?.trim() || "PMPE")
+      .or(filtroMateriaCatalogo(filtros.materia))
+      .or(`assunto_chave.eq.${JSON.stringify(normalizarChaveIA(filtros.assunto))},assunto_chave.is.null`)
+      .order("id")
+      .range(inicio, inicio + tamanhoPagina - 1);
 
-  if (filtros.modulo?.trim()) {
-    consulta = consulta.eq("modulo", filtros.modulo.trim());
+    if (filtros.dificuldade !== "Mista") {
+      consulta = consulta.eq("dificuldade", converterDificuldade(filtros.dificuldade));
+    }
+    const { data, error } = await consulta;
+    if (error) throw new Error(`Não foi possível consultar o banco compartilhado: ${error.message}`);
+    const pagina = (data ?? []) as LinhaCatalogoIA[];
+    linhas.push(...pagina.filter(linha => correspondeFiltroCatalogo(linha, filtros) && ehQuestaoValida(linha)));
+    if (pagina.length < tamanhoPagina) break;
   }
-
-  if (filtros.dificuldade !== "Mista") {
-    consulta = consulta.eq(
-      "dificuldade",
-      converterDificuldade(filtros.dificuldade)
-    );
-  }
-
-  const { data, error } = await consulta;
-  if (error) {
-    throw new Error(
-      `Não foi possível consultar o banco compartilhado: ${error.message}`
-    );
-  }
-
-  return ((data ?? []) as LinhaCatalogoIA[])
-    .filter((linha) => ehQuestaoValida(linha))
-    .map(converterLinha);
+  return linhas.map(converterLinha);
 }
 
 export async function listarIdsRespondidos() {

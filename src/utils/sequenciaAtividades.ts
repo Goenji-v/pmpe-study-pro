@@ -23,7 +23,7 @@ export function calcularSequenciaAtividades(params: {
     }
   });
 
-  const ordenadas = [...datas].sort();
+  const ordenadas = [...datas].filter(data => data <= chaveData(params.agora ?? new Date())).sort();
   if (ordenadas.length === 0) {
     return { atual: 0, melhor: 0 };
   }

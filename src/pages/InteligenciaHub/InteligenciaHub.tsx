@@ -1,3 +1,4 @@
+import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 import { lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -39,15 +40,17 @@ const ABAS: Array<{
 
 export default function InteligenciaHub() {
   const [parametros, setParametros] = useSearchParams();
-  const valorAba = parametros.get("aba");
+  const [abaSalva, salvarAba] = useEstadoNavegacao<AbaInteligencia>("inteligencia:aba", "visao-geral");
+  const valorAba = parametros.get("aba") ?? abaSalva;
   const abaAtiva: AbaInteligencia =
     valorAba === "relatorio" || valorAba === "coach"
       ? valorAba
       : "visao-geral";
 
   function selecionarAba(aba: AbaInteligencia) {
+    salvarAba(aba);
     if (aba === "visao-geral") {
-      setParametros({});
+      setParametros({ aba: "visao-geral" });
       return;
     }
 

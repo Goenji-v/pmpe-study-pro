@@ -169,7 +169,8 @@ export default function QuestaoIACronometroBridge() {
 
     const iniciada = iniciar(dados);
     if (iniciada) {
-      sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO);
+      // Preserve a origem da revisão até o resultado final ser registrado.
+      // ResolverSimuladoIA precisa do revisaoId para concluir a revisão correta.
       setFinalizadaNestaTela(false);
     }
   }
@@ -180,7 +181,9 @@ export default function QuestaoIACronometroBridge() {
   }
 
   function encerrarSemSalvar() {
-    cancelar(true);
+    if (!window.confirm("Deseja cancelar esta sessão? O tempo não será salvo.")) return;
+    cancelar(false);
+    sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO);
   }
 
   function retomarQuestoes() {
@@ -383,7 +386,8 @@ function carregarOrigemRevisao(questoes: QuestaoIA[]): OrigemRevisao | null {
   try {
     const origem = JSON.parse(salvo) as OrigemRevisao;
     const criadaEm = origem.criadoEm ? new Date(origem.criadoEm).getTime() : 0;
-    const recente = criadaEm > 0 && Date.now() - criadaEm <= 6 * 60 * 60 * 1000;
+    const idade = Date.now() - criadaEm;
+    const recente = criadaEm > 0 && idade >= 0 && idade <= 6 * 60 * 60 * 1000;
     const mesmaMateria = questoes.every((questao) => normalizar(questao.materia) === normalizar(origem.materia));
     const mesmoAssunto = questoes.every((questao) => normalizar(questao.assunto) === normalizar(origem.assunto));
 

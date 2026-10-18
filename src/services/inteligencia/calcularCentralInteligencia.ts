@@ -1,3 +1,4 @@
+import { chaveDaMateria } from "../../utils/desempenhoMaterias";
 import type {
   RegistroQuestao,
   Revisao,
@@ -76,7 +77,7 @@ export function calcularCentralInteligencia({
     return data >= inicioHoje && data <= fimHoje;
   });
 
-  const materias = calcularDesempenhoMaterias(questoes, sessoes);
+  const materias = calcularDesempenhoMaterias(questoes, sessoes, revisoes);
   const assuntos = calcularDesempenhoAssuntos(questoes);
   const bancas = calcularDesempenhoBancas(questoes);
   const materiasComQuestoes = materias.filter((materia) => materia.total >= 3);
@@ -180,12 +181,13 @@ export function calcularCentralInteligencia({
 
 function calcularDesempenhoMaterias(
   questoes: RegistroQuestao[],
-  sessoes: SessaoEstudo[]
+  sessoes: SessaoEstudo[],
+  revisoes: Revisao[]
 ): DesempenhoMateria[] {
   const mapa = new Map<string, DesempenhoMateria>();
   const obter = (materiaOriginal: string) => {
     const materia = materiaOriginal.trim() || "Sem matéria";
-    const chave = normalizar(materia);
+    const chave = chaveDaMateria(materia);
     const atual = mapa.get(chave) ?? {
       materia,
       certas: 0,
@@ -216,6 +218,12 @@ function calcularDesempenhoMaterias(
     atualizarUltimaAtividade(atual, sessao.data);
   });
 
+  revisoes.forEach((revisao) => {
+    if (revisao.concluida && revisao.dataConclusao) {
+      atualizarUltimaAtividade(obter(revisao.materia), revisao.dataConclusao);
+    }
+  });
+
   return Array.from(mapa.values())
     .map((materia) => ({
       ...materia,
@@ -229,7 +237,7 @@ function calcularDesempenhoAssuntos(questoes: RegistroQuestao[]): DesempenhoAssu
   questoes.forEach((registro) => {
     const materia = registro.materia.trim() || "Sem matéria";
     const assunto = registro.assunto.trim() || "Sem assunto";
-    const chave = `${normalizar(materia)}::${normalizar(assunto)}`;
+    const chave = `${chaveDaMateria(materia)}::${normalizar(assunto)}`;
     const atual = mapa.get(chave) ?? {
       chave,
       materia,
