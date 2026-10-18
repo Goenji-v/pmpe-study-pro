@@ -2,6 +2,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Upload,
   Pause,
   Play,
   RefreshCcw,
@@ -52,12 +53,13 @@ import {
   salvarAnotacoesSimuladoPdf,
   salvarArquivosSimuladoPdf,
   salvarProcessoSimuladoPdf,
+  restaurarProcessoSimuladoPdfSeguro,
   type ProcessoSimuladoPdfPersistido,
 } from "../../services/simuladoPdfPersistencia";
 import PdfAnotavel, {
   type AnotacoesPdf,
 } from "./PdfAnotavel";
-import { criarBackupSegurancaSimuladoPdf } from "../../utils/backupSegurancaSimuladoPdf";
+import { criarBackupSegurancaSimuladoPdf, lerBackupSegurancaSimuladoPdf } from "../../utils/backupSegurancaSimuladoPdf";
 import "./SimuladoPdf.css";
 
 const LETRAS = ["A", "B", "C", "D", "E"];
@@ -142,6 +144,7 @@ export default function SimuladoPdf() {
     useState(false);
   const [faltaPdfRecuperacao, setFaltaPdfRecuperacao] = useState(false);
   const [avisoRecuperacao, setAvisoRecuperacao] = useState("");
+  const [avisoImportacao, setAvisoImportacao] = useState("");
   const [pdfReanexado, setPdfReanexado] = useState<File | null>(null);
   const [comentadoReanexado, setComentadoReanexado] = useState<File | null>(null);
   const resultadoPersistidoRef = useRef("");
@@ -752,6 +755,41 @@ export default function SimuladoPdf() {
     void baixarBackup(processo);
   }
 
+  async function importarBackupDaSala(arquivo: File | null) {
+    if (!arquivo) return;
+    setAvisoImportacao("");
+    if (arquivo.size > 2_000_000 || !arquivo.name.toLowerCase().endsWith(".json")) {
+      setAvisoImportacao("Selecione um backup JSON do Simulado PDF de até 2 MB.");
+      return;
+    }
+    try {
+      const backup = lerBackupSegurancaSimuladoPdf(await arquivo.text());
+      const atual = carregarProcessoSimuladoPdf();
+      if (atual) {
+        setAvisoImportacao("Já há um simulado salvo neste aparelho. Nada foi substituído. Baixe o backup do processo existente antes de qualquer outra ação.");
+        return;
+      }
+      const qtd = Object.keys(backup.processo.respostas).length;
+      if (!window.confirm(
+        `Restaurar a tentativa "${backup.processo.nome}" com ${qtd}/${backup.processo.totalQuestoes} respostas e ${backup.processo.segundos} segundos?\\nO cronômetro ficará pausado e será necessário ter o PDF original. Este backup é privado.`
+      )) return;
+
+      // Escrever as anotações antes de mostrar o processo: se falhar, nada é criado em localStorage.
+      if (backup.anotacoes !== null) {
+        const existentes = await carregarAnotacoesSimuladoPdf(backup.processo.id);
+        if (existentes === null) {
+          await salvarAnotacoesSimuladoPdf(backup.processo.id, backup.anotacoes);
+        }
+      }
+      restaurarProcessoSimuladoPdfSeguro(backup.processo);
+      setProcessoRecuperavel(carregarProcessoSimuladoPdf());
+      setFaltaPdfRecuperacao(false);
+      setAvisoRecuperacao("Backup recuperado. Suas respostas e cronômetro estão preservados e pausados. Reanexe o PDF original se solicitado.");
+    } catch (erro) {
+      setAvisoImportacao(erro instanceof Error ? erro.message : "Falha ao validar o backup. Nenhuma tentativa foi substituída.");
+    }
+  }
+
   async function continuarProcessoAnterior() {
     const processo = processoRecuperavel;
     if (!processo) return;
@@ -1241,6 +1279,22 @@ export default function SimuladoPdf() {
             <Play size={18} />
             Começar simulado
           </button>
+
+          <div className="simulado-pdf-importar-backup">
+            <strong>Tem um backup do Simulado PDF?</strong>
+            <p>Recupere respostas e cronômetro após perda dos dados locais. O PDF original será solicitado para continuar.</p>
+            <label>
+              <Upload size={16} />
+              Restaurar backup JSON
+              <input type="file" accept=".json,application/json"
+                onChange={(evento) => {
+                  const arquivo = evento.currentTarget.files?.[0] ?? null;
+                  evento.currentTarget.value = "";
+                  void importarBackupDaSala(arquivo);
+                }} />
+            </label>
+            {avisoImportacao && <p role="alert">{avisoImportacao}</p>}
+          </div>
         </section>
       </main>
     );

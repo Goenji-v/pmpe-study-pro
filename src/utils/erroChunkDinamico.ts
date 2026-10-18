@@ -1,3 +1,5 @@
+import { deveAdiarAtualizacaoAutomatica } from "./atualizacaoSegura";
+
 const PADROES_CHUNK_DINAMICO = [
   "failed to fetch dynamically imported module",
   "importing a module script failed",
@@ -46,7 +48,8 @@ export function limparMarcadorRecuperacaoChunkDaUrl() {
 }
 
 export function tentarRecarregarChunkObsoletoUmaVez() {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined" ||
+      deveAdiarAtualizacaoAutomatica(window.location.pathname)) return false;
 
   try {
     const agora = Date.now();

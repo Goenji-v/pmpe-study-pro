@@ -10,6 +10,8 @@ import {
   tentarRecarregarChunkObsoletoUmaVez,
 } from "./utils/erroChunkDinamico";
 
+import { deveAdiarAtualizacaoAutomatica } from "./utils/atualizacaoSegura";
+
 import "./global.css";
 
 declare const __APP_VERSION__: string;
@@ -48,6 +50,11 @@ async function verificarNovaVersao() {
       return;
     }
 
+    if (deveAdiarAtualizacaoAutomatica(window.location.pathname)) {
+      // Não recarregue prova ou redação durante a atividade.
+      return;
+    }
+
     const assinatura =
       `${__APP_VERSION__}->${publicada}`;
     if (
@@ -68,7 +75,9 @@ async function verificarNovaVersao() {
 }
 
 function tentarRecuperarAssetAntigo(valor: unknown) {
-  return ehErroChunkDinamico(valor) && tentarRecarregarChunkObsoletoUmaVez();
+  return ehErroChunkDinamico(valor) &&
+    !deveAdiarAtualizacaoAutomatica(window.location.pathname) &&
+    tentarRecarregarChunkObsoletoUmaVez();
 }
 
 window.addEventListener(

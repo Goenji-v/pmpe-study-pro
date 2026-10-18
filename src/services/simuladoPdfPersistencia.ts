@@ -104,6 +104,24 @@ export function salvarProcessoSimuladoPdf(
   );
 }
 
+/** Importa apenas se não houver tentativa ativa; nunca substitui respostas locais. */
+export function restaurarProcessoSimuladoPdfSeguro(
+  processo: ProcessoSimuladoPdfPersistido
+) {
+  if (localStorage.getItem(CHAVE_PROCESSO) !== null) {
+    throw new Error("Há um simulado salvo neste aparelho. Exporte e preserve o processo atual antes de qualquer restauração.");
+  }
+
+  localStorage.setItem(
+    CHAVE_PROCESSO,
+    JSON.stringify({
+      ...processo,
+      pausado: true,
+      atualizadoEm: new Date().toISOString(),
+    })
+  );
+}
+
 export async function salvarArquivosSimuladoPdf(params: {
   processoId: string;
   caderno: File;

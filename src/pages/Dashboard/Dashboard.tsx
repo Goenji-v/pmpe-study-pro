@@ -241,22 +241,16 @@ export default function Dashboard() {
     [simulados, questoes]
   );
 
-  const assuntosTotais =
-    materias.reduce(
-      (total, materia) =>
-        total + listarAssuntosDaMateria(materia).length,
-      0
-    );
-
-  const assuntosConcluidos =
-    materias.reduce(
-      (total, materia) =>
-        total +
-        listarAssuntosDaMateria(materia).filter(
-          (assunto) => assunto.concluido
-        ).length,
-      0
-    );
+  const { assuntosTotais, assuntosConcluidos } = useMemo(() => {
+    let assuntosTotais = 0;
+    let assuntosConcluidos = 0;
+    for (const materia of materias) {
+      const assuntos = listarAssuntosDaMateria(materia);
+      assuntosTotais += assuntos.length;
+      assuntosConcluidos += assuntos.filter((assunto) => assunto.concluido).length;
+    }
+    return { assuntosTotais, assuntosConcluidos };
+  }, [materias]);
 
   const trilhaPortugues = useMemo(() => {
     const materia = materias.find(
@@ -285,18 +279,20 @@ export default function Dashboard() {
     };
   }, [materias]);
 
-  const inicioHojeMetricas = new Date();
-  inicioHojeMetricas.setHours(0, 0, 0, 0);
-  const fimHojeMetricas = new Date();
-  fimHojeMetricas.setHours(23, 59, 59, 999);
-  const metricasHoje = calcularMetricasConsolidadas({
-    questoes,
-    sessoes,
-    revisoes,
-    simulados,
-    inicio: inicioHojeMetricas,
-    fim: fimHojeMetricas,
-  });
+  // O cronômetro atualiza o Dashboard continuamente. Evita recalcular
+  // todo o histórico de questões a cada segundo ou mudança visual.
+  const metricasHoje = useMemo(() => {
+    const inicioHojeMetricas = new Date(`${hoje}T00:00:00`);
+    const fimHojeMetricas = new Date(`${hoje}T23:59:59.999`);
+    return calcularMetricasConsolidadas({
+      questoes,
+      sessoes,
+      revisoes,
+      simulados,
+      inicio: inicioHojeMetricas,
+      fim: fimHojeMetricas,
+    });
+  }, [questoes, sessoes, revisoes, simulados, hoje]);
   const questoesHoje = metricasHoje.questoes;
   const minutosHoje = metricasHoje.minutos;
 
