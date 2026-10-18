@@ -37,6 +37,21 @@ type ContextoFallbackGemini = {
   }) => void;
 };
 
+/** Resposta vazia do Gemini é uma falha transitória de upstream (502), não um resultado válido. */
+export function exigirTextoRespostaGemini(
+  texto: string | null | undefined,
+  rotulo: string
+): string {
+  if (typeof texto !== "string" || !texto.trim()) {
+    throw Object.assign(
+      new Error(`A IA não retornou a leitura de ${rotulo}.`),
+      { status: 502 }
+    );
+  }
+
+  return texto;
+}
+
 const STATUS_TEMPORARIOS = new Set([500, 502, 503, 504]);
 const ATRASOS_PADRAO_MS = [2_000, 5_000, 10_000];
 
