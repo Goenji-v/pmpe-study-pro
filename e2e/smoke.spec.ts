@@ -25,6 +25,7 @@ const rotasProtegidas = [
   "/estatisticas",
   "/simulados",
   "/simulados-oficiais",
+  "/simulado-pdf",
   "/simulado-oficial/teste",
   "/resolver-simulado-ia",
   "/caderno-questoes",

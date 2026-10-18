@@ -49,11 +49,10 @@ jobs:
           if [ -n "$E2E_TEST_EMAIL" ] && [ -n "$E2E_TEST_PASSWORD" ]; then
             echo "disponivel=true" >> "$GITHUB_OUTPUT"
           else
-            echo "disponivel=false" >> "$GITHUB_OUTPUT"
-            echo "Conta E2E não configurada; fluxo autenticado será ignorado."
+            echo "::error::Configure E2E_TEST_EMAIL e E2E_TEST_PASSWORD com uma conta exclusiva de testes. Sem eles, a validação autenticada é incompleta."
+            exit 1
           fi
       - name: Fluxo autenticado crítico
-        if: steps.conta.outputs.disponivel == 'true'
         run: npm run e2e:auth
       - name: Preservar diagnóstico Playwright em falha
         if: failure()
@@ -98,8 +97,14 @@ jobs:
         run: npm ci
       - name: Instalar Chromium do Playwright
         run: npx playwright install --with-deps chromium
+      - name: Exigir conta de teste autenticada
+        shell: bash
+        run: |
+          if [ -z "$E2E_TEST_EMAIL" ] || [ -z "$E2E_TEST_PASSWORD" ]; then
+            echo "::error::Testes do Parceiro não podem ser ignorados: configure a conta E2E dedicada."
+            exit 1
+          fi
       - name: Validar permissões, rotas e responsividade
-        if: env.E2E_TEST_EMAIL != '' && env.E2E_TEST_PASSWORD != ''
         run: npx playwright test e2e/partner-permissions.spec.ts e2e/partner-area-audit.spec.ts
       - name: Preservar diagnóstico em falha
         if: failure()
