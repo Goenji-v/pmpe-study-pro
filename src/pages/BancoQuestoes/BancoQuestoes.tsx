@@ -1,3 +1,4 @@
+import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -107,14 +108,14 @@ export default function BancoQuestoes() {
     return [...globais, ...pessoais];
   }, [bancoQuestoes, preferenciasGlobais, questoesGlobais]);
 
-  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todas");
-  const [filtroOrigem, setFiltroOrigem] = useState<FiltroOrigem>("todas");
-  const [filtroMateria, setFiltroMateria] = useState("");
-  const [filtroAssunto, setFiltroAssunto] = useState("");
-  const [filtroSubassunto, setFiltroSubassunto] = useState("");
-  const [filtroDificuldade, setFiltroDificuldade] = useState("");
-  const [busca, setBusca] = useState("");
-  const [quantidadeTreino, setQuantidadeTreino] = useState(10);
+  const [filtroStatus, setFiltroStatus] = useEstadoNavegacao<FiltroStatus>("banco:filtroStatus", "todas");
+  const [filtroOrigem, setFiltroOrigem] = useEstadoNavegacao<FiltroOrigem>("banco:filtroOrigem", "todas");
+  const [filtroMateria, setFiltroMateria] = useEstadoNavegacao("banco:filtroMateria", "");
+  const [filtroAssunto, setFiltroAssunto] = useEstadoNavegacao("banco:filtroAssunto", "");
+  const [filtroSubassunto, setFiltroSubassunto] = useEstadoNavegacao("banco:filtroSubassunto", "");
+  const [filtroDificuldade, setFiltroDificuldade] = useEstadoNavegacao("banco:filtroDificuldade", "");
+  const [busca, setBusca] = useEstadoNavegacao("banco:busca", "");
+  const [quantidadeTreino, setQuantidadeTreino] = useEstadoNavegacao("banco:quantidadeTreino", 10);
 
   const [materiaId, setMateriaId] = useState("");
   const [moduloId, setModuloId] = useState("");

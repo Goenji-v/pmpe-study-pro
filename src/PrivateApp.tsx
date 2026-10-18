@@ -1,3 +1,4 @@
+import RetomarNavegacao from "./components/RetomarNavegacao/RetomarNavegacao";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   Navigate,
@@ -125,6 +126,7 @@ function ConteudoPrivado() {
         <RuntimeErrorGuard />
         <AppProvider>
           <PersonalizacaoBridge />
+          <RetomarNavegacao />
           {PARCERIAS_VISIVEIS && <MentoriaProgressoBridge />}
           {paginaDashboard && (
             <Suspense fallback={null}>

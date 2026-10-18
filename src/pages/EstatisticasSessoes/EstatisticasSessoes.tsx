@@ -1,3 +1,4 @@
+import { chaveDaMateria } from "../../utils/desempenhoMaterias";
 import {
   useMemo,
 } from "react";
@@ -78,6 +79,7 @@ export default function EstatisticasSessoes() {
       </div>
 
       <div className="estatisticas-sessoes-resumo">
+        <ResumoCard titulo="Horas de redação" valor={formatarMinutos(sessoes.filter(s => s.tipo === "redacao").reduce((total, s) => total + Math.max(0, Number(s.minutos) || 0), 0))} detalhe="Tempo total registrado em redação" />
         <ResumoCard
           titulo="Hoje"
           valor={formatarMinutos(
@@ -653,9 +655,7 @@ function calcularAssuntos(
         "Sem assunto";
 
       const chave =
-        normalizar(
-          `${materia}::${assunto}`
-        );
+        `${chaveDaMateria(materia)}::${normalizar(assunto)}`;
 
       const atual =
         mapa.get(

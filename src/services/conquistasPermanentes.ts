@@ -1,3 +1,4 @@
+import { calcularSequenciaAtividades } from "../utils/sequenciaAtividades";
 import type {
   ConfiguracoesApp,
   Materia,
@@ -49,6 +50,7 @@ type EntradaConquistas = {
   missoesConcluidas: string[];
   configuracoes: ConfiguracoesApp;
   recompensasRecebidas?: string[];
+  agora?: Date;
 };
 
 export const PREFIXO_RECOMPENSA_CONQUISTA = "conquista-marco:";
@@ -74,6 +76,7 @@ export function calcularConquistasPermanentes(
   const missoes = new Set(entrada.missoesConcluidas).size;
   const recebidas = new Set(entrada.recompensasRecebidas ?? []);
   const melhorSequencia = calcularMelhorSequencia(entrada);
+  const sequenciaAtual = calcularSequenciaAtividades(entrada).atual;
   const melhorSimulado = entrada.simulados.reduce(
     (melhor, simulado) => Math.max(melhor, resumirSimulado(simulado).aproveitamento),
     0
@@ -254,13 +257,13 @@ export function calcularConquistasPermanentes(
       id: "sequencia-30",
       icone: "💎",
       titulo: "Disciplina de Ferro",
-      descricao: "Registre atividade de estudo por 30 dias consecutivos.",
+      descricao: "Registre atividade de estudo por 30 dias consecutivos. O progresso zera após um dia completo sem estudar; a conquista já obtida permanece.",
       raridade: "lendaria",
       categoria: "constancia",
       moedas: 40,
-      valor: melhorSequencia,
+      valor: sequenciaAtual,
       meta: 30,
-      atual: `${melhorSequencia}/30 dias`,
+      atual: `${sequenciaAtual}/30 dias consecutivos`,
     }),
     criarMeta({
       id: "revisoes-10",

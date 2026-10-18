@@ -1,7 +1,7 @@
+import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useMemo,
-  useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -52,14 +52,14 @@ export default function CentralQuestoes() {
   const navigate = useNavigate();
 
   const {
-    questoes,
+    questoes, sessoes,
   } = useApp();
 
   const [
     abaAtiva,
     setAbaAtiva,
-  ] = useState<AbaQuestoes>(
-    "visao-geral"
+  ] = useEstadoNavegacao<AbaQuestoes>(
+    "questoes:aba", "visao-geral"
   );
 
   const resumo = useMemo(
@@ -245,6 +245,7 @@ export default function CentralQuestoes() {
       </nav>
 
       <div className="central-questoes-conteudo">
+        {abaAtiva === "visao-geral" && <CardResumo titulo="Horas de redação" valor={`${(sessoes.filter(s => s.tipo === "redacao").reduce((total, s) => total + Math.max(0, Number(s.minutos) || 0), 0) / 60).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}h`} detalhe="Tempo registrado em sessões de redação" icone="✍️" />}
         {abaAtiva ===
           "visao-geral" && (
           <VisaoGeral

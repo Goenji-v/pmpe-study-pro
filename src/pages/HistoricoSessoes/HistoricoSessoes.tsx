@@ -1,3 +1,4 @@
+import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -17,10 +18,8 @@ export default function HistoricoSessoes() {
   const { sessoes, setSessoes } = useApp();
   const { showToast } = useToast();
 
-  const [busca, setBusca] = useState("");
-  const [tipoFiltro, setTipoFiltro] = useState<
-    TipoSessao | ""
-  >("");
+  const [busca, setBusca] = useEstadoNavegacao("historico:busca", "");
+  const [tipoFiltro, setTipoFiltro] = useEstadoNavegacao<TipoSessao | "">("historico:tipo", "");
   const [periodo, setPeriodo] = useState<
     "todos" | "hoje" | "semana" | "mes"
   >(() => {

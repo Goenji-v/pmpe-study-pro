@@ -35,7 +35,7 @@ const GRUPOS_EQUIVALENTES: string[][] = [
     "raciocinio logico matematico",
     "raciocinio logico-matematico",
   ],
-  ["constitucional", "direito constitucional"],
+  ["constitucional", "direito constitucional", "constitucional federal", "direito constitucional federal", "constituicao federal"],
   [
     "legislacao extravagante",
     "leis extravagantes",
@@ -206,4 +206,9 @@ export function selecionarMateriasParaCards(
 
   // Mantém a ordem original (mais estudadas primeiro).
   return selecionadas.sort((a, b) => materias.indexOf(a) - materias.indexOf(b));
+}
+
+export function nomesEquivalentesMateria(nome: string): string[] {
+  const chave = chaveDaMateria(nome);
+  return GRUPOS_EQUIVALENTES.find(grupo => grupo[0] === chave) ?? [chave];
 }
