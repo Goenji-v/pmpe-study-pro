@@ -5,6 +5,7 @@ import {
   executarComFallbackGemini,
   executarComRetryGemini,
   obterStatusErro,
+  exigirTextoRespostaGemini,
 } from "./retryGemini.ts";
 
 function erroComStatus(status: number) {
@@ -198,4 +199,42 @@ test("404 de arquivo, autenticação e entrada inválida não provocam troca de 
     }, { rotulo: "gabarito", modelos: ["primario", "reserva"] }));
     assert.deepEqual(chamadas, ["primario"]);
   }
+});
+
+
+test("resposta vazia ou apenas espaços aciona retry e modelo reserva", async () => {
+  const chamadas: string[] = [];
+  const resultado = await executarComFallbackGemini(
+    async (modelo) => {
+      chamadas.push(modelo);
+      return exigirTextoRespostaGemini(
+        modelo === "primario" ? "  " : '{"questoes":[]}',
+        "questão 43"
+      );
+    },
+    {
+      rotulo: "questão 43",
+      modelos: ["primario", "reserva"],
+      tentativasPorModelo: [2, 1],
+      atrasosMs: [0],
+      esperar: async () => undefined,
+    }
+  );
+  assert.equal(resultado, '{"questoes":[]}');
+  assert.deepEqual(chamadas, ["primario", "primario", "reserva"]);
+});
+
+test("resposta vazia em todos os modelos não vira gabarito fictício", async () => {
+  await assert.rejects(
+    executarComFallbackGemini(
+      async () => exigirTextoRespostaGemini(null, "questão 43"),
+      {
+        rotulo: "questão 43",
+        modelos: ["primario", "reserva"],
+        tentativasPorModelo: [1, 1],
+        esperar: async () => undefined,
+      }
+    ),
+    /temporariamente indisponível/
+  );
 });
