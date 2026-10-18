@@ -7,6 +7,7 @@ import {
   tentarRecarregarChunkObsoletoUmaVez,
 } from "../../utils/erroChunkDinamico";
 import PerformanceMonitor from "../PerformanceMonitor/PerformanceMonitor";
+import { deveAdiarAtualizacaoAutomatica } from "../../utils/atualizacaoSegura";
 
 
 function criarErroComLocalizacao(evento: ErrorEvent) {
@@ -35,13 +36,17 @@ export default function RuntimeErrorGuard() {
 
       ultimoAvisoRef.current = agora;
       showToast(
-        "Uma falha foi detectada, mas seus dados locais foram preservados. Se algo não responder, recarregue a página.",
+        deveAdiarAtualizacaoAutomatica(window.location.pathname)
+          ? "Uma falha foi detectada. Se estiver em uma prova, faça backup das respostas antes de sair ou atualizar."
+          : "Uma falha foi detectada. Se algo não responder, tente recarregar a página.",
         "warning"
       );
     }
 
     function tentarRecuperarChunk(erro: unknown) {
-      return ehErroChunkDinamico(erro) && tentarRecarregarChunkObsoletoUmaVez();
+      return ehErroChunkDinamico(erro) &&
+        !deveAdiarAtualizacaoAutomatica(window.location.pathname) &&
+        tentarRecarregarChunkObsoletoUmaVez();
     }
 
     function aoErro(evento: ErrorEvent) {
