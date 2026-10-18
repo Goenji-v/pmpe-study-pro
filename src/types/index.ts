@@ -374,6 +374,8 @@ export type ConfiguracoesApp = {
   metaRevisoesDiaria: number;
   /** Quantidade de missões distribuídas em cada dia de segunda a sábado. */
   missoesPorDia?: number;
+  salvarMarcacoesPdf?: boolean;
+  materiasPorDiaSemana?: Partial<Record<"seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom", number>>;
   /** Atividades semanais vêm no domingo por padrão, mas podem ser reposicionadas pelo aluno. */
   diaRedacaoSemanal?: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
   diaSimuladoSemanal?: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";

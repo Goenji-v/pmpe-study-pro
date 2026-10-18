@@ -1,3 +1,4 @@
+import { abrirPdfInterno, ehLinkPdf } from "./leitorMaterial";
 import { armazenamentoLocalDaConta as localStorage, permiteMigracaoLegada } from "./armazenamentoConta";
 import {
   supabase,
@@ -553,6 +554,10 @@ export async function abrirMaterial(
       );
     }
 
+    if (ehLinkPdf(material.url)) {
+      abrirPdfInterno({id: material.id, nome: material.nome, url: material.url});
+      return;
+    }
     window.open(
       material.url,
       "_blank",
@@ -586,6 +591,11 @@ export async function abrirMaterial(
     throw new Error(
       `Não foi possível abrir o arquivo: ${error.message}`
     );
+  }
+
+  if (material.mimeType?.includes("pdf") || /\.pdf$/i.test(material.nomeArquivo ?? "")) {
+    abrirPdfInterno({id: material.id, nome: material.nome, url: data.signedUrl});
+    return;
   }
 
   const novaAba =

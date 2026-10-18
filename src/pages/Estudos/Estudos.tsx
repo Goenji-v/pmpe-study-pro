@@ -1,3 +1,5 @@
+import PerfilAssunto from "../../components/PerfilAssunto/PerfilAssunto";
+import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -56,6 +58,7 @@ export default function Estudos() {
   const buscaRef = useRef<HTMLInputElement>(null);
 
   const [busca, setBusca] = useState("");
+  const [perfilAssunto, setPerfilAssunto] = useState<{materia: Materia; modulo: Modulo; assunto: Assunto} | null>(null);
 
   useEffect(() => {
     const estado = location.state as {
@@ -688,7 +691,7 @@ export default function Estudos() {
 
                           <div className="conteudos-assunto-info">
                             <div className="conteudos-assunto-titulo-linha">
-                              <strong className={assunto.concluido ? "concluido" : ""}>{assunto.nome}</strong>
+                              <button type="button" className="conteudos-nome-perfil" onClick={() => setPerfilAssunto({materia,modulo,assunto})}>{assunto.nome} <small>Ver perfil ↗</small></button>
                               <StatusAssunto assunto={assunto} />
                               {assunto.complementarAoEdital && (
                                 <span className="conteudos-origem-badge">
@@ -921,6 +924,7 @@ export default function Estudos() {
         );
       })()}
 
+      {perfilAssunto && <PerfilAssunto {...perfilAssunto} fechar={() => setPerfilAssunto(null)} />}
       {assuntoEmEdicao && (
         <EditorAssuntoModal
           materia={assuntoEmEdicao.materia}
@@ -1153,7 +1157,7 @@ function EditorAssuntoModal({
         <div className="conteudos-materiais-lista">
           {materiais.map((material) => (
             <article key={material.id}>
-              <a href={material.url} target="_blank" rel="noreferrer">
+              <a href={material.url} target="_blank" rel="noreferrer" onClick={e => { if (material.tipo === "pdf" || ehLinkPdf(material.url)) { e.preventDefault(); abrirPdfInterno({id:material.id,nome:material.nome,url:material.url}); } }}>
                 {material.nome}
               </a>
               <button

@@ -1,4 +1,4 @@
-import type { Materia } from "../types";
+import type { Materia, ConfiguracoesApp } from "../types";
 import type {
   DiaPlano,
   MissaoPlano,
@@ -23,7 +23,8 @@ export function temConteudosPlanoRuntime() {
 }
 
 export function criarPlanoMateriasRuntime(
-  missoesPorDia = 1
+  missoesPorDia = 1,
+  porDia?: ConfiguracoesApp["materiasPorDiaSemana"]
 ): SemanaPlano[] {
   const quantidadePorDia = Math.max(
     1,
@@ -75,10 +76,10 @@ export function criarPlanoMateriasRuntime(
   while (indiceConteudo < sequencia.length) {
     const dias: DiaPlano[] = [];
 
-    for (let dia = 1; dia <= 6; dia += 1) {
+    for (let dia = 1; dia <= (porDia?.dom === undefined ? 6 : 7); dia += 1) {
       const bloco = sequencia.slice(
         indiceConteudo,
-        indiceConteudo + quantidadePorDia
+        indiceConteudo + Math.max(1, Math.min(4, porDia?.[(["seg","ter","qua","qui","sex","sab","dom"] as const)[dia - 1]] ?? quantidadePorDia))
       );
       indiceConteudo += bloco.length;
 
@@ -115,7 +116,8 @@ export function criarPlanoMateriasRuntime(
       }
     }
 
-    dias.push({
+    const domingoExistente = dias.find(d => d.numero === 7);
+    const atividadesDomingo: DiaPlano = {
       numero: 7,
       missoes: [
         {
@@ -133,7 +135,9 @@ export function criarPlanoMateriasRuntime(
           tipo: "simulado",
         },
       ],
-    });
+    };
+    if (domingoExistente) domingoExistente.missoes.push(...atividadesDomingo.missoes);
+    else dias.push(atividadesDomingo);
     semanas.push({
       numero: semana,
       nome: `Semana ${String(semana).padStart(2, "0")}`,

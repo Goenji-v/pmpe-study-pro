@@ -1,3 +1,4 @@
+import { gerarPlanoEdital, preservarIdsPlanoAnterior } from "../../utils/planoEdital";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -19,7 +20,7 @@ type ConfiguracoesFormulario = ConfiguracoesComEdital & {
 };
 
 export default function Configuracoes() {
-  const { configuracoes, setConfiguracoes } = useApp();
+  const { configuracoes, setConfiguracoes, materias } = useApp();
   const { showToast } = useToast();
   const configInicial = configuracoes as ConfiguracoesFormulario;
   const economia = obterEstadoEconomia(configuracoes);
@@ -112,6 +113,10 @@ export default function Configuracoes() {
       tema: temaBasico === "claro" ? "claro" : "escuro",
     };
 
+    if (dadosAtualizados.editalAtivo?.plano) {
+      const ativo = dadosAtualizados.editalAtivo;
+      dadosAtualizados.editalAtivo = { ...ativo, plano: preservarIdsPlanoAnterior(gerarPlanoEdital(ativo.analise, dadosAtualizados, materias), ativo.plano!) };
+    }
     setConfiguracoes(dadosAtualizados);
     showToast("Configurações salvas com sucesso.", "success");
   }
@@ -126,6 +131,8 @@ export default function Configuracoes() {
       metaRevisoesDiaria: 5,
       missoesPorDia: 1,
       materiasPorDia: 1,
+      materiasPorDiaSemana: undefined,
+      salvarMarcacoesPdf: false,
       diasEstudo: ["seg", "ter", "qua", "qui", "sex", "sab"],
       diaRedacaoSemanal: "dom",
       diaSimuladoSemanal: "dom",
@@ -150,9 +157,10 @@ export default function Configuracoes() {
         Defina seu perfil, disponibilidade e metas. O Edital Inteligente usa essas regras para montar o plano.
       </p>
 
+      <nav className="configuracoes-nav" aria-label="Seções das configurações">{[['identidade','Meu perfil'],['rotina','Rotina semanal'],['atividades','Redação e simulado'],['metas','Metas'],['aparencia','Aparência'],['leitura','Leitura de PDFs']].map(([id,nome]) => <a key={id} href={`#config-${id}`}>{nome}</a>)}</nav>
       <div className="configuracoes-grid">
         <div className="configuracoes-card">
-          <h2>Perfil</h2>
+          <h2 id="config-identidade">Perfil</h2>
 
           <div className="configuracoes-form-group">
             <label htmlFor="nomeUsuario">Nome do usuário</label>
@@ -193,7 +201,7 @@ export default function Configuracoes() {
         </div>
 
         <div className="configuracoes-card configuracoes-disponibilidade-card">
-          <h2>Disponibilidade semanal</h2>
+          <h2 id="config-rotina">Disponibilidade semanal</h2>
           <p className="configuracoes-ajuda">
             Marque somente os dias em que você realmente consegue estudar.
           </p>
@@ -231,13 +239,15 @@ export default function Configuracoes() {
               ))}
             </select>
             <small>
-              O mesmo valor também define as missões por dia no plano anterior.
+Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada dia. Salve e altere novamente quando precisar.
             </small>
           </div>
+          <div className="configuracoes-ritmo-semana">{DIAS_SEMANA.map(dia => <label key={dia.id}><span>{dia.nome}</span><select aria-label={`Matérias na ${dia.nome}`} value={formulario.materiasPorDiaSemana?.[dia.id] ?? formulario.materiasPorDia ?? 1} onChange={e => atualizarCampo('materiasPorDiaSemana', {...formulario.materiasPorDiaSemana,[dia.id]:Number(e.target.value)})}>{[1,2,3,4].map(n => <option key={n} value={n}>{n} {n===1?'matéria':'matérias'}</option>)}</select></label>)}</div>
+          <button type="button" onClick={() => atualizarCampo('materiasPorDiaSemana', undefined)}>Usar o padrão em todos os dias</button>
         </div>
 
         <div className="configuracoes-card configuracoes-agenda-semanal">
-          <h2>Redação e simulado semanal</h2>
+          <h2 id="config-atividades">Redação e simulado semanal</h2>
           <p className="configuracoes-ajuda">
             O padrão do Study Pro é Redação + Simulado no domingo. Se preferir, você pode mudar cada atividade para outro dia.
           </p>
@@ -278,7 +288,7 @@ export default function Configuracoes() {
         </div>
 
         <div className="configuracoes-card">
-          <h2>Metas diárias</h2>
+          <h2 id="config-metas">Metas diárias</h2>
 
           <div className="configuracoes-form-group">
             <label htmlFor="metaQuestoes">Questões por dia</label>
@@ -321,8 +331,9 @@ export default function Configuracoes() {
           </div>
         </div>
 
+        <section className="configuracoes-card"><h2 id="config-leitura">Leitura de PDFs</h2><label className="configuracoes-checkbox"><input type="checkbox" checked={formulario.salvarMarcacoesPdf === true} onChange={e => atualizarCampo('salvarMarcacoesPdf',e.target.checked)}/><span>Salvar minhas marcações nos PDFs dos materiais</span></label><p className="configuracoes-ajuda">Ativado: caneta e marca-texto ficam salvos neste aparelho para sua conta. Desativado: as marcações desta leitura são descartadas ao fechar. Os rascunhos de simulados mantêm seu funcionamento próprio.</p></section>
         <div className="configuracoes-card">
-          <h2>Aparência</h2>
+          <h2 id="config-aparencia">Aparência</h2>
           <div className="configuracoes-form-group">
             <label htmlFor="temaBasico">Tema básico gratuito</label>
             <select

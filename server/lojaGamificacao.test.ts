@@ -28,7 +28,7 @@ test("catalogo da loja mantém temas, molduras e cores de ícones", () => {
   assert.ok(CATALOGO_LOJA.length > 0);
   assert.equal(
     CATALOGO_LOJA.every(
-      (item) => item.tipo === "tema" || item.tipo === "moldura" || item.tipo === "icone"
+      (item) => item.tipo === "tema" || item.tipo === "moldura" || item.tipo === "icone" || item.tipo === "fundo-perfil"
     ),
     true
   );

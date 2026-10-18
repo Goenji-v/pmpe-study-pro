@@ -1,3 +1,4 @@
+import type { ConfiguracoesApp } from "../types";
 import {
   planoPMPE,
   type DiaPlano,
@@ -41,11 +42,11 @@ export function normalizarMissoesPorDia(valor: number | undefined): number {
  * Contas sem o plano PMPE padrão usam os conteúdos realmente cadastrados
  * (curso importado ou cadastro manual) como fonte do cronograma.
  */
-export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAtivo = true): SemanaPlano[] {
+export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAtivo = true, porDia?: ConfiguracoesApp["materiasPorDiaSemana"]): SemanaPlano[] {
   const missoesPorDia = normalizarMissoesPorDia(missoesPorDiaInformadas);
 
   if (!planoPadraoAtivo) {
-    return criarPlanoMateriasRuntime(missoesPorDia);
+    return criarPlanoMateriasRuntime(missoesPorDia, porDia);
   }
 
   const fila: EntradaFila[] = [];
@@ -72,8 +73,8 @@ export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAti
   while (indice < fila.length) {
     const dias: DiaPlano[] = [];
 
-    for (let numeroDia = 1; numeroDia <= 6; numeroDia += 1) {
-      const entradas = fila.slice(indice, indice + missoesPorDia);
+    for (let numeroDia = 1; numeroDia <= (porDia?.dom === undefined ? 6 : 7); numeroDia += 1) {
+      const entradas = fila.slice(indice, indice + normalizarMissoesPorDia(porDia?.[(["seg","ter","qua","qui","sex","sab","dom"] as const)[numeroDia - 1]] ?? missoesPorDia));
       if (entradas.length === 0) break;
       indice += entradas.length;
 
@@ -95,7 +96,10 @@ export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAti
       });
     }
 
-    dias.push(criarDomingoCalendario(numeroSemana));
+    const domingo = criarDomingoCalendario(numeroSemana);
+    const diaExistente = dias.find(d => d.numero === 7);
+    if (diaExistente) diaExistente.missoes.push(...domingo.missoes);
+    else dias.push(domingo);
     semanas.push({
       numero: numeroSemana,
       nome: `Semana ${String(numeroSemana).padStart(2, "0")}`,

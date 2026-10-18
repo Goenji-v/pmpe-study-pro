@@ -1,3 +1,4 @@
+import "../Perfil/FundosPerfil.css";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
@@ -166,7 +167,7 @@ export default function Ranking() {
           ) : painelSimulado.ranking.map((item) => (
             <div className={`ranking-linha ranking-linha-simulado ${item.userId === usuario?.id ? "ranking-eu" : ""} ${item.top5 ? "ranking-top5" : ""}`} key={item.userId}>
               <strong>{medalha(item.posicao)}</strong>
-              <span className="ranking-usuario"><b>{item.nome}{item.userId === usuario?.id ? " (você)" : ""}</b><small>{item.parceiro} · {item.turma}</small></span>
+              <span className="ranking-usuario"><button type="button" onClick={() => navigate(item.userId === usuario?.id ? "/perfil" : `/perfil/${encodeURIComponent(item.userId)}`)}>{item.nome}{item.userId === usuario?.id ? " (você)" : ""}</button><small>{item.parceiro} · {item.turma}</small></span>
               <b>{item.certas}</b>
               <span>{item.erradas}</span>
               <span>{item.emBranco}</span>
@@ -187,7 +188,7 @@ export default function Ranking() {
           ) : painel.ranking.map((item) => (
             <div className={`ranking-linha ${item.userId === usuario?.id ? "ranking-eu" : ""} ${item.top5 ? "ranking-top5" : ""}`} key={item.userId}>
               <strong>{medalha(item.posicao)}</strong>
-              <span className="ranking-usuario"><b>{item.nome}{item.userId === usuario?.id ? " (você)" : ""}</b><small>{item.parceiro} · {item.turma}</small></span>
+              <span className="ranking-usuario"><button type="button" onClick={() => navigate(item.userId === usuario?.id ? "/perfil" : `/perfil/${encodeURIComponent(item.userId)}`)}>{item.nome}{item.userId === usuario?.id ? " (você)" : ""}</button><small>{item.parceiro} · {item.turma}</small></span>
               <b>{item.xp}</b>
               <span>{item.horas}h</span>
               <span>{item.questoes}</span>

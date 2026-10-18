@@ -1,3 +1,5 @@
+import { classeFundoPerfil } from "../../services/fundosPerfil";
+import "../Perfil/FundosPerfil.css";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -34,6 +36,7 @@ const FILTROS: Array<{ id: Filtro; nome: string }> = [
   { id: "todos", nome: "Todos" },
   { id: "moldura", nome: "Molduras" },
   { id: "tema", nome: "Temas" },
+  { id: "fundo-perfil", nome: "Fundos de perfil" },
   { id: "icone", nome: "Cores dos ícones" },
 ];
 
@@ -121,6 +124,7 @@ export default function Loja() {
           <span>Título</span>
           <strong>🏆 Desbloqueado em Conquistas</strong>
         </button>
+        <ResumoEquipado rotulo="Fundo do perfil" item={encontrarItemLoja(economia.fundoPerfilEquipado)} fallback="Fundo padrão" />
         <ResumoEquipado rotulo="Moldura" item={moldura} fallback="Moldura padrão" />
         <ResumoEquipado rotulo="Tema" item={tema} fallback={`Grátis: ${nomeTemaBasico(temaBasico)}`} />
         <ResumoEquipado rotulo="Cores dos ícones" item={corIcones} fallback="⚪ Prata Tática" />
@@ -183,7 +187,7 @@ export default function Loja() {
                 </div>
 
                 <div className="loja-card-rodape">
-                  {aba === "loja" && !possui ? (
+                  {item.conquistaId && !possui ? <button type="button" className="loja-botao-secundario" onClick={() => navigate("/conquistas")}>Desbloquear em Conquistas</button> : aba === "loja" && !possui ? (
                     <>
                       <div className="loja-preco">
                         <span>🪙</span>
@@ -245,6 +249,7 @@ function ResumoEquipado({ rotulo, item, fallback }: { rotulo: string; item?: Ite
 }
 
 function PreviewItem({ item }: { item: ItemLoja }) {
+  if (item.tipo === "fundo-perfil") return <div className={`loja-preview-fundo ${classeFundoPerfil(item.id)}`}><i /><span>Seu perfil</span></div>;
   if (item.tipo === "moldura") {
     return <div className={`loja-preview loja-preview-moldura moldura-${item.valorVisual}`}><span>Nível 4</span><strong>808 XP</strong></div>;
   }
@@ -270,6 +275,7 @@ function nomeTemaBasico(tema: TemaBasico) {
 }
 
 function nomeTipo(tipo: TipoItemLoja) {
+  if (tipo === "fundo-perfil") return "FUNDO DO PERFIL";
   if (tipo === "moldura") return "MOLDURA";
   if (tipo === "icone") return "CORES DOS ÍCONES";
   return "TEMA";
