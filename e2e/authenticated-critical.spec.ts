@@ -14,6 +14,11 @@ const rotasCriticas = [
   "/resolver-simulado-ia",
   "/revisoes",
   "/simulados",
+  "/simulados-oficiais",
+  "/simulado-pdf",
+  "/inteligencia",
+  "/backup",
+  "/configuracoes",
   "/desempenho",
   "/",
 ];
