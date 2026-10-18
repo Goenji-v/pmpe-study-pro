@@ -995,3 +995,37 @@
   font-size: 11px;
   line-height: 1.45;
 }
+
+/* Restauracao manual: importacao nunca substitui uma prova local existente. */
+.simulado-pdf-importar-backup {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #365b7d;
+  border-radius: 12px;
+  background: #142b42;
+  color: #ecf5ff;
+}
+.simulado-pdf-importar-backup p {
+  margin: 0;
+  color: #adc7e2;
+  line-height: 1.5;
+}
+.simulado-pdf-importar-backup label {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #5e94c2;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.simulado-pdf-importar-backup input[type="file"] {
+  max-width: 100%;
+}
+.simulado-pdf-importar-backup p[role="alert"] {
+  color: #ffd7a3;
+}
