@@ -1157,7 +1157,7 @@ function EditorAssuntoModal({
         <div className="conteudos-materiais-lista">
           {materiais.map((material) => (
             <article key={material.id}>
-              <a href={material.url} target="_blank" rel="noreferrer" onClick={e => { if (material.tipo === "pdf" || ehLinkPdf(material.url)) { e.preventDefault(); abrirPdfInterno({id:material.id,nome:material.nome,url:material.url}); } }}>
+              <a href={material.url.startsWith("https://") || material.url.startsWith("http://") ? material.url : undefined} target="_blank" rel="noopener noreferrer" onClick={e => { if (!material.url.startsWith("https://") && !material.url.startsWith("http://")) { e.preventDefault(); return; } if (material.tipo === "pdf" || ehLinkPdf(material.url)) { e.preventDefault(); abrirPdfInterno({id:material.id,nome:material.nome,url:material.url}); } }}>
                 {material.nome}
               </a>
               <button
