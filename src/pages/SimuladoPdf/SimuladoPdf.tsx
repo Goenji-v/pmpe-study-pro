@@ -901,6 +901,9 @@ export default function SimuladoPdf() {
   async function excluirProcessoAnterior() {
     const processo = processoRecuperavel;
     if (!processo) return;
+    if (!window.confirm(
+      "Excluir definitivamente este simulado, suas respostas e anotações? Faça o backup antes. Esta ação não pode ser desfeita."
+    )) return;
 
     setRestaurando(true);
 
