@@ -1,3 +1,4 @@
+import { FUNDOS_PERFIL } from "./fundosPerfil";
 import type {
   ConfiguracoesApp,
   Materia,
@@ -33,6 +34,7 @@ export type EstadoEconomia = {
   molduraEquipada?: string;
   temaEquipado?: string;
   iconeEquipado?: string;
+  fundoPerfilEquipado?: string;
   atualizadoEm?: string;
 };
 
@@ -111,11 +113,12 @@ export function obterEstadoEconomia(
       0,
       Math.floor(Number(economia?.sequenciaLoginAtual) || 0)
     ),
-    inventario: [...new Set(["icones-prata-tatica", ...inventarioNormalizado])],
+    inventario: [...new Set(["icones-prata-tatica", ...inventarioNormalizado, ...FUNDOS_PERFIL.filter(f => f.conquistaId && economia?.recompensasRecebidas?.includes(`conquista-marco:${f.conquistaId}`)).map(f => f.id)])],
     compras: comprasValidas,
     tituloEquipado: economia?.tituloEquipado,
     molduraEquipada: economia?.molduraEquipada,
     temaEquipado: economia?.temaEquipado,
+    fundoPerfilEquipado: economia?.fundoPerfilEquipado,
     iconeEquipado: iconeSalvo ?? "icones-prata-tatica",
     atualizadoEm: economia?.atualizadoEm,
   };

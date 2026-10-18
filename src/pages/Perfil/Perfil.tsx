@@ -1,3 +1,5 @@
+import { classeFundoPerfil } from "../../services/fundosPerfil";
+import "./FundosPerfil.css";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
@@ -180,7 +182,7 @@ export default function Perfil() {
 
   return (
     <section className="perfil-page">
-      <header className="perfil-hero">
+      <header className={`perfil-hero ${classeFundoPerfil(economia.fundoPerfilEquipado)}`}>
         <div className="perfil-avatar" aria-hidden="true">
           {iniciais}
         </div>
@@ -197,6 +199,8 @@ export default function Perfil() {
           </div>
         </div>
         <div className="perfil-acoes">
+          <Link to="/loja">Personalizar meu perfil</Link>
+          <Link to="/configuracoes">Editar perfil</Link>
           <Link to="/conquistas">Ver conquistas</Link>
           {tituloEquipado && (
             <button type="button" onClick={usarTituloPadrao}>

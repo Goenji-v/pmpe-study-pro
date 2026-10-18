@@ -525,3 +525,5 @@
     width: fit-content;
   }
 }
+
+.conteudos-nome-perfil{display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer}.conteudos-nome-perfil small{font-size:11px;color:#7dd3fc;white-space:nowrap}

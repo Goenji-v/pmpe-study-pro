@@ -197,7 +197,8 @@ export function gerarPlanoEdital(
   const minutosPorDia = Math.max(20, Math.round(configuracoes.metaMinutosDiaria || 60));
   const revisoesPorDia = Math.max(0, Math.round(configuracoes.metaRevisoesDiaria || 0));
   const metaQuestoesDia = Math.max(0, Math.round(configuracoes.metaQuestoesDiaria || 0));
-  const totalSlotsSemana = diasEstudo.length * materiasPorDia;
+  const quantidadeNoDia = (dia: DiaSemanaId) => Math.max(1, Math.min(4, Math.round(configuracoes.materiasPorDiaSemana?.[dia] ?? materiasPorDia)));
+  const totalSlotsSemana = diasEstudo.reduce((total, dia) => total + quantidadeNoDia(dia), 0);
 
   const filas = criarFilas(analise);
   const sequencia = montarSequenciaEquilibrada(filas, totalSlotsSemana);
@@ -219,7 +220,7 @@ export function gerarPlanoEdital(
       const ehDiaEstudo = diasEstudo.includes(diaSemana);
       const restantes = Math.max(0, sequencia.length - ponteiro);
       const quantidadeMissoes = ehDiaEstudo
-        ? Math.min(materiasPorDia, restantes)
+        ? Math.min(quantidadeNoDia(diaSemana), restantes)
         : 0;
       const duracaoMissao = quantidadeMissoes > 0
         ? Math.max(10, Math.floor(minutosConteudo / quantidadeMissoes))

@@ -1,6 +1,7 @@
+import { FUNDOS_PERFIL } from "./fundosPerfil";
 import type { EstadoEconomia } from "./economiaGamificacao";
 
-export type TipoItemLoja = "tema" | "moldura" | "icone";
+export type TipoItemLoja = "tema" | "moldura" | "icone" | "fundo-perfil";
 export type RaridadeItemLoja = "comum" | "raro" | "epico" | "lendario";
 
 export type ItemLoja = {
@@ -13,9 +14,11 @@ export type ItemLoja = {
   icone: string;
   valorVisual: string;
   ativo?: boolean;
+  conquistaId?: string;
 };
 
 export const CATALOGO_LOJA: ItemLoja[] = [
+  ...FUNDOS_PERFIL.map(fundo => ({...fundo, tipo: "fundo-perfil" as const})),
   {
     id: "icones-prata-tatica",
     tipo: "icone",
@@ -201,6 +204,7 @@ export function itensDoInventario(
 }
 
 export function itemEstaEquipado(estado: EstadoEconomia, item: ItemLoja) {
+  if (item.tipo === "fundo-perfil") return estado.fundoPerfilEquipado === item.id;
   if (item.tipo === "moldura") return estado.molduraEquipada === item.id;
   if (item.tipo === "icone") return estado.iconeEquipado === item.id;
   return estado.temaEquipado === item.id;
@@ -216,6 +220,7 @@ export function comprarItemLoja(
   if (!item) return { estado, erro: "Item não encontrado." };
   if (item.ativo === false) return { estado, item, erro: "Este item não está disponível para compra." };
 
+  if (item.conquistaId) return { estado, item, erro: "Este fundo é desbloqueado por conquista." };
   const inventario = new Set(estado.inventario ?? []);
   if (inventario.has(item.id)) {
     return { estado, item, erro: "Este item já está no seu inventário." };
@@ -270,6 +275,7 @@ export function equiparItemLoja(
     atualizadoEm: agora.toISOString(),
   };
 
+  if (item.tipo === "fundo-perfil") return { item, estado: { ...base, fundoPerfilEquipado: item.id } };
   if (item.tipo === "moldura") {
     return { item, estado: { ...base, molduraEquipada: item.id } };
   }
@@ -287,6 +293,7 @@ export function desequiparTipoLoja(
   agora = new Date()
 ): EstadoEconomia {
   const proximo = { ...estado, atualizadoEm: agora.toISOString() };
+  if (tipo === "fundo-perfil") delete proximo.fundoPerfilEquipado;
   if (tipo === "moldura") delete proximo.molduraEquipada;
   if (tipo === "tema") delete proximo.temaEquipado;
   if (tipo === "icone") proximo.iconeEquipado = "icones-prata-tatica";

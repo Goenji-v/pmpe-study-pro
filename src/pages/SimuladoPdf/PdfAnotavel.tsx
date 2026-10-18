@@ -158,7 +158,7 @@ function PdfAnotavel({
       onAnotacoesChange(structuredClone(anotacoes));
     }, 450);
 
-    return () => window.clearTimeout(timeout);
+    return () => { window.clearTimeout(timeout); onAnotacoesChange(structuredClone(anotacoes)); };
   }, [anotacoes, onAnotacoesChange]);
 
   function salvarSnapshot() {
@@ -361,6 +361,8 @@ function PaginaPdfAnotavel({
   const canvasAnotacaoRef = useRef<HTMLCanvasElement | null>(null);
   const desenhoRef = useRef<TracoPdf | null>(null);
   const tamanhoRef = useRef({ width: 1, height: 1 });
+  const tracosRef = useRef(tracos);
+  useEffect(() => { tracosRef.current = tracos; }, [tracos]);
 
   useEffect(() => {
     let cancelado = false;
@@ -407,6 +409,7 @@ function PaginaPdfAnotavel({
         viewport,
         transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
       }).promise;
+      if (!cancelado) redesenharAnotacoes(canvasAnotacaoRef.current, tracosRef.current, tamanhoRef.current);
     }
 
     void renderizar();

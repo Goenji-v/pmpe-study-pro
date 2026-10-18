@@ -30,8 +30,8 @@ export default function MissaoDoDia({
   } = useApp();
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo]
+    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
   );
 
   const semanaAtual = useMemo(
