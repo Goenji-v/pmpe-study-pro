@@ -765,3 +765,54 @@
     gap: 8px;
   }
 }
+
+/* Recuperação explícita do crédito de uma prova PDF já corrigida. */
+.simulado-pdf-credito-confirmado {
+  display: inline-flex;
+  align-items: center;
+  color: #a0ecc1;
+  font-weight: 650;
+  font-size: 0.88rem;
+}
+.simulado-pdf-creditar-formulario {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  border-radius: 12px;
+  background: rgba(19, 52, 85, 0.38);
+  color: #eaf3ff;
+}
+.simulado-pdf-creditar-formulario p {
+  margin: 0;
+  line-height: 1.5;
+}
+.simulado-pdf-creditar-formulario label {
+  display: grid;
+  gap: 6px;
+  max-width: 300px;
+}
+.simulado-pdf-creditar-formulario input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #7393b4;
+  border-radius: 9px;
+  color: #f3f7ff;
+  background: #102039;
+}
+.simulado-pdf-creditar-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.simulado-pdf-creditar-acoes button {
+  min-height: 40px;
+  border: 1px solid #76a8e3;
+  border-radius: 9px;
+  padding: 8px 14px;
+  color: #f4f8ff;
+  background: #164676;
+  cursor: pointer;
+}
