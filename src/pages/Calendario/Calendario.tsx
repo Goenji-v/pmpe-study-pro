@@ -9,6 +9,7 @@ import {
   useApp,
 } from "../../context/AppContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 
 type EventoCalendario = {
   id: string;
@@ -69,6 +70,7 @@ export default function Calendario() {
     revisoes,
     simulados,
   } = useApp();
+  const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
 
   const hoje =
     inicioDoDia(
@@ -103,12 +105,14 @@ export default function Calendario() {
           sessoes,
           revisoes,
           simulados,
+          nomesSimulados,
         }),
       [
         questoes,
         sessoes,
         revisoes,
         simulados,
+        nomesSimulados,
       ]
     );
 
@@ -644,11 +648,13 @@ function montarEventos({
   sessoes,
   revisoes,
   simulados,
+  nomesSimulados,
 }: {
   questoes: any[];
   sessoes: any[];
   revisoes: any[];
   simulados: any[];
+  nomesSimulados: Record<string, string>;
 }): EventoCalendario[] {
   const eventos:
     EventoCalendario[] = [];
@@ -758,7 +764,10 @@ function montarEventos({
           revisao.materia ||
           "Revisão",
         detalhe:
-          `${revisao.assunto || "Sem assunto"} • Etapa ${revisao.etapa}`,
+          `${revisao.assunto || "Sem assunto"} • Etapa ${revisao.etapa}` +
+          (rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)
+            ? ` • ${rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}`
+            : ""),
         minutos: 0,
         data,
         status,
