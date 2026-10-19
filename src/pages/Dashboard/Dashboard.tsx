@@ -12,6 +12,7 @@ import "./Dashboard.css";
 import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 import {
   calcularDesempenhoPorMateria,
   destacarMelhorEPior,
@@ -65,6 +66,7 @@ export default function Dashboard() {
     configuracoes,
     missoesConcluidas,
   } = useApp();
+  const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
 
   const [
     atualizacaoPlano,
@@ -641,6 +643,9 @@ function iniciarProximaAulaPortugues() {
               <button type="button" key={revisao.id} onClick={() => navigate("/revisoes")}>
                 <span className="dashboard-pro-review-calendar">▣</span>
                 <b>{revisao.assunto}</b>
+                {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
+                  <small>{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
+                )}
                 <small className={`dashboard-pro-review-status ${status.classe}`}>{status.texto}</small>
                 <em>›</em>
               </button>
