@@ -39,7 +39,7 @@ test("revisão criada mostra o nome exato do simulado, sem mudar assunto e maté
   const revisao = primeira.revisoes[0];
   assert.equal(revisao.origemSimulado?.tentativaId, "prova-4");
   assert.equal(revisao.origemSimulado?.nome, "Simulado 4");
-  assert.equal(revisao.materia, "Português");
+  assert.equal(revisao.materia, "Língua Portuguesa");
   assert.equal(revisao.assunto, "Verbos");
   assert.equal(rotuloOrigemRevisaoSimulado(revisao), "Revisão de erros · Simulado 4");
 
@@ -72,7 +72,7 @@ test("revisão comum preexistente não é rotulada incorretamente após reforço
     id: "antiga",
     materiaId: "m-portugues",
     assuntoId: "a-verbos",
-    materia: "Português",
+    materia: "Língua Portuguesa",
     assunto: "Verbos",
     etapa: 1,
     dataCriacao: "2026-10-01T12:00:00.000Z",
