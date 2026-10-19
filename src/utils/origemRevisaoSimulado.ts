@@ -4,6 +4,7 @@ import { listarAnalisesSimulados } from "../services/analisesSimuladosService";
 import type { Revisao } from "../types";
 
 type Catalogo = Record<string, string>;
+const NOMES_VAZIOS: Catalogo = {};
 
 /** Rótulo de origem apenas para revisões realmente ligadas a um simulado.
  * A falta de nome nos registros antigos não autoriza inventar um título.
@@ -57,5 +58,5 @@ export function useNomesSimuladosDeRevisoes(revisoes: Revisao[]): Catalogo {
     };
   }, [idsSemNome, usuarioId]);
 
-  return resultado.usuarioId === usuarioId ? resultado.nomes : {};
+  return resultado.usuarioId === usuarioId ? resultado.nomes : NOMES_VAZIOS;
 }
