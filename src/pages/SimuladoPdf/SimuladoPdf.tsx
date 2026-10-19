@@ -623,6 +623,9 @@ export default function SimuladoPdf() {
       respostas: respostasResultado,
       marcacoes: {},
     });
+    // O relatório remoto deve conservar a duração original caso a sincronização
+    // do histórico de atividades falhe ou a aba seja fechada depois da prova.
+    diagnostico.duracaoMinutos = Math.max(1, Math.ceil(segundos / 60));
 
     // Garante um relatório completo antes de depender da montagem do
     // componente visual. O histórico da tela de Simulados já consegue ler
@@ -669,6 +672,7 @@ export default function SimuladoPdf() {
     questoesResultado,
     rascunho,
     respostasResultado,
+    segundos,
   ]);
 
   useEffect(() => {
