@@ -141,8 +141,11 @@ export function adicionarErrosSimuladoARevisao(params: {
         dataDisponivel.getTime() < dataExistente;
       const atualizada: Revisao = {
         ...existente,
-        // Nunca reescrever IDs/assuntos de revisão anterior que foi
-        // vinculada pelo nome: ela pode representar conteúdo mais amplo.
+        // Nunca reescrever a origem de revisão anterior: um mesmo assunto
+        // pode ter sido reforçado por mais de uma prova.
+        origemSimulado: existente.origemSimulado?.tentativaId === params.analise.tentativaId
+          ? { ...existente.origemSimulado, nome: existente.origemSimulado.nome || params.analise.nome }
+          : existente.origemSimulado,
         certas: certasSeguras,
         erradas: errosCognitivos,
         dataPrevista: deveAntecipar
@@ -179,6 +182,7 @@ export function adicionarErrosSimuladoARevisao(params: {
       erradas: errosCognitivos,
       origemSimulado: {
         tentativaId: params.analise.tentativaId,
+        nome: params.analise.nome,
         materiaDiagnostico: assunto.materia,
         assuntoDiagnostico: assunto.assunto,
         vinculo: referencia ? "conteudo" : "sem_conteudo",

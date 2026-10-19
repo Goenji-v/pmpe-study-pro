@@ -407,6 +407,8 @@ export type Revisao = {
   /** Origem rastreável da revisão extraordinária criada após simulado. */
   origemSimulado?: {
     tentativaId: string;
+    /** Nome original da prova para identificar a revisão na agenda. */
+    nome?: string;
     materiaDiagnostico: string;
     assuntoDiagnostico: string;
     /** Sem conteúdo = permite questões IA, sem fabricar vínculo com videoaula. */
