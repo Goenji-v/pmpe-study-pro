@@ -184,6 +184,8 @@ export type AnaliseSimuladoStudyPro = {
   tentativaId: string;
   nome: string;
   data: string;
+  /** Tempo efetivo da prova em minutos; permite recompor as metas se o histórico local falhar. */
+  duracaoMinutos?: number;
   correcao: CorrecaoQuestaoSimulado[];
   resumo: {
     totalQuestoes: number;
