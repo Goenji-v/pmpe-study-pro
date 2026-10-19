@@ -6,18 +6,7 @@ import type { Revisao } from "../types";
 type Catalogo = Record<string, string>;
 const NOMES_VAZIOS: Catalogo = {};
 
-/** Rótulo de origem apenas para revisões realmente ligadas a um simulado.
- * A falta de nome nos registros antigos não autoriza inventar um título.
- */
-export function rotuloOrigemRevisaoSimulado(
-  revisao: Revisao,
-  nomesPorTentativa: Catalogo = {}
-): string | null {
-  const origem = revisao.origemSimulado;
-  if (!origem?.tentativaId) return null;
-  const nome = (origem.nome || nomesPorTentativa[origem.tentativaId] || "").trim();
-  return nome ? `Revisão de erros · ${nome}` : "Revisão de erros · Simulado";
-}
+export { rotuloOrigemRevisaoSimulado } from "./rotuloOrigemRevisaoSimulado";
 
 /** Resolve em leitura o nome de revisões históricas, sem reescrever a agenda.
  * As revisões novas já carregam o nome e não precisam dessa consulta.
