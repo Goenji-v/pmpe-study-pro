@@ -22,6 +22,7 @@ import type { Materia, Revisao } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
+import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 
 type RevisaoIA = {
   id: string;
@@ -46,6 +47,7 @@ export default function Revisoes() {
   const { usuario } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
 
   // A função é local, mas todas as capturas relevantes são enumeradas para
   // renovar os listeners quando o estado usado na importação mudar.
@@ -400,6 +402,7 @@ export default function Revisoes() {
     excluirRevisao,
     revisoesBase: revisoesComModulo,
     limiteDiario: configuracoes.metaRevisoesDiaria,
+    nomesSimulados,
   };
 
   return (
@@ -452,6 +455,9 @@ export default function Revisoes() {
                   <strong>{revisao.materia}</strong>
                   {revisao.modulo && <small className="revisao-caminho">{revisao.modulo}</small>}
                   <p>{revisao.assunto}</p>
+                  {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
+                    <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
+                  )}
                   <span>
                     Etapa {revisao.etapa} concluída em {formatarDataRevisao(revisao.dataConclusao || revisao.dataPrevista)}
                   </span>
@@ -495,6 +501,7 @@ type GrupoRevisoesProps = {
   excluirRevisao: (revisao: Revisao) => void;
   revisoesBase: Revisao[];
   limiteDiario: number;
+  nomesSimulados: Record<string, string>;
 };
 
 function GrupoRevisoes({
@@ -508,6 +515,7 @@ function GrupoRevisoes({
   excluirRevisao,
   revisoesBase,
   limiteDiario,
+  nomesSimulados,
 }: GrupoRevisoesProps) {
   const [avaliandoId, setAvaliandoId] = useState<string | null>(null);
   const [opcoesId, setOpcoesId] = useState<string | null>(null);
@@ -575,6 +583,9 @@ function GrupoRevisoes({
                 <strong>{revisao.materia}</strong>
                 {revisao.modulo && <small className="revisao-caminho">{revisao.modulo}</small>}
                 <p>{revisao.assunto}</p>
+                {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
+                  <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
+                )}
                 <span>Etapa {revisao.etapa} • {formatarDataRevisao(revisao.dataPrevista)}</span>
                 <small>
                   {diferenca < 0
