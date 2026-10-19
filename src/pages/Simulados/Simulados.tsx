@@ -15,6 +15,8 @@ import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 
 import type { Simulado } from "../../types/index";
+import { carregarProcessoSimuladoPdf } from "../../services/simuladoPdfPersistencia";
+import { criarCreditoSimuladoPdf, jaExisteCreditoSimuladoPdf } from "../../utils/creditoSimuladoPdf";
 import {
   calcularAproveitamentoSimulado,
   resumirSimulado,
@@ -84,6 +86,8 @@ export default function Simulados() {
 
   const [analisesPdf, setAnalisesPdf] =
     useState<AnaliseSimuladoSalva[]>([]);
+  const [tentativaParaCredito, setTentativaParaCredito] = useState<string | null>(null);
+  const [minutosCreditoTexto, setMinutosCreditoTexto] = useState("");
   const [
     carregandoAnalisesPdf,
     setCarregandoAnalisesPdf,
@@ -230,6 +234,56 @@ export default function Simulados() {
     simulado: Simulado
   ) {
     return calcularAproveitamentoSimulado(simulado);
+  }
+
+  function abrirCreditoPdf(registro: AnaliseSimuladoSalva) {
+    if (jaExisteCreditoSimuladoPdf(simulados, registro)) {
+      showToast("Este simulado já está contabilizado nas suas metas.", "info");
+      return;
+    }
+    const processoLocal = carregarProcessoSimuladoPdf();
+    const minutosDoProcesso = processoLocal?.id === registro.tentativaId
+      ? Math.max(1, Math.ceil(processoLocal.segundos / 60))
+      : undefined;
+    const minutosConhecidos = registro.analise.duracaoMinutos ?? minutosDoProcesso;
+    setMinutosCreditoTexto(minutosConhecidos ? String(minutosConhecidos) : "");
+    setTentativaParaCredito(registro.tentativaId);
+  }
+
+  function contabilizarCreditoPdf(registro: AnaliseSimuladoSalva) {
+    if (jaExisteCreditoSimuladoPdf(simulados, registro)) {
+      setTentativaParaCredito(null);
+      showToast("A tentativa já estava contabilizada. Nenhum ponto duplicado.", "info");
+      return;
+    }
+
+    const minutosInformados = Number(minutosCreditoTexto);
+    let lancamento: Simulado;
+    try {
+      lancamento = criarCreditoSimuladoPdf(registro, minutosInformados);
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Tempo da prova inválido.", "warning");
+      return;
+    }
+
+    const { totalAcertos, totalErros, totalNaoRespondidas } = registro.analise.resumo;
+    const confirmar = window.confirm(
+      `Lançar a prova "${registro.nome}" nas metas, na data ORIGINAL da tentativa?\\n` +
+      `${totalAcertos} acertos, ${totalErros} erros, ${totalNaoRespondidas} em branco, ${lancamento.minutos} minutos.\\n` +
+      "A tentativa não será duplicada nem modificada no relatório."
+    );
+    if (!confirmar) return;
+
+    setSimulados((anteriores) =>
+      jaExisteCreditoSimuladoPdf(anteriores, registro)
+        ? anteriores
+        : [lancamento, ...anteriores]
+    );
+    setTentativaParaCredito(null);
+    showToast(
+      "Atividade incluída nas metas e na sequência. Aguarde a sincronização da conta.",
+      "success"
+    );
   }
 
   function salvarSimulado() {
@@ -838,6 +892,8 @@ export default function Simulados() {
                 registro.analise.correcao
               );
               const temMeuGabarito = meuGabarito.length > 0;
+              const jaContabilizado = jaExisteCreditoSimuladoPdf(simulados, registro);
+              const recuperandoCredito = tentativaParaCredito === registro.tentativaId;
 
               return (
                 <article
@@ -894,6 +950,19 @@ export default function Simulados() {
                         : "Ver diagnóstico"}
                     </button>
 
+                    {jaContabilizado ? (
+                      <span className="simulado-pdf-credito-confirmado">
+                        ✓ Contabilizado nas metas
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="simulado-pdf-ver-diagnostico"
+                        onClick={() => abrirCreditoPdf(registro)}
+                      >
+                        Contabilizar nas metas e sequência
+                      </button>
+                    )}
                     {temMeuGabarito && (
                       <button
                         type="button"
@@ -913,6 +982,37 @@ export default function Simulados() {
                       </button>
                     )}
                   </div>
+
+                  {recuperandoCredito && !jaContabilizado && (
+                    <div className="simulado-pdf-creditar-formulario">
+                      <p>
+                        O resultado já está salvo. Falta o registro da atividade nas metas.
+                        Confirme somente o <strong>tempo efetivo</strong> da prova.
+                        Não usamos o tempo de processamento da IA.
+                      </p>
+                      <label>
+                        Tempo estudado (minutos)
+                        <input
+                          type="number"
+                          min={1}
+                          max={1440}
+                          step={1}
+                          required
+                          value={minutosCreditoTexto}
+                          onChange={(evento) => setMinutosCreditoTexto(evento.target.value)}
+                          placeholder="Ex.: 121 para 2h00min40s"
+                        />
+                      </label>
+                      <div className="simulado-pdf-creditar-acoes">
+                        <button type="button" onClick={() => contabilizarCreditoPdf(registro)}>
+                          Confirmar lançamento da prova original
+                        </button>
+                        <button type="button" onClick={() => setTentativaParaCredito(null)}>
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {gabaritoAberto && (
                     <section
