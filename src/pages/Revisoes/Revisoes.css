@@ -517,3 +517,20 @@
     font-size: 10px;
   }
 }
+
+/* Origem auditável do diagnóstico, sem substituir o nome canônico do assunto. */
+.revisao-conteudo .revisao-origem-simulado,
+.revisao-card .revisao-origem-simulado {
+  display: inline-flex;
+  max-width: 100%;
+  width: fit-content;
+  padding: 5px 9px;
+  margin: 3px 0 8px;
+  border: 1px solid rgba(103, 166, 225, .65);
+  border-radius: 8px;
+  background: rgba(36, 90, 145, .25);
+  color: #c5e3ff;
+  overflow-wrap: anywhere;
+  font-size: .8rem;
+  line-height: 1.35;
+}
