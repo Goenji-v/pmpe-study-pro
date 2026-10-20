@@ -6,16 +6,42 @@ import type { PedidoPdf } from '../../services/leitorMaterial';
 import type { AnotacoesPdf } from '../../pages/SimuladoPdf/PdfAnotavel';
 import './LeitorMaterial.css';
 const PdfAnotavel = lazy(() => import('../../pages/SimuladoPdf/PdfAnotavel'));
+type PedidoLeitor = PedidoPdf & { aberturaExternaBloqueada?: boolean };
+
 export default function LeitorMaterial() {
-  const [pedido, setPedido] = useState<PedidoPdf | null>(null);
+  const { configuracoes } = useApp();
+  const [pedido, setPedido] = useState<PedidoLeitor | null>(null);
   useEffect(() => {
-    const abrir = (e: Event) => setPedido((e as CustomEvent<PedidoPdf>).detail);
+    const abrir = (evento: Event) => {
+      const solicitado = (evento as CustomEvent<PedidoPdf>).detail;
+      if (configuracoes.aberturaPdf === 'navegador') {
+        try {
+          // Criar a aba vazia no mesmo gesto sempre que possível, sem expor window.opener.
+          const aba = window.open('about:blank', '_blank');
+          if (aba) {
+            aba.opener = null;
+            aba.location.replace(solicitado.url);
+            return;
+          }
+        } catch {
+          // A ação manual permanece acessível caso o bloqueador impeça a nova aba.
+        }
+        setPedido({ ...solicitado, aberturaExternaBloqueada: true });
+        return;
+      }
+      setPedido(solicitado);
+    };
+    const abrirInterno = (evento: Event) => setPedido((evento as CustomEvent<PedidoPdf>).detail);
     window.addEventListener('study:abrir-pdf', abrir);
-    return () => window.removeEventListener('study:abrir-pdf', abrir);
-  }, []);
-  return pedido ? <PainelPdf key={pedido.id} pedido={pedido} fechar={() => setPedido(null)} /> : null;
+    window.addEventListener('study:abrir-pdf-interno', abrirInterno);
+    return () => {
+      window.removeEventListener('study:abrir-pdf', abrir);
+      window.removeEventListener('study:abrir-pdf-interno', abrirInterno);
+    };
+  }, [configuracoes.aberturaPdf]);
+  return pedido ? <PainelPdf key={pedido.id + (pedido.aberturaExternaBloqueada ? ':externo' : ':interno')} pedido={pedido} fechar={() => setPedido(null)} /> : null;
 }
-function PainelPdf({ pedido, fechar }: { pedido: PedidoPdf; fechar: () => void }) {
+function PainelPdf({ pedido, fechar }: { pedido: PedidoLeitor; fechar: () => void }) {
   const { configuracoes } = useApp();
   const { usuario } = useAuth();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -34,6 +60,7 @@ function PainelPdf({ pedido, fechar }: { pedido: PedidoPdf; fechar: () => void }
   }, [chave, salvar]);
   useEffect(() => {
     dialog.current?.showModal();
+    if (pedido.aberturaExternaBloqueada) return;
     const controle = new AbortController();
     void (async () => {
       try {
@@ -48,10 +75,24 @@ function PainelPdf({ pedido, fechar }: { pedido: PedidoPdf; fechar: () => void }
     })();
     return () => controle.abort();
   }, [pedido]);
+  if (pedido.aberturaExternaBloqueada) {
+    return <dialog ref={dialog} className="leitor-material" onCancel={fechar}>
+      <header><div><small>MATERIAL DE ESTUDO</small><h2>{pedido.nome}</h2></div><button type="button" onClick={fechar} aria-label="Fechar aviso de PDF">Fechar ✕</button></header>
+      <div role="status" className="leitor-aviso">
+        <p>O navegador bloqueou a abertura automática de uma nova aba.</p>
+        <a href={pedido.url} target="_blank" rel="noopener noreferrer">Abrir PDF em nova aba</a>
+        <button type="button" onClick={() => {
+          fechar();
+          window.dispatchEvent(new CustomEvent<PedidoPdf>('study:abrir-pdf-interno', { detail: pedido }));
+        }}>Abrir dentro do Study Pro</button>
+      </div>
+    </dialog>;
+  }
+
   return <dialog ref={dialog} className="leitor-material" onCancel={fechar}>
     <header><div><small>MATERIAL DE ESTUDO</small><h2>{pedido.nome}</h2><p>{salvar ? 'Marcações salvas neste aparelho para sua conta.' : 'Marcações temporárias: serão descartadas ao fechar.'}</p></div><button onClick={fechar} aria-label="Fechar PDF">Fechar ✕</button></header>
     {erro && <div role="status" className="leitor-aviso"><p>{erro}</p><label>Selecionar PDF deste aparelho <input type="file" accept="application/pdf" onChange={e => { const f=e.target.files?.[0]; if(f){setArquivo(f);setErro('');} }} /></label><a href={pedido.url} target="_blank" rel="noopener noreferrer">Abrir no provedor</a></div>}
-    {!arquivo && erro && driveId && <iframe title={`Prévia de ${pedido.nome}`} src={`https://drive.google.com/file/d/${driveId}/preview`} style={{width:"100%",height:"60vh",border:0}} referrerPolicy="no-referrer" />}
+    {!arquivo && erro && driveId && <iframe title={`Prévia de ${pedido.nome}`} src={`https://drive.google.com/file/d/${driveId}/preview`} className="leitor-drive-preview" referrerPolicy="no-referrer" />}
     {arquivo ? <Suspense fallback={<p>Preparando leitor…</p>}><PdfAnotavel key={arquivo.name + arquivo.lastModified} arquivo={arquivo} pausado={false} anotacoesIniciais={iniciais} onAnotacoesChange={guardar} /></Suspense> : !erro && <p>Abrindo PDF…</p>}
   </dialog>;
 }
