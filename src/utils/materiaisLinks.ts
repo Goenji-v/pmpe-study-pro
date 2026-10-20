@@ -25,7 +25,8 @@ export function resolverCategoriaLinkMaterial(params: {
       .trim()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/\s+/g, " ");
 
   // Apenas nomes legados inequivocamente usados como atalhos.
   // Uma categoria "personalizado" explícita continua sendo respeitada.
