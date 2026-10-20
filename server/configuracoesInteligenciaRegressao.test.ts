@@ -53,7 +53,7 @@ test("Configurações: restaurar padrão conserva progressos fora das preferênc
 test("Inteligência: uma sessão de 30 minutos e seu registro-espelho não viram 60", () => {
   const data = new Date().toISOString();
   const sessoes = [{ id: "sessao", tipo: "questoes", materia: "Direito Constitucional", assunto: "Princípios", minutos: 30, data }];
-  const questoes = [{ id: "questoes", materia: "Constitucional", assunto: "Princípios", certas: 4, erradas: 1, minutos: 30, data }];
+  const questoes = [{ id: "questoes", materia: "Constitucional", assunto: "Princípios", banca: "AOCP", certas: 4, erradas: 1, minutos: 30, data }];
 
   const resultado = calcularCentralInteligencia({
     questoes: questoes as any,
@@ -74,7 +74,7 @@ test("Inteligência: uma sessão de 30 minutos e seu registro-espelho não viram
 test("Inteligência: sessões independentes continuam contando", () => {
   const data = new Date().toISOString();
   const sessao = [{ id: "sessao", tipo: "estudo", materia: "Português", assunto: "Verbos", minutos: 30, data }];
-  const questao = { id: "questao", materia: "Português", assunto: "Crase", certas: 1, erradas: 0, minutos: 15, data };
+  const questao = { id: "questao", materia: "Português", assunto: "Crase", banca: "AOCP", certas: 1, erradas: 0, minutos: 15, data };
   assert.equal(minutosQuestaoSemDuplicidade(questao as any, sessao as any), 15);
   const resultado = calcularCentralInteligencia({
     questoes: [questao] as any,
