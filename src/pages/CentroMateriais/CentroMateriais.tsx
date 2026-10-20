@@ -131,7 +131,7 @@ export default function CentroMateriais() {
       );
       const correspondeMateria =
         !filtroMateria ||
-        (Boolean(material.materiaId && materiaSelecionada?.id)
+        (material.materiaId && materiaSelecionada?.id
           ? material.materiaId === materiaSelecionada?.id
           : chaveDaMateria(material.materia) === chaveDaMateria(filtroMateria));
 
