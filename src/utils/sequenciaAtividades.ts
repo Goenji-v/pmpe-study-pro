@@ -59,9 +59,11 @@ export function calcularSequenciaAtividades(params: {
 
 function adicionarData(destino: Set<string>, valor?: string) {
   if (!valor) return;
-  const direta = valor.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (direta) {
-    destino.add(direta[1]);
+  // Datas sem horário são chaves civis. Em timestamps com fuso, a data
+  // correta é a data local do aluno, não o prefixo UTC da string ISO.
+  const somenteData = /^\d{4}-\d{2}-\d{2}$/.test(valor.trim());
+  if (somenteData) {
+    destino.add(valor.trim());
     return;
   }
 
