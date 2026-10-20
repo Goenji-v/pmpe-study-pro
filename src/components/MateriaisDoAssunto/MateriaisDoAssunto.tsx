@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -56,16 +57,19 @@ export default function MateriaisDoAssunto({
 
   const [erro, setErro] =
     useState("");
+  const geracaoRequisicao = useRef(0);
 
   // carregar usa somente os três campos abaixo; o callback apenas devolve
   // os atalhos encontrados para a Central de Estudos.
   /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    carregar();
+    void carregar();
+    return () => { geracaoRequisicao.current += 1; };
   }, [materia, materiaId, modulo, moduloId, assunto, assuntoId, assuntoIdsLegados]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   async function carregar() {
+    const geracao = ++geracaoRequisicao.current;
     if (
       !materia.trim() ||
       !assunto.trim()
@@ -79,9 +83,12 @@ export default function MateriaisDoAssunto({
 
     try {
       setCarregando(true);
+      setMateriais([]);
+      setOutrosDaDisciplina([]);
       setErro("");
 
       const todos = await listarMateriais();
+      if (geracao !== geracaoRequisicao.current) return;
       const { vinculados: lista, outrosDaDisciplina: outros } =
         agruparMateriaisDaDisciplina(todos, {
           materia, materiaId, modulo, moduloId,
@@ -101,6 +108,7 @@ export default function MateriaisDoAssunto({
           separados.questoes?.url,
       });
     } catch (erroCarregamento) {
+      if (geracao !== geracaoRequisicao.current) return;
       onAtalhosCarregados?.({});
       setErro(
         erroCarregamento instanceof Error
@@ -108,7 +116,7 @@ export default function MateriaisDoAssunto({
           : "Não foi possível carregar os materiais."
       );
     } finally {
-      setCarregando(false);
+      if (geracao === geracaoRequisicao.current) setCarregando(false);
     }
   }
 
