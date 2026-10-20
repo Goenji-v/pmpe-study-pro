@@ -126,8 +126,11 @@ export default function CentralEstudos() {
     setAtalhosMateriais({});
   }, [
     estado.materia,
+    estado.materiaId,
     estado.modulo,
+    estado.moduloId,
     estado.assunto,
+    estado.assuntoId,
   ]);
 
 const [
