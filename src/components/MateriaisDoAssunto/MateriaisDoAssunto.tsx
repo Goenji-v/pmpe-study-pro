@@ -7,10 +7,11 @@ import "./MateriaisDoAssunto.css";
 
 import {
   abrirMaterial,
-  listarMateriaisPorAssunto,
+  listarMateriais,
   type MaterialEstudo,
 } from "../../services/materiaisService";
 import { separarMateriaisPorUso } from "../../utils/materiaisLinks";
+import { agruparMateriaisDaDisciplina } from "../../utils/correspondenciaMateriais";
 
 type AtalhosMateriais = {
   aula?: string;
@@ -44,6 +45,11 @@ export default function MateriaisDoAssunto({
   ] = useState<MaterialEstudo[]>([]);
 
   const [
+    outrosDaDisciplina,
+    setOutrosDaDisciplina,
+  ] = useState<MaterialEstudo[]>([]);
+
+  const [
     carregando,
     setCarregando,
   ] = useState(false);
@@ -65,6 +71,7 @@ export default function MateriaisDoAssunto({
       !assunto.trim()
     ) {
       setMateriais([]);
+      setOutrosDaDisciplina([]);
       setErro("");
       onAtalhosCarregados?.({});
       return;
@@ -74,15 +81,15 @@ export default function MateriaisDoAssunto({
       setCarregando(true);
       setErro("");
 
-      const lista =
-        await listarMateriaisPorAssunto(
-          materia,
-          assunto,
-          modulo,
-          { materiaId, moduloId, assuntoId, assuntoIdsLegados }
-        );
+      const todos = await listarMateriais();
+      const { vinculados: lista, outrosDaDisciplina: outros } =
+        agruparMateriaisDaDisciplina(todos, {
+          materia, materiaId, modulo, moduloId,
+          assunto, assuntoId, assuntoIdsLegados,
+        });
 
       setMateriais(lista);
+      setOutrosDaDisciplina(outros);
 
       const separados =
         separarMateriaisPorUso(lista);
@@ -144,7 +151,8 @@ export default function MateriaisDoAssunto({
   if (
     !carregando &&
     !erro &&
-    materiaisComuns.length === 0
+    materiaisComuns.length === 0 &&
+    outrosDaDisciplina.length === 0
   ) {
     return null;
   }
@@ -237,6 +245,33 @@ export default function MateriaisDoAssunto({
             )
           )}
         </div>
+      )}
+
+      {outrosDaDisciplina.length > 0 && (
+        <details className="materiais-assunto-outros">
+          <summary>
+            Outros materiais de {materia} ({outrosDaDisciplina.length})
+          </summary>
+          <p>
+            Estes materiais estão salvos na mesma disciplina, mas não têm vínculo
+            confirmado com este assunto. Confira a origem antes de reutilizá-los.
+          </p>
+          <div className="materiais-assunto-lista">
+            {outrosDaDisciplina.map((material) => (
+              <article key={material.id} className="materiais-assunto-card">
+                <div className="materiais-assunto-icone">{iconeMaterial(material)}</div>
+                <div className="materiais-assunto-info">
+                  <strong>{material.nome}</strong>
+                  <span>Cadastro: {material.assunto}{material.modulo ? ` · ${material.modulo}` : ""}</span>
+                </div>
+                <button type="button" onClick={() => abrir(material)}
+                  aria-label={`Abrir ${material.nome}, cadastrado em ${material.assunto}`}>
+                  Abrir
+                </button>
+              </article>
+            ))}
+          </div>
+        </details>
       )}
     </section>
   );
