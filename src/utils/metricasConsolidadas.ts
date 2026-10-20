@@ -1,3 +1,4 @@
+import { chaveDaMateria } from "./desempenhoMaterias";
 import type {
   RegistroQuestao,
   Revisao,
@@ -162,7 +163,7 @@ export function minutosQuestaoSemDuplicidade(
   const duplicadoPorSessao = sessoes.some(
     (sessao) =>
       sessao.tipo === "questoes" &&
-      normalizar(sessao.materia) === normalizar(registro.materia) &&
+      chaveDaMateria(sessao.materia) === chaveDaMateria(registro.materia) &&
       normalizar(sessao.assunto) === normalizar(registro.assunto) &&
       datasProximas(sessao.data, registro.data, 5000)
   );
