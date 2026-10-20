@@ -37,10 +37,7 @@ export function materialCorrespondeAoAssunto(
   material: MaterialReferenciavel,
   referencia: ReferenciaAssuntoMaterial
 ): boolean {
-  const materiaCompativel = material.materiaId && referencia.materiaId
-    ? material.materiaId === referencia.materiaId
-    : chaveDaMateria(material.materia) === chaveDaMateria(referencia.materia);
-  if (!materiaCompativel) return false;
+  if (!materialPertenceAMateria(material, referencia)) return false;
 
   if (referencia.modulo?.trim()) {
     if (material.moduloId && referencia.moduloId) {
@@ -60,4 +57,33 @@ export function materialCorrespondeAoAssunto(
   }
 
   return nomeExatoNormalizado(material.assunto) === nomeExatoNormalizado(referencia.assunto);
+}
+
+/** Os materiais de outra matéria nunca aparecem como "não vinculados". */
+export function materialPertenceAMateria(
+  material: Pick<MaterialReferenciavel, "materia" | "materiaId">,
+  referencia: Pick<ReferenciaAssuntoMaterial, "materia" | "materiaId">
+): boolean {
+  if (material.materiaId && referencia.materiaId) {
+    return material.materiaId === referencia.materiaId;
+  }
+  return chaveDaMateria(material.materia) === chaveDaMateria(referencia.materia);
+}
+
+/**
+ * Não inventa vínculo com um assunto parecido: materiais fora da seleção
+ * permanecem separados, com o assunto de cadastro visível para conferência.
+ */
+export function agruparMateriaisDaDisciplina<T extends MaterialReferenciavel>(
+  materiais: readonly T[],
+  referencia: ReferenciaAssuntoMaterial
+): { vinculados: T[]; outrosDaDisciplina: T[] } {
+  const vinculados: T[] = [];
+  const outrosDaDisciplina: T[] = [];
+  for (const material of materiais) {
+    if (!materialPertenceAMateria(material, referencia)) continue;
+    if (materialCorrespondeAoAssunto(material, referencia)) vinculados.push(material);
+    else outrosDaDisciplina.push(material);
+  }
+  return { vinculados, outrosDaDisciplina };
 }
