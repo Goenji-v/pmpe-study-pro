@@ -19,15 +19,23 @@ type AtalhosMateriais = {
 
 type Props = {
   materia: string;
+  materiaId?: string;
   modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
+  assuntoIdsLegados?: readonly string[];
   onAtalhosCarregados?: (atalhos: AtalhosMateriais) => void;
 };
 
 export default function MateriaisDoAssunto({
   materia,
+  materiaId,
   modulo,
+  moduloId,
   assunto,
+  assuntoId,
+  assuntoIdsLegados,
   onAtalhosCarregados,
 }: Props) {
   const [
@@ -48,7 +56,7 @@ export default function MateriaisDoAssunto({
   /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     carregar();
-  }, [materia, modulo, assunto]);
+  }, [materia, materiaId, modulo, moduloId, assunto, assuntoId, assuntoIdsLegados]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   async function carregar() {
@@ -70,7 +78,8 @@ export default function MateriaisDoAssunto({
         await listarMateriaisPorAssunto(
           materia,
           assunto,
-          modulo
+          modulo,
+          { materiaId, moduloId, assuntoId, assuntoIdsLegados }
         );
 
       setMateriais(lista);
