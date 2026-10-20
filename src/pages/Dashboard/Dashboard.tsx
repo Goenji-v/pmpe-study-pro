@@ -330,7 +330,7 @@ export default function Dashboard() {
     questoes,
     sessoes,
     revisoes,
-    simulados: simuladosContabilizaveis,
+    simulados,
   }).atual;
 
   // Fonte única para cards, "Visão rápida", IA Coach e Taxa de acertos:
