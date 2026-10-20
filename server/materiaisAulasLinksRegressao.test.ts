@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { resolverLinksAtividade } from "../src/utils/linksAtividade.ts";
 import { resolverCategoriaLinkMaterial, separarMateriaisPorUso } from "../src/utils/materiaisLinks.ts";
 import { agruparMateriaisDaDisciplina } from "../src/utils/correspondenciaMateriais.ts";
+import { listarMateriaisDaEstrutura } from "../src/utils/materiaisDoConteudo.ts";
 
 test("Central: revisão aberta por outro caminho encontra aula já importada no curso", () => {
   const links = resolverLinksAtividade({
@@ -94,4 +95,26 @@ test("Central transmite IDs estáveis e o componente distingue materiais sem ví
   assert.match(materiais,/Outros materiais de/);
   assert.match(materiais,/geracao !== geracaoRequisicao.current/);
   assert.match(materiais,/return \(\) => \{ geracaoRequisicao.current \+= 1; \}/);
+});
+
+test("PDFs da estrutura do curso aparecem apenas uma vez, sem links inseguros", () => {
+  const lista = listarMateriaisDaEstrutura({
+    pdf: "https://example.org/seguranca.pdf",
+    materiais: [
+      { id: "repetido", nome: "Mesmo PDF", tipo: "pdf", url: "https://example.org/seguranca.pdf", criadoEm: "2026-10-20" },
+      { id: "outro", nome: "Resumo", tipo: "link", url: "https://example.org/resumo", criadoEm: "2026-10-20" },
+      { id: "inseguro", nome: "Não abrir", tipo: "link", url: "javascript:alert(1)", criadoEm: "2026-10-20" },
+    ],
+  });
+  assert.equal(lista.length, 2);
+  assert.deepEqual(lista.map(item => item.nome), ["Mesmo PDF", "Resumo"]);
+});
+
+test("A Central repassa os PDFs do curso e abre arquivos pelo leitor interno", async () => {
+  const central = await readFile("src/pages/CentralEstudos/CentralEstudos.tsx", "utf8");
+  const materiais = await readFile("src/components/MateriaisDoAssunto/MateriaisDoAssunto.tsx", "utf8");
+  assert.match(central, /materiaisDoConteudo=\{assuntoSelecionado\?\.materiais\}/);
+  assert.match(central, /pdfDoConteudo=\{assuntoSelecionado\?\.pdf\}/);
+  assert.match(materiais, /listarMateriaisDaEstrutura/);
+  assert.match(materiais, /abrirPdfInterno/);
 });
