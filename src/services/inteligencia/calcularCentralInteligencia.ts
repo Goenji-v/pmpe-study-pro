@@ -5,7 +5,7 @@ import type {
   SessaoEstudo,
   Simulado,
 } from "../../types";
-import { calcularMetricasConsolidadas, resumirSimulado } from "../../utils/metricasConsolidadas";
+import { calcularMetricasConsolidadas, minutosQuestaoSemDuplicidade, resumirSimulado } from "../../utils/metricasConsolidadas";
 import { normalizarBancaConcurso } from "../../utils/bancasConcurso";
 import type {
   DadosCentral,
@@ -208,7 +208,7 @@ function calcularDesempenhoMaterias(
     atual.erradas += numeroSeguro(registro.erradas) + numeroSeguro(registro.emBranco);
     atual.total = atual.certas + atual.erradas;
     atual.percentual = atual.total === 0 ? 0 : Math.round((atual.certas / atual.total) * 100);
-    atual.minutos += numeroSeguro(registro.minutos);
+    atual.minutos += minutosQuestaoSemDuplicidade(registro, sessoes);
     atualizarUltimaAtividade(atual, registro.data);
   });
 
