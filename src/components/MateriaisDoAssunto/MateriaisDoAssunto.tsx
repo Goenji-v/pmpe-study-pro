@@ -11,6 +11,9 @@ import {
   listarMateriais,
   type MaterialEstudo,
 } from "../../services/materiaisService";
+import type { MaterialAssunto } from "../../types";
+import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
+import { listarMateriaisDaEstrutura } from "../../utils/materiaisDoConteudo";
 import { separarMateriaisPorUso } from "../../utils/materiaisLinks";
 import { agruparMateriaisDaDisciplina } from "../../utils/correspondenciaMateriais";
 
@@ -27,6 +30,8 @@ type Props = {
   assunto: string;
   assuntoId?: string;
   assuntoIdsLegados?: readonly string[];
+  materiaisDoConteudo?: readonly MaterialAssunto[];
+  pdfDoConteudo?: string;
   onAtalhosCarregados?: (atalhos: AtalhosMateriais) => void;
 };
 
@@ -38,6 +43,8 @@ export default function MateriaisDoAssunto({
   assunto,
   assuntoId,
   assuntoIdsLegados,
+  materiaisDoConteudo,
+  pdfDoConteudo,
   onAtalhosCarregados,
 }: Props) {
   const [
@@ -150,6 +157,10 @@ export default function MateriaisDoAssunto({
   } = separarMateriaisPorUso(
     materiais
   );
+  const materiaisCurso = listarMateriaisDaEstrutura({
+    materiais: materiaisDoConteudo,
+    pdf: pdfDoConteudo,
+  }).filter((item) => !materiais.some((material) => material.url === item.url));
 
   /*
    * Aula e Questões são atalhos operacionais da sessão e aparecem na barra
@@ -160,6 +171,7 @@ export default function MateriaisDoAssunto({
     !carregando &&
     !erro &&
     materiaisComuns.length === 0 &&
+    materiaisCurso.length === 0 &&
     outrosDaDisciplina.length === 0
   ) {
     return null;
@@ -252,6 +264,40 @@ export default function MateriaisDoAssunto({
               </article>
             )
           )}
+        </div>
+      )}
+
+      {materiaisCurso.length > 0 && (
+        <div className="materiais-assunto-curso">
+          <h4>PDFs e links do conteúdo</h4>
+          <div className="materiais-assunto-lista">
+            {materiaisCurso.map((material) => (
+              <article className="materiais-assunto-card" key={material.id}>
+                <div className="materiais-assunto-icone">{material.tipo === "pdf" ? "📕" : "🔗"}</div>
+                <div className="materiais-assunto-info">
+                  <strong>{material.nome}</strong>
+                  <span>Material já associado ao conteúdo do curso</span>
+                </div>
+                <button type="button" onClick={() => {
+                  if (material.tipo === "pdf" || ehLinkPdf(material.url)) {
+                    try {
+                      abrirPdfInterno({
+                        id: `conteudo:${assuntoId ?? assunto}:${material.id}`,
+                        nome: material.nome,
+                        url: material.url,
+                      });
+                    } catch {
+                      setErro("Não foi possível abrir este PDF.");
+                    }
+                  } else {
+                    window.open(material.url, "_blank", "noopener,noreferrer");
+                  }
+                }} aria-label={`Abrir ${material.nome} do curso`}>
+                  Abrir
+                </button>
+              </article>
+            ))}
+          </div>
         </div>
       )}
 
