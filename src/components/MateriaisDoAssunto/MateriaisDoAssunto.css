@@ -221,3 +221,13 @@
   outline-offset: 3px;
   border-radius: 3px;
 }
+
+.materiais-assunto-curso {
+  margin-top: 15px;
+}
+
+.materiais-assunto-curso h4 {
+  margin-bottom: 9px;
+  color: #e2e8f0;
+  font-size: 14px;
+}
