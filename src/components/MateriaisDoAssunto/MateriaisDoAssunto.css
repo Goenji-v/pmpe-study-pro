@@ -197,3 +197,27 @@
     width: 100%;
   }
 }
+.materiais-assunto-outros {
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid #334155;
+}
+
+.materiais-assunto-outros summary {
+  color: #bfdbfe;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.materiais-assunto-outros > p {
+  margin: 10px 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.materiais-assunto-outros summary:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
