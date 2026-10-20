@@ -1389,6 +1389,8 @@ const [
             assunto={assuntoSelecionado?.nome ?? estado.assunto}
             assuntoId={assuntoSelecionado?.id ?? estado.assuntoId}
             assuntoIdsLegados={assuntoSelecionado?.idsLegados}
+            materiaisDoConteudo={assuntoSelecionado?.materiais}
+            pdfDoConteudo={assuntoSelecionado?.pdf}
             onAtalhosCarregados={setAtalhosMateriais}
           />
 
