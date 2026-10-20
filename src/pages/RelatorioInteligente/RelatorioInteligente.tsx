@@ -183,7 +183,7 @@ export default function RelatorioInteligente() {
               </thead>
               <tbody>
                 {relatorio.materias.map((materia) => (
-                  <tr key={materia.materia}>
+                  <tr key={materia.chave}>
                     <td><strong>{materia.materia}</strong></td>
                     <td>{materia.questoes}</td>
                     <td>{materia.certas}</td>

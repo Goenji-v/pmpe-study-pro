@@ -9,6 +9,7 @@ import "./CentroMateriais.css";
 
 import { useApp } from "../../context/AppContext";
 import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
+import { agruparMateriaisPorConteudo, materialCorrespondeMateria, resolverMateriaMaterial, resolverAssuntoMaterial } from "../../utils/identidadeMateriais";
 
 import {
   abrirMaterial,
@@ -97,8 +98,8 @@ export default function CentroMateriais() {
   const materiaAtual = useMemo(
     () =>
       materias.find(
-        (item) => item.nome === materia
-      ),
+        (item) => item.id === materia || item.nome === materia
+      ) ?? resolverMateriaMaterial({ materia }, materias),
     [materias, materia]
   );
 
@@ -113,99 +114,46 @@ export default function CentroMateriais() {
   const moduloAtual = useMemo(
     () =>
       modulosDisponiveis.find(
-        (item) => item.nome === modulo
+        (item) => item.id === modulo || item.nome === modulo
       ),
     [modulosDisponiveis, modulo]
   );
 
   const assuntosDisponiveis =
     moduloAtual?.assuntos ?? [];
+  const referenciaAssunto = resolverAssuntoMaterial(assuntosDisponiveis, assunto);
+
+  const materiaFiltroAtual = materias.find((item) => item.id === filtroMateria || item.nome === filtroMateria)
+    ?? resolverMateriaMaterial({ materia: filtroMateria }, materias);
+  const moduloFiltroAtual = materiaFiltroAtual
+    ? listarModulosDaMateria(materiaFiltroAtual).find((item) => item.id === filtroModulo || item.nome === filtroModulo)
+    : undefined;
 
   const materiaisFiltrados = useMemo(() => {
     const termo = normalizar(pesquisa);
-
     return materiais.filter((material) => {
-      const correspondeMateria =
-        !filtroMateria ||
-        material.materia === filtroMateria;
-
-      const correspondeModulo =
-        !filtroModulo ||
-        material.modulo === filtroModulo ||
-        (!material.modulo && filtroModulo === "Geral");
-
-      const correspondePesquisa =
-        !termo ||
-        normalizar(
-          [
-            material.nome,
-            material.materia,
-            material.modulo,
-            material.assunto,
-            material.observacao,
-            material.nomeArquivo,
-          ]
-            .filter(Boolean)
-            .join(" ")
-        ).includes(termo);
-
-      return (
-        correspondeMateria &&
-        correspondeModulo &&
-        correspondePesquisa
+      const correspondeMateria = !filtroMateria || materialCorrespondeMateria(material, {
+        materia: materiaFiltroAtual?.nome || filtroMateria,
+        materiaId: materiaFiltroAtual?.id,
+        idsLegadosMateria: materiaFiltroAtual?.idsLegados,
+      });
+      const correspondeModulo = !filtroModulo || (
+        material.moduloId && moduloFiltroAtual
+          ? material.moduloId === moduloFiltroAtual.id
+          : normalizar(material.modulo || "Geral") === normalizar(moduloFiltroAtual?.nome || filtroModulo)
       );
+      const correspondePesquisa = !termo || normalizar([
+        material.nome, material.materia, materiaFiltroAtual?.nome, material.modulo,
+        material.assunto, material.observacao, material.nomeArquivo,
+      ].filter(Boolean).join(" ")).includes(termo);
+      return correspondeMateria && correspondeModulo && correspondePesquisa;
     });
-  }, [
-    materiais,
-    pesquisa,
-    filtroMateria,
-    filtroModulo,
-  ]);
+  }, [materiais, pesquisa, filtroMateria, filtroModulo, materiaFiltroAtual, moduloFiltroAtual]);
 
-  const grupos = useMemo(() => {
-    const mapa = new Map<
-      string,
-      Map<
-        string,
-        Map<string, MaterialEstudo[]>
-      >
-    >();
-
-    materiaisFiltrados.forEach((material) => {
-      const nomeModulo =
-        material.modulo || "Geral";
-
-      if (!mapa.has(material.materia)) {
-        mapa.set(material.materia, new Map());
-      }
-
-      const modulos = mapa.get(material.materia);
-
-      if (!modulos) {
-        return;
-      }
-
-      if (!modulos.has(nomeModulo)) {
-        modulos.set(nomeModulo, new Map());
-      }
-
-      const assuntos = modulos.get(nomeModulo);
-
-      if (!assuntos) {
-        return;
-      }
-
-      if (!assuntos.has(material.assunto)) {
-        assuntos.set(material.assunto, []);
-      }
-
-      assuntos.get(material.assunto)?.push(material);
-    });
-
-    return Array.from(mapa.entries()).sort(([a], [b]) =>
-      a.localeCompare(b, "pt-BR")
-    );
-  }, [materiaisFiltrados]);
+  const grupos = useMemo(
+    () => agruparMateriaisPorConteudo(materiaisFiltrados, materias),
+    [materiaisFiltrados, materias]
+  );
 
   useEffect(() => {
     carregarMateriais();
@@ -273,6 +221,10 @@ export default function CentroMateriais() {
       setErro("Selecione ou informe um assunto.");
       return;
     }
+    if (referenciaAssunto.ambiguo) {
+      setErro("Há mais de um assunto com esse nome. Selecione o assunto na lista.");
+      return;
+    }
 
     if (modo === "arquivo" && !arquivo) {
       setErro("Selecione um arquivo.");
@@ -291,29 +243,23 @@ export default function CentroMateriais() {
         modo === "arquivo"
           ? await salvarArquivoMaterial({
               nome,
-              materia,
+              materia: materiaAtual?.nome || materia,
               materiaId: materiaAtual?.id,
-              modulo,
+              modulo: moduloAtual?.nome || modulo,
               moduloId: moduloAtual?.id,
-              assunto,
-              assuntoId:
-                moduloAtual?.assuntos.find(
-                  (item) => item.nome === assunto
-                )?.id,
+              assunto: referenciaAssunto.assunto?.nome || assunto,
+              assuntoId: referenciaAssunto.assunto?.id,
               observacao,
               arquivo: arquivo as File,
             })
           : await salvarLinkMaterial({
               nome,
-              materia,
+              materia: materiaAtual?.nome || materia,
               materiaId: materiaAtual?.id,
-              modulo,
+              modulo: moduloAtual?.nome || modulo,
               moduloId: moduloAtual?.id,
-              assunto,
-              assuntoId:
-                moduloAtual?.assuntos.find(
-                  (item) => item.nome === assunto
-                )?.id,
+              assunto: referenciaAssunto.assunto?.nome || assunto,
+              assuntoId: referenciaAssunto.assunto?.id,
               observacao,
               url,
               categoriaLink,
@@ -557,7 +503,7 @@ export default function CentroMateriais() {
 
             <Campo label="Matéria">
               <select
-                value={materia}
+                value={materiaAtual?.id || materia}
                 onChange={(evento) =>
                   alterarMateria(evento.target.value)
                 }
@@ -569,7 +515,7 @@ export default function CentroMateriais() {
                 {materias.map((item) => (
                   <option
                     key={item.id}
-                    value={item.nome}
+                    value={item.id}
                   >
                     {item.nome}
                   </option>
@@ -579,7 +525,7 @@ export default function CentroMateriais() {
 
             <Campo label="Módulo">
               <select
-                value={modulo}
+                value={moduloAtual?.id || modulo}
                 onChange={(evento) =>
                   alterarModulo(evento.target.value)
                 }
@@ -594,7 +540,7 @@ export default function CentroMateriais() {
                 {modulosDisponiveis.map((item) => (
                   <option
                     key={item.id}
-                    value={item.nome}
+                    value={item.id}
                   >
                     {item.nome}
                   </option>
@@ -604,13 +550,7 @@ export default function CentroMateriais() {
 
             <Campo label="Assunto">
               <select
-                value={
-                  assuntosDisponiveis.some(
-                    (item) => item.nome === assunto
-                  )
-                    ? assunto
-                    : ""
-                }
+                value={referenciaAssunto.assunto?.id || ""}
                 onChange={(evento) =>
                   setAssunto(evento.target.value)
                 }
@@ -625,7 +565,7 @@ export default function CentroMateriais() {
                 {assuntosDisponiveis.map((item) => (
                   <option
                     key={item.id}
-                    value={item.nome}
+                    value={item.id}
                   >
                     {item.nome}
                   </option>
@@ -633,7 +573,7 @@ export default function CentroMateriais() {
               </select>
 
               <input
-                value={assunto}
+                value={referenciaAssunto.assunto?.nome || assunto}
                 onChange={(evento) =>
                   setAssunto(evento.target.value)
                 }
@@ -707,10 +647,11 @@ export default function CentroMateriais() {
             />
 
             <select
-              value={filtroMateria}
-              onChange={(evento) =>
-                setFiltroMateria(evento.target.value)
-              }
+              value={materiaFiltroAtual?.id || filtroMateria}
+              onChange={(evento) => {
+                setFiltroMateria(evento.target.value);
+                setFiltroModulo("");
+              }}
             >
               <option value="">
                 Todas as matérias
@@ -719,7 +660,7 @@ export default function CentroMateriais() {
               {materias.map((item) => (
                 <option
                   key={item.id}
-                  value={item.nome}
+                  value={item.id}
                 >
                   {item.nome}
                 </option>
@@ -727,7 +668,7 @@ export default function CentroMateriais() {
             </select>
 
             <select
-              value={filtroModulo}
+              value={moduloFiltroAtual?.id || filtroModulo}
               onChange={(evento) =>
                 setFiltroModulo(evento.target.value)
               }
@@ -737,21 +678,9 @@ export default function CentroMateriais() {
                 Todos os módulos
               </option>
 
-              {materias
-                .find((item) => item.nome === filtroMateria)
-                ? listarModulosDaMateria(
-                    materias.find(
-                      (item) => item.nome === filtroMateria
-                    )!
-                  ).map((item) => (
-                    <option
-                      key={item.id}
-                      value={item.nome}
-                    >
-                      {item.nome}
-                    </option>
-                  ))
-                : null}
+              {materiaFiltroAtual ? listarModulosDaMateria(materiaFiltroAtual).map((item) => (
+                <option key={item.id} value={item.id}>{item.nome}</option>
+              )) : null}
             </select>
           </div>
 
@@ -769,31 +698,23 @@ export default function CentroMateriais() {
             </div>
           ) : (
             <div className="materiais-grupos">
-              {grupos.map(([nomeMateria, modulos]) => (
+              {grupos.map(({ chave: chaveMateria, nome: nomeMateria, modulos }) => (
                 <section
-                  key={nomeMateria}
+                  key={chaveMateria}
                   className="materiais-materia"
                 >
                   <h2>📘 {nomeMateria}</h2>
 
-                  {Array.from(modulos.entries())
-                    .sort(([a], [b]) =>
-                      a.localeCompare(b, "pt-BR")
-                    )
-                    .map(([nomeModulo, assuntos]) => (
+                  {modulos.map(({ chave: chaveModulo, nome: nomeModulo, assuntos }) => (
                       <div
-                        key={nomeModulo}
+                        key={chaveModulo}
                         className="materiais-modulo"
                       >
                         <h3>🗂️ {nomeModulo}</h3>
 
-                        {Array.from(assuntos.entries())
-                          .sort(([a], [b]) =>
-                            a.localeCompare(b, "pt-BR")
-                          )
-                          .map(([nomeAssunto, itens]) => (
+                        {assuntos.map(({ chave: chaveAssunto, nome: nomeAssunto, materiais: itens }) => (
                             <div
-                              key={nomeAssunto}
+                              key={chaveAssunto}
                               className="materiais-assunto"
                             >
                               <h4>📂 {nomeAssunto}</h4>

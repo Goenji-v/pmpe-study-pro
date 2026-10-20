@@ -12,6 +12,8 @@ import "./Dashboard.css";
 import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { calcularSequenciaAtividades, listarDiasEstudados } from "../../utils/sequenciaAtividades";
+import { useDiaLocalAtual } from "../../hooks/useDiaLocalAtual";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 import {
   calcularDesempenhoPorMateria,
@@ -216,7 +218,7 @@ export default function Dashboard() {
   }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
-  const hoje = obterDataLocal();
+  const hoje = useDiaLocalAtual();
 
   // Fonte canônica para os indicadores globais. A mesma regra é usada pela
   // Inteligência e pelo Desempenho: remove espelhos de Simulado IA, separa
@@ -330,13 +332,9 @@ export default function Dashboard() {
       configuracoes.metaMinutosDiaria
     );
 
-  const sequencia =
-    calcularSequencia(
-      questoes,
-      sessoes,
-      revisoes,
-      simuladosContabilizaveis
-    );
+  const atividadesSequencia = { questoes, sessoes, revisoes, simulados };
+  const sequencia = calcularSequenciaAtividades(atividadesSequencia).atual;
+  const diasEstudados = listarDiasEstudados(atividadesSequencia);
 
   // Fonte única para cards, "Visão rápida", IA Coach e Taxa de acertos:
   // nomes equivalentes são unificados e melhor/pior exigem amostra mínima.
@@ -621,7 +619,7 @@ function iniciarProximaAulaPortugues() {
         <ProStat tone="azul" icon="⏱" valor={formatarMinutos(minutosHoje)} label="Tempo estudado hoje" detalhe={`${formatarMinutos(minutosSemanaAtual)} esta semana`} onClick={() => navigate("/historico-sessoes")} />
         <ProStat tone="roxo" icon="📝" valor={String(questoesHoje)} label="Questões hoje" detalhe={`${totalQuestoes} no total`} onClick={() => navigate("/historico")} />
         <ProStat tone="verde" icon="🎯" valor={`${aproveitamento}%`} label="Taxa de acertos" detalhe={melhorMateria ? `${melhorMateria.materia}: ${melhorMateria.percentual}%` : totalQuestoes > 0 ? "Poucas questões por matéria" : "Comece resolvendo questões"} onClick={() => navigate("/estatisticas")} />
-        <StreakStat sequencia={sequencia} dados={desempenhoSemanal} onClick={() => navigate("/historico-sessoes", { state: { periodo: "semana" } })} />
+        <StreakStat sequencia={sequencia} diasEstudados={diasEstudados} dados={desempenhoSemanal} onClick={() => navigate("/historico-sessoes", { state: { periodo: "semana" } })} />
       </section>
 
       <section className="dashboard-pro-middle">
@@ -700,7 +698,7 @@ function ProStat({ icon, valor, label, detalhe, tone, onClick }: { icon: string;
   );
 }
 
-function StreakStat({ sequencia, dados, onClick }: { sequencia: number; dados: DesempenhoDia[]; onClick: () => void }) {
+function StreakStat({ sequencia, diasEstudados, dados, onClick }: { sequencia: number; diasEstudados: Set<string>; dados: DesempenhoDia[]; onClick: () => void }) {
   const hoje = new Date();
   const indiceHoje = hoje.getDay() === 0 ? 6 : hoje.getDay() - 1;
 
@@ -728,7 +726,7 @@ function StreakStat({ sequencia, dados, onClick }: { sequencia: number; dados: D
 
       <div className="dashboard-pro-streak-week" aria-label="Dias estudados nesta semana">
         {dados.map((item, indice) => {
-          const estudou = item.minutos >= 30;
+          const estudou = diasEstudados.has(item.chave);
           const hojeDia = indice === indiceHoje;
           const futuro = indice > indiceHoje;
 
@@ -957,148 +955,6 @@ function calcularPercentualMeta(
         100
     )
   );
-}
-
-function calcularSequencia(
-  questoes: RegistroQuestao[],
-  sessoes: SessaoEstudo[],
-  revisoes: Revisao[],
-  simulados: Simulado[]
-): number {
-  const MINUTOS_MINIMOS_POR_DIA = 30;
-
-  const minutosPorDia =
-    new Map<string, number>();
-
-  sessoes.forEach((sessao) => {
-    const dataLocal =
-      obterDataLocalSeguro(
-        sessao.data
-      );
-
-    const minutos =
-      Number(sessao.minutos) || 0;
-
-    minutosPorDia.set(
-      dataLocal,
-      (minutosPorDia.get(
-        dataLocal
-      ) || 0) + minutos
-    );
-  });
-
-  questoes.forEach((registro) => {
-    const dataLocal =
-      obterDataLocalSeguro(
-        registro.data
-      );
-
-    const minutos =
-      Number(registro.minutos) || 0;
-
-    minutosPorDia.set(
-      dataLocal,
-      (minutosPorDia.get(
-        dataLocal
-      ) || 0) + minutos
-    );
-  });
-
-  simulados.forEach((simulado) => {
-    const dataLocal = obterDataLocalSeguro(simulado.data);
-    const minutos = Math.max(0, Number(simulado.minutos) || 0);
-
-    minutosPorDia.set(
-      dataLocal,
-      (minutosPorDia.get(dataLocal) || 0) + minutos
-    );
-  });
-
-  revisoes.forEach((revisao) => {
-    if (
-      !revisao.concluida ||
-      !revisao.dataConclusao
-    ) {
-      return;
-    }
-
-    const dataLocal =
-      obterDataLocalSeguro(
-        revisao.dataConclusao
-      );
-
-    /*
-     * Uma revisão concluída sem tempo
-     * informado não cria automaticamente
-     * 30 minutos. Ela só reforça um dia
-     * que já tenha estudo registrado.
-     */
-    if (
-      !minutosPorDia.has(dataLocal)
-    ) {
-      minutosPorDia.set(
-        dataLocal,
-        0
-      );
-    }
-  });
-
-  const diasValidos =
-    new Set<string>();
-
-  minutosPorDia.forEach(
-    (minutos, data) => {
-      if (
-        minutos >=
-        MINUTOS_MINIMOS_POR_DIA
-      ) {
-        diasValidos.add(data);
-      }
-    }
-  );
-
-  const hoje = inicioDoDia(
-    new Date()
-  );
-
-  const chaveHoje =
-    obterDataLocal(hoje);
-
-  /*
-   * Se hoje ainda não atingiu 30 minutos,
-   * verificamos a sequência terminando ontem.
-   * Isso evita mostrar zero durante a manhã
-   * antes de você estudar.
-   */
-  const dataInicial =
-    diasValidos.has(chaveHoje)
-      ? hoje
-      : adicionarDias(
-          hoje,
-          -1
-        );
-
-  let sequencia = 0;
-  let dataVerificada =
-    dataInicial;
-
-  while (
-    diasValidos.has(
-      obterDataLocal(
-        dataVerificada
-      )
-    )
-  ) {
-    sequencia += 1;
-
-    dataVerificada =
-      adicionarDias(
-        dataVerificada,
-        -1
-      );
-  }
-
-  return sequencia;
 }
 
 function formatarMinutos(

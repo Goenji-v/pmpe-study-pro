@@ -5,25 +5,41 @@ import type {
   Simulado,
 } from "../types";
 
-export function calcularSequenciaAtividades(params: {
+type EntradaSequenciaAtividades = {
   sessoes: SessaoEstudo[];
   questoes: RegistroQuestao[];
   revisoes: Revisao[];
   simulados: Simulado[];
   agora?: Date;
-}) {
+};
+
+/** Um dia estudado exige atividade realizada, sem mínimo arbitrário de minutos.
+ * Datas civis antigas mantêm seu dia; timestamps usam o fuso local do aparelho.
+ */
+export function listarDiasEstudados(params: EntradaSequenciaAtividades): Set<string> {
+  const agora = params.agora ?? new Date();
   const datas = new Set<string>();
 
-  params.sessoes.forEach((item) => adicionarData(datas, item.data));
-  params.questoes.forEach((item) => adicionarData(datas, item.data));
-  params.simulados.forEach((item) => adicionarData(datas, item.data));
+  params.sessoes.forEach((item) => {
+    if (positivo(item.minutos) || positivo(item.quantidadeQuestoes)) adicionarData(datas, item.data, agora);
+  });
+  params.questoes.forEach((item) => {
+    if (positivo(item.minutos) || positivo(item.certas) || positivo(item.erradas)) adicionarData(datas, item.data, agora);
+  });
+  params.simulados.forEach((item) => {
+    if (positivo(item.minutos) || positivo(item.certas) || positivo(item.erradas)) adicionarData(datas, item.data, agora);
+  });
   params.revisoes.forEach((item) => {
     if (item.concluida && item.dataConclusao) {
-      adicionarData(datas, item.dataConclusao);
+      adicionarData(datas, item.dataConclusao, agora);
     }
   });
+  return datas;
+}
 
-  const ordenadas = [...datas].filter(data => data <= chaveData(params.agora ?? new Date())).sort();
+export function calcularSequenciaAtividades(params: EntradaSequenciaAtividades) {
+  const agora = params.agora ?? new Date();
+  const ordenadas = [...listarDiasEstudados({ ...params, agora })].sort();
   if (ordenadas.length === 0) {
     return { atual: 0, melhor: 0 };
   }
@@ -40,8 +56,8 @@ export function calcularSequenciaAtividades(params: {
     }
   }
 
-  const hoje = chaveData(params.agora ?? new Date());
-  const ontem = chaveData(adicionarDias(params.agora ?? new Date(), -1));
+  const hoje = obterDiaLocal(agora);
+  const ontem = obterDiaLocal(adicionarDias(agora, -1));
   const ultima = ordenadas[ordenadas.length - 1];
 
   if (ultima !== hoje && ultima !== ontem) {
@@ -57,21 +73,27 @@ export function calcularSequenciaAtividades(params: {
   return { atual, melhor };
 }
 
-function adicionarData(destino: Set<string>, valor?: string) {
+function positivo(valor: number | undefined) {
+  return Number.isFinite(valor) && Number(valor) > 0;
+}
+
+function adicionarData(destino: Set<string>, valor: string | undefined, agora: Date) {
   if (!valor) return;
-  const direta = valor.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (direta) {
-    destino.add(direta[1]);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+    const dataCivil = inicioDaChave(valor);
+    if (!Number.isNaN(dataCivil.getTime()) && dataCivil.toISOString().slice(0, 10) === valor && valor <= obterDiaLocal(agora)) {
+      destino.add(valor);
+    }
     return;
   }
 
   const data = new Date(valor);
-  if (!Number.isNaN(data.getTime())) {
-    destino.add(chaveData(data));
+  if (!Number.isNaN(data.getTime()) && data <= agora) {
+    destino.add(obterDiaLocal(data));
   }
 }
 
-function chaveData(data: Date) {
+export function obterDiaLocal(data: Date) {
   return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
 }
 
@@ -89,5 +111,6 @@ function diferencaEmDias(inicio: string, fim: string) {
 
 function inicioDaChave(chave: string) {
   const [ano, mes, dia] = chave.split("-").map(Number);
-  return new Date(ano, mes - 1, dia, 0, 0, 0, 0);
+  // A distância entre dias civis não depende de dias de 23/25h no horário de verão.
+  return new Date(Date.UTC(ano, mes - 1, dia));
 }

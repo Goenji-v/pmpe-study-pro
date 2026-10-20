@@ -4,6 +4,7 @@ import type {
   SessaoEstudo,
   Simulado,
 } from "../types";
+import { criarIdentificadorMateriaHistorico, type ReferenciaMateriaHistorico } from "./identidadeMateriaHistorico";
 
 export type ResumoSimuladoConsolidado = {
   total: number;
@@ -105,6 +106,8 @@ export function calcularMetricasConsolidadas(
     0
   );
 
+  const identificarMateria = criarIdentificadorMateriaHistorico([...sessoesPeriodo, ...registrosContabilizaveis, ...(entrada.revisoes ?? [])]);
+
   const minutosQuestoes = registrosContabilizaveis.reduce((total, registro) => {
     const minutos = numeroSeguro(registro.minutos);
     if (minutos <= 0) return total;
@@ -112,8 +115,7 @@ export function calcularMetricasConsolidadas(
     const duplicadoPorSessao = sessoesPeriodo.some(
       (sessao) =>
         sessao.tipo === "questoes" &&
-        normalizar(sessao.materia) === normalizar(registro.materia) &&
-        normalizar(sessao.assunto) === normalizar(registro.assunto) &&
+        mesmoConteudo(sessao, registro, identificarMateria) &&
         datasProximas(sessao.data, registro.data, 5000)
     );
 
@@ -217,6 +219,20 @@ function datasProximas(
     Number.isFinite(dataB) &&
     Math.abs(dataA - dataB) <= toleranciaMs
   );
+}
+
+function mesmoConteudo(
+  a: SessaoEstudo,
+  b: RegistroQuestao,
+  identificarMateria: (referencia: ReferenciaMateriaHistorico) => string
+) {
+  // IDs prevalecem sobre nomes: aliases legados não devem duplicar a mesma
+  // atividade nem unir conteúdos homônimos que pertencem a IDs diferentes.
+  if (identificarMateria(a) !== identificarMateria(b)) return false;
+  if (a.moduloId && b.moduloId && a.moduloId !== b.moduloId) return false;
+  return a.assuntoId && b.assuntoId
+    ? a.assuntoId === b.assuntoId
+    : normalizar(a.assunto) === normalizar(b.assunto);
 }
 
 function adicionarDia(

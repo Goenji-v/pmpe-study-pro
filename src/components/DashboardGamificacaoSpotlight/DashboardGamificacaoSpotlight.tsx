@@ -15,12 +15,14 @@ import {
   obterTituloEquipadoValido,
 } from "../../services/conquistasTitulos";
 import { calcularSequenciaAtividades } from "../../utils/sequenciaAtividades";
+import { useDiaLocalAtual } from "../../hooks/useDiaLocalAtual";
 
 const XP_POR_NIVEL = 250;
 
 export default function DashboardGamificacaoSpotlight() {
   const location = useLocation();
   const navigate = useNavigate();
+  useDiaLocalAtual();
   const {
     sessoes,
     questoes,
@@ -42,16 +44,7 @@ export default function DashboardGamificacaoSpotlight() {
     [sessoes, questoes, revisoes, simulados]
   );
 
-  const sequencia = useMemo(
-    () =>
-      calcularSequenciaAtividades({
-        sessoes,
-        questoes,
-        revisoes,
-        simulados,
-      }),
-    [sessoes, questoes, revisoes, simulados]
-  );
+  const sequencia = calcularSequenciaAtividades({ sessoes, questoes, revisoes, simulados });
 
   const economia = useMemo(
     () => obterEstadoEconomia(configuracoes),

@@ -1,6 +1,7 @@
 import type { Revisao } from "../../types";
 
 export type DesempenhoMateria = {
+  chave: string;
   materia: string;
   certas: number;
   erradas: number;

@@ -15,14 +15,40 @@ import {
 } from "../../types/editalInteligente";
 
 type TemaBasico = "azul" | "escuro" | "claro";
-type ConfiguracoesFormulario = ConfiguracoesComEdital & {
+type ConfiguracoesFormulario = Pick<ConfiguracoesComEdital,
+  | "nomeUsuario" | "concurso" | "bancaPadrao" | "tema"
+  | "metaQuestoesDiaria" | "metaMinutosDiaria" | "metaRevisoesDiaria"
+  | "materiasPorDia" | "missoesPorDia" | "materiasPorDiaSemana"
+  | "salvarMarcacoesPdf" | "diasEstudo" | "diaRedacaoSemanal" | "diaSimuladoSemanal"
+> & {
   temaBasico?: TemaBasico;
 };
+
+// Não transportar economia, progresso ou metadados na cópia editável do formulário.
+function camposEditaveis(config: ConfiguracoesFormulario): ConfiguracoesFormulario {
+  return {
+    nomeUsuario: config.nomeUsuario,
+    concurso: config.concurso,
+    bancaPadrao: config.bancaPadrao,
+    tema: config.tema,
+    temaBasico: config.temaBasico,
+    metaQuestoesDiaria: config.metaQuestoesDiaria,
+    metaMinutosDiaria: config.metaMinutosDiaria,
+    metaRevisoesDiaria: config.metaRevisoesDiaria,
+    materiasPorDia: config.materiasPorDia,
+    missoesPorDia: config.missoesPorDia,
+    materiasPorDiaSemana: config.materiasPorDiaSemana,
+    salvarMarcacoesPdf: config.salvarMarcacoesPdf,
+    diasEstudo: config.diasEstudo,
+    diaRedacaoSemanal: config.diaRedacaoSemanal,
+    diaSimuladoSemanal: config.diaSimuladoSemanal,
+  };
+}
 
 export default function Configuracoes() {
   const { configuracoes, setConfiguracoes, materias } = useApp();
   const { showToast } = useToast();
-  const configInicial = configuracoes as ConfiguracoesFormulario;
+  const configInicial = configuracoes as ConfiguracoesComEdital & { temaBasico?: TemaBasico };
   const economia = obterEstadoEconomia(configuracoes);
   const temaLojaEquipado = encontrarItemLoja(economia.temaEquipado);
   const ritmoInicial = Math.max(
@@ -33,7 +59,7 @@ export default function Configuracoes() {
     configInicial.temaBasico ?? (configInicial.tema === "claro" ? "claro" : "azul");
 
   const [formulario, setFormulario] = useState<ConfiguracoesFormulario>({
-    ...configInicial,
+    ...camposEditaveis(configInicial),
     temaBasico: temaBasicoInicial,
     diasEstudo:
       configInicial.diasEstudo?.length
@@ -119,12 +145,20 @@ export default function Configuracoes() {
       tema: temaBasico === "claro" ? "claro" : "escuro",
     };
 
-    if (dadosAtualizados.editalAtivo?.plano) {
-      const ativo = dadosAtualizados.editalAtivo;
-      dadosAtualizados.editalAtivo = { ...ativo, plano: preservarIdsPlanoAnterior(gerarPlanoEdital(ativo.analise, dadosAtualizados, materias), ativo.plano!) };
-    }
-    setConfiguracoes(dadosAtualizados);
+    setConfiguracoes(anterior => aplicarPreferencias(anterior, dadosAtualizados));
     showToast("Configurações salvas com sucesso.", "success");
+  }
+
+  function aplicarPreferencias(anterior: ConfiguracoesComEdital, preferencias: ConfiguracoesFormulario) {
+    const atualizadas = { ...anterior, ...camposEditaveis(preferencias) };
+    const ativo = anterior.editalAtivo;
+    if (ativo?.plano) {
+      atualizadas.editalAtivo = {
+        ...ativo,
+        plano: preservarIdsPlanoAnterior(gerarPlanoEdital(ativo.analise, atualizadas, materias), ativo.plano),
+      };
+    }
+    return atualizadas;
   }
 
   function restaurarPadrao() {
@@ -144,12 +178,10 @@ export default function Configuracoes() {
       diaSimuladoSemanal: "dom",
       tema: "escuro",
       temaBasico: "azul",
-      editalOnboardingVisto: formulario.editalOnboardingVisto,
-      editalAtivo: formulario.editalAtivo,
     };
 
     setFormulario(padrao);
-    setConfiguracoes(padrao);
+    setConfiguracoes(anterior => aplicarPreferencias(anterior, padrao));
     showToast("Configurações padrão restauradas.", "info");
   }
 
@@ -411,7 +443,7 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
           </div>
           <div className="configuracoes-resumo-item">
             <span>Edital</span>
-            <strong>{formulario.editalAtivo?.confirmadoEm ? "Configurado" : "Não configurado"}</strong>
+            <strong>{configInicial.editalAtivo?.confirmadoEm ? "Configurado" : "Não configurado"}</strong>
           </div>
         </div>
 

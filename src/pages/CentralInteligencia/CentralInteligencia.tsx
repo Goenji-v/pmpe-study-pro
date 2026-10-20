@@ -219,7 +219,7 @@ export default function CentralInteligencia() {
           descricao="Aproveitamento acumulado nas questões registradas."
           vazio="Nenhuma questão registrada."
           itens={dados.materias.slice(0, 8).map((materia) => ({
-            chave: materia.materia,
+            chave: materia.chave,
             nome: materia.materia,
             percentual: materia.percentual,
             detalhe: `${materia.total} questões • ${formatarMinutos(materia.minutos)}`,

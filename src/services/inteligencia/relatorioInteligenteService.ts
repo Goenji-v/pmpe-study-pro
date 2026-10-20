@@ -1,4 +1,4 @@
-import { chaveDaMateria } from "../../utils/desempenhoMaterias";
+import { criarIdentificadorMateriaHistorico, type ReferenciaMateriaHistorico } from "../../utils/identidadeMateriaHistorico";
 import type {
   RegistroQuestao,
   Revisao,
@@ -30,6 +30,7 @@ export type ComparacaoIndicador = {
 };
 
 export type DesempenhoMateriaInteligente = {
+  chave: string;
   materia: string;
   questoes: number;
   certas: number;
@@ -214,11 +215,13 @@ function calcularMaterias(
   revisoes: Revisao[]
 ): DesempenhoMateriaInteligente[] {
   const mapa = new Map<string, DesempenhoMateriaInteligente>();
+  const identificarMateria = criarIdentificadorMateriaHistorico([...questoes, ...sessoes, ...revisoes]);
 
-  function obter(materiaOriginal: string) {
-    const materia = materiaOriginal.trim() || "Sem matéria";
-    const chave = chaveDaMateria(materia);
+  function obter(registro: ReferenciaMateriaHistorico) {
+    const materia = registro.materia.trim() || "Sem matéria";
+    const chave = identificarMateria(registro);
     const atual = mapa.get(chave) ?? {
+      chave,
       materia,
       questoes: 0,
       certas: 0,
@@ -233,31 +236,34 @@ function calcularMaterias(
   }
 
   questoes.forEach((registro) => {
-    const atual = obter(registro.materia);
+    const atual = obter(registro);
     atual.certas += numeroSeguro(registro.certas);
     atual.erradas += numeroSeguro(registro.erradas) + numeroSeguro(registro.emBranco ?? 0);
     atual.questoes = atual.certas + atual.erradas;
     atual.aproveitamento =
       atual.questoes === 0 ? 0 : Math.round((atual.certas / atual.questoes) * 100);
-    atual.minutos += numeroSeguro(registro.minutos);
     atualizarUltimaAtividade(atual, registro.data);
   });
 
   sessoes.forEach((sessao) => {
-    const atual = obter(sessao.materia);
-    atual.minutos += numeroSeguro(sessao.minutos);
+    const atual = obter(sessao);
     atualizarUltimaAtividade(atual, sessao.data);
   });
 
   revisoes.forEach((revisao) => {
     if (revisao.concluida && revisao.dataConclusao) {
-      atualizarUltimaAtividade(obter(revisao.materia), revisao.dataConclusao);
+      atualizarUltimaAtividade(obter(revisao), revisao.dataConclusao);
     }
   });
 
-  return Array.from(mapa.values())
-    .map((item) => ({
+  return Array.from(mapa.entries())
+    .map(([chave, item]) => ({
       ...item,
+      minutos: calcularMetricasConsolidadas({
+        questoes: questoes.filter((registro) => identificarMateria(registro) === chave),
+        sessoes: sessoes.filter((sessao) => identificarMateria(sessao) === chave),
+        simulados: [],
+      }).minutos,
       diasSemEstudar: item.ultimaAtividade ? diasDesde(item.ultimaAtividade) : null,
     }))
     .sort((a, b) => b.questoes - a.questoes || b.minutos - a.minutos);

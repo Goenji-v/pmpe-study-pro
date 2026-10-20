@@ -7,6 +7,7 @@ import {
   resolverCategoriaLinkMaterial,
   type CategoriaLinkMaterial,
 } from "../utils/materiaisLinks";
+import { materialCorrespondeAssunto, type ReferenciaMaterial } from "../utils/identidadeMateriais";
 
 export type {
   CategoriaLinkMaterial,
@@ -104,121 +105,49 @@ export async function listarMateriais():
     usuario.id
   );
 
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("materiais")
-    .select(
-      [
-        "id",
-        "user_id",
-        "local_id",
-        "nome",
-        "materia",
-        "assunto",
-        "tipo",
-        "observacao",
-        "url_externa",
-        "storage_path",
-        "nome_arquivo",
-        "mime_type",
-        "tamanho_bytes",
-        "created_at",
-        "dados",
-      ].join(",")
-    )
-    .eq(
-      "user_id",
-      usuario.id
-    )
-    .order(
-      "created_at",
-      {
-        ascending: false,
-      }
-    );
-
-  if (error) {
-    throw new Error(
-      `Não foi possível listar os materiais: ${error.message}`
-    );
-  }
-
-  return (
-  (data ?? []) as unknown as MaterialBanco[]
-).map(
-  converterMaterialBanco
-);
+  return listarMateriaisDoUsuario(usuario.id);
 }
 
 export async function listarMateriaisPorAssunto(
   materia: string,
   assunto: string,
-  modulo?: string
+  modulo?: string,
+  identidade: Omit<ReferenciaMaterial, "materia" | "assunto" | "modulo"> = {}
 ): Promise<MaterialEstudo[]> {
   const usuario =
     await exigirUsuario();
 
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("materiais")
-    .select(
-      [
-        "id",
-        "user_id",
-        "local_id",
-        "nome",
-        "materia",
-        "assunto",
-        "tipo",
-        "observacao",
-        "url_externa",
-        "storage_path",
-        "nome_arquivo",
-        "mime_type",
-        "tamanho_bytes",
-        "created_at",
-        "dados",
-      ].join(",")
-    )
-    .eq(
-      "user_id",
-      usuario.id
-    )
-    .eq(
-      "materia",
-      materia.trim()
-    )
-    .eq(
-      "assunto",
-      assunto.trim()
-    )
-    .order(
-      "created_at",
-      {
-        ascending: false,
-      }
-    );
+  const materiais = await listarMateriaisDoUsuario(usuario.id);
+  return materiais.filter((material) => materialCorrespondeAssunto(material, {
+    ...identidade, materia, assunto, modulo,
+  }));
+}
 
-  if (error) {
-    throw new Error(
-      `Não foi possível listar os materiais: ${error.message}`
-    );
+async function listarMateriaisDoUsuario(userId: string): Promise<MaterialEstudo[]> {
+  // Consultar por nome no servidor elimina registros com nomes/IDs antigos.
+  // Paginação evita perder materiais antigos após o limite padrão do PostgREST.
+  const tamanhoPagina = 1000;
+  const registros: MaterialBanco[] = [];
+  for (let inicio = 0; ; inicio += tamanhoPagina) {
+    const { data, error } = await supabase
+      .from("materiais")
+      .select([
+        "id", "user_id", "local_id", "nome", "materia", "assunto", "tipo",
+        "observacao", "url_externa", "storage_path", "nome_arquivo",
+        "mime_type", "tamanho_bytes", "created_at", "dados",
+      ].join(","))
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(inicio, inicio + tamanhoPagina - 1);
+    if (error) {
+      throw new Error(`Não foi possível listar os materiais: ${error.message}`);
+    }
+    const pagina = (data ?? []) as unknown as MaterialBanco[];
+    registros.push(...pagina);
+    if (pagina.length < tamanhoPagina) break;
   }
-
-  return (
-    (data ?? []) as unknown as MaterialBanco[]
-  )
-    .map(converterMaterialBanco)
-    .filter(
-      (material) =>
-        !modulo?.trim() ||
-        material.modulo === modulo.trim() ||
-        (!material.modulo && modulo.trim() === "Geral")
-    );
+  return registros.map(converterMaterialBanco);
 }
 
 export async function salvarArquivoMaterial(

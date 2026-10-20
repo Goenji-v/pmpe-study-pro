@@ -75,8 +75,7 @@ export function calcularConquistasPermanentes(
   ).length;
   const missoes = new Set(entrada.missoesConcluidas).size;
   const recebidas = new Set(entrada.recompensasRecebidas ?? []);
-  const melhorSequencia = calcularMelhorSequencia(entrada);
-  const sequenciaAtual = calcularSequenciaAtividades(entrada).atual;
+  const { melhor: melhorSequencia, atual: sequenciaAtual } = calcularSequenciaAtividades(entrada);
   const melhorSimulado = entrada.simulados.reduce(
     (melhor, simulado) => Math.max(melhor, resumirSimulado(simulado).aproveitamento),
     0
@@ -390,23 +389,6 @@ export function calcularConquistasPermanentes(
   ];
 }
 
-function calcularMelhorSequencia(entrada: EntradaConquistas) {
-  const datas = listarDatasAtividade(entrada);
-  if (datas.length === 0) return 0;
-
-  let melhor = 1;
-  let atual = 1;
-  for (let indice = 1; indice < datas.length; indice += 1) {
-    if (diferencaEmDias(datas[indice - 1], datas[indice]) === 1) {
-      atual += 1;
-      melhor = Math.max(melhor, atual);
-    } else {
-      atual = 1;
-    }
-  }
-  return melhor;
-}
-
 function listarDatasAtividade(entrada: EntradaConquistas) {
   const datas = new Set<string>();
   entrada.sessoes.forEach((item) => adicionarData(datas, item.data));
@@ -501,12 +483,6 @@ function adicionarData(destino: Set<string>, valor?: string) {
       `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`
     );
   }
-}
-
-function diferencaEmDias(inicio: string, fim: string) {
-  const a = inicioDaChave(inicio).getTime();
-  const b = inicioDaChave(fim).getTime();
-  return Math.round((b - a) / 86_400_000);
 }
 
 function inicioDaChave(chave: string) {

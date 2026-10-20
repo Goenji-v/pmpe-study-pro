@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -11,6 +12,7 @@ import {
   type MaterialEstudo,
 } from "../../services/materiaisService";
 import { separarMateriaisPorUso } from "../../utils/materiaisLinks";
+import type { Materia } from "../../types";
 
 type AtalhosMateriais = {
   aula?: string;
@@ -19,15 +21,27 @@ type AtalhosMateriais = {
 
 type Props = {
   materia: string;
+  materiaId?: string;
+  idsLegadosMateria?: string[];
   modulo?: string;
+  moduloId?: string;
   assunto: string;
+  assuntoId?: string;
+  idsLegadosAssunto?: string[];
+  materiaCatalogo?: Materia;
   onAtalhosCarregados?: (atalhos: AtalhosMateriais) => void;
 };
 
 export default function MateriaisDoAssunto({
   materia,
+  materiaId,
+  idsLegadosMateria,
   modulo,
+  moduloId,
   assunto,
+  assuntoId,
+  idsLegadosAssunto,
+  materiaCatalogo,
   onAtalhosCarregados,
 }: Props) {
   const [
@@ -42,16 +56,22 @@ export default function MateriaisDoAssunto({
 
   const [erro, setErro] =
     useState("");
+  const identidadeLegada = JSON.stringify([idsLegadosMateria, idsLegadosAssunto]);
+  const consultaAtual = useRef(0);
 
-  // carregar usa somente os três campos abaixo; o callback apenas devolve
+  // O callback apenas devolve
   // os atalhos encontrados para a Central de Estudos.
   /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    carregar();
-  }, [materia, modulo, assunto]);
+    let cancelado = false;
+    void carregar(() => cancelado);
+    return () => { cancelado = true; consultaAtual.current += 1; };
+  }, [materia, materiaId, modulo, moduloId, assunto, assuntoId, identidadeLegada, materiaCatalogo]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
-  async function carregar() {
+  async function carregar(cancelado = () => false) {
+    const consulta = ++consultaAtual.current;
+    const ignorar = () => cancelado() || consulta !== consultaAtual.current;
     if (
       !materia.trim() ||
       !assunto.trim()
@@ -70,9 +90,11 @@ export default function MateriaisDoAssunto({
         await listarMateriaisPorAssunto(
           materia,
           assunto,
-          modulo
+          modulo,
+          { materiaId, idsLegadosMateria, moduloId, assuntoId, idsLegadosAssunto, materiaCatalogo }
         );
 
+      if (ignorar()) return;
       setMateriais(lista);
 
       const separados =
@@ -85,6 +107,7 @@ export default function MateriaisDoAssunto({
           separados.questoes?.url,
       });
     } catch (erroCarregamento) {
+      if (ignorar()) return;
       onAtalhosCarregados?.({});
       setErro(
         erroCarregamento instanceof Error
@@ -92,7 +115,7 @@ export default function MateriaisDoAssunto({
           : "Não foi possível carregar os materiais."
       );
     } finally {
-      setCarregando(false);
+      if (!ignorar()) setCarregando(false);
     }
   }
 
@@ -158,7 +181,7 @@ export default function MateriaisDoAssunto({
 
         <button
           type="button"
-          onClick={carregar}
+          onClick={() => carregar()}
           disabled={carregando}
         >
           Atualizar
