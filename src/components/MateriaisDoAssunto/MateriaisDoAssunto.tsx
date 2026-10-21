@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -7,10 +8,14 @@ import "./MateriaisDoAssunto.css";
 
 import {
   abrirMaterial,
-  listarMateriaisPorAssunto,
+  listarMateriais,
   type MaterialEstudo,
 } from "../../services/materiaisService";
+import type { MaterialAssunto } from "../../types";
+import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
+import { listarMateriaisDaEstrutura } from "../../utils/materiaisDoConteudo";
 import { separarMateriaisPorUso } from "../../utils/materiaisLinks";
+import { agruparMateriaisDaDisciplina } from "../../utils/correspondenciaMateriais";
 
 type AtalhosMateriais = {
   aula?: string;
@@ -25,6 +30,8 @@ type Props = {
   assunto: string;
   assuntoId?: string;
   assuntoIdsLegados?: readonly string[];
+  materiaisDoConteudo?: readonly MaterialAssunto[];
+  pdfDoConteudo?: string;
   onAtalhosCarregados?: (atalhos: AtalhosMateriais) => void;
 };
 
@@ -36,11 +43,18 @@ export default function MateriaisDoAssunto({
   assunto,
   assuntoId,
   assuntoIdsLegados,
+  materiaisDoConteudo,
+  pdfDoConteudo,
   onAtalhosCarregados,
 }: Props) {
   const [
     materiais,
     setMateriais,
+  ] = useState<MaterialEstudo[]>([]);
+
+  const [
+    outrosDaDisciplina,
+    setOutrosDaDisciplina,
   ] = useState<MaterialEstudo[]>([]);
 
   const [
@@ -50,21 +64,25 @@ export default function MateriaisDoAssunto({
 
   const [erro, setErro] =
     useState("");
+  const geracaoRequisicao = useRef(0);
 
   // carregar usa somente os três campos abaixo; o callback apenas devolve
   // os atalhos encontrados para a Central de Estudos.
   /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    carregar();
+    void carregar();
+    return () => { geracaoRequisicao.current += 1; };
   }, [materia, materiaId, modulo, moduloId, assunto, assuntoId, assuntoIdsLegados]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   async function carregar() {
+    const geracao = ++geracaoRequisicao.current;
     if (
       !materia.trim() ||
       !assunto.trim()
     ) {
       setMateriais([]);
+      setOutrosDaDisciplina([]);
       setErro("");
       onAtalhosCarregados?.({});
       return;
@@ -72,17 +90,20 @@ export default function MateriaisDoAssunto({
 
     try {
       setCarregando(true);
+      setMateriais([]);
+      setOutrosDaDisciplina([]);
       setErro("");
 
-      const lista =
-        await listarMateriaisPorAssunto(
-          materia,
-          assunto,
-          modulo,
-          { materiaId, moduloId, assuntoId, assuntoIdsLegados }
-        );
+      const todos = await listarMateriais();
+      if (geracao !== geracaoRequisicao.current) return;
+      const { vinculados: lista, outrosDaDisciplina: outros } =
+        agruparMateriaisDaDisciplina(todos, {
+          materia, materiaId, modulo, moduloId,
+          assunto, assuntoId, assuntoIdsLegados,
+        });
 
       setMateriais(lista);
+      setOutrosDaDisciplina(outros);
 
       const separados =
         separarMateriaisPorUso(lista);
@@ -94,6 +115,7 @@ export default function MateriaisDoAssunto({
           separados.questoes?.url,
       });
     } catch (erroCarregamento) {
+      if (geracao !== geracaoRequisicao.current) return;
       onAtalhosCarregados?.({});
       setErro(
         erroCarregamento instanceof Error
@@ -101,7 +123,7 @@ export default function MateriaisDoAssunto({
           : "Não foi possível carregar os materiais."
       );
     } finally {
-      setCarregando(false);
+      if (geracao === geracaoRequisicao.current) setCarregando(false);
     }
   }
 
@@ -135,6 +157,10 @@ export default function MateriaisDoAssunto({
   } = separarMateriaisPorUso(
     materiais
   );
+  const materiaisCurso = listarMateriaisDaEstrutura({
+    materiais: materiaisDoConteudo,
+    pdf: pdfDoConteudo,
+  }).filter((item) => !materiais.some((material) => material.url === item.url));
 
   /*
    * Aula e Questões são atalhos operacionais da sessão e aparecem na barra
@@ -144,7 +170,9 @@ export default function MateriaisDoAssunto({
   if (
     !carregando &&
     !erro &&
-    materiaisComuns.length === 0
+    materiaisComuns.length === 0 &&
+    materiaisCurso.length === 0 &&
+    outrosDaDisciplina.length === 0
   ) {
     return null;
   }
@@ -237,6 +265,67 @@ export default function MateriaisDoAssunto({
             )
           )}
         </div>
+      )}
+
+      {materiaisCurso.length > 0 && (
+        <div className="materiais-assunto-curso">
+          <h4>PDFs e links do conteúdo</h4>
+          <div className="materiais-assunto-lista">
+            {materiaisCurso.map((material) => (
+              <article className="materiais-assunto-card" key={material.id}>
+                <div className="materiais-assunto-icone">{material.tipo === "pdf" ? "📕" : "🔗"}</div>
+                <div className="materiais-assunto-info">
+                  <strong>{material.nome}</strong>
+                  <span>Material já associado ao conteúdo do curso</span>
+                </div>
+                <button type="button" onClick={() => {
+                  if (material.tipo === "pdf" || ehLinkPdf(material.url)) {
+                    try {
+                      abrirPdfInterno({
+                        id: `conteudo:${assuntoId ?? assunto}:${material.id}`,
+                        nome: material.nome,
+                        url: material.url,
+                      });
+                    } catch {
+                      setErro("Não foi possível abrir este PDF.");
+                    }
+                  } else {
+                    window.open(material.url, "_blank", "noopener,noreferrer");
+                  }
+                }} aria-label={`Abrir ${material.nome} do curso`}>
+                  Abrir
+                </button>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {outrosDaDisciplina.length > 0 && (
+        <details className="materiais-assunto-outros">
+          <summary>
+            Outros materiais de {materia} ({outrosDaDisciplina.length})
+          </summary>
+          <p>
+            Estes materiais estão salvos na mesma disciplina, mas não têm vínculo
+            confirmado com este assunto. Confira a origem antes de reutilizá-los.
+          </p>
+          <div className="materiais-assunto-lista">
+            {outrosDaDisciplina.map((material) => (
+              <article key={material.id} className="materiais-assunto-card">
+                <div className="materiais-assunto-icone">{iconeMaterial(material)}</div>
+                <div className="materiais-assunto-info">
+                  <strong>{material.nome}</strong>
+                  <span>Cadastro: {material.assunto}{material.modulo ? ` · ${material.modulo}` : ""}</span>
+                </div>
+                <button type="button" onClick={() => abrir(material)}
+                  aria-label={`Abrir ${material.nome}, cadastrado em ${material.assunto}`}>
+                  Abrir
+                </button>
+              </article>
+            ))}
+          </div>
+        </details>
       )}
     </section>
   );

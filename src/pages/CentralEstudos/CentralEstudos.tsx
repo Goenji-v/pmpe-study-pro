@@ -43,6 +43,7 @@ import {
   listarModulosDaMateria,
 } from "../../services/conteudos/navegarConteudos";
 import { localizarProximaAula } from "../../services/conteudos/localizarConteudo";
+import { resolverLinksAtividade } from "../../utils/linksAtividade";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { salvarArquivoMaterial } from "../../services/materiaisService";
 import { obterReferenciasDaMissao, planoPMPE } from "../../data/planoPMPE";
@@ -125,8 +126,11 @@ export default function CentralEstudos() {
     setAtalhosMateriais({});
   }, [
     estado.materia,
+    estado.materiaId,
     estado.modulo,
+    estado.moduloId,
     estado.assunto,
+    estado.assuntoId,
   ]);
 
 const [
@@ -417,8 +421,17 @@ const [
 
   const formatoRevisao = estado.formatoRevisao ?? "teoria";
   const revisaoPorQuestoes = estado.tipo === "revisao" && formatoRevisao === "questoes";
-  const urlAulaPrincipal = estado.urlAula ?? atalhosMateriais.aula;
-  const urlQuestoesPrincipal = atalhosMateriais.questoes ?? estado.urlQuestoes;
+  const linksAtividade = resolverLinksAtividade({
+    urlAulaSessao: estado.urlAula,
+    urlQuestoesSessao: estado.urlQuestoes,
+    urlAulaSelecionada: aulaSelecionada?.url,
+    urlAulaAssunto: assuntoSelecionado?.aula,
+    urlQuestoesAssunto: assuntoSelecionado?.questoes,
+    urlAulaMaterial: atalhosMateriais.aula,
+    urlQuestoesMaterial: atalhosMateriais.questoes,
+  });
+  const urlAulaPrincipal = linksAtividade.aula;
+  const urlQuestoesPrincipal = linksAtividade.questoes;
   const finalizacaoComQuestoes = sessaoExigeResultadoQuestoes(
     estado.tipo,
     estado.tipo === "revisao" ? formatoRevisao : undefined
@@ -1372,9 +1385,15 @@ const [
           </div>
 
           <MateriaisDoAssunto
-            materia={estado.materia}
-            modulo={estado.modulo}
-            assunto={estado.assunto}
+            materia={materiaSelecionada?.nome ?? estado.materia}
+            materiaId={materiaSelecionada?.id ?? estado.materiaId}
+            modulo={selecaoAssunto?.modulo.nome ?? estado.modulo}
+            moduloId={selecaoAssunto?.modulo.id ?? estado.moduloId}
+            assunto={assuntoSelecionado?.nome ?? estado.assunto}
+            assuntoId={assuntoSelecionado?.id ?? estado.assuntoId}
+            assuntoIdsLegados={assuntoSelecionado?.idsLegados}
+            materiaisDoConteudo={assuntoSelecionado?.materiais}
+            pdfDoConteudo={assuntoSelecionado?.pdf}
             onAtalhosCarregados={setAtalhosMateriais}
           />
 
