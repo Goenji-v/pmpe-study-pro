@@ -29,9 +29,10 @@ test("selecionar apenas a matéria exibe todos os cadastros dessa matéria", () 
   );
 });
 
-test("ao escolher o assunto, manter os outros materiais separados e com origem", () => {
+test("assunto selecionado mantém somente seus materiais no resultado exibido", () => {
   const separados = agruparMateriaisDaDisciplina(materiais, referencia);
   assert.deepEqual(separados.vinculados.map((item) => item.id), ["mesmo-assunto"]);
+  // O banco ainda guarda os outros arquivos, mas a Central usa só vinculados.
   assert.deepEqual(separados.outrosDaDisciplina.map((item) => item.id), ["outra-aula"]);
 });
 
@@ -40,8 +41,29 @@ test("materiais da matéria não ficam escondidos e não viram links da sessão 
   assert.match(fonte, /if \(!assunto\.trim\(\)\) \{/);
   assert.match(fonte, /setMateriais\(todos\.filter/);
   assert.match(fonte, /onAtalhosCarregados\?\.\(\{\}\)/);
-  assert.match(fonte, /outrosDaDisciplina\.map/);
-  assert.match(fonte, /Cadastro: \{material\.assunto\}/);
+  assert.match(fonte, /const \{ vinculados: lista \} =/);
+  assert.doesNotMatch(fonte, /outrosDaDisciplina\.map|Cadastro: \{material\.assunto\}/);
   assert.match(fonte, /MATERIAIS DA MATÉRIA/);
   assert.doesNotMatch(fonte, /<details className="materiais-assunto-outros"/);
+});
+
+test("Português → Verbos não exibe Ortografia ou Orações Subordinadas", () => {
+  const referenciaVerbos = {
+    materia: "Língua Portuguesa",
+    materiaId: "portugues",
+    modulo: "Geral",
+    assunto: "Verbos",
+    assuntoId: "verbos",
+  };
+  const biblioteca = [
+    { id: "verbo", materia: "Língua Portuguesa", materiaId: "portugues", modulo: "Geral", assunto: "Verbos", assuntoId: "verbos" },
+    { id: "ortografia", materia: "Língua Portuguesa", materiaId: "portugues", modulo: "Geral", assunto: "Ortografia", assuntoId: "ortografia" },
+    { id: "oracoes", materia: "Língua Portuguesa", materiaId: "portugues", modulo: "Geral", assunto: "Orações subordinadas", assuntoId: "oracoes" },
+  ];
+  const { vinculados, outrosDaDisciplina } = agruparMateriaisDaDisciplina(biblioteca, referenciaVerbos);
+  assert.deepEqual(vinculados.map((item) => item.id), ["verbo"]);
+  assert.deepEqual(outrosDaDisciplina.map((item) => item.id), ["ortografia", "oracoes"]);
+  const semVerbos = agruparMateriaisDaDisciplina(biblioteca.slice(1), referenciaVerbos);
+  assert.deepEqual(semVerbos.vinculados, []);
+  assert.equal(semVerbos.outrosDaDisciplina.length, 2);
 });
