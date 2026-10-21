@@ -22,7 +22,8 @@ import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
 
 import MateriaisDoAssunto from "../../components/MateriaisDoAssunto/MateriaisDoAssunto";
-import { statusDaRevisao, formatarDataRevisao } from "../../utils/revisoes";
+import { formatarDataRevisao } from "../../utils/revisoes";
+import { resumoRevisoesDaCentral } from "../../utils/revisoesCentral";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 import type { Revisao } from "../../types";
@@ -74,22 +75,8 @@ export default function CentralEstudos() {
     revisoes,
   } = useApp();
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
-  const revisoesPendentes = useMemo(
-    () => revisoes.filter((revisao) => !revisao.concluida).sort((a, b) => a.dataPrevista.localeCompare(b.dataPrevista)),
-    [revisoes]
-  );
-  const gruposRevisoes = useMemo(() => {
-    const grupos = new Map<string, { titulo: string; itens: Revisao[] }>();
-    for (const revisao of revisoesPendentes) {
-      const status = statusDaRevisao(revisao.dataPrevista);
-      const chave = status === "atrasada" ? "0" : status === "hoje" ? "1" : "2:" + revisao.dataPrevista.slice(0, 10);
-      const titulo = status === "atrasada" ? "Atrasadas" : status === "hoje" ? "Para hoje" : formatarDataRevisao(revisao.dataPrevista);
-      const grupo = grupos.get(chave) ?? { titulo, itens: [] };
-      grupo.itens.push(revisao);
-      grupos.set(chave, grupo);
-    }
-    return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, grupo]) => ({ id, ...grupo }));
-  }, [revisoesPendentes]);
+  // A lista resumida é derivada das revisões reais; nunca altera o progresso.
+  const resumoRevisoes = resumoRevisoesDaCentral(revisoes);
 
   const {
     sessaoAtiva,
@@ -135,6 +122,7 @@ export default function CentralEstudos() {
 
   const [mensagem, setMensagem] =
     useState("");
+  const [mostrarRevisoes, setMostrarRevisoes] = useState(false);
 
   const [
     atalhosMateriais,
@@ -502,6 +490,7 @@ const [
       objetivo: "Revisar " + revisao.assunto,
       observacao: "Revisão etapa " + revisao.etapa + " · " + plano.titulo,
     });
+    setMostrarRevisoes(false);
     setMensagem("Revisão selecionada. Ela será concluída somente ao finalizar a sessão.");
   }
 
@@ -1104,31 +1093,6 @@ const [
             ))}
           </div>
 
-          {estado.tipo === "revisao" && (
-            <section className="central-estudos-revisoes-pendentes" aria-label="Revisões pendentes">
-              <h3>Revisões pendentes ({revisoesPendentes.length})</h3>
-              {gruposRevisoes.length === 0 && <p>Nenhuma revisão pendente.</p>}
-              {gruposRevisoes.map((grupo) => (
-                <div key={grupo.id} className="central-estudos-grupo-revisoes">
-                  <h4>{grupo.titulo} ({grupo.itens.length})</h4>
-                  {grupo.itens.map((revisao) => (
-                    <div key={revisao.id} className="central-estudos-item-revisao">
-                      <div>
-                        <strong>{revisao.materia} · {revisao.assunto}</strong>
-                        <small>{revisao.modulo ? revisao.modulo + " · " : ""}{formatarDataRevisao(revisao.dataPrevista)}</small>
-                        {revisao.origemSimulado && <small>{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>}
-                      </div>
-                      <button type="button" disabled={cronometroAtivo} onClick={() => selecionarRevisaoPendente(revisao)}>
-                        {estado.revisaoId === revisao.id ? "Selecionada" : "Selecionar"}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ))}
-              <p>Selecionar não conclui a revisão. A conclusão ocorre apenas após finalizar a sessão vinculada.</p>
-            </section>
-          )}
-
           <div className="central-estudos-formulario">
             <div className="central-estudos-campo">
               <label>
@@ -1335,6 +1299,75 @@ const [
                     ? "Releitura, resumo, anotações ou revisão do material."
                     : "Ao finalizar, informe total, acertos, banca e dificuldade. O desempenho entra nas estatísticas do assunto."}
                 </small>
+              </div>
+            )}
+
+            {estado.tipo === "revisao" && (
+              <div className="central-estudos-revisoes-acesso">
+                <button
+                  type="button"
+                  className="central-estudos-ver-revisoes"
+                  aria-expanded={mostrarRevisoes}
+                  aria-controls="central-resumo-revisoes"
+                  onClick={() => setMostrarRevisoes((anterior) => !anterior)}
+                >
+                  {mostrarRevisoes ? "Ocultar revisões" : "Ver revisões"}
+                </button>
+
+                {mostrarRevisoes && (
+                  <section
+                    id="central-resumo-revisoes"
+                    className="central-estudos-revisoes-pendentes"
+                    aria-label="Revisões pendentes até amanhã"
+                  >
+                    <h3>Revisões pendentes</h3>
+                    <p className="central-estudos-revisoes-ajuda">
+                      Até três revisões atrasadas, de hoje ou de amanhã.
+                    </p>
+                    {resumoRevisoes.grupos.length === 0 && (
+                      <p>Não há revisões pendentes atrasadas, para hoje ou para amanhã.</p>
+                    )}
+                    {resumoRevisoes.grupos.map((grupo) => (
+                      <div key={grupo.id} className="central-estudos-grupo-revisoes">
+                        <h4>{grupo.titulo} ({grupo.itens.length})</h4>
+                        {grupo.itens.map((revisao) => (
+                          <div key={revisao.id} className="central-estudos-item-revisao">
+                            <div>
+                              <strong>{revisao.materia} · {revisao.assunto}</strong>
+                              <small>
+                                {revisao.modulo ? revisao.modulo + " · " : ""}
+                                {formatarDataRevisao(revisao.dataPrevista)}
+                              </small>
+                              {revisao.origemSimulado && (
+                                <small>{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              disabled={cronometroAtivo}
+                              onClick={() => selecionarRevisaoPendente(revisao)}
+                            >
+                              {estado.revisaoId === revisao.id ? "Selecionada" : "Selecionar"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <p className="central-estudos-revisoes-ajuda">
+                      Selecionar não conclui a revisão. Ela só é concluída ao finalizar a sessão vinculada.
+                    </p>
+                    <button
+                      type="button"
+                      className="central-estudos-todas-revisoes"
+                      onClick={() => navigate("/revisoes")}
+                    >
+                      Ver todas as revisões
+                      {resumoRevisoes.totalPendentes > resumoRevisoes.quantidadeExibida
+                        ? ` (${resumoRevisoes.totalPendentes} pendentes)`
+                        : ""}
+                    </button>
+                  </section>
+                )}
               </div>
             )}
 
