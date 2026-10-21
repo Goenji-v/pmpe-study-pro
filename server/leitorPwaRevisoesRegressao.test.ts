@@ -84,5 +84,7 @@ test("seleção de revisão mantém identidade histórica até finalizar a sess�
   assert.match(trecho, /revisaoId: revisao\.id/);
   assert.match(trecho, /materiaId: revisao\.materiaId/);
   assert.match(trecho, /assuntoId: revisao\.assuntoId/);
-  assert.match(central, /\.filter\(\(revisao\) => !revisao\.concluida\)/);
+  const resumo = ler("src/utils/revisoesCentral.ts");
+  assert.match(central, /resumoRevisoesDaCentral\(revisoes\)/);
+  assert.match(resumo, /\.filter\(\(item\) => !item\.concluida\)/);
 });
