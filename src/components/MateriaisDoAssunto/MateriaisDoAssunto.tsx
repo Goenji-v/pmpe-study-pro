@@ -15,7 +15,7 @@ import type { MaterialAssunto } from "../../types";
 import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
 import { listarMateriaisDaEstrutura } from "../../utils/materiaisDoConteudo";
 import { separarMateriaisPorUso } from "../../utils/materiaisLinks";
-import { agruparMateriaisDaDisciplina } from "../../utils/correspondenciaMateriais";
+import { agruparMateriaisDaDisciplina, materialPertenceAMateria } from "../../utils/correspondenciaMateriais";
 
 type AtalhosMateriais = {
   aula?: string;
@@ -77,10 +77,7 @@ export default function MateriaisDoAssunto({
 
   async function carregar() {
     const geracao = ++geracaoRequisicao.current;
-    if (
-      !materia.trim() ||
-      !assunto.trim()
-    ) {
+    if (!materia.trim()) {
       setMateriais([]);
       setOutrosDaDisciplina([]);
       setErro("");
@@ -96,6 +93,17 @@ export default function MateriaisDoAssunto({
 
       const todos = await listarMateriais();
       if (geracao !== geracaoRequisicao.current) return;
+      if (!assunto.trim()) {
+        // Somente a matéria foi selecionada: mostrar todo conteúdo dela,
+        // sem atribuir links ou arquivos a um assunto não escolhido.
+        setMateriais(todos.filter((material) =>
+          materialPertenceAMateria(material, { materia, materiaId })
+        ));
+        setOutrosDaDisciplina([]);
+        onAtalhosCarregados?.({});
+        return;
+      }
+
       const { vinculados: lista, outrosDaDisciplina: outros } =
         agruparMateriaisDaDisciplina(todos, {
           materia, materiaId, modulo, moduloId,
@@ -145,22 +153,20 @@ export default function MateriaisDoAssunto({
     }
   }
 
-  if (
-    !materia.trim() ||
-    !assunto.trim()
-  ) {
+  if (!materia.trim()) {
     return null;
   }
 
-  const {
-    vinculados: materiaisComuns,
-  } = separarMateriaisPorUso(
-    materiais
-  );
-  const materiaisCurso = listarMateriaisDaEstrutura({
-    materiais: materiaisDoConteudo,
-    pdf: pdfDoConteudo,
-  }).filter((item) => !materiais.some((material) => material.url === item.url));
+  const assuntoSelecionado = Boolean(assunto.trim());
+  const materiaisComuns = assuntoSelecionado
+    ? separarMateriaisPorUso(materiais).vinculados
+    : materiais;
+  const materiaisCurso = assuntoSelecionado
+    ? listarMateriaisDaEstrutura({
+        materiais: materiaisDoConteudo,
+        pdf: pdfDoConteudo,
+      }).filter((item) => !materiais.some((material) => material.url === item.url))
+    : [];
 
   /*
    * Aula e Questões são atalhos operacionais da sessão e aparecem na barra
@@ -172,7 +178,8 @@ export default function MateriaisDoAssunto({
     !erro &&
     materiaisComuns.length === 0 &&
     materiaisCurso.length === 0 &&
-    outrosDaDisciplina.length === 0
+    outrosDaDisciplina.length === 0 &&
+    assuntoSelecionado
   ) {
     return null;
   }
@@ -182,14 +189,18 @@ export default function MateriaisDoAssunto({
       <div className="materiais-assunto-topo">
         <div>
           <span>
-            MATERIAIS VINCULADOS
+            {assuntoSelecionado ? "MATERIAIS VINCULADOS" : "MATERIAIS DA MATÉRIA"}
           </span>
 
           <h3>
             {materia}
-            {modulo ? ` → ${modulo}` : ""}
-            {" → "}
-            {assunto}
+            {assuntoSelecionado && (
+              <>
+                {modulo ? ` → ${modulo}` : ""}
+                {" → "}
+                {assunto}
+              </>
+            )}
           </h3>
         </div>
 
@@ -214,8 +225,9 @@ export default function MateriaisDoAssunto({
         </div>
       ) : materiaisComuns.length === 0 ? (
         <div className="materiais-assunto-vazio">
-          Nenhum PDF, imagem, documento ou link extra
-          foi vinculado a este assunto.
+          {assuntoSelecionado
+            ? "Nenhum PDF, imagem, documento ou link extra foi vinculado diretamente a este assunto."
+            : "Nenhum material cadastrado nesta matéria."}
         </div>
       ) : (
         <div className="materiais-assunto-lista">
@@ -302,13 +314,13 @@ export default function MateriaisDoAssunto({
       )}
 
       {outrosDaDisciplina.length > 0 && (
-        <details className="materiais-assunto-outros">
-          <summary>
-            Outros materiais de {materia} ({outrosDaDisciplina.length})
-          </summary>
+        <section className="materiais-assunto-outros" aria-label="Materiais da matéria sem vínculo com o assunto selecionado">
+          <h4>
+            Materiais da matéria — outros assuntos ({outrosDaDisciplina.length})
+          </h4>
           <p>
-            Estes materiais estão salvos na mesma disciplina, mas não têm vínculo
-            confirmado com este assunto. Confira a origem antes de reutilizá-los.
+            Estes materiais são da mesma matéria, mas não têm vínculo confirmado
+            com o assunto selecionado. A origem de cada material aparece abaixo.
           </p>
           <div className="materiais-assunto-lista">
             {outrosDaDisciplina.map((material) => (
@@ -325,7 +337,7 @@ export default function MateriaisDoAssunto({
               </article>
             ))}
           </div>
-        </details>
+        </section>
       )}
     </section>
   );
