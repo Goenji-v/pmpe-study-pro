@@ -92,9 +92,9 @@ test("Central transmite IDs estáveis e o componente distingue materiais sem ví
   assert.match(tela,/assuntoId=\{assuntoSelecionado\?\.id/);
   assert.match(tela,/urlAulaSelecionada: aulaSelecionada\?\.url/);
   assert.match(materiais,/agruparMateriaisDaDisciplina/);
-  assert.match(materiais,/Materiais da matéria — outros assuntos/);
   assert.match(materiais,/materialPertenceAMateria\(material, \{ materia, materiaId \}\)/);
-  assert.doesNotMatch(materiais,/<details className="materiais-assunto-outros">/);
+  assert.match(materiais,/const \{ vinculados: lista \} =/);
+  assert.doesNotMatch(materiais,/outrosDaDisciplina\.map|materiais-assunto-outros/);
   assert.match(materiais,/geracao !== geracaoRequisicao.current/);
   assert.match(materiais,/return \(\) => \{ geracaoRequisicao.current \+= 1; \}/);
 });
