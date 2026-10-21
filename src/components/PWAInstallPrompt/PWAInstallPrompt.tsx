@@ -115,7 +115,7 @@ export default function PWAInstallPrompt() {
       </button>
 
       <img
-        src="/assets/studio-pro-mark.svg?v=3"
+        src="/assets/study-pro-logo-original-v2.jpg?v=5"
         alt=""
         aria-hidden="true"
         className="pwa-install-logo"

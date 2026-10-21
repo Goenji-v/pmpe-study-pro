@@ -20,13 +20,13 @@
   ],
   "icons": [
     {
-      "src": "/assets/studio-pro-mark.svg?v=3",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/assets/study-pro-logo-original-v2.jpg?v=5",
+      "sizes": "1254x1254",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/assets/studio-pro-mark.svg?v=3",
+      "src": "/assets/study-pro-icon-maskable.svg?v=5",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
