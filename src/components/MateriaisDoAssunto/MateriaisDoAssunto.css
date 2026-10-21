@@ -203,10 +203,12 @@
   border-top: 1px solid #334155;
 }
 
-.materiais-assunto-outros summary {
+.materiais-assunto-outros h4 {
+  margin: 0 0 8px;
   color: #bfdbfe;
-  font-weight: 750;
-  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .materiais-assunto-outros > p {
@@ -214,12 +216,6 @@
   color: #cbd5e1;
   font-size: 13px;
   line-height: 1.5;
-}
-
-.materiais-assunto-outros summary:focus-visible {
-  outline: 2px solid #93c5fd;
-  outline-offset: 3px;
-  border-radius: 3px;
 }
 
 .materiais-assunto-curso {
@@ -231,3 +227,8 @@
   color: #e2e8f0;
   font-size: 14px;
 }
+
+/* Conteúdo de outros assuntos fica visível, sem precisar expandir um acordeão. */
+.materiais-assunto-outros .materiais-assunto-lista { margin-top: 12px; }
+.materiais-assunto-outros .materiais-assunto-card { border-left: 3px solid #60a5fa; }
+.materiais-assunto-outros .materiais-assunto-info span { white-space: normal; overflow-wrap: anywhere; }
