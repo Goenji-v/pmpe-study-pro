@@ -224,11 +224,13 @@ export default function MateriaisDoAssunto({
           Carregando materiais...
         </div>
       ) : materiaisComuns.length === 0 ? (
-        <div className="materiais-assunto-vazio">
-          {assuntoSelecionado
-            ? "Nenhum PDF, imagem, documento ou link extra foi vinculado diretamente a este assunto."
-            : "Nenhum material cadastrado nesta matéria."}
-        </div>
+        materiaisCurso.length === 0 && (
+          <div className="materiais-assunto-vazio">
+            {assuntoSelecionado
+              ? "Nenhum PDF, imagem, documento ou link extra foi vinculado diretamente a este assunto."
+              : "Nenhum material cadastrado nesta matéria."}
+          </div>
+        )
       ) : (
         <div className="materiais-assunto-lista">
           {materiaisComuns.map(
