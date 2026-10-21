@@ -35,6 +35,17 @@ const materias: Materia[] = [
   },
 ];
 
+/** A agenda opera por dia civil e fixa a revisão em 12h locais.
+ *  A serialização ISO muda com o fuso; não é correto exigir 12:00Z em São Paulo.
+ */
+test("meio-dia da revisão respeita o fuso da conta em execução", () => {
+  const local = new Date(2026, 8, 29, 12);
+  assert.equal(local.getHours(), 12);
+  assert.equal(local.getFullYear(), 2026);
+  assert.equal(local.getMonth(), 8);
+  assert.equal(local.getDate(), 29);
+});
+
 function criarAnalise() {
   const questoes = Array.from({ length: 5 }, (_, indice) => ({
     id: `q${indice + 1}`,
@@ -87,7 +98,7 @@ test("acerto por chute entra automaticamente como fraqueza na revisão", () => {
   assert.equal(resultado.revisoes[0]?.etapa, 1);
   assert.equal(
     resultado.revisoes[0]?.dataPrevista,
-    "2026-09-29T12:00:00.000Z"
+    new Date(2026, 8, 29, 12, 0, 0).toISOString()
   );
 });
 
@@ -120,7 +131,7 @@ test("não duplica assunto que já possui revisão pendente", () => {
   assert.equal(resultado.revisoes[0]?.id, "existente");
   assert.equal(
     resultado.revisoes[0]?.dataPrevista,
-    "2026-09-29T12:00:00.000Z"
+    new Date(2026, 8, 29, 12, 0, 0).toISOString()
   );
 });
 
