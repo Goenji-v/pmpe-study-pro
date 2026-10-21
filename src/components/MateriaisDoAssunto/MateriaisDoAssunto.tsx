@@ -53,11 +53,6 @@ export default function MateriaisDoAssunto({
   ] = useState<MaterialEstudo[]>([]);
 
   const [
-    outrosDaDisciplina,
-    setOutrosDaDisciplina,
-  ] = useState<MaterialEstudo[]>([]);
-
-  const [
     carregando,
     setCarregando,
   ] = useState(false);
@@ -79,7 +74,6 @@ export default function MateriaisDoAssunto({
     const geracao = ++geracaoRequisicao.current;
     if (!materia.trim()) {
       setMateriais([]);
-      setOutrosDaDisciplina([]);
       setErro("");
       onAtalhosCarregados?.({});
       return;
@@ -88,7 +82,6 @@ export default function MateriaisDoAssunto({
     try {
       setCarregando(true);
       setMateriais([]);
-      setOutrosDaDisciplina([]);
       setErro("");
 
       const todos = await listarMateriais();
@@ -99,19 +92,19 @@ export default function MateriaisDoAssunto({
         setMateriais(todos.filter((material) =>
           materialPertenceAMateria(material, { materia, materiaId })
         ));
-        setOutrosDaDisciplina([]);
         onAtalhosCarregados?.({});
         return;
       }
 
-      const { vinculados: lista, outrosDaDisciplina: outros } =
+      // Com assunto selecionado, exibir somente vínculos confirmados.
+      // Materiais dos demais assuntos permanecem intactos no cadastro.
+      const { vinculados: lista } =
         agruparMateriaisDaDisciplina(todos, {
           materia, materiaId, modulo, moduloId,
           assunto, assuntoId, assuntoIdsLegados,
         });
 
       setMateriais(lista);
-      setOutrosDaDisciplina(outros);
 
       const separados =
         separarMateriaisPorUso(lista);
@@ -168,22 +161,8 @@ export default function MateriaisDoAssunto({
       }).filter((item) => !materiais.some((material) => material.url === item.url))
     : [];
 
-  /*
-   * Aula e Questões são atalhos operacionais da sessão e aparecem na barra
-   * principal da Central de Estudos. Esta caixa fica reservada a PDF, imagem,
-   * documento e links personalizados.
-   */
-  if (
-    !carregando &&
-    !erro &&
-    materiaisComuns.length === 0 &&
-    materiaisCurso.length === 0 &&
-    outrosDaDisciplina.length === 0 &&
-    assuntoSelecionado
-  ) {
-    return null;
-  }
-
+  // Se não houver arquivo correspondente, indicar isso no próprio assunto,
+  // em vez de exibir arquivos de Ortografia ou de outros temas.
   return (
     <section className="materiais-assunto-box">
       <div className="materiais-assunto-topo">
@@ -315,32 +294,6 @@ export default function MateriaisDoAssunto({
         </div>
       )}
 
-      {outrosDaDisciplina.length > 0 && (
-        <section className="materiais-assunto-outros" aria-label="Materiais da matéria sem vínculo com o assunto selecionado">
-          <h4>
-            Materiais da matéria — outros assuntos ({outrosDaDisciplina.length})
-          </h4>
-          <p>
-            Estes materiais são da mesma matéria, mas não têm vínculo confirmado
-            com o assunto selecionado. A origem de cada material aparece abaixo.
-          </p>
-          <div className="materiais-assunto-lista">
-            {outrosDaDisciplina.map((material) => (
-              <article key={material.id} className="materiais-assunto-card">
-                <div className="materiais-assunto-icone">{iconeMaterial(material)}</div>
-                <div className="materiais-assunto-info">
-                  <strong>{material.nome}</strong>
-                  <span>Cadastro: {material.assunto}{material.modulo ? ` · ${material.modulo}` : ""}</span>
-                </div>
-                <button type="button" onClick={() => abrir(material)}
-                  aria-label={`Abrir ${material.nome}, cadastrado em ${material.assunto}`}>
-                  Abrir
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
     </section>
   );
 }
