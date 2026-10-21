@@ -490,11 +490,13 @@ const [
     const plano = planejarRevisaoPendente(revisao);
     prepararSessao({
       materia: referencia?.materia.nome ?? revisao.materia,
-      materiaId: referencia?.materia.id ?? revisao.materiaId,
+      // IDs históricos ficam na sessão vinculada: a conclusão exige o
+      // mesmo identificador da revisão, mesmo após uma renomeação de conteúdo.
+      materiaId: revisao.materiaId,
       modulo: referencia?.modulo.nome ?? revisao.modulo,
-      moduloId: referencia?.modulo.id ?? revisao.moduloId,
+      moduloId: revisao.moduloId,
       assunto: referencia?.assunto.nome ?? revisao.assunto,
-      assuntoId: referencia?.assunto.id ?? revisao.assuntoId,
+      assuntoId: revisao.assuntoId,
       tipo: "revisao", revisaoId: revisao.id,
       formatoRevisao: plano.modo === "teoria_questoes" ? "teoria" : "questoes",
       objetivo: "Revisar " + revisao.assunto,
