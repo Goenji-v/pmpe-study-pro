@@ -22,6 +22,10 @@ import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
 
 import MateriaisDoAssunto from "../../components/MateriaisDoAssunto/MateriaisDoAssunto";
+import { statusDaRevisao, formatarDataRevisao } from "../../utils/revisoes";
+import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
+import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
+import type { Revisao } from "../../types";
 
 import { useApp } from "../../context/AppContext";
 
@@ -67,7 +71,25 @@ export default function CentralEstudos() {
   const {
     materias,
     sessoes,
+    revisoes,
   } = useApp();
+  const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
+  const revisoesPendentes = useMemo(
+    () => revisoes.filter((revisao) => !revisao.concluida).sort((a, b) => a.dataPrevista.localeCompare(b.dataPrevista)),
+    [revisoes]
+  );
+  const gruposRevisoes = useMemo(() => {
+    const grupos = new Map<string, { titulo: string; itens: Revisao[] }>();
+    for (const revisao of revisoesPendentes) {
+      const status = statusDaRevisao(revisao.dataPrevista);
+      const chave = status === "atrasada" ? "0" : status === "hoje" ? "1" : "2:" + revisao.dataPrevista.slice(0, 10);
+      const titulo = status === "atrasada" ? "Atrasadas" : status === "hoje" ? "Para hoje" : formatarDataRevisao(revisao.dataPrevista);
+      const grupo = grupos.get(chave) ?? { titulo, itens: [] };
+      grupo.itens.push(revisao);
+      grupos.set(chave, grupo);
+    }
+    return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, grupo]) => ({ id, ...grupo }));
+  }, [revisoesPendentes]);
 
   const {
     sessaoAtiva,
@@ -456,6 +478,31 @@ const [
       [campo]:
         valor,
     });
+  }
+
+  function selecionarRevisaoPendente(revisao: Revisao) {
+    if (cronometroAtivo) return;
+    const referencia = localizarReferenciaCanonica(materias, {
+      materia: revisao.materia, materiaId: revisao.materiaId,
+      modulo: revisao.modulo, moduloId: revisao.moduloId,
+      assunto: revisao.assunto, assuntoId: revisao.assuntoId,
+    });
+    const plano = planejarRevisaoPendente(revisao);
+    prepararSessao({
+      materia: referencia?.materia.nome ?? revisao.materia,
+      // IDs históricos ficam na sessão vinculada: a conclusão exige o
+      // mesmo identificador da revisão, mesmo após uma renomeação de conteúdo.
+      materiaId: revisao.materiaId,
+      modulo: referencia?.modulo.nome ?? revisao.modulo,
+      moduloId: revisao.moduloId,
+      assunto: referencia?.assunto.nome ?? revisao.assunto,
+      assuntoId: revisao.assuntoId,
+      tipo: "revisao", revisaoId: revisao.id,
+      formatoRevisao: plano.modo === "teoria_questoes" ? "teoria" : "questoes",
+      objetivo: "Revisar " + revisao.assunto,
+      observacao: "Revisão etapa " + revisao.etapa + " · " + plano.titulo,
+    });
+    setMensagem("Revisão selecionada. Ela será concluída somente ao finalizar a sessão.");
   }
 
   function alterarTipo(
@@ -1056,6 +1103,31 @@ const [
               />
             ))}
           </div>
+
+          {estado.tipo === "revisao" && (
+            <section className="central-estudos-revisoes-pendentes" aria-label="Revisões pendentes">
+              <h3>Revisões pendentes ({revisoesPendentes.length})</h3>
+              {gruposRevisoes.length === 0 && <p>Nenhuma revisão pendente.</p>}
+              {gruposRevisoes.map((grupo) => (
+                <div key={grupo.id} className="central-estudos-grupo-revisoes">
+                  <h4>{grupo.titulo} ({grupo.itens.length})</h4>
+                  {grupo.itens.map((revisao) => (
+                    <div key={revisao.id} className="central-estudos-item-revisao">
+                      <div>
+                        <strong>{revisao.materia} · {revisao.assunto}</strong>
+                        <small>{revisao.modulo ? revisao.modulo + " · " : ""}{formatarDataRevisao(revisao.dataPrevista)}</small>
+                        {revisao.origemSimulado && <small>{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>}
+                      </div>
+                      <button type="button" disabled={cronometroAtivo} onClick={() => selecionarRevisaoPendente(revisao)}>
+                        {estado.revisaoId === revisao.id ? "Selecionada" : "Selecionar"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <p>Selecionar não conclui a revisão. A conclusão ocorre apenas após finalizar a sessão vinculada.</p>
+            </section>
+          )}
 
           <div className="central-estudos-formulario">
             <div className="central-estudos-campo">

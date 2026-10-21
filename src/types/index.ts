@@ -375,6 +375,8 @@ export type ConfiguracoesApp = {
   /** Quantidade de missões distribuídas em cada dia de segunda a sábado. */
   missoesPorDia?: number;
   salvarMarcacoesPdf?: boolean;
+  /** Como abrir arquivos PDF de estudo; novas contas usam o leitor interno. */
+  aberturaPdf?: "interno" | "navegador";
   materiasPorDiaSemana?: Partial<Record<"seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom", number>>;
   /** Atividades semanais vêm no domingo por padrão, mas podem ser reposicionadas pelo aluno. */
   diaRedacaoSemanal?: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";

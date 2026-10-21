@@ -64,6 +64,14 @@ export default function Configuracoes() {
     showToast("Preferência de marcações salva.", "success");
   }
 
+  function alterarAberturaPdf(aberturaPdf: "interno" | "navegador") {
+    // Atualiza somente esta preferência sobre o estado mais recente.
+    // Moedas, conquistas e edições ainda não salvas continuam intactas.
+    setFormulario((anterior) => ({ ...anterior, aberturaPdf }));
+    setConfiguracoes((anterior) => ({ ...anterior, aberturaPdf }));
+    showToast("Preferência de abertura de PDFs salva.", "success");
+  }
+
   function atualizarRitmoDiario(valor: number) {
     const ritmo = Math.max(1, Math.min(4, valor));
     camposEditados.current = {
@@ -182,6 +190,7 @@ export default function Configuracoes() {
       materiasPorDia: 1,
       materiasPorDiaSemana: undefined,
       salvarMarcacoesPdf: false,
+      aberturaPdf: "interno" as const,
       diasEstudo: ["seg", "ter", "qua", "qui", "sex", "sab"] as DiaSemanaId[],
       diaRedacaoSemanal: "dom" as DiaSemanaId,
       diaSimuladoSemanal: "dom" as DiaSemanaId,
@@ -392,7 +401,29 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
           </div>
         </div>
 
-        <section className="configuracoes-card"><h2 id="config-leitura">Leitura de PDFs</h2><label className="configuracoes-checkbox"><input type="checkbox" checked={formulario.salvarMarcacoesPdf === true} onChange={e => alterarPersistenciaPdf(e.target.checked)}/><span>Salvar minhas marcações nos PDFs dos materiais</span></label><p className="configuracoes-ajuda">Esta opção é salva automaticamente. Ativado: caneta e marca-texto ficam salvos neste aparelho para sua conta. Desativado: as marcações desta leitura são descartadas ao fechar. Os rascunhos de simulados mantêm seu funcionamento próprio.</p></section>
+        <section className="configuracoes-card">
+          <h2 id="config-leitura">Leitura de PDFs</h2>
+          <div className="configuracoes-form-group">
+            <label htmlFor="abertura-pdf">Ao abrir um PDF de estudo</label>
+            <select
+              id="abertura-pdf"
+              value={formulario.aberturaPdf ?? "interno"}
+              onChange={(evento) => alterarAberturaPdf(evento.target.value === "navegador" ? "navegador" : "interno")}
+            >
+              <option value="interno">Dentro do Study Pro</option>
+              <option value="navegador">No navegador — nova aba</option>
+            </select>
+            <p className="configuracoes-ajuda">
+              A preferência é salva automaticamente nesta conta. Se o navegador bloquear a nova aba,
+              você poderá abri-la por um link. Os simulados mantêm seu leitor próprio.
+            </p>
+          </div>
+          <label className="configuracoes-checkbox">
+            <input type="checkbox" checked={formulario.salvarMarcacoesPdf === true} onChange={e => alterarPersistenciaPdf(e.target.checked)}/>
+            <span>Salvar minhas marcações nos PDFs dos materiais</span>
+          </label>
+          <p className="configuracoes-ajuda">Esta opção é salva automaticamente. Ativado: caneta e marca-texto ficam salvos neste aparelho para sua conta. Desativado: as marcações desta leitura são descartadas ao fechar. Os rascunhos de simulados mantêm seu funcionamento próprio.</p>
+        </section>
         <div className="configuracoes-card">
           <h2 id="config-aparencia">Aparência</h2>
           <div className="configuracoes-form-group">

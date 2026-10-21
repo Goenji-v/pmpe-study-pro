@@ -460,3 +460,13 @@ border-color:#2563eb;
   cursor: not-allowed;
   opacity: 0.65;
 }
+
+.central-estudos-revisoes-pendentes{margin:16px 0;padding:14px;border:1px solid var(--border-color,#344b64);border-radius:12px;max-height:420px;overflow-y:auto}
+.central-estudos-revisoes-pendentes h3{margin:0 0 12px}
+.central-estudos-grupo-revisoes{margin:12px 0}
+.central-estudos-grupo-revisoes h4{margin:8px 0;color:var(--text-primary,#e2e8f0)}
+.central-estudos-item-revisao{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ffffff22}
+.central-estudos-item-revisao>div{display:flex;flex-direction:column;min-width:0;gap:4px}
+.central-estudos-item-revisao small{overflow-wrap:anywhere}
+.central-estudos-item-revisao button{padding:8px 12px;flex-shrink:0;border-radius:8px;cursor:pointer}
+@media(max-width:600px){.central-estudos-item-revisao{align-items:flex-start;flex-direction:column}}
