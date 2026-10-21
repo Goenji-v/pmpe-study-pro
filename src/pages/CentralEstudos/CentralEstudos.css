@@ -470,3 +470,50 @@ border-color:#2563eb;
 .central-estudos-item-revisao small{overflow-wrap:anywhere}
 .central-estudos-item-revisao button{padding:8px 12px;flex-shrink:0;border-radius:8px;cursor:pointer}
 @media(max-width:600px){.central-estudos-item-revisao{align-items:flex-start;flex-direction:column}}
+
+/* Atalho compacto da Central: só aparece após tocar em Ver revisões. */
+.central-estudos-revisoes-acesso {
+  min-width: 0;
+  margin: 12px 0 18px;
+}
+.central-estudos-ver-revisoes,
+.central-estudos-todas-revisoes {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #60a5fa;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.14);
+  color: #dbeafe;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.central-estudos-ver-revisoes:hover,
+.central-estudos-todas-revisoes:hover {
+  background: rgba(37, 99, 235, 0.26);
+}
+.central-estudos-ver-revisoes:focus-visible,
+.central-estudos-todas-revisoes:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+.central-estudos-revisoes-acesso .central-estudos-revisoes-pendentes {
+  margin-bottom: 0;
+  max-height: 440px;
+  overflow: auto;
+}
+.central-estudos-revisoes-ajuda {
+  margin: 9px 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.central-estudos-todas-revisoes {
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  .central-estudos-ver-revisoes,
+  .central-estudos-todas-revisoes {
+    width: 100%;
+  }
+}
