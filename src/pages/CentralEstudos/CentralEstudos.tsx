@@ -17,7 +17,7 @@ import {
   sessaoExigeResultadoQuestoes,
 } from "../../utils/revisoes";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
-import { BANCAS_CONCURSO } from "../../utils/bancasConcurso";
+import { BANCAS_CONCURSO, solicitarBancaNaFinalizacao } from "../../utils/bancasConcurso";
 import "./CentralEstudos.css";
 import "./CentralEstudosModal.css";
 
@@ -431,6 +431,10 @@ const [
 
   const formatoRevisao = estado.formatoRevisao ?? "teoria";
   const revisaoPorQuestoes = estado.tipo === "revisao" && formatoRevisao === "questoes";
+  const solicitarBanca = solicitarBancaNaFinalizacao(
+    estado.tipo,
+    estado.tipo === "revisao" ? formatoRevisao : undefined
+  );
   const linksAtividade = resolverLinksAtividade({
     urlAulaSessao: estado.urlAula,
     urlQuestoesSessao: estado.urlQuestoes,
@@ -959,9 +963,7 @@ const [
         quantidadeErros:
           erros,
 
-        banca:
-          banca.trim() ||
-          undefined,
+        banca: solicitarBanca ? banca.trim() || undefined : undefined,
 
         dificuldade:
           exigeQuestoes && estado.tipo !== "revisao"
@@ -1838,9 +1840,7 @@ const [
                 </>
               )}
 
-              {(estado.tipo === "questoes" ||
-                estado.tipo === "simulado" ||
-                estado.tipo === "revisao") && (
+              {solicitarBanca && (
                 <label>
                   Banca
 
