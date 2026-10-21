@@ -1,3 +1,4 @@
+import { chaveDaMateria } from "./desempenhoMaterias";
 import type {
   RegistroQuestao,
   Revisao,
@@ -105,20 +106,10 @@ export function calcularMetricasConsolidadas(
     0
   );
 
-  const minutosQuestoes = registrosContabilizaveis.reduce((total, registro) => {
-    const minutos = numeroSeguro(registro.minutos);
-    if (minutos <= 0) return total;
-
-    const duplicadoPorSessao = sessoesPeriodo.some(
-      (sessao) =>
-        sessao.tipo === "questoes" &&
-        normalizar(sessao.materia) === normalizar(registro.materia) &&
-        normalizar(sessao.assunto) === normalizar(registro.assunto) &&
-        datasProximas(sessao.data, registro.data, 5000)
-    );
-
-    return total + (duplicadoPorSessao ? 0 : minutos);
-  }, 0);
+  const minutosQuestoes = registrosContabilizaveis.reduce(
+    (total, registro) => total + minutosQuestaoSemDuplicidade(registro, sessoesPeriodo),
+    0
+  );
 
   const minutosSimulados = simuladosPeriodo.reduce((total, simulado) => {
     const minutos = numeroSeguro(simulado.minutos);
@@ -156,6 +147,27 @@ export function calcularMetricasConsolidadas(
     revisoesConcluidas: revisoesConcluidas.length,
     diasAtivos: diasAtivos.size,
   };
+}
+
+/**
+ * Regra única de deduplicação do tempo de resolução de questões.
+ * Uma sessão do mesmo assunto, matéria e instante é a fonte canônica
+ * quando o registro das questões é apenas o espelho da atividade.
+ */
+export function minutosQuestaoSemDuplicidade(
+  registro: RegistroQuestao,
+  sessoes: SessaoEstudo[]
+): number {
+  const minutos = numeroSeguro(registro.minutos);
+  if (minutos <= 0) return 0;
+  const duplicadoPorSessao = sessoes.some(
+    (sessao) =>
+      sessao.tipo === "questoes" &&
+      chaveDaMateria(sessao.materia) === chaveDaMateria(registro.materia) &&
+      normalizar(sessao.assunto) === normalizar(registro.assunto) &&
+      datasProximas(sessao.data, registro.data, 5000)
+  );
+  return duplicadoPorSessao ? 0 : minutos;
 }
 
 export function resumirSimulado(

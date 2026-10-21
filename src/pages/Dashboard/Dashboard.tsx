@@ -12,6 +12,7 @@ import "./Dashboard.css";
 import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { calcularSequenciaAtividades } from "../../utils/sequenciaAtividades";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 import {
   calcularDesempenhoPorMateria,
@@ -45,12 +46,7 @@ import {
 } from "../../utils/planoUtils";
 import { criarPlanoCalendario, normalizarMissoesPorDia, obterDiaAtualPlano } from "../../utils/planoCalendario";
 
-import type {
-  RegistroQuestao,
-  Revisao,
-  SessaoEstudo,
-  Simulado,
-} from "../../types/index";
+import type { RegistroQuestao, Revisao, SessaoEstudo, Simulado } from "../../types/index";
 
 
 export default function Dashboard() {
@@ -330,13 +326,12 @@ export default function Dashboard() {
       configuracoes.metaMinutosDiaria
     );
 
-  const sequencia =
-    calcularSequencia(
-      questoes,
-      sessoes,
-      revisoes,
-      simuladosContabilizaveis
-    );
+  const sequencia = calcularSequenciaAtividades({
+    questoes,
+    sessoes,
+    revisoes,
+    simulados,
+  }).atual;
 
   // Fonte única para cards, "Visão rápida", IA Coach e Taxa de acertos:
   // nomes equivalentes são unificados e melhor/pior exigem amostra mínima.
@@ -957,148 +952,6 @@ function calcularPercentualMeta(
         100
     )
   );
-}
-
-function calcularSequencia(
-  questoes: RegistroQuestao[],
-  sessoes: SessaoEstudo[],
-  revisoes: Revisao[],
-  simulados: Simulado[]
-): number {
-  const MINUTOS_MINIMOS_POR_DIA = 30;
-
-  const minutosPorDia =
-    new Map<string, number>();
-
-  sessoes.forEach((sessao) => {
-    const dataLocal =
-      obterDataLocalSeguro(
-        sessao.data
-      );
-
-    const minutos =
-      Number(sessao.minutos) || 0;
-
-    minutosPorDia.set(
-      dataLocal,
-      (minutosPorDia.get(
-        dataLocal
-      ) || 0) + minutos
-    );
-  });
-
-  questoes.forEach((registro) => {
-    const dataLocal =
-      obterDataLocalSeguro(
-        registro.data
-      );
-
-    const minutos =
-      Number(registro.minutos) || 0;
-
-    minutosPorDia.set(
-      dataLocal,
-      (minutosPorDia.get(
-        dataLocal
-      ) || 0) + minutos
-    );
-  });
-
-  simulados.forEach((simulado) => {
-    const dataLocal = obterDataLocalSeguro(simulado.data);
-    const minutos = Math.max(0, Number(simulado.minutos) || 0);
-
-    minutosPorDia.set(
-      dataLocal,
-      (minutosPorDia.get(dataLocal) || 0) + minutos
-    );
-  });
-
-  revisoes.forEach((revisao) => {
-    if (
-      !revisao.concluida ||
-      !revisao.dataConclusao
-    ) {
-      return;
-    }
-
-    const dataLocal =
-      obterDataLocalSeguro(
-        revisao.dataConclusao
-      );
-
-    /*
-     * Uma revisão concluída sem tempo
-     * informado não cria automaticamente
-     * 30 minutos. Ela só reforça um dia
-     * que já tenha estudo registrado.
-     */
-    if (
-      !minutosPorDia.has(dataLocal)
-    ) {
-      minutosPorDia.set(
-        dataLocal,
-        0
-      );
-    }
-  });
-
-  const diasValidos =
-    new Set<string>();
-
-  minutosPorDia.forEach(
-    (minutos, data) => {
-      if (
-        minutos >=
-        MINUTOS_MINIMOS_POR_DIA
-      ) {
-        diasValidos.add(data);
-      }
-    }
-  );
-
-  const hoje = inicioDoDia(
-    new Date()
-  );
-
-  const chaveHoje =
-    obterDataLocal(hoje);
-
-  /*
-   * Se hoje ainda não atingiu 30 minutos,
-   * verificamos a sequência terminando ontem.
-   * Isso evita mostrar zero durante a manhã
-   * antes de você estudar.
-   */
-  const dataInicial =
-    diasValidos.has(chaveHoje)
-      ? hoje
-      : adicionarDias(
-          hoje,
-          -1
-        );
-
-  let sequencia = 0;
-  let dataVerificada =
-    dataInicial;
-
-  while (
-    diasValidos.has(
-      obterDataLocal(
-        dataVerificada
-      )
-    )
-  ) {
-    sequencia += 1;
-
-    dataVerificada =
-      adicionarDias(
-        dataVerificada,
-        -1
-      );
-  }
-
-  return sequencia;
 }
 
 function formatarMinutos(

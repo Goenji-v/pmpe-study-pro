@@ -1,5 +1,6 @@
 import { gerarPlanoEdital, preservarIdsPlanoAnterior } from "../../utils/planoEdital";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { mesclarConfiguracoesEditadas } from "../../utils/mesclarConfiguracoesEditadas";
 import { Link } from "react-router-dom";
 
 import "./Configuracoes.css";
@@ -32,6 +33,9 @@ export default function Configuracoes() {
   const temaBasicoInicial: TemaBasico =
     configInicial.temaBasico ?? (configInicial.tema === "claro" ? "claro" : "azul");
 
+  const camposEditados = useRef<Partial<ConfiguracoesFormulario>>({});
+  const diasRitmoEditados = useRef<Partial<Record<DiaSemanaId, number>> | null | undefined>(undefined);
+
   const [formulario, setFormulario] = useState<ConfiguracoesFormulario>({
     ...configInicial,
     temaBasico: temaBasicoInicial,
@@ -49,17 +53,24 @@ export default function Configuracoes() {
     campo: K,
     valor: ConfiguracoesFormulario[K]
   ) {
+    camposEditados.current = { ...camposEditados.current, [campo]: valor };
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
   }
 
   function alterarPersistenciaPdf(salvar: boolean) {
-    atualizarCampo('salvarMarcacoesPdf', salvar);
-    setConfiguracoes(anterior => ({ ...anterior, salvarMarcacoesPdf: salvar }));
-    showToast('Preferência de marcações salva.', 'success');
+    // A preferência é salva imediatamente, não reutiliza o restante do formulário.
+    setFormulario((anterior) => ({ ...anterior, salvarMarcacoesPdf: salvar }));
+    setConfiguracoes((anterior) => ({ ...anterior, salvarMarcacoesPdf: salvar }));
+    showToast("Preferência de marcações salva.", "success");
   }
 
   function atualizarRitmoDiario(valor: number) {
     const ritmo = Math.max(1, Math.min(4, valor));
+    camposEditados.current = {
+      ...camposEditados.current,
+      materiasPorDia: ritmo,
+      missoesPorDia: ritmo,
+    };
     setFormulario((anterior) => ({
       ...anterior,
       materiasPorDia: ritmo,
@@ -67,71 +78,103 @@ export default function Configuracoes() {
     }));
   }
 
+  function atualizarRitmoDaSemana(dia: DiaSemanaId, valor: number) {
+    diasRitmoEditados.current = { ...(diasRitmoEditados.current ?? {}), [dia]: valor };
+    setFormulario((anterior) => ({
+      ...anterior,
+      materiasPorDiaSemana: { ...anterior.materiasPorDiaSemana, [dia]: valor },
+    }));
+  }
+
+  function usarRitmoPadrao() {
+    diasRitmoEditados.current = null;
+    setFormulario((anterior) => ({ ...anterior, materiasPorDiaSemana: undefined }));
+  }
+
   function alternarDia(dia: DiaSemanaId) {
-    setFormulario((anterior) => {
-      const atuais = anterior.diasEstudo ?? [];
-      const diasEstudo = atuais.includes(dia)
-        ? atuais.filter((item) => item !== dia)
-        : DIAS_SEMANA.map((item) => item.id).filter(
-            (item) => [...atuais, dia].includes(item)
-          );
-      return { ...anterior, diasEstudo };
-    });
+    const atuais = formulario.diasEstudo ?? [];
+    const diasEstudo = atuais.includes(dia)
+      ? atuais.filter((item) => item !== dia)
+      : DIAS_SEMANA.map((item) => item.id).filter(
+          (item) => [...atuais, dia].includes(item)
+        );
+    atualizarCampo("diasEstudo", diasEstudo);
   }
 
   function salvarConfiguracoes() {
-    const nomeLimpo = formulario.nomeUsuario.trim();
-    const concursoLimpo = formulario.concurso.trim();
-    const ritmoDiario = Math.max(
-      1,
-      Math.min(4, formulario.materiasPorDia ?? formulario.missoesPorDia ?? 1)
-    );
-    const temaBasico = formulario.temaBasico ?? "azul";
+    // Nunca salve a cópia antiga completa: outros fluxos podem ter recebido
+    // moedas, conquistas, progresso ou revisões enquanto esta tela estava aberta.
+    const campos = { ...camposEditados.current };
+    const diasEditados = diasRitmoEditados.current;
+    if (campos.nomeUsuario !== undefined) campos.nomeUsuario = campos.nomeUsuario.trim();
+    if (campos.concurso !== undefined) campos.concurso = campos.concurso.trim();
+    if (campos.materiasPorDia !== undefined || campos.missoesPorDia !== undefined) {
+      const ritmo = Math.max(1, Math.min(4, formulario.materiasPorDia ?? formulario.missoesPorDia ?? 1));
+      campos.materiasPorDia = ritmo;
+      campos.missoesPorDia = ritmo;
+    }
+    if (campos.temaBasico !== undefined) {
+      campos.tema = campos.temaBasico === "claro" ? "claro" : "escuro";
+    }
 
-    if (!nomeLimpo) {
+    const paraValidar = mesclarConfiguracoesEditadas(
+      configuracoes as ConfiguracoesFormulario, campos, diasEditados
+    );
+    if (!paraValidar.nomeUsuario.trim()) {
       showToast("Informe o nome do usuário.", "warning");
       return;
     }
-    if (!concursoLimpo) {
+    if (!paraValidar.concurso.trim()) {
       showToast("Informe o concurso.", "warning");
       return;
     }
-    if ((formulario.diasEstudo?.length ?? 0) === 0) {
+    if ((paraValidar.diasEstudo?.length ?? 0) === 0) {
       showToast("Escolha pelo menos um dia da semana para estudar.", "warning");
       return;
     }
     if (
-      formulario.metaQuestoesDiaria < 0 ||
-      formulario.metaMinutosDiaria < 0 ||
-      formulario.metaRevisoesDiaria < 0
+      paraValidar.metaQuestoesDiaria < 0 ||
+      paraValidar.metaMinutosDiaria < 0 ||
+      paraValidar.metaRevisoesDiaria < 0
     ) {
       showToast("Confira as metas e a quantidade de matérias por dia.", "error");
       return;
     }
 
-    const dadosAtualizados: ConfiguracoesFormulario = {
-      ...formulario,
-      nomeUsuario: nomeLimpo,
-      concurso: concursoLimpo,
-      materiasPorDia: ritmoDiario,
-      missoesPorDia: ritmoDiario,
-      temaBasico,
-      tema: temaBasico === "claro" ? "claro" : "escuro",
-    };
+    const atualizarPlano = diasEditados !== undefined ||
+      (["diasEstudo", "materiasPorDia", "missoesPorDia", "diaRedacaoSemanal",
+        "diaSimuladoSemanal", "metaQuestoesDiaria", "metaMinutosDiaria",
+        "metaRevisoesDiaria", "concurso", "bancaPadrao"] as const)
+        .some((campo) => Object.prototype.hasOwnProperty.call(campos, campo));
 
-    if (dadosAtualizados.editalAtivo?.plano) {
+    setConfiguracoes((anterior) => {
+      const dadosAtualizados = mesclarConfiguracoesEditadas(
+        anterior as ConfiguracoesFormulario, campos, diasEditados
+      );
+      if (!atualizarPlano || !dadosAtualizados.editalAtivo?.plano) {
+        return dadosAtualizados;
+      }
       const ativo = dadosAtualizados.editalAtivo;
-      dadosAtualizados.editalAtivo = { ...ativo, plano: preservarIdsPlanoAnterior(gerarPlanoEdital(ativo.analise, dadosAtualizados, materias), ativo.plano!) };
-    }
-    setConfiguracoes(dadosAtualizados);
+      return {
+        ...dadosAtualizados,
+        editalAtivo: {
+          ...ativo,
+          plano: preservarIdsPlanoAnterior(
+            gerarPlanoEdital(ativo.analise, dadosAtualizados, materias),
+            ativo.plano
+          ),
+        },
+      };
+    });
+    camposEditados.current = {};
+    diasRitmoEditados.current = undefined;
     showToast("Configurações salvas com sucesso.", "success");
   }
 
   function restaurarPadrao() {
     if (!window.confirm("Deseja restaurar as configurações padrão?")) return;
 
-    const padrao: ConfiguracoesFormulario = {
-      ...formulario,
+    const padrao = {
       metaQuestoesDiaria: 30,
       metaMinutosDiaria: 120,
       metaRevisoesDiaria: 5,
@@ -139,17 +182,29 @@ export default function Configuracoes() {
       materiasPorDia: 1,
       materiasPorDiaSemana: undefined,
       salvarMarcacoesPdf: false,
-      diasEstudo: ["seg", "ter", "qua", "qui", "sex", "sab"],
-      diaRedacaoSemanal: "dom",
-      diaSimuladoSemanal: "dom",
-      tema: "escuro",
-      temaBasico: "azul",
-      editalOnboardingVisto: formulario.editalOnboardingVisto,
-      editalAtivo: formulario.editalAtivo,
+      diasEstudo: ["seg", "ter", "qua", "qui", "sex", "sab"] as DiaSemanaId[],
+      diaRedacaoSemanal: "dom" as DiaSemanaId,
+      diaSimuladoSemanal: "dom" as DiaSemanaId,
+      tema: "escuro" as const,
+      temaBasico: "azul" as TemaBasico,
     };
-
-    setFormulario(padrao);
-    setConfiguracoes(padrao);
+    setFormulario((anterior) => ({ ...anterior, ...padrao }));
+    setConfiguracoes((anterior) => {
+      const atualizado = { ...anterior, ...padrao } as ConfiguracoesFormulario;
+      if (!atualizado.editalAtivo?.plano) return atualizado;
+      const ativo = atualizado.editalAtivo;
+      return {
+        ...atualizado,
+        editalAtivo: {
+          ...ativo,
+          plano: preservarIdsPlanoAnterior(
+            gerarPlanoEdital(ativo.analise, atualizado, materias), ativo.plano
+          ),
+        },
+      };
+    });
+    camposEditados.current = {};
+    diasRitmoEditados.current = undefined;
     showToast("Configurações padrão restauradas.", "info");
   }
 
@@ -248,8 +303,8 @@ export default function Configuracoes() {
 Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada dia. Salve e altere novamente quando precisar.
             </small>
           </div>
-          <div className="configuracoes-ritmo-semana">{DIAS_SEMANA.map(dia => <label key={dia.id}><span>{dia.nome}</span><select aria-label={`Matérias na ${dia.nome}`} value={formulario.materiasPorDiaSemana?.[dia.id] ?? formulario.materiasPorDia ?? 1} onChange={e => atualizarCampo('materiasPorDiaSemana', {...formulario.materiasPorDiaSemana,[dia.id]:Number(e.target.value)})}>{[1,2,3,4].map(n => <option key={n} value={n}>{n} {n===1?'matéria':'matérias'}</option>)}</select></label>)}</div>
-          <button type="button" onClick={() => atualizarCampo('materiasPorDiaSemana', undefined)}>Usar o padrão em todos os dias</button>
+          <div className="configuracoes-ritmo-semana">{DIAS_SEMANA.map(dia => <label key={dia.id}><span>{dia.nome}</span><select aria-label={`Matérias na ${dia.nome}`} value={formulario.materiasPorDiaSemana?.[dia.id] ?? formulario.materiasPorDia ?? 1} onChange={e => atualizarRitmoDaSemana(dia.id, Number(e.target.value))}>{[1,2,3,4].map(n => <option key={n} value={n}>{n} {n===1?'matéria':'matérias'}</option>)}</select></label>)}</div>
+          <button type="button" onClick={usarRitmoPadrao}>Usar o padrão em todos os dias</button>
         </div>
 
         <div className="configuracoes-card configuracoes-agenda-semanal">

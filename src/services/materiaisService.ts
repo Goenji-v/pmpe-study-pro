@@ -1,4 +1,5 @@
 import { abrirPdfInterno, ehLinkPdf } from "./leitorMaterial";
+import { materialCorrespondeAoAssunto, type ReferenciaAssuntoMaterial } from "../utils/correspondenciaMateriais";
 import { armazenamentoLocalDaConta as localStorage, permiteMigracaoLegada } from "./armazenamentoConta";
 import {
   supabase,
@@ -155,70 +156,14 @@ export async function listarMateriais():
 export async function listarMateriaisPorAssunto(
   materia: string,
   assunto: string,
-  modulo?: string
+  modulo?: string,
+  ids: Partial<Omit<ReferenciaAssuntoMaterial, "materia" | "assunto" | "modulo">> = {}
 ): Promise<MaterialEstudo[]> {
-  const usuario =
-    await exigirUsuario();
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("materiais")
-    .select(
-      [
-        "id",
-        "user_id",
-        "local_id",
-        "nome",
-        "materia",
-        "assunto",
-        "tipo",
-        "observacao",
-        "url_externa",
-        "storage_path",
-        "nome_arquivo",
-        "mime_type",
-        "tamanho_bytes",
-        "created_at",
-        "dados",
-      ].join(",")
-    )
-    .eq(
-      "user_id",
-      usuario.id
-    )
-    .eq(
-      "materia",
-      materia.trim()
-    )
-    .eq(
-      "assunto",
-      assunto.trim()
-    )
-    .order(
-      "created_at",
-      {
-        ascending: false,
-      }
-    );
-
-  if (error) {
-    throw new Error(
-      `Não foi possível listar os materiais: ${error.message}`
-    );
-  }
-
-  return (
-    (data ?? []) as unknown as MaterialBanco[]
-  )
-    .map(converterMaterialBanco)
-    .filter(
-      (material) =>
-        !modulo?.trim() ||
-        material.modulo === modulo.trim() ||
-        (!material.modulo && modulo.trim() === "Geral")
-    );
+  // Buscar pelo nome literal excluía os materiais antigos após renomear matérias.
+  // Reaproveitamos a consulta restrita ao usuário autenticado, sem migração remota.
+  const lista = await listarMateriais();
+  const referencia = { materia, assunto, modulo, ...ids };
+  return lista.filter((material) => materialCorrespondeAoAssunto(material, referencia));
 }
 
 export async function salvarArquivoMaterial(

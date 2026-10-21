@@ -1,4 +1,5 @@
 import PerfilAssunto from "../../components/PerfilAssunto/PerfilAssunto";
+import { calcularMetricasDoAssunto } from "../../utils/metricasAssunto";
 import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -172,31 +173,8 @@ export default function Estudos() {
     setAssuntosExpandidos((atual) => ({ ...atual, [assuntoId]: !atual[assuntoId] }));
   }
 
-  function metricasAssunto(
-  materia: Materia,
-  _modulo: Modulo,
-  assunto: Assunto
-) {
-    const sessoesDoAssunto = sessoes.filter((sessao) =>
-      (sessao.assuntoId && sessao.assuntoId === assunto.id) ||
-      (!sessao.assuntoId && sessao.materia === materia.nome && sessao.assunto === assunto.nome)
-    );
-    const registros = questoes.filter((registro) =>
-      (registro.assuntoId && registro.assuntoId === assunto.id) ||
-      (!registro.assuntoId && registro.materia === materia.nome && registro.assunto === assunto.nome)
-    );
-    const revisoesDoAssunto = revisoes.filter((revisao) =>
-      (revisao.assuntoId && revisao.assuntoId === assunto.id) ||
-      (!revisao.assuntoId && revisao.materia === materia.nome && revisao.assunto === assunto.nome)
-    );
-    const minutos = sessoesDoAssunto.reduce((total, sessao) => total + sessao.minutos, 0) +
-      registros.reduce((total, registro) => total + registro.minutos, 0);
-    const certas = registros.reduce((total, registro) => total + registro.certas, 0);
-    const erradas = registros.reduce((total, registro) => total + registro.erradas, 0);
-    const totalQuestoes = certas + erradas;
-    const aproveitamento = totalQuestoes ? Math.round((certas / totalQuestoes) * 100) : 0;
-    const revisoesPendentes = revisoesDoAssunto.filter((revisao) => !revisao.concluida).length;
-    return { minutos, certas, erradas, totalQuestoes, aproveitamento, revisoesPendentes };
+  function metricasAssunto(materia: Materia, modulo: Modulo, assunto: Assunto) {
+    return calcularMetricasDoAssunto({ materia, modulo, assunto, sessoes, questoes, revisoes });
   }
 
   function abrirCentral(materia: Materia, modulo: Modulo, assunto: Assunto) {
@@ -745,7 +723,8 @@ export default function Estudos() {
                                   <span>⏱ {m.minutos} min</span>
                                   <span>❓ {m.totalQuestoes} questões</span>
                                   {m.totalQuestoes > 0 && <span>◎ {m.aproveitamento}%</span>}
-                                  {m.revisoesPendentes > 0 && <span>↻ {m.revisoesPendentes} revisão{m.revisoesPendentes === 1 ? "" : "ões"}</span>}
+                                  {m.revisoesPendentes > 0 && <span>↻ {m.revisoesPendentes} revisão{m.revisoesPendentes === 1 ? "" : "ões"} pendente{m.revisoesPendentes === 1 ? "" : "s"}</span>}
+                                   {m.revisoesConcluidas > 0 && <span>✓ {m.revisoesConcluidas} revisão{m.revisoesConcluidas === 1 ? "" : "ões"} concluída{m.revisoesConcluidas === 1 ? "" : "s"}</span>}
                                 </div>
                               );
                             })()}

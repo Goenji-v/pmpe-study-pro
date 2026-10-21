@@ -9,6 +9,7 @@ import "./CentroMateriais.css";
 
 import { useApp } from "../../context/AppContext";
 import { listarModulosDaMateria } from "../../services/conteudos/navegarConteudos";
+import { chaveDaMateria } from "../../utils/desempenhoMaterias";
 
 import {
   abrirMaterial,
@@ -97,7 +98,7 @@ export default function CentroMateriais() {
   const materiaAtual = useMemo(
     () =>
       materias.find(
-        (item) => item.nome === materia
+        (item) => chaveDaMateria(item.nome) === chaveDaMateria(materia)
       ),
     [materias, materia]
   );
@@ -125,9 +126,14 @@ export default function CentroMateriais() {
     const termo = normalizar(pesquisa);
 
     return materiais.filter((material) => {
+      const materiaSelecionada = materias.find(
+        (item) => chaveDaMateria(item.nome) === chaveDaMateria(filtroMateria)
+      );
       const correspondeMateria =
         !filtroMateria ||
-        material.materia === filtroMateria;
+        (material.materiaId && materiaSelecionada?.id
+          ? material.materiaId === materiaSelecionada?.id
+          : chaveDaMateria(material.materia) === chaveDaMateria(filtroMateria));
 
       const correspondeModulo =
         !filtroModulo ||
@@ -160,6 +166,7 @@ export default function CentroMateriais() {
     pesquisa,
     filtroMateria,
     filtroModulo,
+    materias,
   ]);
 
   const grupos = useMemo(() => {
@@ -174,12 +181,17 @@ export default function CentroMateriais() {
     materiaisFiltrados.forEach((material) => {
       const nomeModulo =
         material.modulo || "Geral";
+      // IDs estáveis identificam a matéria atual; grafias históricas conhecidas
+      // aparecem no mesmo grupo, sem mesclar assuntos ou módulos diferentes.
+      const nomeMateria = materias.find((item) => item.id === material.materiaId)?.nome
+        ?? materias.find((item) => chaveDaMateria(item.nome) === chaveDaMateria(material.materia))?.nome
+        ?? material.materia;
 
-      if (!mapa.has(material.materia)) {
-        mapa.set(material.materia, new Map());
+      if (!mapa.has(nomeMateria)) {
+        mapa.set(nomeMateria, new Map());
       }
 
-      const modulos = mapa.get(material.materia);
+      const modulos = mapa.get(nomeMateria);
 
       if (!modulos) {
         return;
@@ -205,7 +217,7 @@ export default function CentroMateriais() {
     return Array.from(mapa.entries()).sort(([a], [b]) =>
       a.localeCompare(b, "pt-BR")
     );
-  }, [materiaisFiltrados]);
+  }, [materiaisFiltrados, materias]);
 
   useEffect(() => {
     carregarMateriais();
