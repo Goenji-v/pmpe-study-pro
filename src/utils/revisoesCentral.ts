@@ -30,7 +30,7 @@ export function resumoRevisoesDaCentral(revisoes: Revisao[], agora = new Date())
     .sort((a, b) => a.instante - b.instante || a.item.id.localeCompare(b.item.id));
 
   const selecionadas = elegiveis.slice(0, 3);
-  const grupos: GrupoRevisoesCentral[] = [
+  const candidatos: GrupoRevisoesCentral[] = [
     {
       id: "atrasadas",
       titulo: "Atrasadas",
@@ -46,7 +46,8 @@ export function resumoRevisoesDaCentral(revisoes: Revisao[], agora = new Date())
       titulo: "Amanhã",
       itens: selecionadas.filter((item) => item.dias === 1).map((item) => item.item),
     },
-  ].filter((grupo) => grupo.itens.length > 0);
+  ];
+  const grupos = candidatos.filter((grupo) => grupo.itens.length > 0);
 
   return {
     grupos,
