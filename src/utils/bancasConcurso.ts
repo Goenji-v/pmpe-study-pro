@@ -86,3 +86,16 @@ function normalizarChaveBanca(
     .trim()
     .replace(/\s+/g, " ");
 }
+
+/**
+ * Banca identifica a origem das questões, não o estudo de teoria.
+ * Revisão teórica mantém a avaliação manual, mas não solicita nem salva banca.
+ */
+export function solicitarBancaNaFinalizacao(
+  tipo: import("../types").TipoSessao,
+  formatoRevisao?: "teoria" | "questoes"
+): boolean {
+  return tipo === "questoes" ||
+    tipo === "simulado" ||
+    (tipo === "revisao" && formatoRevisao === "questoes");
+}
