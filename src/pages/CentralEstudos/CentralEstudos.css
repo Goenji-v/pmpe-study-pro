@@ -517,3 +517,120 @@ border-color:#2563eb;
     width: 100%;
   }
 }
+
+/* Identidade visual por prazo, sem depender apenas da cor: cada grupo traz rótulo. */
+.central-estudos-revisoes-acesso .central-estudos-grupo-revisoes {
+  --revisao-cor: #fbbf24;
+  --revisao-fundo: rgba(245, 158, 11, 0.075);
+  --revisao-linha: rgba(245, 158, 11, 0.32);
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--revisao-linha);
+  border-left: 4px solid var(--revisao-cor);
+  border-radius: 12px;
+  background: var(--revisao-fundo);
+}
+.central-estudos-revisoes-acesso .grupo-atrasadas {
+  --revisao-cor: #f87171;
+  --revisao-fundo: rgba(239, 68, 68, 0.075);
+  --revisao-linha: rgba(248, 113, 113, 0.32);
+}
+.central-estudos-revisoes-acesso .grupo-hoje {
+  --revisao-cor: #4ade80;
+  --revisao-fundo: rgba(34, 197, 94, 0.07);
+  --revisao-linha: rgba(74, 222, 128, 0.32);
+}
+.central-estudos-revisoes-acesso .grupo-amanha {
+  --revisao-cor: #fbbf24;
+  --revisao-fundo: rgba(245, 158, 11, 0.075);
+  --revisao-linha: rgba(251, 191, 36, 0.32);
+}
+.central-estudos-revisoes-acesso .central-estudos-grupo-revisoes h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: var(--revisao-cor);
+  font-size: 14px;
+  font-weight: 800;
+}
+.central-estudos-revisoes-acesso .central-estudos-grupo-revisoes h4::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 9px;
+  background: currentColor;
+}
+.central-estudos-grupo-contagem {
+  font-size: 12px;
+  font-weight: 600;
+}
+.central-estudos-revisoes-acesso .central-estudos-item-revisao {
+  margin: 8px 0 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-left: 3px solid var(--revisao-cor);
+  border-radius: 9px;
+  background: rgba(2, 6, 23, 0.25);
+}
+.central-estudos-revisoes-acesso .central-estudos-revisao-conteudo {
+  flex: 1;
+  min-width: 0;
+}
+.central-estudos-revisao-titulo {
+  line-height: 1.45;
+  color: #f1f5f9;
+  overflow-wrap: anywhere;
+}
+.central-estudos-revisao-materia {
+  color: var(--revisao-cor);
+}
+.central-estudos-revisao-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.central-estudos-revisao-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #dbe4f0;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.central-estudos-revisao-origem {
+  border-color: var(--revisao-linha);
+}
+.central-estudos-revisoes-acesso .central-estudos-item-revisao > button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #64748b;
+  border-radius: 9px;
+  background: #253449;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.central-estudos-revisoes-acesso .central-estudos-item-revisao > button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+.central-estudos-revisoes-acesso .central-estudos-item-revisao > button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+@media (max-width: 600px) {
+  .central-estudos-revisoes-acesso .central-estudos-grupo-revisoes { padding: 10px; }
+  .central-estudos-revisoes-acesso .central-estudos-item-revisao > button {
+    width: 100%;
+  }
+}

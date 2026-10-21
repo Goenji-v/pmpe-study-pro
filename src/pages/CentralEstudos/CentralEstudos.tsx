@@ -1328,19 +1328,29 @@ const [
                       <p>Não há revisões pendentes atrasadas, para hoje ou para amanhã.</p>
                     )}
                     {resumoRevisoes.grupos.map((grupo) => (
-                      <div key={grupo.id} className="central-estudos-grupo-revisoes">
-                        <h4>{grupo.titulo} ({grupo.itens.length})</h4>
+                      <div key={grupo.id} className={`central-estudos-grupo-revisoes grupo-${grupo.id}`}>
+                        <h4>{grupo.titulo} <span className="central-estudos-grupo-contagem">({grupo.itens.length})</span></h4>
                         {grupo.itens.map((revisao) => (
                           <div key={revisao.id} className="central-estudos-item-revisao">
-                            <div>
-                              <strong>{revisao.materia} · {revisao.assunto}</strong>
-                              <small>
-                                {revisao.modulo ? revisao.modulo + " · " : ""}
-                                {formatarDataRevisao(revisao.dataPrevista)}
-                              </small>
-                              {revisao.origemSimulado && (
-                                <small>{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
-                              )}
+                            <div className="central-estudos-revisao-conteudo">
+                              <strong className="central-estudos-revisao-titulo">
+                                <span className="central-estudos-revisao-materia">{revisao.materia}</span>
+                                <span aria-hidden="true"> · </span>
+                                {revisao.assunto}
+                              </strong>
+                              <div className="central-estudos-revisao-etiquetas">
+                                {revisao.modulo && (
+                                  <span className="central-estudos-revisao-etiqueta">{revisao.modulo}</span>
+                                )}
+                                <time className="central-estudos-revisao-etiqueta" dateTime={revisao.dataPrevista}>
+                                  {formatarDataRevisao(revisao.dataPrevista)}
+                                </time>
+                                {revisao.origemSimulado && (
+                                  <span className="central-estudos-revisao-etiqueta central-estudos-revisao-origem">
+                                    {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <button
                               type="button"
