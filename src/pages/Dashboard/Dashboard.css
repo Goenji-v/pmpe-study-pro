@@ -2460,3 +2460,67 @@
     font-size: 8px;
   }
 }
+
+
+/* Fila de revisão: nome em largura integral, sem disputar espaço com
+   o ícone, o selo de prazo ou a origem do simulado. */
+.dashboard-pro-v3 .dashboard-pro-review-list > button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon spacer status"
+    "title title title"
+    "origin origin arrow";
+  align-items: start;
+  column-gap: 10px;
+  row-gap: 8px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 13px 14px;
+}
+.dashboard-pro-review-list .dashboard-pro-review-calendar {
+  grid-area: icon;
+}
+.dashboard-pro-review-list .dashboard-pro-review-title {
+  grid-area: title;
+  display: block;
+  min-width: 0;
+  color: #eaf2ff;
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: none;
+}
+.dashboard-pro-review-list .dashboard-pro-review-origin {
+  grid-area: origin;
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.dashboard-pro-review-list .dashboard-pro-review-status {
+  grid-area: status;
+  align-self: center;
+  justify-self: end;
+}
+.dashboard-pro-review-list em {
+  grid-area: arrow;
+  justify-self: end;
+  align-self: end;
+  line-height: 1;
+}
+@media (max-width: 720px) {
+  .dashboard-pro-v3 .dashboard-pro-review-list > button {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+  .dashboard-pro-review-list em {
+    display: block;
+  }
+}
