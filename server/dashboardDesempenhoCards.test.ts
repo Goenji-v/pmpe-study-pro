@@ -33,7 +33,15 @@ test("dashboard oficial usa cards 2D no lugar do gráfico 3D", async () => {
 
   assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /dashboard-materia-progress/);
-  assert.match(css, /min-height: 118px/);
+  assert.match(css, /min-height: 164px/);
+  // O nome ocupa a largura inteira do card e quebra entre palavras.
+  assert.match(codigo, /<strong>\{item\.materia\}<\/strong>/);
+  assert.match(css, /grid-template-columns: 34px minmax\(0, 1fr\)/);
+  assert.match(css, /grid-template-rows: 34px auto/);
+  assert.match(css, /grid-column: 1 \/ -1/);
+  assert.match(css, /overflow-wrap: break-word/);
+  assert.match(css, /word-break: normal/);
+  assert.doesNotMatch(css, /-webkit-line-clamp/);
   assert.match(css, /cursor: pointer/);
   assert.match(css, /dashboard-cards-insight/);
   assert.match(css, /@media \(max-width: 560px\)/);
