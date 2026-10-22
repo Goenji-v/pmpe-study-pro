@@ -636,13 +636,15 @@ function iniciarProximaAulaPortugues() {
           <div className="dashboard-pro-review-list">
             {revisoesDashboard.length > 0 ? revisoesDashboard.map(({ revisao, status }) => (
               <button type="button" key={revisao.id} onClick={() => navigate("/revisoes")}>
-                <span className="dashboard-pro-review-calendar">▣</span>
-                <b>{revisao.assunto}</b>
-                {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
-                  <small>{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
-                )}
+                <span className="dashboard-pro-review-calendar" aria-hidden="true">▣</span>
                 <small className={`dashboard-pro-review-status ${status.classe}`}>{status.texto}</small>
-                <em>›</em>
+                <b className="dashboard-pro-review-title">{revisao.assunto}</b>
+                {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
+                  <small className="dashboard-pro-review-origin">
+                    {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}
+                  </small>
+                )}
+                <em aria-hidden="true">›</em>
               </button>
             )) : <div className="dashboard-pro-review-empty">Nenhuma revisão atrasada, para hoje ou amanhã.</div>}
           </div>
