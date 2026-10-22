@@ -51,6 +51,7 @@ import { localizarProximaAula } from "../../services/conteudos/localizarConteudo
 import { resolverLinksAtividade } from "../../utils/linksAtividade";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { salvarArquivoMaterial } from "../../services/materiaisService";
+import { acumularArquivosFinalizacao } from "../../utils/anexosFinalizacao";
 import { obterReferenciasDaMissao, planoPMPE } from "../../data/planoPMPE";
 
 type EstadoNavegacaoCentral = {
@@ -2010,19 +2011,29 @@ const [
               </div>
 
               <label className="finalizacao-arquivo">
-                <span>📎 Selecionar arquivos</span>
+                <span>📎 Adicionar arquivos</span>
                 <input
                   type="file"
                   multiple
                   accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp"
                   disabled={salvandoFinalizacao}
-                  onChange={(evento) =>
-                    setArquivosFinalizacao(
-                      Array.from(evento.target.files ?? [])
-                    )
-                  }
+                  onChange={(evento) => {
+                    const selecionados = Array.from(evento.currentTarget.files ?? []);
+                    setArquivosFinalizacao((anteriores) =>
+                      acumularArquivosFinalizacao(anteriores, selecionados)
+                    );
+                    // Permite adicionar mais arquivos depois, inclusive reescolher
+                    // um que tenha sido removido da lista.
+                    evento.currentTarget.value = "";
+                  }}
                 />
+                <small>Escolha vários arquivos de uma vez ou adicione mais em etapas. Os anteriores continuam na lista.</small>
               </label>
+              <p className="finalizacao-arquivos-contador" role="status" aria-live="polite">
+                {arquivosFinalizacao.length === 0
+                  ? "Nenhum arquivo selecionado."
+                  : `${arquivosFinalizacao.length} arquivo(s) pronto(s) para salvar neste assunto.`}
+              </p>
 
               {arquivosFinalizacao.length > 0 && (
                 <div className="finalizacao-arquivos-lista">
