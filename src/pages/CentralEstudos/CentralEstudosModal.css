@@ -293,3 +293,16 @@
 }
 .finalizacao-avaliacao p { margin: 8px 0; }
 .finalizacao-avaliacao small { color: #cbd5e1; }
+
+.finalizacao-arquivo small,
+.finalizacao-arquivos-contador {
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.finalizacao-arquivos-contador {
+  margin: 0;
+  color: #93c5fd;
+  font-weight: 700;
+}
