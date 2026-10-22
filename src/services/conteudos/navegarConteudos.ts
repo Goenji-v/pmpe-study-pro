@@ -419,6 +419,17 @@ function moduloRepeteMateria(
     return true;
   }
 
+  // O curso de História de Pernambuco é cadastrado sob a matéria "História".
+  // Tratar esses nomes como equivalentes mantém cada assunto importado
+  // separado, com suas aulas internas, sem recriar IDs nem alterar progresso.
+  // Restringir à equivalência exata evita fundir módulos históricos distintos.
+  if (
+    (materia === "historia" || materia === "historia de pernambuco") &&
+    modulo === "historia de pernambuco"
+  ) {
+    return true;
+  }
+
   const ehRaciocinioLogicoMatematica = (valor: string) =>
     /\braciocinio\b/.test(valor) &&
     /\blogico\b/.test(valor) &&
