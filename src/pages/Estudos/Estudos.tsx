@@ -598,6 +598,9 @@ export default function Estudos() {
 
       {materiasFiltradas.map((materia) => {
         const trilhaFixa = normalizarTexto(materia.nome) === "portugues";
+        const historiaPernambuco = ["historia", "historia de pernambuco"].includes(
+          normalizarTexto(materia.nome)
+        );
         const cursoImportado = materiaTemCursoImportado(materia);
         const todos = (materia.modulos ?? []).flatMap((m) => m.assuntos);
         const concluidos = todos.filter((a) => a.concluido).length;
@@ -713,7 +716,11 @@ export default function Estudos() {
                                 onClick={() => alternarAssunto(assunto.id)}
                                 aria-expanded={Boolean(assuntosExpandidos[assunto.id])}
                               >
-                                {assuntosExpandidos[assunto.id] ? "Ocultar etapas" : `Ver ${assunto.aulas?.length ?? 0} aula${assunto.aulas?.length === 1 ? "" : "s"} e ${assunto.tarefas?.length ?? 0} tarefa${assunto.tarefas?.length === 1 ? "" : "s"}`}
+                                {assuntosExpandidos[assunto.id]
+                                  ? "Ocultar etapas"
+                                  : historiaPernambuco
+                                    ? `Ver ${assunto.aulas?.length ?? 0} subassunto${assunto.aulas?.length === 1 ? "" : "s"} (aulas) e ${assunto.tarefas?.length ?? 0} tarefa${assunto.tarefas?.length === 1 ? "" : "s"}`
+                                    : `Ver ${assunto.aulas?.length ?? 0} aula${assunto.aulas?.length === 1 ? "" : "s"} e ${assunto.tarefas?.length ?? 0} tarefa${assunto.tarefas?.length === 1 ? "" : "s"}`}
                               </button>
                             )}
                             {(() => {
@@ -801,7 +808,7 @@ export default function Estudos() {
                             <div className="conteudos-etapas-assunto">
                               {(assunto.aulas ?? []).length > 0 && (
                                 <section>
-                                  <h4>Videoaulas</h4>
+                                  <h4>{historiaPernambuco ? "Subassuntos · aulas do curso" : "Videoaulas"}</h4>
                                   {(assunto.aulas ?? []).slice().sort((a, b) => a.ordem - b.ordem).map((aula, indice) => (
                                     <div key={aula.id} className="conteudos-etapa-linha">
                                       <label className="conteudos-check-aula">
@@ -816,7 +823,10 @@ export default function Estudos() {
                                             modulo.id
                                           )}
                                         />
-                                        <span className={aula.concluida ? "concluida" : ""}>{indice + 1}. {aula.nome}</span>
+                                        <span className={aula.concluida ? "concluida" : ""}>
+                                          {historiaPernambuco ? `Subassunto ${indice + 1} · ` : `${indice + 1}. `}
+                                          {aula.nome}
+                                        </span>
                                       </label>
                                       {aula.url && <button type="button" onClick={() => window.open(aula.url, "_blank", "noopener,noreferrer")}>Abrir aula</button>}
                                     </div>
