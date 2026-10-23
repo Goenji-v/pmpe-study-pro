@@ -62,8 +62,18 @@ async function navegarPeloMenu(
   await expect(page.locator(".sidebar-mobile-overlay")).toBeVisible();
   await expect(page.locator("body")).toHaveClass(/menu-mobile-aberto/);
 
-  await page.getByRole("button", { name: grupo, exact: true }).click();
-  await page.getByRole("link", { name: item, exact: true }).click();
+  // Com o body bloqueado, quem deve rolar é a área interna do drawer.
+  // Verificar na viewport de 360px, sobretudo os grupos após Planejamento.
+  const navegacao = page.locator(".sidebar-menu");
+  await expect(navegacao).toHaveCSS("overflow-y", "auto");
+  const botaoGrupo = page.getByRole("button", { name: grupo, exact: true });
+  await botaoGrupo.scrollIntoViewIfNeeded();
+  await expect(botaoGrupo).toBeInViewport();
+  await botaoGrupo.click();
+  const link = page.getByRole("link", { name: item, exact: true });
+  await link.scrollIntoViewIfNeeded();
+  await expect(link).toBeInViewport();
+  await link.click();
 
   await expect(page).toHaveURL(destino, { timeout: 15_000 });
   await expect(page.locator(".layout")).toBeVisible({ timeout: 15_000 });
@@ -82,7 +92,9 @@ async function navegarPeloPerfil(
   const trigger = page.locator(".user-profile-trigger");
 
   await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
   const dropdown = page.locator(".user-profile-dropdown");
   await expect(dropdown).toBeVisible();
