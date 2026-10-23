@@ -364,3 +364,35 @@
     width: min(90vw, 315px);
   }
 }
+
+/* Mobile: rolagem exclusivamente dentro da navegação, mesmo com o
+   body bloqueado pelo backdrop. Garante acesso a "Prática" e aos últimos
+   grupos em telas de 360px sem deslocar o drawer para fora da viewport. */
+@media (max-width: 900px) {
+  .sidebar.sidebar-mobile-aberta {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar.sidebar-mobile-aberta .sidebar-logo {
+    flex: 0 0 auto;
+  }
+
+  .sidebar.sidebar-mobile-aberta .sidebar-menu {
+    flex: 1 1 auto !important;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .sidebar.sidebar-mobile-aberta .sidebar-rodape-acoes {
+    flex: 0 0 auto;
+  }
+}
