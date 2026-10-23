@@ -392,6 +392,12 @@
     touch-action: pan-y;
   }
 
+  /* Os grupos são itens flex: não podem encolher e cortar os submenus
+     antes que o container rolável calcule sua altura de conteúdo. */
+  .sidebar.sidebar-mobile-aberta .sidebar-menu > * {
+    flex: 0 0 auto;
+  }
+
   .sidebar.sidebar-mobile-aberta .sidebar-rodape-acoes {
     flex: 0 0 auto;
   }
