@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useApp } from "../../context/AppContext";
@@ -119,7 +119,9 @@ export default function UserProfileMenu() {
   const inicial = nome.charAt(0).toUpperCase() || "S";
   const titulo = tituloEquipado?.nome || gamificacao.tituloNivel;
 
-  useEffect(() => {
+  // Fechar o menu antes da pintura da nova rota evita um clique no
+  // perfil ser desfeito por um efeito atrasado após a navegação mobile.
+  useLayoutEffect(() => {
     setAberto(false);
   }, [location.pathname]);
 
