@@ -268,3 +268,21 @@ export function desmarcarMissaoPlano(
     new Event("pmpe-plano-atualizado")
   );
 }
+
+/** Completa a visualização de semanas transcorridas sem inventar tarefas. */
+export function ampliarPlanoAteSemana(plano: SemanaPlano[], semanaAtual: number): SemanaPlano[] {
+  const resultado = [...plano];
+  const ultima = resultado.at(-1)?.numero ?? 0;
+  const limite = Math.min(520, Math.max(ultima, Math.floor(semanaAtual)));
+  for (let numero = ultima + 1; numero <= limite; numero += 1) {
+    resultado.push({
+      numero,
+      nome: `Semana ${String(numero).padStart(2, "0")}`,
+      dias: Array.from({ length: 7 }, (_, indice) => ({
+        numero: indice + 1,
+        missoes: [],
+      })),
+    });
+  }
+  return resultado;
+}
