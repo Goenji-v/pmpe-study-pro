@@ -35,7 +35,6 @@ import {
   getSemanaAtual,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
-  listarPendenciasAteSemana,
 } from "../../utils/planoUtils";
 import {
   adaptarMissaoFlexivel,
@@ -193,11 +192,15 @@ export default function PlanoEstudos() {
       }
     );
     const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
+    const organizado = concluidas.length > 0
+      ? projetarPlanoCompactado(base, concluidas)
+      : base;
     return ampliarPlanoAteSemana(
-      base, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+      organizado, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
     );
   }, [
     missoesPorDia,
+    concluidas,
     configuracoes.planoPadraoAtivo,
     configuracoes.materiasPorDiaSemana,
     configuracoes.diaRedacaoSemanal,
@@ -253,7 +256,7 @@ export default function PlanoEstudos() {
   }), [previaReajuste, concluidas]);
 
   const pendenciasAnteriores = useMemo(
-    () => listarPendenciasAteSemana(concluidas, planoCalendario, semanaInicial),
+    () => [],
     [concluidas, planoCalendario, semanaInicial]
   );
 
@@ -537,7 +540,7 @@ export default function PlanoEstudos() {
                   Semana {item.numero}: {item.feitos} de {item.total} conteúdos concluídos
                 </p>
               ))}
-              <p>Esta prévia não é o cronograma oficial; a validação das equivalências de assuntos ainda é necessária.</p>
+              <p>O plano utiliza esta projeção sem alterar seus registros.</p>
             </div>
           )}
         </div>
