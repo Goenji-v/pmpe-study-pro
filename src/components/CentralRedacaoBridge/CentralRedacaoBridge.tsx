@@ -19,7 +19,7 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { getSemanaAtual } from "../../utils/planoUtils";
+import { calcularSemanaCorrida } from "../../utils/planoContinuo";
 import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
 import {
   montarObservacaoRedacao,
@@ -49,6 +49,7 @@ export default function CentralRedacaoBridge() {
     sessoes,
     setSessoes,
     missoesConcluidas,
+    sessoes,
     configuracoes,
   } = useApp();
   const {
@@ -98,13 +99,11 @@ export default function CentralRedacaoBridge() {
 
   const semanaAtual = useMemo(
     () =>
-      getSemanaAtual(
-        missoesConcluidas,
-        planoCalendario,
-        configuracoes.semanaAtualPlano
-      ),
+      calcularSemanaCorrida(sessoes, configuracoes.semanaAtualPlano, new Date(), configuracoes.inicioPlanoEm),
     [
       configuracoes.semanaAtualPlano,
+      configuracoes.inicioPlanoEm,
+      sessoes,
       missoesConcluidas,
       planoCalendario,
     ]
