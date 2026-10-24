@@ -63,14 +63,14 @@ export default function NotificationCenter() {
   );
 
   const missaoHoje = useMemo(() => {
-    const semana = getSemanaAtual(missoesConcluidas, plano, configuracoes.semanaAtualPlano);
+    const semana = getSemanaAtual(missoesConcluidas, plano, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano);
     const dia = obterDiaAtualPlano();
     const concluidas = new Set(missoesConcluidas);
     const semanaAtual = plano.find((item) => item.numero === semana);
     const diaAtual = semanaAtual?.dias.find((item) => item.numero === dia);
     const missao = diaAtual?.missoes.find((item) => !concluidas.has(item.id));
     return missao ? { semana, dia, missao } : null;
-  }, [configuracoes.semanaAtualPlano, missoesConcluidas, plano]);
+  }, [configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano, missoesConcluidas, plano]);
 
   const revisoesPendentes = useMemo(
     () => revisoes.filter((revisao) => !revisao.concluida),
