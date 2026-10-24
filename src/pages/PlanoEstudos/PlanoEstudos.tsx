@@ -255,11 +255,6 @@ export default function PlanoEstudos() {
     return { numero: semana.numero, feitos, total: conteudos.length };
   }), [previaReajuste, concluidas]);
 
-  const pendenciasAnteriores = useMemo(
-    () => [],
-    [concluidas, planoCalendario, semanaInicial]
-  );
-
   const missaoRedacaoDomingo = dia?.missoes.find(
     (missao) => missao.tipo === "redacao"
   );
@@ -590,25 +585,6 @@ export default function PlanoEstudos() {
         </p>
       </section>
 
-      {pendenciasAnteriores.length > 0 && (
-        <section className="plano-pendencias-anteriores" aria-label="Pendências das semanas anteriores">
-          <h2>Pendências de semanas anteriores ({pendenciasAnteriores.length})</h2>
-          <p>A semana avança pelo calendário. Essas matérias não foram marcadas como concluídas.</p>
-          <div className="plano-pendencias-lista">
-            {pendenciasAnteriores.map(({ semana: numeroSemana, dia: numeroDia, missao }) => (
-              <article key={missao.id} className="plano-pendencia-card">
-                <div>
-                  <small>Semana {numeroSemana} · {NOMES_DIAS_PLANO[numeroDia]}</small>
-                  <strong>{missao.materia} — {missao.assunto}</strong>
-                </div>
-                <button type="button" onClick={() => iniciarEstudo(missao)}>
-                  Estudar pendente
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
       {semanaInicial > (planoCalendario.findLast((item) => item.dias.some((d) => d.missoes.length))?.numero ?? 0) && (
         <p className="plano-sem-novos-assuntos">
           A semana {semanaInicial} chegou pelo calendário. Ainda não há novos assuntos cadastrados
