@@ -41,6 +41,7 @@ export function calcularSemanaCorrida(
 /** Nunca redistribui, conclui ou duplica missões antigas. Semanas futuras
  * sem novos conteúdos só representam o tempo, e mantêm as pendências à vista. */
 export function criarSemanasContinuas(plano: readonly SemanaPlano[], semanaAtual: number): SemanaPlano[] {
+  if (!plano.length) return [];
   const saida = [...plano];
   const ultimoNumero = Math.max(0, ...plano.map((semana) => semana.numero));
   const limite = Math.max(ultimoNumero, semanaAtual);
