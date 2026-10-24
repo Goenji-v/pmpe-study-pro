@@ -49,6 +49,8 @@ import {
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
 import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
+import { useAuth } from "../../context/AuthContext";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -58,6 +60,10 @@ type MissaoPlanoExibida = MissaoPlano & {
 
 export default function PlanoEstudos() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const [reajusteAtivo, setReajusteAtivo] = useLocalStorage<boolean>(
+    "pmpe:" + (usuario?.id ?? "deslogado") + ":reajuste-visual-individual", false
+  );
   const location = useLocation();
   const estadoNavegacao = location.state as { semana?: number; dia?: number } | null;
 
@@ -192,7 +198,7 @@ export default function PlanoEstudos() {
       }
     );
     const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
-    const organizado = concluidas.length > 0
+    const organizado = reajusteAtivo && concluidas.length > 0
       ? projetarPlanoCompactado(base, concluidas)
       : base;
     return ampliarPlanoAteSemana(
@@ -200,6 +206,7 @@ export default function PlanoEstudos() {
     );
   }, [
     missoesPorDia,
+    reajusteAtivo,
     concluidas,
     configuracoes.planoPadraoAtivo,
     configuracoes.materiasPorDiaSemana,
@@ -519,7 +526,8 @@ export default function PlanoEstudos() {
         </div>
       </div>
 
-      <section aria-label="Prévia de reorganização individual" className="plano-adaptacao">
+      <section aria-label="Reorganização individual" className="plano-adaptacao">
+        <div><h2>Régua da minha conta</h2><p>Reordena apenas a visualização, sem mudar registros.</p><button type="button" onClick={() => setReajusteAtivo((valor) => !valor)}>{reajusteAtivo ? "Voltar à distribuição original" : "Aplicar régua nesta conta"}</button></div>
         <div>
           <h2>Prévia do reajuste das semanas</h2>
           <p>Simulação somente de leitura: preserva as conclusões e os registros reais dos estudos. Nada é salvo ou transferido.</p>
