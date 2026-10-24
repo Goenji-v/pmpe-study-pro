@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import type { SessaoEstudo } from "../src/types";
+import type { SessaoEstudo, Materia } from "../src/types";
+import { criarPlanoCalendario } from "../src/utils/planoCalendario";
 import type { SemanaPlano } from "../src/data/planoPMPE";
 import { calcularSemanaCorrida, criarSemanasContinuas, listarPendenciasAnteriores, obterMissaoHoje, obterProximaMissaoContinua } from "../src/utils/planoContinuo";
 
@@ -69,4 +70,17 @@ test("telas não anunciam falso plano concluído com backlog", () => {
   assert.match(arquivos[1], /obterProximaMissaoContinua/);
   assert.match(arquivos[2], /Encerrada · pendente/);
   assert.match(arquivos[2], /type="date"/);
+});
+
+test("trocar de conta ou atualizar o curso muda o plano dinâmico sem misturar cache", () => {
+  const curso = (id: string, titulo: string): Materia[] => [{
+    id, nome: titulo,
+    assuntos: [{ id: id+"-assunto", nome: titulo+" - primeira aula", concluido: false, prioridade: "media" }]
+  }];
+  const primeiro = criarPlanoCalendario(1, false, undefined, curso("curso-a", "Informática"));
+  const segundo = criarPlanoCalendario(1, false, undefined, curso("curso-b", "História"));
+  const assuntos = (visao: SemanaPlano[]) => visao.flatMap(s => s.dias.flatMap(d => d.missoes.filter(m => m.tipo === "conteudo").map(m => m.materia)));
+  assert.deepEqual(assuntos(primeiro), ["Informática"]);
+  assert.deepEqual(assuntos(segundo), ["História"]);
+  assert.deepEqual(assuntos(primeiro), ["Informática"]);
 });
