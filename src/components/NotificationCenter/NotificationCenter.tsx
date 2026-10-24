@@ -45,7 +45,7 @@ export default function NotificationCenter() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const { administrador } = useAdminStatus();
-  const { configuracoes, missoesConcluidas, revisoes, sessoes } = useApp();
+  const { configuracoes, missoesConcluidas, revisoes, sessoes, materias } = useApp();
 
   const [aberto, setAberto] = useState(false);
   const [notificacoes, setNotificacoes] = useState<NotificacaoInterna[]>([]);
@@ -58,8 +58,8 @@ export default function NotificationCenter() {
   const [jobsGeracao, setJobsGeracao] = useState<JobGeracaoIAPublico[]>([]);
 
   const plano = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana, materias),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana, materias]
   );
 
   const missaoHoje = useMemo(() => {
