@@ -33,6 +33,9 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getSemanaAtual,
+  semanaPorDataInicio,
+  ampliarPlanoAteSemana,
+  listarPendenciasAteSemana,
 } from "../../utils/planoUtils";
 import {
   adaptarMissaoFlexivel,
@@ -178,31 +181,35 @@ export default function PlanoEstudos() {
     configuracoes.missoesPorDia ?? 1
   );
 
-  const planoCalendario = useMemo(
-    () =>
-      aplicarDiasAtividadesSemanais(
-        criarPlanoCalendario(
-          missoesPorDia,
-          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
-        ),
-        {
-          diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
-          diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
-        }
-      ),
-    [
-      missoesPorDia,
-      configuracoes.planoPadraoAtivo,
-      configuracoes.materiasPorDiaSemana,
-      configuracoes.diaRedacaoSemanal,
-      configuracoes.diaSimuladoSemanal,
-    ]
-  );
+  const planoCalendario = useMemo(() => {
+    const base = aplicarDiasAtividadesSemanais(
+      criarPlanoCalendario(
+        missoesPorDia,
+        configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
+      ), {
+        diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
+        diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
+      }
+    );
+    const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
+    return ampliarPlanoAteSemana(
+      base, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+    );
+  }, [
+    missoesPorDia,
+    configuracoes.planoPadraoAtivo,
+    configuracoes.materiasPorDiaSemana,
+    configuracoes.diaRedacaoSemanal,
+    configuracoes.diaSimuladoSemanal,
+    configuracoes.dataInicioPlano,
+    configuracoes.semanaAtualPlano,
+  ]);
 
   const semanaInicial = getSemanaAtual(
     concluidas,
     planoCalendario,
-    configuracoes.semanaAtualPlano
+    configuracoes.semanaAtualPlano,
+    configuracoes.dataInicioPlano
   );
   const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
@@ -228,9 +235,12 @@ export default function PlanoEstudos() {
   );
 
   const dia = semana?.dias.find(
-    (item) =>
-      item.numero ===
-      diaSelecionado
+    (item) => item.numero === diaSelecionado
+  );
+
+  const pendenciasAnteriores = useMemo(
+    () => listarPendenciasAteSemana(concluidas, planoCalendario, semanaInicial),
+    [concluidas, planoCalendario, semanaInicial]
   );
 
   const missaoRedacaoDomingo = dia?.missoes.find(
@@ -540,6 +550,32 @@ export default function PlanoEstudos() {
           A sequência fixa não é alterada. A adaptação atua somente nas missões flexíveis de reforço; domingos continuam exclusivos para redação + simulado.
         </p>
       </section>
+
+      {pendenciasAnteriores.length > 0 && (
+        <section className="plano-pendencias-anteriores" aria-label="Pendências das semanas anteriores">
+          <h2>Pendências de semanas anteriores ({pendenciasAnteriores.length})</h2>
+          <p>A semana avança pelo calendário. Essas matérias não foram marcadas como concluídas.</p>
+          <div className="plano-pendencias-lista">
+            {pendenciasAnteriores.map(({ semana: numeroSemana, dia: numeroDia, missao }) => (
+              <article key={missao.id} className="plano-pendencia-card">
+                <div>
+                  <small>Semana {numeroSemana} · {NOMES_DIAS_PLANO[numeroDia]}</small>
+                  <strong>{missao.materia} — {missao.assunto}</strong>
+                </div>
+                <button type="button" onClick={() => iniciarEstudo(missao)}>
+                  Estudar pendente
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+      {semanaInicial > (planoCalendario.findLast((item) => item.dias.some((d) => d.missoes.length))?.numero ?? 0) && (
+        <p className="plano-sem-novos-assuntos">
+          A semana {semanaInicial} chegou pelo calendário. Ainda não há novos assuntos cadastrados
+          para esta semana; continue pelas pendências sem perder o progresso anterior.
+        </p>
+      )}
 
       <div className="plano-semanas">
         {planoCalendario.map(
