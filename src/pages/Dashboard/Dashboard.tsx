@@ -149,7 +149,8 @@ export default function Dashboard() {
       getSemanaAtual(
         missoesConcluidas,
         planoCalendario,
-        configuracoes.semanaAtualPlano
+        configuracoes.semanaAtualPlano,
+        configuracoes.dataInicioPlano
       );
     const diaAtual = obterDiaAtualPlano();
     const concluidasSet = new Set(missoesConcluidas);
@@ -209,7 +210,7 @@ export default function Dashboard() {
     };
     // atualizacaoPlano é um token explícito disparado por eventos externos do Dashboard.
     /* oxlint-disable react-hooks/exhaustive-deps */
-  }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]);
+  }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   const hoje = obterDataLocal();

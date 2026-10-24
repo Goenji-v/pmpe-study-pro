@@ -101,10 +101,12 @@ export default function CentralRedacaoBridge() {
       getSemanaAtual(
         missoesConcluidas,
         planoCalendario,
-        configuracoes.semanaAtualPlano
+        configuracoes.semanaAtualPlano,
+        configuracoes.dataInicioPlano
       ),
     [
       configuracoes.semanaAtualPlano,
+      configuracoes.dataInicioPlano,
       missoesConcluidas,
       planoCalendario,
     ]

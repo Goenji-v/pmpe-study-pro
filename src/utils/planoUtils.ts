@@ -114,15 +114,11 @@ export function getProximaMissao(
     concluidasInformadas ?? getMissoesConcluidas()
   );
 
-  const semanaInferida = inferirSemanaComProgresso(concluidas, plano);
-  const inicio =
-    typeof semanaMinimaInformada === "number" &&
-    Number.isFinite(semanaMinimaInformada)
-      ? Math.max(1, Math.floor(semanaMinimaInformada))
-      : semanaInferida;
-
+  // A semana atual é referência do calendário, não um corte das pendências.
+  // Nunca deixar matérias antigas desaparecerem nem declarar plano concluído
+  // apenas porque uma semana futura foi selecionada.
+  void semanaMinimaInformada;
   for (const semana of plano) {
-    if (semana.numero < inicio) continue;
 
     for (const dia of semana.dias) {
       for (const missao of dia.missoes) {
@@ -177,21 +173,57 @@ export function getProgressoSemana(
   );
 }
 
+/**
+ * Semana pelo calendário, independente de tarefas feitas.
+ * A data de início é configurada pelo titular. Sem data confiável,
+ * preservamos o modo legado, sem inventar início de estudos.
+ */
+export function semanaPorDataInicio(
+  dataInicio: string | undefined,
+  agora = new Date()
+): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataInicio ?? "")) return null;
+  const [ano, mes, dia] = dataInicio!.split("-").map(Number);
+  const data = new Date(ano, mes - 1, dia, 12);
+  if (data.getFullYear() !== ano || data.getMonth() !== mes - 1 || data.getDate() !== dia) return null;
+  const diaSemana = (data.getDay() + 6) % 7; // segunda é zero
+  const inicioSegunda = Date.UTC(ano, mes - 1, dia - diaSemana);
+  const hojeSegunda = Date.UTC(
+    agora.getFullYear(), agora.getMonth(), agora.getDate() - (agora.getDay() + 6) % 7
+  );
+  return Math.max(1, Math.floor((hojeSegunda - inicioSegunda) / (7 * 86400000)) + 1);
+}
+
+export function listarPendenciasAteSemana(
+  concluidasInformadas: string[],
+  plano: SemanaPlano[],
+  semanaAtual: number
+): ProximaMissaoPlano[] {
+  const concluidas = new Set(concluidasInformadas);
+  return plano.flatMap((semana) =>
+    semana.numero >= semanaAtual ? [] : semana.dias.flatMap((dia) =>
+      dia.missoes.filter((missao) => !concluidas.has(missao.id)).map((missao) => ({
+        semana: semana.numero, dia: dia.numero, missao,
+      }))
+    )
+  );
+}
+
 export function getSemanaAtual(
   concluidasInformadas?: string[],
   plano: SemanaPlano[] = planoPMPE,
-  semanaMinimaInformada?: number
+  semanaMinimaInformada?: number,
+  dataInicioPlano?: string,
+  agora = new Date()
 ): number {
-  if (plano.length === 0) return 1;
-
-  const proxima = getProximaMissao(
-    concluidasInformadas,
-    plano,
-    semanaMinimaInformada
-  );
-
-  if (proxima) return proxima.semana;
-  return plano.at(-1)?.numero ?? 1;
+  const peloCalendario = semanaPorDataInicio(dataInicioPlano, agora);
+  const minimo = Number.isFinite(semanaMinimaInformada)
+    ? Math.max(1, Math.floor(semanaMinimaInformada!))
+    : 1;
+  if (peloCalendario !== null) return Math.max(minimo, peloCalendario);
+  if (plano.length === 0) return minimo;
+  const concluidas = new Set(concluidasInformadas ?? getMissoesConcluidas());
+  return Math.max(minimo, inferirSemanaComProgresso(concluidas, plano));
 }
 
 export function concluirMissaoPlano(
@@ -235,4 +267,22 @@ export function desmarcarMissaoPlano(
   window.dispatchEvent(
     new Event("pmpe-plano-atualizado")
   );
+}
+
+/** Completa a visualização de semanas transcorridas sem inventar tarefas. */
+export function ampliarPlanoAteSemana(plano: SemanaPlano[], semanaAtual: number): SemanaPlano[] {
+  const resultado = [...plano];
+  const ultima = resultado.at(-1)?.numero ?? 0;
+  const limite = Math.min(520, Math.max(ultima, Math.floor(semanaAtual)));
+  for (let numero = ultima + 1; numero <= limite; numero += 1) {
+    resultado.push({
+      numero,
+      nome: `Semana ${String(numero).padStart(2, "0")}`,
+      dias: Array.from({ length: 7 }, (_, indice) => ({
+        numero: indice + 1,
+        missoes: [],
+      })),
+    });
+  }
+  return resultado;
 }
