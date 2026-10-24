@@ -49,6 +49,7 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
+import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -237,6 +238,19 @@ export default function PlanoEstudos() {
   const dia = semana?.dias.find(
     (item) => item.numero === diaSelecionado
   );
+
+  const [mostrarPreviaReajuste, setMostrarPreviaReajuste] = useState(false);
+  const previaReajuste = useMemo(
+    () => projetarPlanoCompactado(planoCalendario, concluidas),
+    [planoCalendario, concluidas]
+  );
+  const resumoPrevia = useMemo(() => previaReajuste.map((semana) => {
+    const conteudos = semana.dias.flatMap((dia) =>
+      dia.missoes.filter((missao) => missao.tipo === "conteudo")
+    );
+    const feitos = conteudos.filter((missao) => concluidas.includes(missao.id)).length;
+    return { numero: semana.numero, feitos, total: conteudos.length };
+  }), [previaReajuste, concluidas]);
 
   const pendenciasAnteriores = useMemo(
     () => listarPendenciasAteSemana(concluidas, planoCalendario, semanaInicial),
@@ -506,6 +520,28 @@ export default function PlanoEstudos() {
           </strong>
         </div>
       </div>
+
+      <section aria-label="Prévia de reorganização individual" className="plano-adaptacao">
+        <div>
+          <h2>Prévia do reajuste das semanas</h2>
+          <p>Simulação somente de leitura: preserva as conclusões e os registros reais dos estudos. Nada é salvo ou transferido.</p>
+          <button type="button" aria-expanded={mostrarPreviaReajuste}
+            onClick={() => setMostrarPreviaReajuste((valor) => !valor)}>
+            {mostrarPreviaReajuste ? "Ocultar prévia" : "Simular reorganização"}
+          </button>
+          {mostrarPreviaReajuste && (
+            <div role="status">
+              <p>As missões de conteúdo concluídas aparecem primeiro apenas nesta prévia. Revisões, redações e simulados permanecem nos dias originais.</p>
+              {resumoPrevia.filter((item) => item.total > 0).map((item) => (
+                <p key={item.numero}>
+                  Semana {item.numero}: {item.feitos} de {item.total} conteúdos concluídos
+                </p>
+              ))}
+              <p>Esta prévia não é o cronograma oficial; a validação das equivalências de assuntos ainda é necessária.</p>
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="plano-adaptacao">
         <div className="plano-adaptacao-principal">
