@@ -311,7 +311,6 @@ export default function Configuracoes() {
               id="dataInicioPlano"
               type="date"
               value={formulario.dataInicioPlano ?? ""}
-              max={new Date().toLocaleDateString("en-CA")}
               onChange={(evento) => atualizarCampo("dataInicioPlano", evento.target.value || undefined)}
             />
             <small>
