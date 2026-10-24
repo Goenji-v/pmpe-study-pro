@@ -136,6 +136,16 @@ export default function Configuracoes() {
       showToast("Informe o concurso.", "warning");
       return;
     }
+    if (paraValidar.dataInicioPlano) {
+      const [ano, mes, dia] = paraValidar.dataInicioPlano.split("-").map(Number);
+      const selecionada = new Date(ano, mes - 1, dia, 12);
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(paraValidar.dataInicioPlano) ||
+          selecionada.getFullYear() !== ano || selecionada.getMonth() !== mes - 1 ||
+          selecionada.getDate() !== dia || selecionada.getTime() > Date.now()) {
+        showToast("Informe uma data válida de início do plano, não futura.", "warning");
+        return;
+      }
+    }
     if ((paraValidar.diasEstudo?.length ?? 0) === 0) {
       showToast("Escolha pelo menos um dia da semana para estudar.", "warning");
       return;
@@ -293,6 +303,22 @@ export default function Configuracoes() {
                 </button>
               );
             })}
+          </div>
+
+          <div className="configuracoes-form-group">
+            <label htmlFor="dataInicioPlano">Data de início do seu cronograma</label>
+            <input
+              id="dataInicioPlano"
+              type="date"
+              value={formulario.dataInicioPlano ?? ""}
+              max={new Date().toLocaleDateString("en-CA")}
+              onChange={(evento) => atualizarCampo("dataInicioPlano", evento.target.value || undefined)}
+            />
+            <small>
+              A semana avança pelo calendário, mesmo que você não tenha estudado.
+              Pendências anteriores continuam disponíveis. Informe a data real de início:
+              nenhum progresso será marcado automaticamente.
+            </small>
           </div>
 
           <div className="configuracoes-form-group">
