@@ -103,8 +103,6 @@ export default function CentralRedacaoBridge() {
       configuracoes.semanaAtualPlano,
       configuracoes.inicioPlanoEm,
       sessoes,
-      missoesConcluidas,
-      planoCalendario,
     ]
   );
 
