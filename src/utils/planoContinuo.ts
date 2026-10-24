@@ -12,7 +12,12 @@ export function calcularSemanaCorrida(
   agora = new Date(),
   inicioInformado?: string
 ): number {
-  const marco = inicioInformado ? new Date(inicioInformado) : null;
+  // Datas YYYY-MM-DD são civis locais, não UTC (evita recuar um dia no Brasil).
+  const marco = inicioInformado
+    ? /^\\d{4}-\\d{2}-\\d{2}$/.test(inicioInformado)
+      ? new Date(...(inicioInformado.split("-").map(Number).map((valor, i) => i === 1 ? valor - 1 : valor) as [number, number, number]))
+      : new Date(inicioInformado)
+    : null;
   const datas = sessoes
     .map((sessao) => new Date(sessao.data))
     .filter((data) => Number.isFinite(data.getTime()) && data.getTime() <= agora.getTime());
@@ -38,7 +43,7 @@ export function calcularSemanaCorrida(
 export function criarSemanasContinuas(plano: readonly SemanaPlano[], semanaAtual: number): SemanaPlano[] {
   const saida = [...plano];
   const ultimoNumero = Math.max(0, ...plano.map((semana) => semana.numero));
-  const limite = Math.min(Math.max(ultimoNumero, semanaAtual), 156);
+  const limite = Math.max(ultimoNumero, semanaAtual);
   for (let numero = ultimoNumero + 1; numero <= limite; numero += 1) {
     saida.push({
       numero,
