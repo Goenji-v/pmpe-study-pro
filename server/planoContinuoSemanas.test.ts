@@ -30,6 +30,7 @@ test("semana avança na segunda mesmo com tarefas incompletas", () => {
 
 test("continua na semana 5 ou 9 sem inventar atividades", () => {
   const snapshot = JSON.stringify(plano);
+  assert.deepEqual(criarSemanasContinuas([], 9), [], "nenhum plano não vira uma grade fictícia");
   const visao = criarSemanasContinuas(plano, 9);
   assert.equal(visao.length, 9);
   assert.equal(visao[8].numero, 9);
