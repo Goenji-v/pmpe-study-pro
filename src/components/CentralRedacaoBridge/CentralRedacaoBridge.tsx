@@ -49,6 +49,7 @@ export default function CentralRedacaoBridge() {
     sessoes,
     setSessoes,
     missoesConcluidas,
+    materias,
     configuracoes,
   } = useApp();
   const {
@@ -80,7 +81,7 @@ export default function CentralRedacaoBridge() {
       aplicarDiasAtividadesSemanais(
         criarPlanoCalendario(
           normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
-          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
+          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana, materias
         ),
         {
           diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
@@ -90,7 +91,7 @@ export default function CentralRedacaoBridge() {
     [
       configuracoes.missoesPorDia,
       configuracoes.planoPadraoAtivo,
-      configuracoes.materiasPorDiaSemana,
+      configuracoes.materiasPorDiaSemana, materias,
       configuracoes.diaRedacaoSemanal,
       configuracoes.diaSimuladoSemanal,
     ]
