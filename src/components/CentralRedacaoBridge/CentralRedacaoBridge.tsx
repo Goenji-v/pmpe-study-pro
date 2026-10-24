@@ -49,7 +49,6 @@ export default function CentralRedacaoBridge() {
     sessoes,
     setSessoes,
     missoesConcluidas,
-    sessoes,
     configuracoes,
   } = useApp();
   const {
