@@ -9,11 +9,10 @@ import { useNavigate } from "react-router-dom";
 import "./MissaoDoDia.css";
 
 import {
-  getProximaMissao,
-  getSemanaAtual,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
-import { criarPlanoCalendario, normalizarMissoesPorDia, NOMES_DIAS_PLANO } from "../../utils/planoCalendario";
+import { criarPlanoCalendario, normalizarMissoesPorDia, NOMES_DIAS_PLANO, obterDiaAtualPlano } from "../../utils/planoCalendario";
+import { calcularSemanaCorrida, listarPendenciasAnteriores, obterMissaoHoje, obterProximaMissaoContinua } from "../../utils/planoContinuo";
 
 type MissaoDoDiaProps = {
   atualizacao?: number;
@@ -25,6 +24,7 @@ export default function MissaoDoDia({
   const navigate = useNavigate();
   const {
     materias,
+    sessoes,
     missoesConcluidas,
     configuracoes,
   } = useApp();
@@ -35,19 +35,24 @@ export default function MissaoDoDia({
   );
 
   const semanaAtual = useMemo(
-    () => getSemanaAtual(
-      missoesConcluidas,
-      planoCalendario,
-      configuracoes.semanaAtualPlano
-    ),
-    [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]
+    () => calcularSemanaCorrida(sessoes, configuracoes.semanaAtualPlano, new Date(), configuracoes.inicioPlanoEm),
+    [sessoes, configuracoes.semanaAtualPlano, configuracoes.inicioPlanoEm, atualizacao]
   );
 
   // atualizacao é um token explícito para invalidar o cálculo após eventos externos.
   /* oxlint-disable react-hooks/exhaustive-deps */
+  const diaAtual = obterDiaAtualPlano();
+  const pendenciasAnteriores = useMemo(
+    () => listarPendenciasAnteriores(planoCalendario, missoesConcluidas, semanaAtual, diaAtual),
+    [planoCalendario, missoesConcluidas, semanaAtual, diaAtual]
+  );
+  const missaoHoje = useMemo(
+    () => obterMissaoHoje(planoCalendario, missoesConcluidas, semanaAtual, diaAtual),
+    [planoCalendario, missoesConcluidas, semanaAtual, diaAtual]
+  );
   const proxima = useMemo(
-    () => getProximaMissao(missoesConcluidas, planoCalendario, semanaAtual),
-    [atualizacao, missoesConcluidas, planoCalendario, semanaAtual]
+    () => obterProximaMissaoContinua(planoCalendario, missoesConcluidas, semanaAtual, diaAtual),
+    [atualizacao, missoesConcluidas, planoCalendario, semanaAtual, diaAtual]
   );
   /* oxlint-enable react-hooks/exhaustive-deps */
 
@@ -127,7 +132,7 @@ export default function MissaoDoDia({
             MISSÃO DO DIA
           </span>
 
-          <h2>{planoCalendario.length ? "Plano concluído" : "Nenhum plano configurado"}</h2>
+          <h2>{planoCalendario.length ? `Semana ${semanaAtual} · sem atividades pendentes` : "Nenhum plano configurado"}</h2>
 
           <p>
             {planoCalendario.length ? "Todas as missões cadastradas foram concluídas." : "Importe seu edital para montar suas missões."}
@@ -154,7 +159,7 @@ export default function MissaoDoDia({
       <div className="missao-dia-topo">
         <div>
           <span className="missao-dia-etiqueta">
-            MISSÃO DO DIA
+            {pendenciasAnteriores.length ? "PENDÊNCIA PRIORITÁRIA" : "MISSÃO DO DIA"} · SEMANA {semanaAtual}
           </span>
 
           <h2>{missao.materia}</h2>
@@ -170,6 +175,19 @@ export default function MissaoDoDia({
           </span>
         </div>
       </div>
+
+      {pendenciasAnteriores.length > 0 && (
+        <p className="missao-dia-aviso-pendencias">
+          {pendenciasAnteriores.length} atividade(s) anterior(es) ainda pendente(s).
+          Nenhuma foi marcada como concluída automaticamente.
+        </p>
+      )}
+      {missaoHoje && missaoHoje.missao.id !== missao.id && (
+        <div className="missao-dia-tambem-hoje">
+          <strong>Também para hoje: {missaoHoje.missao.materia} — {missaoHoje.missao.assunto}</strong>
+          <button type="button" onClick={() => iniciarMissao(missaoHoje)}>▶ Iniciar estudo de hoje</button>
+        </div>
+      )}
 
       <div className="missao-dia-detalhes">
         <Detalhe
