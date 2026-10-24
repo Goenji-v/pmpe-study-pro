@@ -386,3 +386,33 @@
   opacity: 0.62;
   cursor: not-allowed;
 }
+
+/* Pendências antigas aparecem antes da programação atual, sem indicar conclusão. */
+.plano-pendencias-anteriores {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid rgba(251, 191, 36, .45);
+  border-radius: 14px;
+  background: rgba(251, 191, 36, .065);
+}
+.plano-pendencias-anteriores h2 { margin: 0 0 8px; font-size: 18px; color: #fcd34d; }
+.plano-pendencias-anteriores p { margin: 0 0 12px; color: #cbd5e1; }
+.plano-pendencias-lista { display: grid; gap: 10px; max-height: 350px; overflow-y: auto; }
+.plano-pendencia-card {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; padding: 12px; border-radius: 10px;
+  border: 1px solid rgba(251,191,36,.2); background: rgba(15,23,42,.66);
+}
+.plano-pendencia-card > div { display: grid; gap: 4px; min-width: 0; }
+.plano-pendencia-card small { color: #fcd34d; }
+.plano-pendencia-card strong { color: #f8fafc; overflow-wrap: anywhere; }
+.plano-pendencia-card button {
+  flex-shrink: 0; min-height: 42px; padding: 8px 14px; border-radius: 9px;
+  border: 1px solid #60a5fa; background: #1d4ed8; color: white; cursor: pointer;
+}
+.plano-pendencia-card button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+.plano-sem-novos-assuntos { color: #fcd34d; font-size: 14px; line-height: 1.5; }
+@media(max-width: 600px) {
+  .plano-pendencia-card { flex-direction: column; align-items: stretch; }
+  .plano-pendencia-card button { width: 100%; }
+}
