@@ -20,7 +20,8 @@ export function projetarPlanoCompactado(
 
   plano.forEach((semana, s) => semana.dias.forEach((dia, d) =>
     dia.missoes.forEach((missao, i) => {
-      if (missao.tipo !== "conteudo") return;
+      if (missao.tipo !== "conteudo" && missao.tipo !== "questoes") return;
+      if (/revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)) return;
       slots.push({ semana: s, dia: d, indice: i });
       conteudos.push(missao);
     })
