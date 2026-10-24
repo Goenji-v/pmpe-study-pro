@@ -24,13 +24,14 @@ export function temConteudosPlanoRuntime() {
 
 export function criarPlanoMateriasRuntime(
   missoesPorDia = 1,
-  porDia?: ConfiguracoesApp["materiasPorDiaSemana"]
+  porDia?: ConfiguracoesApp["materiasPorDiaSemana"],
+  materiasDaConta?: Materia[]
 ): SemanaPlano[] {
   const quantidadePorDia = Math.max(
     1,
     Math.min(6, Math.floor(missoesPorDia || 1))
   );
-  const filas = materiasAtuais
+  const filas = (materiasDaConta ?? materiasAtuais)
     .map((materia) => ({
       materia,
       itens: listarModulosDaMateria(materia).flatMap((modulo) =>
