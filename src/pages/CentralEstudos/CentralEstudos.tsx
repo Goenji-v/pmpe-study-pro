@@ -1853,16 +1853,15 @@ const [
                         evento.target.value
                       )
                     }
-                    placeholder="Selecione ou digite uma banca"
+                    placeholder="Selecione uma banca ou Aleatórias"
                   />
                   <datalist id="bancas-concurso">
+                    <option value="Aleatórias" label="Questões de bancas variadas" />
                     {BANCAS_CONCURSO.map((nomeBanca) => (
                       <option key={nomeBanca} value={nomeBanca} />
                     ))}
-                    {estado.tipo === "revisao" && (
-                      <option value="Aleatórias" />
-                    )}
                   </datalist>
+                  <small>Use “Aleatórias” quando resolver questões de bancas diferentes.</small>
                 </label>
               )}
 
