@@ -71,6 +71,7 @@ export default function PlanoEstudos() {
     definirConclusaoAssunto,
     definirConclusaoAula,
     configuracoes,
+    setConfiguracoes,
   } = useApp();
 
   const [temaRedacao, setTemaRedacao] = useState("");
@@ -555,6 +556,22 @@ export default function PlanoEstudos() {
       <section className="plano-agenda-continua" aria-label="Semana corrente e pendências">
         <h2>Semana {semanaInicial} no calendário</h2>
         <p>As semanas passam normalmente, mesmo sem estudo. Somente atividades realizadas são marcadas como concluídas.</p>
+        <label className="plano-inicio-ciclo">
+          Início do ciclo de estudos
+          <input
+            aria-label="Data de início do plano"
+            type="date"
+            value={configuracoes.inicioPlanoEm?.slice(0, 10) ?? ""}
+            onChange={(evento) => {
+              const data = evento.target.value;
+              setConfiguracoes((anterior) => ({
+                ...anterior,
+                inicioPlanoEm: data || undefined,
+              }));
+            }}
+          />
+          <small>Opcional. Se vazio, usamos a primeira sessão registrada na sua conta. Mudar esta data não conclui, apaga ou movimenta atividades.</small>
+        </label>
         {pendenciasAnteriores.length > 0 ? (
           <>
             <h3>Para recuperar: {pendenciasAnteriores.length} pendência(s) anteriores</h3>
