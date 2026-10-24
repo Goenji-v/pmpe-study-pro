@@ -30,7 +30,7 @@ import {
   normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
-import { getSemanaAtual } from "../../utils/planoUtils";
+import { calcularSemanaCorrida } from "../../utils/planoContinuo";
 import { statusDaRevisao } from "../../utils/revisoes";
 
 import "./NotificationCenter.css";
@@ -45,7 +45,7 @@ export default function NotificationCenter() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const { administrador } = useAdminStatus();
-  const { configuracoes, missoesConcluidas, revisoes } = useApp();
+  const { configuracoes, missoesConcluidas, revisoes, sessoes, materias } = useApp();
 
   const [aberto, setAberto] = useState(false);
   const [notificacoes, setNotificacoes] = useState<NotificacaoInterna[]>([]);
@@ -58,19 +58,19 @@ export default function NotificationCenter() {
   const [jobsGeracao, setJobsGeracao] = useState<JobGeracaoIAPublico[]>([]);
 
   const plano = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana, materias),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana, materias]
   );
 
   const missaoHoje = useMemo(() => {
-    const semana = getSemanaAtual(missoesConcluidas, plano, configuracoes.semanaAtualPlano);
+    const semana = calcularSemanaCorrida(sessoes, configuracoes.semanaAtualPlano, new Date(), configuracoes.inicioPlanoEm);
     const dia = obterDiaAtualPlano();
     const concluidas = new Set(missoesConcluidas);
     const semanaAtual = plano.find((item) => item.numero === semana);
     const diaAtual = semanaAtual?.dias.find((item) => item.numero === dia);
     const missao = diaAtual?.missoes.find((item) => !concluidas.has(item.id));
     return missao ? { semana, dia, missao } : null;
-  }, [configuracoes.semanaAtualPlano, missoesConcluidas, plano]);
+  }, [configuracoes.semanaAtualPlano, configuracoes.inicioPlanoEm, missoesConcluidas, plano, sessoes]);
 
   const revisoesPendentes = useMemo(
     () => revisoes.filter((revisao) => !revisao.concluida),

@@ -1,4 +1,4 @@
-import type { ConfiguracoesApp } from "../types";
+import type { ConfiguracoesApp, Materia } from "../types";
 import {
   planoPMPE,
   type DiaPlano,
@@ -42,11 +42,11 @@ export function normalizarMissoesPorDia(valor: number | undefined): number {
  * Contas sem o plano PMPE padrão usam os conteúdos realmente cadastrados
  * (curso importado ou cadastro manual) como fonte do cronograma.
  */
-export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAtivo = true, porDia?: ConfiguracoesApp["materiasPorDiaSemana"]): SemanaPlano[] {
+export function criarPlanoCalendario(missoesPorDiaInformadas = 1, planoPadraoAtivo = true, porDia?: ConfiguracoesApp["materiasPorDiaSemana"], materiasDaConta?: Materia[]): SemanaPlano[] {
   const missoesPorDia = normalizarMissoesPorDia(missoesPorDiaInformadas);
 
   if (!planoPadraoAtivo) {
-    return criarPlanoMateriasRuntime(missoesPorDia, porDia);
+    return criarPlanoMateriasRuntime(missoesPorDia, porDia, materiasDaConta);
   }
 
   const fila: EntradaFila[] = [];

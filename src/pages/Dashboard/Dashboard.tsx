@@ -37,14 +37,13 @@ import {
 import {
   getProgressoPlano,
   getProgressoSemana,
-  getProximaMissao,
-  getSemanaAtual,
   getTotalConcluidas,
   getTotalMissoes,
   getTotalPendentes,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
 import { criarPlanoCalendario, normalizarMissoesPorDia, obterDiaAtualPlano } from "../../utils/planoCalendario";
+import { calcularSemanaCorrida, listarPendenciasAnteriores, obterMissaoHoje, obterProximaMissaoContinua } from "../../utils/planoContinuo";
 
 import type { RegistroQuestao, Revisao, SessaoEstudo, Simulado } from "../../types/index";
 
@@ -70,8 +69,8 @@ export default function Dashboard() {
   ] = useState(0);
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana, materias),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana, materias]
   );
 
   useEffect(() => {
@@ -145,12 +144,12 @@ export default function Dashboard() {
   }, []);
 
   const dadosPlano = useMemo(() => {
-    const semanaAtual =
-      getSemanaAtual(
-        missoesConcluidas,
-        planoCalendario,
-        configuracoes.semanaAtualPlano
-      );
+    const semanaAtual = calcularSemanaCorrida(
+      sessoes,
+      configuracoes.semanaAtualPlano,
+      new Date(),
+      configuracoes.inicioPlanoEm
+    );
     const diaAtual = obterDiaAtualPlano();
     const concluidasSet = new Set(missoesConcluidas);
     const semanaDoCalendario = planoCalendario.find(
@@ -159,16 +158,13 @@ export default function Dashboard() {
     const diaDoCalendario = semanaDoCalendario?.dias.find(
       (dia) => dia.numero === diaAtual
     );
-    const missaoPendenteHoje = diaDoCalendario?.missoes.find(
-      (missao) => !concluidasSet.has(missao.id)
+    const missaoHoje = obterMissaoHoje(planoCalendario, missoesConcluidas, semanaAtual, diaAtual);
+    const pendenciasAnteriores = listarPendenciasAnteriores(
+      planoCalendario,
+      missoesConcluidas,
+      semanaAtual,
+      diaAtual
     );
-    const missaoHoje = missaoPendenteHoje
-      ? {
-          semana: semanaAtual,
-          dia: diaAtual,
-          missao: missaoPendenteHoje,
-        }
-      : null;
     const hojeConcluido = Boolean(
       diaDoCalendario &&
       diaDoCalendario.missoes.length > 0 &&
@@ -188,13 +184,14 @@ export default function Dashboard() {
       pendentes:
         getTotalPendentes(missoesConcluidas, planoCalendario),
 
-      proxima:
-        getProximaMissao(
-          missoesConcluidas,
-          planoCalendario,
-          semanaAtual
-        ),
+      proxima: obterProximaMissaoContinua(
+        planoCalendario,
+        missoesConcluidas,
+        semanaAtual,
+        diaAtual
+      ),
 
+      pendenciasAnteriores,
       missaoHoje,
       hojeConcluido,
       diaAtual,
@@ -209,7 +206,7 @@ export default function Dashboard() {
     };
     // atualizacaoPlano é um token explícito disparado por eventos externos do Dashboard.
     /* oxlint-disable react-hooks/exhaustive-deps */
-  }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano]);
+  }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.inicioPlanoEm, sessoes]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   const hoje = obterDataLocal();
@@ -509,6 +506,9 @@ function iniciarProximaAulaPortugues() {
           {dadosPlano.missaoHoje ? (
             <>
               <h2>{dadosPlano.missaoHoje.missao.materia} — {dadosPlano.missaoHoje.missao.assunto}</h2>
+              {dadosPlano.pendenciasAnteriores.length > 0 && (
+                <p role="status">{dadosPlano.pendenciasAnteriores.length} atividade(s) de semanas anteriores pendente(s). <button type="button" onClick={() => navigate("/plano")}>Ver pendências</button></p>
+              )}
               <span className="dashboard-pro-badge">{configuracoes.concurso || "PMPE"}</span>
               <div className="dashboard-pro-progress-row"><div className="dashboard-pro-progress"><div style={{width:`${dadosPlano.progressoSemana}%`}} /></div><strong>{dadosPlano.progressoSemana}%</strong></div>
               <div className="dashboard-pro-mission-meta"><span>▣ {dadosPlano.missaoHoje.missao.tipo || "Aula"}</span><b>•</b><span>◉ {questoesHoje} questões hoje</span><b>•</b><span>↻ {revisoesConcluidasHoje} revisão{revisoesConcluidasHoje === 1 ? "" : "ões"}</span></div>
@@ -537,6 +537,14 @@ function iniciarProximaAulaPortugues() {
                 </button>
               </div>
             </>
+          ) : dadosPlano.pendenciasAnteriores.length > 0 ? (
+            <div className="dashboard-pro-empty">
+              <h2>Semana {dadosPlano.semanaAtual} · tarefas pendentes</h2>
+              <p>Você tem {dadosPlano.pendenciasAnteriores.length} atividade(s) anterior(es) para recuperar. A semana avançou sem registrar conclusões fictícias.</p>
+              <div className="dashboard-pro-actions">
+                <button type="button" onClick={() => navigate("/plano")}>Ver pendências e semana atual</button>
+              </div>
+            </div>
           ) : dadosPlano.hojeConcluido ? (
             <div className="dashboard-pro-empty">
               <h2>Plano de hoje concluído</h2>
@@ -547,8 +555,15 @@ function iniciarProximaAulaPortugues() {
             </div>
           ) : (
             <div className="dashboard-pro-empty">
-              <h2>{planoCalendario.length ? "Plano concluído" : "Seu plano ainda não foi configurado"}</h2>
-              <p>{planoCalendario.length ? "Não há missão programada para hoje." : "Importe seu edital ou curso para começar. Nenhum assunto é adicionado automaticamente."}</p>
+              <h2>{planoCalendario.length ? `Semana ${dadosPlano.semanaAtual} · sem novos estudos previstos` : "Seu plano ainda não foi configurado"}</h2>
+              <p>{planoCalendario.length
+                ? "O calendário continua avançando. Não há conteúdo novo atribuído a este dia; seus registros e semanas anteriores foram preservados."
+                : "Importe seu edital ou curso para começar. Nenhum assunto é adicionado automaticamente."}</p>
+              {planoCalendario.length > 0 && (
+                <div className="dashboard-pro-actions">
+                  <button type="button" onClick={() => navigate("/plano")}>Ver calendário e histórico do plano</button>
+                </div>
+              )}
               {!planoCalendario.length && <button type="button" onClick={() => navigate("/meu-edital")}>Configurar meus estudos</button>}
             </div>
           )}

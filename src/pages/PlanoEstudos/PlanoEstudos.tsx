@@ -32,8 +32,8 @@ import { guardarRascunhoSimuladoPdf } from "../../services/simuladoPdfDraft";
 import {
   getProgressoPlano,
   getProgressoSemana,
-  getSemanaAtual,
 } from "../../utils/planoUtils";
+import { calcularSemanaCorrida, criarSemanasContinuas, listarPendenciasAnteriores } from "../../utils/planoContinuo";
 import {
   adaptarMissaoFlexivel,
   calcularDiagnosticoSemanalPlano,
@@ -71,6 +71,7 @@ export default function PlanoEstudos() {
     definirConclusaoAssunto,
     definirConclusaoAula,
     configuracoes,
+    setConfiguracoes,
   } = useApp();
 
   const [temaRedacao, setTemaRedacao] = useState("");
@@ -178,12 +179,12 @@ export default function PlanoEstudos() {
     configuracoes.missoesPorDia ?? 1
   );
 
-  const planoCalendario = useMemo(
+  const planoOriginal = useMemo(
     () =>
       aplicarDiasAtividadesSemanais(
         criarPlanoCalendario(
           missoesPorDia,
-          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
+          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana, materias
         ),
         {
           diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
@@ -193,18 +194,29 @@ export default function PlanoEstudos() {
     [
       missoesPorDia,
       configuracoes.planoPadraoAtivo,
-      configuracoes.materiasPorDiaSemana,
+      configuracoes.materiasPorDiaSemana, materias,
       configuracoes.diaRedacaoSemanal,
       configuracoes.diaSimuladoSemanal,
     ]
   );
 
-  const semanaInicial = getSemanaAtual(
-    concluidas,
-    planoCalendario,
-    configuracoes.semanaAtualPlano
+  // O calendário avança toda segunda, mesmo se a semana anterior não foi
+  // concluída. O início é inferido somente de registros reais da conta.
+  const semanaInicial = calcularSemanaCorrida(
+    sessoes,
+    configuracoes.semanaAtualPlano,
+    new Date(),
+    configuracoes.inicioPlanoEm
+  );
+  const planoCalendario = useMemo(
+    () => criarSemanasContinuas(planoOriginal, semanaInicial),
+    [planoOriginal, semanaInicial]
   );
   const diaCalendarioHoje = obterDiaAtualPlano();
+  const pendenciasAnteriores = useMemo(
+    () => listarPendenciasAnteriores(planoOriginal, concluidas, semanaInicial, diaCalendarioHoje),
+    [planoOriginal, concluidas, semanaInicial, diaCalendarioHoje]
+  );
   const semanaInicialDisponivel =
     planoCalendario.find((item) => item.numero === semanaInicial) ?? planoCalendario[0];
   const diaInicial = semanaInicialDisponivel?.dias.some((item) => item.numero === diaCalendarioHoje)
@@ -541,6 +553,54 @@ export default function PlanoEstudos() {
         </p>
       </section>
 
+      <section className="plano-agenda-continua" aria-label="Semana corrente e pendências">
+        <h2>Semana {semanaInicial} no calendário</h2>
+        <p>As semanas passam normalmente, mesmo sem estudo. Somente atividades realizadas são marcadas como concluídas.</p>
+        <label className="plano-inicio-ciclo">
+          Início do ciclo de estudos
+          <input
+            aria-label="Data de início do plano"
+            type="date"
+            value={configuracoes.inicioPlanoEm?.slice(0, 10) ?? ""}
+            onChange={(evento) => {
+              const data = evento.target.value;
+              setConfiguracoes((anterior) => ({
+                ...anterior,
+                inicioPlanoEm: data || undefined,
+              }));
+            }}
+          />
+          <small>Opcional. Se vazio, usamos a primeira sessão registrada na sua conta. Mudar esta data não conclui, apaga ou movimenta atividades.</small>
+        </label>
+        {pendenciasAnteriores.length > 0 ? (
+          <>
+            <h3>Para recuperar: {pendenciasAnteriores.length} pendência(s) anteriores</h3>
+            <p>Faça primeiro as pendências e continue também com os estudos da semana atual. Nada foi concluído automaticamente.</p>
+            <div className="plano-pendencias-lista">
+              {pendenciasAnteriores.slice(0, 6).map(({ semana: numero, dia: diaPendente, missao }) => (
+                <button
+                  type="button"
+                  key={`${numero}-${diaPendente}-${missao.id}`}
+                  onClick={() => {
+                    setSemanaSelecionada(numero);
+                    setDiaSelecionado(diaPendente);
+                  }}
+                >
+                  <strong>Semana {numero} · {NOMES_DIAS_PLANO[diaPendente]}</strong>
+                  <span>{missao.materia} — {missao.assunto}</span>
+                  <small>Ver pendência</small>
+                </button>
+              ))}
+            </div>
+            {pendenciasAnteriores.length > 6 && (
+              <small>Mais {pendenciasAnteriores.length - 6} pendências disponíveis nas semanas anteriores.</small>
+            )}
+          </>
+        ) : (
+          <p>Nenhuma pendência anterior registrada no plano.</p>
+        )}
+      </section>
+
       <div className="plano-semanas">
         {planoCalendario.map(
           (itemSemana) => {
@@ -597,6 +657,9 @@ export default function PlanoEstudos() {
                 <strong>
                   {percentual}%
                 </strong>
+                {itemSemana.numero < semanaInicial && percentual < 100 && (
+                  <small>Encerrada · pendente</small>
+                )}
               </button>
             );
           }

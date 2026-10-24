@@ -383,6 +383,8 @@ export type ConfiguracoesApp = {
   diaSimuladoSemanal?: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
   /** Semana mínima considerada como posição atual. Pendências anteriores não fazem o plano regredir. */
   semanaAtualPlano?: number;
+  /** Primeiro dia do ciclo semanal; altera a posição do calendário, nunca o histórico. */
+  inicioPlanoEm?: string;
   tema: Tema;
 };
 

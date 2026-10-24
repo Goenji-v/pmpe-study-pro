@@ -19,7 +19,7 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { getSemanaAtual } from "../../utils/planoUtils";
+import { calcularSemanaCorrida } from "../../utils/planoContinuo";
 import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
 import {
   montarObservacaoRedacao,
@@ -49,6 +49,7 @@ export default function CentralRedacaoBridge() {
     sessoes,
     setSessoes,
     missoesConcluidas,
+    materias,
     configuracoes,
   } = useApp();
   const {
@@ -80,7 +81,7 @@ export default function CentralRedacaoBridge() {
       aplicarDiasAtividadesSemanais(
         criarPlanoCalendario(
           normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
-          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
+          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana, materias
         ),
         {
           diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
@@ -90,7 +91,7 @@ export default function CentralRedacaoBridge() {
     [
       configuracoes.missoesPorDia,
       configuracoes.planoPadraoAtivo,
-      configuracoes.materiasPorDiaSemana,
+      configuracoes.materiasPorDiaSemana, materias,
       configuracoes.diaRedacaoSemanal,
       configuracoes.diaSimuladoSemanal,
     ]
@@ -98,15 +99,11 @@ export default function CentralRedacaoBridge() {
 
   const semanaAtual = useMemo(
     () =>
-      getSemanaAtual(
-        missoesConcluidas,
-        planoCalendario,
-        configuracoes.semanaAtualPlano
-      ),
+      calcularSemanaCorrida(sessoes, configuracoes.semanaAtualPlano, new Date(), configuracoes.inicioPlanoEm),
     [
       configuracoes.semanaAtualPlano,
-      missoesConcluidas,
-      planoCalendario,
+      configuracoes.inicioPlanoEm,
+      sessoes,
     ]
   );
 

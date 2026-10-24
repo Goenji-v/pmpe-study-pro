@@ -386,3 +386,22 @@
   opacity: 0.62;
   cursor: not-allowed;
 }
+
+/* Agenda contínua: prazo e conclusão são informações diferentes. */
+.plano-agenda-continua {
+  padding: 18px;
+  margin: 20px 0;
+  border: 1px solid rgba(96, 165, 250, .35);
+  background: rgba(15, 23, 42, .65);
+  border-radius: 14px;
+}
+.plano-agenda-continua h2 { margin: 0 0 8px; }
+.plano-agenda-continua p { margin: 8px 0; line-height: 1.5; }
+.plano-inicio-ciclo { display: flex; flex-wrap: wrap; flex-direction: column; gap: 8px; margin: 14px 0; }
+.plano-inicio-ciclo input { max-width: 230px; min-height: 40px; padding: 9px; border: 1px solid #475569; border-radius: 8px; color: #e2e8f0; background: #0f172a; }
+.plano-inicio-ciclo small { color: #cbd5e1; line-height: 1.5; }
+.plano-pendencias-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; margin: 12px 0; }
+.plano-pendencias-lista button { display: flex; flex-direction: column; gap: 6px; text-align: left; min-height: 90px; padding: 12px; color: #f8fafc; background: #192b40; border: 1px solid #f59e0b; border-radius: 10px; cursor: pointer; }
+.plano-pendencias-lista button small { color: #fbbf24; }
+.plano-pendencias-lista button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+.plano-semana-botao small { display: block; color: #fbbf24; font-size: 10px; }
