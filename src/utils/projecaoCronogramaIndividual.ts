@@ -7,6 +7,8 @@ import type { MissaoPlano, SemanaPlano } from "../data/planoPMPE";
  * Revisão, redação e simulado mantêm seus próprios dias e não entram na compactação.
  *
  * A ativação deve ser individual, depois de validar a prévia com o aluno.
+ * AVISO: isto reorganiza apenas a apresentação; não garante pré-requisitos pedagógicos
+ * e não deve ser usado como plano ativo antes do mapeamento canônico.
  */
 export function projetarPlanoCompactado(
   plano: SemanaPlano[],
