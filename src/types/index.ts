@@ -383,6 +383,8 @@ export type ConfiguracoesApp = {
   diaSimuladoSemanal?: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
   /** Semana mínima considerada como posição atual. Pendências anteriores não fazem o plano regredir. */
   semanaAtualPlano?: number;
+  /** Data escolhida pelo aluno para iniciar contagem das semanas (AAAA-MM-DD). */
+  dataInicioPlano?: string;
   tema: Tema;
 };
 
