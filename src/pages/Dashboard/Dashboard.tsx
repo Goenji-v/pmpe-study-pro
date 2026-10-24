@@ -555,8 +555,15 @@ function iniciarProximaAulaPortugues() {
             </div>
           ) : (
             <div className="dashboard-pro-empty">
-              <h2>{planoCalendario.length ? "Plano concluído" : "Seu plano ainda não foi configurado"}</h2>
-              <p>{planoCalendario.length ? "Não há missão programada para hoje." : "Importe seu edital ou curso para começar. Nenhum assunto é adicionado automaticamente."}</p>
+              <h2>{planoCalendario.length ? `Semana ${dadosPlano.semanaAtual} · sem novos estudos previstos` : "Seu plano ainda não foi configurado"}</h2>
+              <p>{planoCalendario.length
+                ? "O calendário continua avançando. Não há conteúdo novo atribuído a este dia; seus registros e semanas anteriores foram preservados."
+                : "Importe seu edital ou curso para começar. Nenhum assunto é adicionado automaticamente."}</p>
+              {planoCalendario.length > 0 && (
+                <div className="dashboard-pro-actions">
+                  <button type="button" onClick={() => navigate("/plano")}>Ver calendário e histórico do plano</button>
+                </div>
+              )}
               {!planoCalendario.length && <button type="button" onClick={() => navigate("/meu-edital")}>Configurar meus estudos</button>}
             </div>
           )}
