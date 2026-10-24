@@ -184,7 +184,7 @@ export default function PlanoEstudos() {
       aplicarDiasAtividadesSemanais(
         criarPlanoCalendario(
           missoesPorDia,
-          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
+          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana, materias
         ),
         {
           diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
@@ -194,7 +194,7 @@ export default function PlanoEstudos() {
     [
       missoesPorDia,
       configuracoes.planoPadraoAtivo,
-      configuracoes.materiasPorDiaSemana,
+      configuracoes.materiasPorDiaSemana, materias,
       configuracoes.diaRedacaoSemanal,
       configuracoes.diaSimuladoSemanal,
     ]
