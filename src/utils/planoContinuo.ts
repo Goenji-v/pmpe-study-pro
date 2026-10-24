@@ -14,7 +14,7 @@ export function calcularSemanaCorrida(
 ): number {
   // Datas YYYY-MM-DD são civis locais, não UTC (evita recuar um dia no Brasil).
   const marco = inicioInformado
-    ? /^\\d{4}-\\d{2}-\\d{2}$/.test(inicioInformado)
+    ? /^\d{4}-\d{2}-\d{2}$/.test(inicioInformado)
       ? new Date(...(inicioInformado.split("-").map(Number).map((valor, i) => i === 1 ? valor - 1 : valor) as [number, number, number]))
       : new Date(inicioInformado)
     : null;
