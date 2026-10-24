@@ -182,7 +182,7 @@ export function semanaPorDataInicio(
   dataInicio: string | undefined,
   agora = new Date()
 ): number | null {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dataInicio ?? "")) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataInicio ?? "")) return null;
   const [ano, mes, dia] = dataInicio!.split("-").map(Number);
   const data = new Date(ano, mes - 1, dia, 12);
   if (data.getFullYear() !== ano || data.getMonth() !== mes - 1 || data.getDate() !== dia) return null;
