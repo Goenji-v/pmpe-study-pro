@@ -35,7 +35,11 @@ export default function MissaoDoDia({
   );
 
   const semanaAtual = useMemo(
-    () => calcularSemanaCorrida(sessoes, configuracoes.semanaAtualPlano, new Date(), configuracoes.inicioPlanoEm),
+    () => {
+      // Token de atualização do plano, usado para refrescar a semana após eventos.
+      void atualizacao;
+      return calcularSemanaCorrida(sessoes, configuracoes.semanaAtualPlano, new Date(), configuracoes.inicioPlanoEm);
+    },
     [sessoes, configuracoes.semanaAtualPlano, configuracoes.inicioPlanoEm, atualizacao]
   );
 
