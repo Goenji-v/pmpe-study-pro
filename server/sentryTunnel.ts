@@ -105,9 +105,13 @@ export async function encaminharEnvelopeSentry(
     return;
   }
 
-  const corpo = Buffer.isBuffer(req.body)
-    ? req.body
-    : Buffer.from(req.body || "");
+  // Aceita apenas Buffer ou texto; arrays/objetos indicam corpo adulterado.
+  const corpoBruto: unknown = req.body;
+  if (!Buffer.isBuffer(corpoBruto) && typeof corpoBruto !== "string") {
+    res.status(400).end();
+    return;
+  }
+  const corpo = Buffer.isBuffer(corpoBruto) ? corpoBruto : Buffer.from(corpoBruto, "utf8");
 
   if (!corpo.length || corpo.length > LIMITE_ENVELOPE_BYTES) {
     res.status(413).end();
