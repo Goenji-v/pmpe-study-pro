@@ -262,6 +262,17 @@ export default function PlanoEstudos() {
     return { numero: semana.numero, feitos, total: conteudos.length };
   }), [previaReajuste, concluidas]);
 
+  const revisoesSeparadas = useMemo(() => planoCalendario.flatMap((semana) =>
+    semana.dias.flatMap((dia) => dia.missoes
+      .filter((missao) =>
+        (missao.tipo === "revisao" ||
+          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)) &&
+        !concluidas.includes(missao.id)
+      )
+      .map((missao) => ({ missao, semana: semana.numero, dia: dia.numero }))
+    )
+  ), [planoCalendario, concluidas]);
+
   const missaoRedacaoDomingo = dia?.missoes.find(
     (missao) => missao.tipo === "redacao"
   );
@@ -548,6 +559,20 @@ export default function PlanoEstudos() {
           )}
         </div>
       </section>
+
+      {reajusteAtivo && revisoesSeparadas.length > 0 && (
+        <section className="plano-adaptacao" aria-label="Fila separada de revisões">
+          <h2>Revisões separadas ({revisoesSeparadas.length})</h2>
+          <p>Revisões e erros de simulados não contam como matéria pendente na régua.</p>
+          {revisoesSeparadas.map(({missao, semana: numeroSemana, dia: numeroDia}) => (
+            <article key={missao.id} className="plano-pendencia-card">
+              <div><small>Semana original {numeroSemana} · {NOMES_DIAS_PLANO[numeroDia]}</small>
+              <strong>{missao.materia} — {missao.assunto}</strong></div>
+              <button type="button" onClick={() => iniciarEstudo(missao)}>Revisar</button>
+            </article>
+          ))}
+        </section>
+      )}
 
       <section className="plano-adaptacao">
         <div className="plano-adaptacao-principal">
