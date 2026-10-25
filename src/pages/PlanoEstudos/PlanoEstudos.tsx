@@ -201,8 +201,20 @@ export default function PlanoEstudos() {
     const organizado = reajusteAtivo && concluidas.length > 0
       ? projetarPlanoCompactado(base, concluidas)
       : base;
+    // As revisões são exibidas em uma fila independente, sem afetar
+    // o percentual das matérias. O simulado semanal permanece na grade.
+    const grade = reajusteAtivo ? organizado.map((semana) => ({
+      ...semana,
+      dias: semana.dias.map((dia) => ({
+        ...dia,
+        missoes: dia.missoes.filter((missao) => !(
+          missao.tipo === "revisao" ||
+          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
+        )),
+      })),
+    })) : organizado;
     return ampliarPlanoAteSemana(
-      organizado, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+      grade, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
     );
   }, [
     missoesPorDia,
@@ -262,16 +274,25 @@ export default function PlanoEstudos() {
     return { numero: semana.numero, feitos, total: conteudos.length };
   }), [previaReajuste, concluidas]);
 
-  const revisoesSeparadas = useMemo(() => planoCalendario.flatMap((semana) =>
-    semana.dias.flatMap((dia) => dia.missoes
-      .filter((missao) =>
+  const revisoesSeparadas = useMemo(() => {
+    if (!reajusteAtivo) return [];
+    const base = aplicarDiasAtividadesSemanais(
+      criarPlanoCalendario(missoesPorDia,
+        configuracoes.planoPadraoAtivo !== false,
+        configuracoes.materiasPorDiaSemana),
+      { diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
+        diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom" }
+    );
+    return base.flatMap((semana) => semana.dias.flatMap((dia) =>
+      dia.missoes.filter((missao) =>
         (missao.tipo === "revisao" ||
           /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)) &&
         !concluidas.includes(missao.id)
-      )
-      .map((missao) => ({ missao, semana: semana.numero, dia: dia.numero }))
-    )
-  ), [planoCalendario, concluidas]);
+      ).map((missao) => ({missao, semana: semana.numero, dia: dia.numero}))
+    ));
+  }, [reajusteAtivo, missoesPorDia, configuracoes.planoPadraoAtivo,
+    configuracoes.materiasPorDiaSemana, configuracoes.diaRedacaoSemanal,
+    configuracoes.diaSimuladoSemanal, concluidas]);
 
   const missaoRedacaoDomingo = dia?.missoes.find(
     (missao) => missao.tipo === "redacao"
