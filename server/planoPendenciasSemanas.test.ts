@@ -47,10 +47,8 @@ test("pendências antigas aparecem antes das novas; semana avançada não diz pl
   assert.equal(getSemanaAtual(feitas,a,undefined,"2026-09-21",new Date(2026,9,24,12)),5);
   assert.deepEqual(feitas,["m-1","m-3"]);
 });
-test("plano oferece ativação individual sem listar backlog antigo",()=>{
+test("régua extra e revisões separadas não aparecem no plano",()=>{
   const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
-  assert.match(pagina,/reajuste-visual-individual/);
-  assert.match(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
-  assert.match(pagina,/Aplicar régua nesta conta/);
-  assert.doesNotMatch(pagina,/className="plano-pendencias-anteriores"/);
+  assert.doesNotMatch(pagina,/reajuste-visual-individual|Aplicar régua nesta conta|Fila separada de revisões/);
+  assert.match(pagina,/base, Math.max\(semanaCalendario, configuracoes.semanaAtualPlano \?\? 1\)/);
 });
