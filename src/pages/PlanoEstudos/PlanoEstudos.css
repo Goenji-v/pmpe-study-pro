@@ -321,7 +321,13 @@
 .plano-modulo { display:block; margin:6px 0 2px; color:#60a5fa; font-size:12px; font-weight:700; }
 
 /* Adaptação controlada do plano: mantida apenas na lógica interna. */
-.plano-adaptacao { display:none; }
+.plano-adaptacao:not([aria-label^="Reorganiza"]):not([aria-label^="Fila separada"]) { display:none; }
+.plano-adaptacao[aria-label^="Reorganiza"] { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:0 0 22px; padding:18px; background:#1e293b; border:1px solid #334155; border-radius:16px; }
+.plano-adaptacao[aria-label^="Fila separada"] { display:block; margin:0 0 22px; padding:18px; background:#1e293b; border:1px solid #334155; border-radius:16px; }
+.plano-adaptacao[aria-label^="Reorganiza"] h2 { margin:0 0 6px; font-size:18px; }
+.plano-adaptacao[aria-label^="Reorganiza"] p { margin:0 0 12px; color:#94a3b8; font-size:13px; line-height:1.45; }
+.plano-adaptacao[aria-label^="Reorganiza"] button { padding:10px 14px; color:#fff; background:#2563eb; border:0; border-radius:9px; font-weight:800; cursor:pointer; }
+@media (max-width:700px) { .plano-adaptacao[aria-label^="Reorganiza"] { grid-template-columns:1fr; } }
 .plano-adaptacao-principal { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:22px; align-items:center; }
 .plano-adaptacao-etiqueta { display:none; }
 .plano-adaptacao-principal h2 { margin:0 0 8px; font-size:19px; }
