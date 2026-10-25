@@ -196,7 +196,6 @@ export default function PlanoEstudos() {
     );
   }, [
     missoesPorDia,
-    concluidas,
     configuracoes.planoPadraoAtivo,
     configuracoes.materiasPorDiaSemana,
     configuracoes.diaRedacaoSemanal,
