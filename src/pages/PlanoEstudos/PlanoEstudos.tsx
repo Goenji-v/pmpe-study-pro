@@ -207,7 +207,7 @@ export default function PlanoEstudos() {
       ...semana,
       dias: semana.dias.map((dia) => ({
         ...dia,
-        missoes: dia.missoes.filter((missao) => !(
+        missoes: dia.numero === 7 ? [...dia.missoes] : dia.missoes.filter((missao) => !(
           missao.tipo === "revisao" ||
           /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
         )),
@@ -285,7 +285,7 @@ export default function PlanoEstudos() {
     );
     return base.flatMap((semana) => semana.dias.flatMap((dia) =>
       dia.missoes.filter((missao) =>
-        (missao.tipo === "revisao" ||
+        dia.numero !== 7 && (missao.tipo === "revisao" ||
           /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)) &&
         !concluidas.includes(missao.id)
       ).map((missao) => ({missao, semana: semana.numero, dia: dia.numero}))

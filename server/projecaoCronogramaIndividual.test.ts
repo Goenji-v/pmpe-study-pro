@@ -25,3 +25,21 @@ test("compacta somente conteúdos e mantém histórico/IDs intactos", () => {
   assert.deepEqual(concluidas, ["b", "c"]);
   assert.equal(projetarPlanoCompactado(reorganizado, concluidas)[0].dias[0].missoes[0].id, "b");
 });
+
+test("domingo permanece idêntico, mesmo se houver conteúdo concluído nele", () => {
+  const plano = [
+    { numero: 1, nome: "Semana 1", dias: [
+      { numero: 1, missoes: [{id:"a",tipo:"conteudo"}] },
+      { numero: 7, missoes: [{id:"dom",tipo:"conteudo"},{id:"sim",tipo:"simulado"}] },
+    ] },
+    { numero: 2, nome: "Semana 2", dias: [
+      { numero: 1, missoes: [{id:"b",tipo:"conteudo"}] },
+      { numero: 7, missoes: [{id:"red",tipo:"redacao"}] },
+    ] },
+  ] as unknown as SemanaPlano[];
+  const resultado = projetarPlanoCompactado(plano, ["b", "dom"]);
+  assert.equal(resultado[0].dias[0].missoes[0].id, "b");
+  assert.equal(resultado[1].dias[0].missoes[0].id, "a");
+  assert.deepEqual(resultado[0].dias[1], plano[0].dias[1]);
+  assert.deepEqual(resultado[1].dias[1], plano[1].dias[1]);
+});
