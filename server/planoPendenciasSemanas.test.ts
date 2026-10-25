@@ -50,5 +50,5 @@ test("pendências antigas aparecem antes das novas; semana avançada não diz pl
 test("régua extra e revisões separadas não aparecem no plano",()=>{
   const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
   assert.doesNotMatch(pagina,/reajuste-visual-individual|Aplicar régua nesta conta|Fila separada de revisões/);
-  assert.match(pagina,/base, Math.max\(semanaCalendario, configuracoes.semanaAtualPlano \?\? 1\)/);
+  assert.match(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
 });

@@ -48,6 +48,7 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
+import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -191,11 +192,26 @@ export default function PlanoEstudos() {
       }
     );
     const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
+    // Projeção visual automática: não grava IDs, conclusões ou domingos.
+    const organizado = concluidas.length > 0
+      ? projetarPlanoCompactado(base, concluidas)
+      : base;
+    const grade = concluidas.length > 0 ? organizado.map((semana) => ({
+      ...semana,
+      dias: semana.dias.map((dia) => ({
+        ...dia,
+        missoes: dia.numero === 7 ? [...dia.missoes] : dia.missoes.filter((missao) => !(
+          missao.tipo === "revisao" ||
+          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
+        )),
+      })),
+    })) : organizado;
     return ampliarPlanoAteSemana(
-      base, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+      grade, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
     );
   }, [
     missoesPorDia,
+    concluidas,
     configuracoes.planoPadraoAtivo,
     configuracoes.materiasPorDiaSemana,
     configuracoes.diaRedacaoSemanal,
