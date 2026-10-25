@@ -35,7 +35,6 @@ import {
   getSemanaAtual,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
-  listarPendenciasAteSemana,
 } from "../../utils/planoUtils";
 import {
   adaptarMissaoFlexivel,
@@ -50,6 +49,8 @@ import {
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
 import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
+import { useAuth } from "../../context/AuthContext";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -59,6 +60,10 @@ type MissaoPlanoExibida = MissaoPlano & {
 
 export default function PlanoEstudos() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const [reajusteAtivo, setReajusteAtivo] = useLocalStorage<boolean>(
+    "pmpe:" + (usuario?.id ?? "deslogado") + ":reajuste-visual-individual", false
+  );
   const location = useLocation();
   const estadoNavegacao = location.state as { semana?: number; dia?: number } | null;
 
@@ -193,11 +198,28 @@ export default function PlanoEstudos() {
       }
     );
     const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
+    const organizado = reajusteAtivo && concluidas.length > 0
+      ? projetarPlanoCompactado(base, concluidas)
+      : base;
+    // As revisões são exibidas em uma fila independente, sem afetar
+    // o percentual das matérias. O simulado semanal permanece na grade.
+    const grade = reajusteAtivo ? organizado.map((semana) => ({
+      ...semana,
+      dias: semana.dias.map((dia) => ({
+        ...dia,
+        missoes: dia.missoes.filter((missao) => !(
+          missao.tipo === "revisao" ||
+          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
+        )),
+      })),
+    })) : organizado;
     return ampliarPlanoAteSemana(
-      base, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+      grade, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
     );
   }, [
     missoesPorDia,
+    reajusteAtivo,
+    concluidas,
     configuracoes.planoPadraoAtivo,
     configuracoes.materiasPorDiaSemana,
     configuracoes.diaRedacaoSemanal,
@@ -252,10 +274,25 @@ export default function PlanoEstudos() {
     return { numero: semana.numero, feitos, total: conteudos.length };
   }), [previaReajuste, concluidas]);
 
-  const pendenciasAnteriores = useMemo(
-    () => listarPendenciasAteSemana(concluidas, planoCalendario, semanaInicial),
-    [concluidas, planoCalendario, semanaInicial]
-  );
+  const revisoesSeparadas = useMemo(() => {
+    if (!reajusteAtivo) return [];
+    const base = aplicarDiasAtividadesSemanais(
+      criarPlanoCalendario(missoesPorDia,
+        configuracoes.planoPadraoAtivo !== false,
+        configuracoes.materiasPorDiaSemana),
+      { diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
+        diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom" }
+    );
+    return base.flatMap((semana) => semana.dias.flatMap((dia) =>
+      dia.missoes.filter((missao) =>
+        (missao.tipo === "revisao" ||
+          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)) &&
+        !concluidas.includes(missao.id)
+      ).map((missao) => ({missao, semana: semana.numero, dia: dia.numero}))
+    ));
+  }, [reajusteAtivo, missoesPorDia, configuracoes.planoPadraoAtivo,
+    configuracoes.materiasPorDiaSemana, configuracoes.diaRedacaoSemanal,
+    configuracoes.diaSimuladoSemanal, concluidas]);
 
   const missaoRedacaoDomingo = dia?.missoes.find(
     (missao) => missao.tipo === "redacao"
@@ -521,7 +558,28 @@ export default function PlanoEstudos() {
         </div>
       </div>
 
-      <section aria-label="Prévia de reorganização individual" className="plano-adaptacao">
+      <section aria-label="Reorganização individual" className="plano-adaptacao">
+        <div><h2>Régua da minha conta</h2><p>Reordena apenas a visualização, sem mudar registros.</p><button type="button" onClick={() => {
+            if (!reajusteAtivo) {
+              const primeira = previaReajuste.find((semana) => semana.dias.some((dia) =>
+                dia.missoes.some((missao) =>
+                  (missao.tipo === "conteudo" || missao.tipo === "questoes" ||
+                    missao.tipo === "simulado" || missao.tipo === "redacao") &&
+                  !/revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto) &&
+                  !concluidas.includes(missao.id)
+                )
+              ));
+              if (primeira) {
+                setSemanaSelecionada(primeira.numero);
+                const primeiroDia = primeira.dias.find((dia) => dia.missoes.some((m) =>
+                  !concluidas.includes(m.id) &&
+                  !/revis[aã]o|erros dos simulados/i.test(m.materia + " " + m.assunto)
+                ));
+                setDiaSelecionado(primeiroDia?.numero ?? 1);
+              }
+            }
+            setReajusteAtivo((valor) => !valor);
+          }}>{reajusteAtivo ? "Voltar à distribuição original" : "Aplicar régua nesta conta"}</button></div>
         <div>
           <h2>Prévia do reajuste das semanas</h2>
           <p>Simulação somente de leitura: preserva as conclusões e os registros reais dos estudos. Nada é salvo ou transferido.</p>
@@ -537,11 +595,25 @@ export default function PlanoEstudos() {
                   Semana {item.numero}: {item.feitos} de {item.total} conteúdos concluídos
                 </p>
               ))}
-              <p>Esta prévia não é o cronograma oficial; a validação das equivalências de assuntos ainda é necessária.</p>
+              <p>O plano utiliza esta projeção sem alterar seus registros.</p>
             </div>
           )}
         </div>
       </section>
+
+      {reajusteAtivo && revisoesSeparadas.length > 0 && (
+        <section className="plano-adaptacao" aria-label="Fila separada de revisões">
+          <h2>Revisões separadas ({revisoesSeparadas.length})</h2>
+          <p>Revisões e erros de simulados não contam como matéria pendente na régua.</p>
+          {revisoesSeparadas.map(({missao, semana: numeroSemana, dia: numeroDia}) => (
+            <article key={missao.id} className="plano-pendencia-card">
+              <div><small>Semana original {numeroSemana} · {NOMES_DIAS_PLANO[numeroDia]}</small>
+              <strong>{missao.materia} — {missao.assunto}</strong></div>
+              <button type="button" onClick={() => iniciarEstudo(missao)}>Revisar</button>
+            </article>
+          ))}
+        </section>
+      )}
 
       <section className="plano-adaptacao">
         <div className="plano-adaptacao-principal">
@@ -587,25 +659,6 @@ export default function PlanoEstudos() {
         </p>
       </section>
 
-      {pendenciasAnteriores.length > 0 && (
-        <section className="plano-pendencias-anteriores" aria-label="Pendências das semanas anteriores">
-          <h2>Pendências de semanas anteriores ({pendenciasAnteriores.length})</h2>
-          <p>A semana avança pelo calendário. Essas matérias não foram marcadas como concluídas.</p>
-          <div className="plano-pendencias-lista">
-            {pendenciasAnteriores.map(({ semana: numeroSemana, dia: numeroDia, missao }) => (
-              <article key={missao.id} className="plano-pendencia-card">
-                <div>
-                  <small>Semana {numeroSemana} · {NOMES_DIAS_PLANO[numeroDia]}</small>
-                  <strong>{missao.materia} — {missao.assunto}</strong>
-                </div>
-                <button type="button" onClick={() => iniciarEstudo(missao)}>
-                  Estudar pendente
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
       {semanaInicial > (planoCalendario.findLast((item) => item.dias.some((d) => d.missoes.length))?.numero ?? 0) && (
         <p className="plano-sem-novos-assuntos">
           A semana {semanaInicial} chegou pelo calendário. Ainda não há novos assuntos cadastrados

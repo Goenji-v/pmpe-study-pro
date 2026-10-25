@@ -47,12 +47,10 @@ test("pendências antigas aparecem antes das novas; semana avançada não diz pl
   assert.equal(getSemanaAtual(feitas,a,undefined,"2026-09-21",new Date(2026,9,24,12)),5);
   assert.deepEqual(feitas,["m-1","m-3"]);
 });
-test("texto do plano e da missão mantém acesso às pendências sem auto-concluir",()=>{
+test("plano oferece ativação individual sem listar backlog antigo",()=>{
   const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
-  const componente=readFileSync("src/components/MissaoDoDia/MissaoDoDia.tsx","utf8");
-  assert.match(pagina,/listarPendenciasAteSemana\(concluidas, planoCalendario, semanaInicial\)/);
-  assert.match(pagina,/Estudar pendente/);
-  assert.match(pagina,/iniciarEstudo\(missao\)/);
-  assert.doesNotMatch(pagina.split('className="plano-pendencias-anteriores"')[1]?.split('className="plano-semanas"')[0] ?? "",/setConcluidas|alternarConclusao/);
-  assert.match(componente,/configuracoes\.dataInicioPlano/);
+  assert.match(pagina,/reajuste-visual-individual/);
+  assert.match(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
+  assert.match(pagina,/Aplicar régua nesta conta/);
+  assert.doesNotMatch(pagina,/className="plano-pendencias-anteriores"/);
 });
