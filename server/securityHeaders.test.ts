@@ -28,7 +28,11 @@ test("CSP bloqueia execução e incorporação não autorizadas", () => {
   assert.match(csp, /script-src-attr 'none'/);
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /frame-ancestors 'none'/);
-  assert.match(csp, /frame-src 'none'/);
+  assert.match(
+    csp,
+    /frame-src https:\/\/drive\.google\.com https:\/\/www\.youtube\.com https:\/\/www\.youtube-nocookie\.com/
+  );
+  assert.doesNotMatch(csp, /frame-src \*/);
   assert.match(csp, /form-action 'self'/);
   assert.doesNotMatch(csp, /'unsafe-eval'/);
 });
