@@ -559,7 +559,27 @@ export default function PlanoEstudos() {
       </div>
 
       <section aria-label="Reorganização individual" className="plano-adaptacao">
-        <div><h2>Régua da minha conta</h2><p>Reordena apenas a visualização, sem mudar registros.</p><button type="button" onClick={() => setReajusteAtivo((valor) => !valor)}>{reajusteAtivo ? "Voltar à distribuição original" : "Aplicar régua nesta conta"}</button></div>
+        <div><h2>Régua da minha conta</h2><p>Reordena apenas a visualização, sem mudar registros.</p><button type="button" onClick={() => {
+            if (!reajusteAtivo) {
+              const primeira = previaReajuste.find((semana) => semana.dias.some((dia) =>
+                dia.missoes.some((missao) =>
+                  (missao.tipo === "conteudo" || missao.tipo === "questoes" ||
+                    missao.tipo === "simulado" || missao.tipo === "redacao") &&
+                  !/revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto) &&
+                  !concluidas.includes(missao.id)
+                )
+              ));
+              if (primeira) {
+                setSemanaSelecionada(primeira.numero);
+                const primeiroDia = primeira.dias.find((dia) => dia.missoes.some((m) =>
+                  !concluidas.includes(m.id) &&
+                  !/revis[aã]o|erros dos simulados/i.test(m.materia + " " + m.assunto)
+                ));
+                setDiaSelecionado(primeiroDia?.numero ?? 1);
+              }
+            }
+            setReajusteAtivo((valor) => !valor);
+          }}>{reajusteAtivo ? "Voltar à distribuição original" : "Aplicar régua nesta conta"}</button></div>
         <div>
           <h2>Prévia do reajuste das semanas</h2>
           <p>Simulação somente de leitura: preserva as conclusões e os registros reais dos estudos. Nada é salvo ou transferido.</p>
