@@ -394,3 +394,83 @@
     padding: 4px 7px;
   }
 }
+
+
+/*
+ * Celulares: painel de gamificação em linhas reais, sem comprimir moedas
+ * entre a barra de XP e a sequência. Não modifica valores nem ações.
+ */
+@media (max-width: 720px) {
+  .dashboard-pro-header h1 {
+    flex-direction: column;
+    align-items: stretch;
+    white-space: normal;
+    min-width: 0;
+  }
+
+  .dashboard-xp-inline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "nivel streak moedas"
+      "xp xp xp";
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 12px;
+  }
+
+  .dashboard-xp-inline-nivel {
+    grid-area: nivel;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-xp-inline-progresso {
+    grid-area: xp;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .dashboard-xp-inline-streak {
+    grid-area: streak;
+    min-width: 0;
+  }
+
+  .dashboard-xp-inline-moedas {
+    grid-area: moedas;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    width: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 9px;
+  }
+
+  .dashboard-xp-inline-moedas strong {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-xp-inline-conquistas {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-xp-inline {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "nivel streak"
+      "moedas moedas"
+      "xp xp";
+  }
+
+  .dashboard-xp-inline-moedas {
+    justify-self: start;
+  }
+}
