@@ -430,3 +430,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Respiro inferior para que o botão nunca fique atrás do rodapé/barra do sistema. */
+.materiais-formulario {
+  padding-bottom: 22px;
+  scroll-padding-bottom: 28px;
+}
+
+@media (max-width: 1050px) {
+  .materiais-cadastro {
+    padding-bottom: 38px;
+  }
+  .materiais-container {
+    padding-bottom: 44px;
+  }
+}
