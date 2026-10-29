@@ -9,6 +9,7 @@ import express, {
 import http from "node:http";
 import { GoogleGenAI } from "@google/genai";
 import { capturarErroServidor } from "./sentry.ts";
+import { mensagemErroPublica } from "./erroPublico.ts";
 import { arquivoMidiaValido } from "./validacaoMidia.ts";
 import { encaminharEnvelopeSentry } from "./sentryTunnel.ts";
 import {
@@ -345,10 +346,7 @@ async function analisarCursoMidia(req: Request, res: Response) {
     const status = obterStatusErro(erro);
     res.status(status === 429 ? 429 : status === 503 ? 503 : 500).json({
       sucesso: false,
-      erro:
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível organizar o curso agora.",
+      erro: mensagemErroPublica(res.statusCode),
     });
   }
 }
@@ -513,10 +511,7 @@ async function analisarEdital(req: Request, res: Response) {
 
     res.status(statusHttp).json({
       sucesso: false,
-      erro:
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível analisar o edital.",
+      erro: mensagemErroPublica(res.statusCode),
     });
   }
 }
