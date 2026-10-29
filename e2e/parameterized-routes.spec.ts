@@ -21,7 +21,8 @@ test.describe("rotas com parâmetros e autenticação", () => {
     await page.getByLabel("E-mail").fill(email!);
     await page.locator('input[autocomplete="current-password"]').fill(senha!);
     await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page).not.toHaveURL(/login(?:$|[?])/, { timeout: 15_000 });    for (const rota of rotas) {
+    await expect(page).not.toHaveURL(/login(?:$|[?])/, { timeout: 15_000 });
+    for (const rota of rotas) {
       await page.goto(rota, { waitUntil: "domcontentloaded" });
       await expect(page.locator("body")).not.toBeEmpty();
     }
