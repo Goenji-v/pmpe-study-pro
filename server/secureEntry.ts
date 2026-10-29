@@ -71,7 +71,24 @@ const janelaGeralMs = 10 * 60 * 1000;
 const limiteGeral = 60;
 const janelaImportacaoMs = 60 * 60 * 1000;
 const limiteImportacao = 8;
+const janelaConsultaLeveMs = 10 * 60 * 1000;
+// Uma aba consultando a cada 2,5 segundos faz 240 GETs em 10 minutos.
+// 1200 permite até cinco abas nesse ritmo sem bloquear o uso normal.
+const limiteConsultaLeve = 1200;
 const acessos = new Map<string, number[]>();
+
+// Remove usuários inativos e timestamps expirados para limitar o crescimento do Map.
+const limpezaAcessos = setInterval(() => {
+  const agora = Date.now();
+  for (const [chave, instantes] of acessos) {
+    const janela = chave.endsWith(":importacao") ? janelaImportacaoMs :
+      chave.endsWith(":consulta") ? janelaConsultaLeveMs : janelaGeralMs;
+    const recentes = instantes.filter((instante) => agora - instante < janela);
+    if (recentes.length === 0) acessos.delete(chave);
+    else acessos.set(chave, recentes);
+  }
+}, janelaGeralMs);
+limpezaAcessos.unref();
 
 const app = express();
 
@@ -347,7 +364,7 @@ function arquivoMidiaValido(bytes: Buffer, mimeType: string) {
   }
 
   if (mimeType === "image/jpeg") {
-    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9;
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   }
 
   if (mimeType === "image/webp") {
@@ -633,16 +650,10 @@ async function autenticarEControlarUso(
         req.path.startsWith("/simulados-pdf/jobs")
       );
 
-    if (consultaLeve) {
-      res.locals.userId = userId;
-      next();
-      return;
-    }
-
-    const chave = `${userId}:${importacao ? "importacao" : "geral"}`;
+    const chave = `${userId}:${consultaLeve ? "consulta" : importacao ? "importacao" : "geral"}`;
     const agora = Date.now();
-    const janela = importacao ? janelaImportacaoMs : janelaGeralMs;
-    const limite = importacao ? limiteImportacao : limiteGeral;
+    const janela = consultaLeve ? janelaConsultaLeveMs : importacao ? janelaImportacaoMs : janelaGeralMs;
+    const limite = consultaLeve ? limiteConsultaLeve : importacao ? limiteImportacao : limiteGeral;
     const recentes = (acessos.get(chave) ?? []).filter(
       (instante) => agora - instante < janela
     );
