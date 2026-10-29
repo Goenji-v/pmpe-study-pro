@@ -662,35 +662,21 @@ export default function Estudos() {
                         <div className="conteudos-progresso conteudos-progresso-modulo"><div style={{ width: `${pct}%` }} /></div>
                         <div className="conteudos-assuntos">
                           {agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos).map((grupo) => (
-                            <div key={grupo.chave} className={grupo.tipo === "unico" ? "conteudos-grupo-simples" : "conteudos-grupo-agregado"}>
-                              {grupo.tipo !== "unico" && (
-                                <button
-                                  type="button"
-                                  className="conteudos-grupo-cabecalho"
-                                  aria-expanded={Boolean(assuntosExpandidos[grupo.chave])}
-                                  onClick={() => alternarAssunto(grupo.chave)}
-                                >
-                                  <span className="conteudos-grupo-titulo">{grupo.titulo}</span>
-                                  <span className="conteudos-grupo-progresso">
-                                    {grupo.assuntos.filter((item) => item.concluido).length} de {grupo.assuntos.length} {grupo.tipo === "partes" ? "aulas" : "assuntos"} · {Math.round(grupo.assuntos.filter((item) => item.concluido).length / grupo.assuntos.length * 100)}%
-                                  </span>
-                                  <span aria-hidden="true">{assuntosExpandidos[grupo.chave] ? "▴" : "▾"}</span>
-                                </button>
-                              )}
-                              {(grupo.tipo === "unico" || assuntosExpandidos[grupo.chave]) && grupo.assuntos.map((assunto) => (
+                            <div key={grupo.chave} className="conteudos-grupo-simples">
+                              {grupo.assuntos.slice(0,1).map((assunto) => (
                         <div key={assunto.id} className="conteudos-assunto-item">
-                          <label className="conteudos-status-assunto" title={assunto.concluido ? "Reabrir o assunto inteiro" : "Marcar o assunto inteiro como concluído"}>
+                          {grupo.tipo !== "partes" && <label className="conteudos-status-assunto" title={assunto.concluido ? "Reabrir o assunto inteiro" : "Marcar o assunto inteiro como concluído"}>
                             <input
                               type="checkbox"
                               checked={assunto.concluido}
                               onChange={() => definirConclusaoAssunto(materia.id, assunto.id, !assunto.concluido, modulo.id)}
                             />
-                          </label>
+                          </label>}
 
                           <div className="conteudos-assunto-info">
                             <div className="conteudos-assunto-titulo-linha">
-                              <button type="button" className="conteudos-nome-perfil" onClick={() => setPerfilAssunto({materia,modulo,assunto})}>{assunto.nome} <small>Ver perfil ↗</small></button>
-                              <StatusAssunto assunto={assunto} />
+                              <button type="button" className="conteudos-nome-perfil" onClick={() => setPerfilAssunto({materia,modulo,assunto})}>{grupo.tipo === "partes" ? grupo.titulo : assunto.nome} <small>Ver perfil ↗</small></button>
+                              {grupo.tipo !== "partes" && <StatusAssunto assunto={assunto} />}
                               {assunto.complementarAoEdital && (
                                 <span className="conteudos-origem-badge">
                                   {assunto.vinculoCurso?.status === "ambiguo"
@@ -708,7 +694,14 @@ export default function Estudos() {
                                 </button>
                               )}
                             </div>
-                            {(() => {
+                            {grupo.tipo === "partes" && <div className="conteudos-progresso-assunto">
+                              <div className="conteudos-progresso-assunto-topo">
+                                <span>{grupo.assuntos.filter((item) => item.concluido).length} de {grupo.assuntos.length} aulas</span>
+                                <strong>{Math.round(grupo.assuntos.filter((item) => item.concluido).length / grupo.assuntos.length * 100)}%</strong>
+                              </div>
+                              <div className="conteudos-progresso-assunto-barra"><div style={{ width: Math.round(grupo.assuntos.filter((item) => item.concluido).length / grupo.assuntos.length * 100) + "%" }} /></div>
+                            </div>}
+                            {grupo.tipo !== "partes" && (() => {
                               const totalAulas = assunto.aulas?.length ?? 0;
                               const aulasConcluidas = assunto.aulas?.filter((aula) => aula.concluida).length ?? 0;
                               const percentualAulas = totalAulas > 0
@@ -726,16 +719,18 @@ export default function Estudos() {
                                 </div>
                               ) : null;
                             })()}
-                            {((assunto.aulas?.length ?? 0) > 0 || (assunto.tarefas?.length ?? 0) > 0) && (
+                            {(grupo.tipo === "partes" || (assunto.aulas?.length ?? 0) > 0 || (assunto.tarefas?.length ?? 0) > 0) && (
                               <button
                                 type="button"
                                 className="conteudos-detalhes-toggle"
-                                onClick={() => alternarAssunto(assunto.id)}
-                                aria-expanded={Boolean(assuntosExpandidos[assunto.id])}
+                                onClick={() => alternarAssunto(grupo.tipo === "partes" ? grupo.chave : assunto.id)}
+                                aria-expanded={Boolean(assuntosExpandidos[grupo.tipo === "partes" ? grupo.chave : assunto.id])}
                               >
-                                {assuntosExpandidos[assunto.id]
-                                  ? "Ocultar etapas"
-                                  : historiaPernambuco
+                                {assuntosExpandidos[grupo.tipo === "partes" ? grupo.chave : assunto.id]
+                                  ? "Ocultar aulas"
+                                  : grupo.tipo === "partes"
+                                    ? `Ver ${grupo.assuntos.length} aulas`
+                                    : historiaPernambuco
                                     ? `Ver ${assunto.aulas?.length ?? 0} subassunto${assunto.aulas?.length === 1 ? "" : "s"} (aulas) e ${assunto.tarefas?.length ?? 0} tarefa${assunto.tarefas?.length === 1 ? "" : "s"}`
                                     : `Ver ${assunto.aulas?.length ?? 0} aula${assunto.aulas?.length === 1 ? "" : "s"} e ${assunto.tarefas?.length ?? 0} tarefa${assunto.tarefas?.length === 1 ? "" : "s"}`}
                               </button>
@@ -757,7 +752,7 @@ export default function Estudos() {
                           <span className={`prioridade prioridade-${assunto.prioridade}`}>{assunto.prioridade}</span>
 
                           <div className="conteudos-acoes-aula conteudos-acoes-unificadas">
-                            <button type="button" onClick={() => abrirCentral(materia, modulo, assunto)}>▶ Estudar</button>
+                            <button type="button" onClick={() => abrirCentral(materia, modulo, grupo.tipo === "partes" ? (grupo.assuntos.find((item) => !item.concluido) ?? assunto) : assunto)}>▶ Estudar</button>
 
                             {(assunto.aulas?.[0]?.url || assunto.aula) && (
                               <button type="button" onClick={() => window.open(
@@ -821,9 +816,24 @@ export default function Estudos() {
                             )}
                           </div>
 
-                          {assuntosExpandidos[assunto.id] && (
+                          {assuntosExpandidos[grupo.tipo === "partes" ? grupo.chave : assunto.id] && (
                             <div className="conteudos-etapas-assunto">
-                              {(assunto.aulas ?? []).length > 0 && (
+                              {grupo.tipo === "partes" && (
+                                <section aria-label={"Aulas de " + grupo.titulo}>
+                                  <h4>Aulas de {grupo.titulo}</h4>
+                                  {grupo.assuntos.map((parte, indice) => (
+                                    <div key={parte.id} className="conteudos-etapa-linha">
+                                      <label className="conteudos-check-aula">
+                                        <input type="checkbox" checked={parte.concluido}
+                                          onChange={() => definirConclusaoAssunto(materia.id, parte.id, !parte.concluido, modulo.id)} />
+                                        <span className={parte.concluido ? "concluida" : ""}>{"Aula " + (indice + 1) + " — " + parte.nome}</span>
+                                      </label>
+                                      <button type="button" onClick={() => abrirCentral(materia, modulo, parte)}>Estudar aula</button>
+                                    </div>
+                                  ))}
+                                </section>
+                              )}
+                              {grupo.tipo !== "partes" && (assunto.aulas ?? []).length > 0 && (
                                 <section>
                                   <h4>{historiaPernambuco ? "Subassuntos · aulas do curso" : "Videoaulas"}</h4>
                                   {(assunto.aulas ?? []).slice().sort((a, b) => a.ordem - b.ordem).map((aula, indice) => (
