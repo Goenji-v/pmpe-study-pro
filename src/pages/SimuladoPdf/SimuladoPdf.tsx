@@ -1183,6 +1183,7 @@ export default function SimuladoPdf() {
     return (
       <main className="simulado-pdf-workspace setup">
         <section className="simulado-pdf-setup">
+          <button type="button" onClick={() => navigate("/simulado-pdf/rapido")}>Corrigir com gabaritos (sem IA e sem PDF)</button>
           <button
             type="button"
             className="voltar"
