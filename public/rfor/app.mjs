@@ -22,7 +22,7 @@ async function renderProducts(){
   const products=await repo.listProducts();
   const q=$('#search').value.trim().toLowerCase(); const cat=$('#category').value;
   const filtered=products.filter(p=>p.active && (!q || p.name.toLowerCase().includes(q)) && (!cat || p.category===cat));
-  $('#products').innerHTML=filtered.map(p=>{ const available=p.stock-p.reserved; return `<article class="product-card"><div class="product-image">${p.image}</div><span class="tag">${escapeHtml(p.category)}</span><h3>${escapeHtml(p.name)}</h3><strong class="price">${money(p.price)}</strong><small>${available>0?`${available} disponível(is)`:'Sem estoque'}</small><button class="primary" data-add="${p.id}" ${available<=0?'disabled':''}>Adicionar ao carrinho</button></article>`}).join('') || '<p>Nenhum produto encontrado.</p>';
+  $('#products').innerHTML=filtered.map(p=>{ const available=p.stock-p.reserved; return `<article class="product-card"><div class="product-image">${escapeHtml(p.image)}</div><span class="tag">${escapeHtml(p.category)}</span><h3>${escapeHtml(p.name)}</h3><strong class="price">${money(p.price)}</strong><small>${available>0?`${available} disponível(is)`:'Sem estoque'}</small><button class="primary" data-add="${p.id}" ${available<=0?'disabled':''}>Adicionar ao carrinho</button></article>`}).join('') || '<p>Nenhum produto encontrado.</p>';
   document.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add)));
   const categories=[...new Set(products.map(p=>p.category))]; const cur=$('#category').value; $('#category').innerHTML='<option value="">Todas as categorias</option>'+categories.map(c=>`<option ${c===cur?'selected':''}>${escapeHtml(c)}</option>`).join('');
 }
