@@ -69,3 +69,49 @@ export function auditarGruposDePartes(materias: readonly Materia[]): GrupoSugeri
   }
   return grupos;
 }
+
+
+export type GrupoAssuntosVisual = {
+  chave: string;
+  titulo: string;
+  tipo: "partes" | "tema" | "unico";
+  assuntos: Assunto[];
+};
+
+/**
+ * Agrupa apenas na apresentação. Os Assunto originais continuam inalterados,
+ * com seus próprios IDs para checkbox, estudo, aula, questão e histórico.
+ */
+export function agruparAssuntosParaExibicao(
+  materia: string,
+  moduloId: string,
+  assuntos: readonly Assunto[],
+): GrupoAssuntosVisual[] {
+  const contagem = new Map<string, number>();
+  const descritores = assuntos.map((assunto) => {
+    const parte = identificarParte(assunto.nome);
+    if (parte) {
+      const nomeBase = parte.titulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      return { chave: "partes:" + nomeBase, titulo: parte.titulo, tipo: "partes" as const };
+    }
+    const tema = sugerirModuloPortugues(materia, assunto.nome);
+    if (tema) return { chave: "tema:" + tema, titulo: tema, tipo: "tema" as const };
+    return { chave: "unico:" + assunto.id, titulo: assunto.nome, tipo: "unico" as const };
+  });
+  for (const descritor of descritores) contagem.set(descritor.chave, (contagem.get(descritor.chave) ?? 0) + 1);
+  const grupos = new Map<string, GrupoAssuntosVisual>();
+  assuntos.forEach((assunto, indice) => {
+    const descritor = descritores[indice];
+    const agrupar = (contagem.get(descritor.chave) ?? 0) >= 2;
+    const chave = agrupar ? descritor.chave : "unico:" + assunto.id;
+    const grupo = grupos.get(chave) ?? {
+      chave: "grupo:" + moduloId + ":" + chave,
+      titulo: agrupar ? descritor.titulo : assunto.nome,
+      tipo: agrupar ? descritor.tipo : "unico",
+      assuntos: [],
+    };
+    grupo.assuntos.push(assunto);
+    grupos.set(chave, grupo);
+  });
+  return [...grupos.values()];
+}
