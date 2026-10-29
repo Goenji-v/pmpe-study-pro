@@ -7,9 +7,9 @@ export function lerGabarito(texto: string, total: number): ParseGabarito {
   const invalidas: string[] = [];
   let proximo = 1;
   const normalizado = texto.toUpperCase().replace(/ANULAD[AO]S?/g, "X").replace(/EM BRANCO|BRANC[AO]/g, "N");
-  const tokens = normalizado.match(/\\d+\\s*[-.):]?\\s*[A-Z]+|[A-Z]+/g) ?? [];
+  const tokens = normalizado.match(/\d+\s*[-.):]?\s*[A-Z]+|[A-Z]+/g) ?? [];
   for (const token of tokens) {
-    const achado = /^(\\d+)\\s*[-.):]?\\s*([A-Z]+)$/.exec(token.trim());
+    const achado = /^(\d+)\s*[-.):]?\s*([A-Z]+)$/.exec(token.trim());
     const numero = achado ? Number(achado[1]) : proximo;
     const letra = (achado ? achado[2] : token.trim()).toUpperCase();
     if (!valido.test(letra) || !Number.isInteger(numero) || numero < 1 || numero > total) { invalidas.push(token); continue; }
