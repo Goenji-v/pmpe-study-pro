@@ -529,3 +529,54 @@
 .conteudos-assunto-item button.conteudos-nome-perfil{padding:0;border-radius:0;flex-wrap:wrap;display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer}.conteudos-nome-perfil small{font-size:11px;color:#7dd3fc;white-space:nowrap}
 
 .conteudos-nome-perfil:hover small{text-decoration:underline}.conteudos-nome-perfil:focus-visible{outline:2px solid #7dd3fc;outline-offset:5px}
+
+
+/* Assuntos seriados e tópicos: agrupamento apenas visual, sem mexer no progresso salvo. */
+.conteudos-grupo-agregado,
+.conteudos-grupo-simples {
+  min-width: 0;
+}
+
+.conteudos-grupo-agregado {
+  padding: 12px;
+  margin-bottom: 12px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid #334155;
+  border-radius: 12px;
+}
+
+.conteudos-grupo-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 0;
+  color: #e2e8f0;
+  text-align: left;
+  background: #152d4a;
+  border: 1px solid #47617d;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.conteudos-grupo-cabecalho[aria-expanded="true"] {
+  margin-bottom: 12px;
+}
+
+.conteudos-grupo-titulo {
+  font-weight: 850;
+  color: #bfdbfe;
+}
+
+.conteudos-grupo-progresso {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+@media (max-width: 700px) {
+  .conteudos-grupo-agregado { padding: 8px; }
+  .conteudos-grupo-cabecalho { align-items: flex-start; }
+}
