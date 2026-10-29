@@ -10,6 +10,7 @@ import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";
+import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
 import {
   materiaTemCursoImportado,
   moduloGerenciadoPorCurso,
@@ -660,7 +661,23 @@ export default function Estudos() {
                       <>
                         <div className="conteudos-progresso conteudos-progresso-modulo"><div style={{ width: `${pct}%` }} /></div>
                         <div className="conteudos-assuntos">
-                          {modulo.assuntos.map((assunto) => (
+                          {agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos).map((grupo) => (
+                            <div key={grupo.chave} className={grupo.tipo === "unico" ? "conteudos-grupo-simples" : "conteudos-grupo-agregado"}>
+                              {grupo.tipo !== "unico" && (
+                                <button
+                                  type="button"
+                                  className="conteudos-grupo-cabecalho"
+                                  aria-expanded={Boolean(assuntosExpandidos[grupo.chave])}
+                                  onClick={() => alternarAssunto(grupo.chave)}
+                                >
+                                  <span className="conteudos-grupo-titulo">{grupo.titulo}</span>
+                                  <span className="conteudos-grupo-progresso">
+                                    {grupo.assuntos.filter((item) => item.concluido).length} de {grupo.assuntos.length} {grupo.tipo === "partes" ? "aulas" : "assuntos"} · {Math.round(grupo.assuntos.filter((item) => item.concluido).length / grupo.assuntos.length * 100)}%
+                                  </span>
+                                  <span aria-hidden="true">{assuntosExpandidos[grupo.chave] ? "▴" : "▾"}</span>
+                                </button>
+                              )}
+                              {(grupo.tipo === "unico" || assuntosExpandidos[grupo.chave]) && grupo.assuntos.map((assunto) => (
                         <div key={assunto.id} className="conteudos-assunto-item">
                           <label className="conteudos-status-assunto" title={assunto.concluido ? "Reabrir o assunto inteiro" : "Marcar o assunto inteiro como concluído"}>
                             <input
@@ -846,7 +863,9 @@ export default function Estudos() {
                             </div>
                           )}
                         </div>
-                      ))}
+                              ))}
+                            </div>
+                          ))}
                           {modulo.assuntos.length === 0 && <p className="conteudos-sem-assuntos">Módulo sem assuntos.</p>}
                         </div>
                       </>
