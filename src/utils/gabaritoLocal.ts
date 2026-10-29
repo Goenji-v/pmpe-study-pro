@@ -6,7 +6,7 @@ export function lerGabarito(texto: string, total: number): ParseGabarito {
   const duplicadas: number[] = [];
   const invalidas: string[] = [];
   let proximo = 1;
-  const normalizado = texto.toUpperCase().replace(/ANULAD[AO]S?/g, "X").replace(/EM BRANCO|BRANC[AO]/g, "N");
+  const normalizado = texto.toUpperCase().replace(/ANULAD[AO]S?/g, "X").replace(/EM BRANCO|BRANC[AO]/g, "N").replace(/(?:^|\\s)[—–-](?=\\s|$)/g, " N");
   const tokens = normalizado.match(/\d+\s*[-.):]?\s*[A-Z]+|[A-Z]+/g) ?? [];
   for (const token of tokens) {
     const achado = /^(\d+)\s*[-.):]?\s*([A-Z]+)$/.exec(token.trim());
