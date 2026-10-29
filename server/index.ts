@@ -925,7 +925,6 @@ app.post(
 );
 
 /*
-COLE ESTA ROTA NO server/index.ts ANTES DO app.listen(...)
 */
 
 app.post(
