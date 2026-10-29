@@ -1,3 +1,4 @@
+import { mensagemErroPublica } from "./erroPublico.ts";
 import "dotenv/config";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import express, {
@@ -158,10 +159,7 @@ app.get(
       );
 
       res.status(500).json({
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Erro ao listar modelos.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -201,10 +199,7 @@ app.get(
       console.error("[geracao-ia-job] erro ao listar", erro);
       res.status(500).json({
         sucesso: false,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Não foi possível consultar as gerações.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -250,10 +245,7 @@ app.get(
       console.error("[geracao-ia-job] erro ao consultar", erro);
       res.status(500).json({
         sucesso: false,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Não foi possível consultar a geração.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -342,10 +334,7 @@ app.post(
       console.error("[geracao-ia-job] erro ao criar", erro);
       res.status(500).json({
         sucesso: false,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Não foi possível iniciar a geração.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -447,10 +436,7 @@ app.post(
       console.error("[simulado-pdf-job] erro ao criar", erro);
       res.status(500).json({
         sucesso: false,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Não foi possível iniciar a análise do simulado.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -496,10 +482,7 @@ app.get(
       console.error("[simulado-pdf-job] erro ao consultar", erro);
       res.status(500).json({
         sucesso: false,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Não foi possível consultar a análise do simulado.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -535,10 +518,7 @@ app.delete(
       console.error("[simulado-pdf-job] erro ao excluir", erro);
       res.status(500).json({
         sucesso: false,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Não foi possível excluir a análise do simulado.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -689,10 +669,7 @@ app.post(
       console.error("Erro Gemini:", erro);
       res.status(500).json({
         sucesso: false,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Erro desconhecido.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -915,10 +892,7 @@ app.post(
       res.status(500).json({
         sucesso: false,
 
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Erro ao gerar o diagnóstico.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -1273,10 +1247,7 @@ Regras:
       res.status(500).json({
         sucesso: false,
 
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Erro ao gerar cronograma.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
@@ -1324,10 +1295,7 @@ app.post(
       res.status(500).json({
         sucesso: false,
         diagnosticoId,
-        erro:
-          erro instanceof Error
-            ? erro.message
-            : "Erro ao analisar a prova.",
+        erro: mensagemErroPublica(res.statusCode),
       });
     }
   }
