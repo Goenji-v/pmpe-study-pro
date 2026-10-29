@@ -8,7 +8,7 @@ export default function SimuladoCorrecaoRapida() {
   const [aluno, setAluno] = useState("");
   const [faixasTexto, setFaixasTexto] = useState("");
   const [confirmado, setConfirmado] = useState(false);
-  const faixa = useMemo(() => faixasTexto.split("\\n").map(l => /^(\\d+)\\s*[-–]\\s*(\\d+)\\s+(.+)$/.exec(l.trim())).filter((m): m is RegExpExecArray => !!m).map(m => ({ inicio: Number(m[1]), fim: Number(m[2]), materia: m[3].trim() })), [faixasTexto]);
+  const faixa = useMemo(() => faixasTexto.split("\n").map(l => /^(\d+)\s*[-–]\s*(\d+)\s+(.+)$/.exec(l.trim())).filter((m): m is RegExpExecArray => !!m).map(m => ({ inicio: Number(m[1]), fim: Number(m[2]), materia: m[3].trim() })), [faixasTexto]);
   const g = useMemo(() => lerGabarito(oficial, total), [oficial, total]);
   const a = useMemo(() => lerGabarito(aluno, total), [aluno, total]);
   const estruturaValida = !faixasTexto.trim() || (faixa.length > 0 && faixa.every((f: FaixaMateria) => f.inicio >= 1 && f.fim <= total && f.inicio <= f.fim) && new Set(faixa.flatMap(f => Array.from({length:f.fim-f.inicio+1},(_,i)=>f.inicio+i))).size === faixa.reduce((s,f)=>s+f.fim-f.inicio+1,0));
