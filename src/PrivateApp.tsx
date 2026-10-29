@@ -49,6 +49,7 @@ const MeuEdital = lazy(() => import("./pages/MeuEdital/MeuEdital"));
 const Cursos = lazy(() => import("./pages/Cursos/Cursos"));
 const CursoMentoria = lazy(() => import("./pages/CursoMentoria/CursoMentoria"));
 const Loja = lazy(() => import("./pages/Loja/Loja"));
+const SimuladoCorrecaoRapida = lazy(() => import("./pages/SimuladoPdf/SimuladoCorrecaoRapida"));
 const ResolverSimuladoIA = lazy(() => import("./pages/ResolverSimuladoIA/ResolverSimuladoIA"));
 const MeusSimuladosIA = lazy(() => import("./pages/MeusSimuladosIA/MeusSimuladosIA"));
 const RevisaoCadernoIA = lazy(() => import("./pages/RevisaoCadernoIA/RevisaoCadernoIA"));
@@ -192,6 +193,7 @@ function ConteudoPrivado() {
                         <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
                         <Route path="/simulado-oficial/:id" element={<SimuladoOficial />} />
                         <Route path="/simulado-pdf" element={<SimuladoPdf />} />
+                        <Route path="/simulado-pdf/rapido" element={<SimuladoCorrecaoRapida />} />
                         <Route path="/resolver-simulado-ia" element={<MeusSimuladosIA />} />
                         <Route path="/caderno-questoes" element={<MeusSimuladosIA />} />
                         <Route path="/resolver-simulado-ia/prova" element={<ResolverSimuladoIA />} />
