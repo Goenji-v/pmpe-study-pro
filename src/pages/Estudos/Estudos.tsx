@@ -663,7 +663,7 @@ export default function Estudos() {
                         <div className="conteudos-assuntos">
                           {agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos).map((grupo) => (
                             <div key={grupo.chave} className="conteudos-grupo-simples">
-                              {grupo.assuntos.slice(0,1).map((assunto) => (
+                              {(grupo.tipo === "partes" ? grupo.assuntos.slice(0, 1) : grupo.assuntos).map((assunto) => (
                         <div key={assunto.id} className="conteudos-assunto-item">
                           {grupo.tipo !== "partes" && <label className="conteudos-status-assunto" title={assunto.concluido ? "Reabrir o assunto inteiro" : "Marcar o assunto inteiro como concluído"}>
                             <input
