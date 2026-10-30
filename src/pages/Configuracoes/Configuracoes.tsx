@@ -239,8 +239,8 @@ export default function Configuracoes() {
       </p>
 
       <nav className="configuracoes-nav" aria-label="Seções das configurações">{[['identidade','Meu perfil'],['rotina','Rotina semanal'],['atividades','Redação e simulado'],['metas','Metas'],['aparencia','Aparência'],['senha','Alterar senha'],['leitura','Leitura de PDFs']].map(([id,nome]) => <a key={id} href={`#config-${id}`}>{nome}</a>)}</nav>
-      <AlterarSenha />
       <div className="configuracoes-grid">
+        <AlterarSenha />
         <div className="configuracoes-card">
           <h2 id="config-identidade">Perfil</h2>
 
