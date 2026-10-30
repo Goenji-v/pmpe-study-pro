@@ -2117,7 +2117,16 @@ function EstadoDaConta({
             erro
           );
 
-          setErroNuvem(mensagem);
+          // Expõe a etapa que falhou sem esconder o erro nem sobrescrever dados.
+          // O usuário pode distinguir falha no backup, disputa de revisão e
+          // indisponibilidade de rede antes de tentar outra resolução.
+          const etapa = mensagem.includes("preservar as duas versões") ||
+              mensagem.includes("backup de segurança")
+            ? "Falha ao preservar os backups no Supabase"
+            : erro instanceof ConflitoSincronizacaoError
+              ? "A revisão da nuvem mudou durante a confirmação"
+              : "Não foi possível concluir a resolução";
+          setErroNuvem(`${etapa}. ${mensagem} Nenhuma nova tentativa automática de substituição será feita.`);
           setAlteracoesPendentes(1);
           setStatusNuvem(
             navegadorEstaOnline()
