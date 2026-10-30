@@ -1,3 +1,4 @@
+import AlterarSenha from "./AlterarSenha";
 import { gerarPlanoEdital, preservarIdsPlanoAnterior } from "../../utils/planoEdital";
 import { useRef, useState } from "react";
 import { mesclarConfiguracoesEditadas } from "../../utils/mesclarConfiguracoesEditadas";
@@ -237,7 +238,8 @@ export default function Configuracoes() {
         Defina seu perfil, disponibilidade e metas. O Edital Inteligente usa essas regras para montar o plano.
       </p>
 
-      <nav className="configuracoes-nav" aria-label="Seções das configurações">{[['identidade','Meu perfil'],['rotina','Rotina semanal'],['atividades','Redação e simulado'],['metas','Metas'],['aparencia','Aparência'],['leitura','Leitura de PDFs']].map(([id,nome]) => <a key={id} href={`#config-${id}`}>{nome}</a>)}</nav>
+      <nav className="configuracoes-nav" aria-label="Seções das configurações">{[['identidade','Meu perfil'],['rotina','Rotina semanal'],['atividades','Redação e simulado'],['metas','Metas'],['aparencia','Aparência'],['senha','Alterar senha'],['leitura','Leitura de PDFs']].map(([id,nome]) => <a key={id} href={`#config-${id}`}>{nome}</a>)}</nav>
+      <AlterarSenha />
       <div className="configuracoes-grid">
         <div className="configuracoes-card">
           <h2 id="config-identidade">Perfil</h2>
