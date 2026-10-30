@@ -51,7 +51,7 @@ export default function SimuladoCorrecaoRapida() {
     <button type="button" disabled={!completo} onClick={()=>setConfirmado(true)}>Calcular minha nota</button>
     {nota && <p><button type="button" onClick={() => {
       const proximo = { data: new Date().toISOString(), percentual: nota.percentual, materias: nota.materias.map(m => ({ materia: m.materia, percentual: m.percentual })) };
-      if (salvarTextoLocal(CHAVE_HISTORICO, JSON.stringify(proximo))) { setAnterior(proximo); setAvisoLocal("Resultado salvo neste aparelho."); }
+      if (salvarTextoLocal(CHAVE_HISTORICO, JSON.stringify(proximo))) { setAvisoLocal("Resultado salvo. Ele será a referência na próxima correção."); }
       else setAvisoLocal("Não foi possível salvar o resultado neste aparelho.");
     }}>Salvar resultado para comparar no próximo simulado</button></p>}
     {nota && anterior && <section aria-label="Comparação com o simulado anterior">
