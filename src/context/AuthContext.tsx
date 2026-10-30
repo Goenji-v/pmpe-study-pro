@@ -224,7 +224,7 @@ export function AuthProvider({
     email: string
   ) {
     const redirectTo =
-      `${ORIGEM_AUTH_PRODUCAO}/login`;
+      `${ORIGEM_AUTH_PRODUCAO}/redefinir-senha`;
 
     const {
       error,
