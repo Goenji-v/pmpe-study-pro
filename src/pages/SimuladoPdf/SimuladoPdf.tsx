@@ -356,37 +356,59 @@ export default function SimuladoPdf() {
     }
 
     let ativo = true;
+    let timer: number | undefined;
+    let tentativasSemProgresso = 0;
+    let ultimoProgresso = -1;
 
-    const consultar = async () => {
-      try {
-        const job =
-          await consultarAnaliseSimuladoPdf(requestIdAtual);
-
-        if (!ativo) return;
-        await aplicarJob(job, rascunho?.id);
-      } catch (erro) {
-        if (!ativo) return;
-
-        setDescricaoAnalise(
-          "A análise continua salva. Tentando reconectar ao servidor."
-        );
-
-        if (erro instanceof Error && erro.message) {
-          setErroAnalise(erro.message);
-        }
+    const agendar = (ms: number) => {
+      window.clearTimeout(timer);
+      if (ativo && !document.hidden) {
+        timer = window.setTimeout(() => void consultar(), ms);
       }
     };
 
-    const id = window.setInterval(
-      () => void consultar(),
-      INTERVALO_POLLING_MS
-    );
+    const consultar = async () => {
+      if (!ativo || document.hidden) return;
+      try {
+        const job = await consultarAnaliseSimuladoPdf(requestIdAtual);
+        if (!ativo) return;
+        if (job.progresso !== ultimoProgresso) {
+          ultimoProgresso = job.progresso;
+          tentativasSemProgresso = 0;
+        } else {
+          tentativasSemProgresso += 1;
+        }
+        await aplicarJob(job, rascunho?.id);
+        if (!ativo) return;
+        // Backoff: evita requisições contínuas quando o processamento é lento.
+        const intervalo = tentativasSemProgresso < 4
+          ? INTERVALO_POLLING_MS
+          : tentativasSemProgresso < 10 ? 5_000 : 10_000;
+        agendar(intervalo);
+      } catch (erro) {
+        if (!ativo) return;
+        tentativasSemProgresso += 1;
+        setDescricaoAnalise(
+          "A análise continua salva. Tentando reconectar ao servidor."
+        );
+        if (erro instanceof Error && erro.message) {
+          setErroAnalise(erro.message);
+        }
+        agendar(tentativasSemProgresso < 4 ? 5_000 : 10_000);
+      }
+    };
 
+    const aoMudarVisibilidade = () => {
+      window.clearTimeout(timer);
+      if (!document.hidden && ativo) void consultar();
+    };
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
     void consultar();
 
     return () => {
       ativo = false;
-      window.clearInterval(id);
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", aoMudarVisibilidade);
     };
   }, [
     aplicarJob,
