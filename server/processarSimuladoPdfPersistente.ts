@@ -7,7 +7,7 @@ import {
 } from "./jsonIa.ts";
 import { parametrosExtracaoGemini } from "./modelosGemini.ts";
 import {
-  atualizarJobGeracaoIA,
+  atualizarJobGeracaoIAComPosse,
   reivindicarJobGeracaoIA,
   type ContextoSupabaseJob,
   type JobGeracaoIA,
@@ -341,7 +341,7 @@ async function processar(
     );
     ultimoProgresso = progressoNormalizado;
 
-    await atualizarJobGeracaoIA(
+    await atualizarJobGeracaoIAComPosse(
       contexto,
       job.id,
       {
@@ -582,7 +582,7 @@ async function processar(
       alertas: Array.from(new Set(alertas)).slice(0, 30),
     };
 
-    await atualizarJobGeracaoIA(
+    await atualizarJobGeracaoIAComPosse(
       contexto,
       job.id,
       {
@@ -609,7 +609,7 @@ async function processar(
         ? erro.message
         : "Erro desconhecido ao analisar o simulado.";
 
-    await atualizarJobGeracaoIA(
+    await atualizarJobGeracaoIAComPosse(
       contexto,
       job.id,
       {
