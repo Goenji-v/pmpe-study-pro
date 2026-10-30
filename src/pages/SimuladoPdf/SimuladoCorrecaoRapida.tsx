@@ -23,7 +23,7 @@ export default function SimuladoCorrecaoRapida() {
   const [oficial, setOficial] = useState("");
   const [aluno, setAluno] = useState("");
   const [faixasTexto, setFaixasTexto] = useState(() => lerTextoLocal(CHAVE_MODELO));
-  const [anterior, setAnterior] = useState<ResultadoAnterior | null>(() => lerHistorico());
+  const [anterior] = useState<ResultadoAnterior | null>(() => lerHistorico());
   const [avisoLocal, setAvisoLocal] = useState("");
   const [confirmado, setConfirmado] = useState(false);
   const faixa = useMemo(() => faixasTexto.split("\n").map(l => /^(\d+)\s*[-–]\s*(\d+)\s+(.+)$/.exec(l.trim())).filter((m): m is RegExpExecArray => !!m).map(m => ({ inicio: Number(m[1]), fim: Number(m[2]), materia: m[3].trim() })), [faixasTexto]);
