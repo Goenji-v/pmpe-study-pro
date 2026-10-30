@@ -11,7 +11,7 @@
     "dev:web": "vite --host 0.0.0.0",
     "dev:api": "tsx watch server/secureEntry.ts",
     "start:api": "tsx server/secureEntry.ts",
-    "test": "node --import tsx --test server/*.test.ts",
+    "test": "node --import tsx --test server/*.test.ts src/utils/gabaritoLocal.test.ts",
     "lint": "oxlint src server",
     "build": "npm run lint && npm test && npm run build:app",
     "check": "npm run build",
