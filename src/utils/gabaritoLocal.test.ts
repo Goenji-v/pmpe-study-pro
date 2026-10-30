@@ -23,3 +23,25 @@ test("calcula acerto, erro, branco e anulada por matéria", () => {
   assert.deepEqual([nota.acertos,nota.erros,nota.brancos,nota.anuladas,nota.validas,nota.percentual], [2,1,1,1,4,50]);
   assert.equal(nota.materias[0].percentual,50);
 });
+
+test("50 questões corrigidas localmente preservam todas as respostas", () => {
+  const texto = Array.from({ length: 50 }, (_, i) => `${i + 1}-A`).join(" ");
+  const oficial = lerGabarito(texto, 50);
+  const aluno = lerGabarito(texto, 50);
+  assert.deepEqual(oficial.faltantes, []);
+  assert.deepEqual(aluno.duplicadas, []);
+  const nota = calcularNotaLocal(oficial.respostas, aluno.respostas, 50);
+  assert.equal(nota.acertos, 50);
+  assert.equal(nota.percentual, 100);
+});
+
+test("anuladas são excluídas da nota por padrão ou pontuadas quando configurado", () => {
+  const oficial = lerGabarito("1-A 2-X", 2);
+  const aluno = lerGabarito("1-B 2-N", 2);
+  const padrao = calcularNotaLocal(oficial.respostas, aluno.respostas, 2);
+  assert.equal(padrao.validas, 1);
+  assert.equal(padrao.acertos, 0);
+  const pontuado = calcularNotaLocal(oficial.respostas, aluno.respostas, 2, [], false);
+  assert.equal(pontuado.validas, 2);
+  assert.equal(pontuado.acertos, 1);
+});
