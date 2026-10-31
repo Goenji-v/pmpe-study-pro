@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { QuestaoAnaliseSimulado } from "../../utils/analiseSimuladoStudyPro";
 
 type Props = { questoes: QuestaoAnaliseSimulado[]; respostas: Record<string, string | undefined>; nome: string };
