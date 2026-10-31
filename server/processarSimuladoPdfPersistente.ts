@@ -1871,7 +1871,7 @@ function criarIntervalos(total: number) {
   return intervalos;
 }
 
-function validarPayload(valor: Record<string, unknown>): PayloadSimuladoPdf {
+export function validarPayload(valor: Record<string, unknown>): PayloadSimuladoPdf {
   const totalInformado = Math.round(numeroSeguro(valor.totalInformado));
   const prova = validarArquivoPayload(valor.prova, "caderno");
   const comentado = validarArquivoPayload(valor.comentado, "gabarito oficial ou comentado");
