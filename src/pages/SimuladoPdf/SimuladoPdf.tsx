@@ -18,7 +18,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 
-import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
+import EspelhoSimuladoPdf from "./EspelhoSimuladoPdf";
 import { useApp } from "../../context/AppContext";
 import type { Simulado } from "../../types";
 import { contarResultadoSimuladoPdf } from "../../utils/contagemSimuladoPdf";
@@ -731,6 +731,11 @@ export default function SimuladoPdf() {
       return;
     }
 
+    if (!comentado) {
+      window.alert("Anexe também o PDF do gabarito oficial ou do simulado comentado para iniciar.");
+      return;
+    }
+
     if (
       !Number.isInteger(total) ||
       total < 1 ||
@@ -1281,7 +1286,7 @@ export default function SimuladoPdf() {
 
           <label className="arquivo">
             <span>
-              PDF comentado/gabarito · opcional
+              PDF de gabarito oficial ou simulado comentado · obrigatório
             </span>
             <input
               type="file"
@@ -1435,21 +1440,7 @@ export default function SimuladoPdf() {
           </div>
         )}
 
-        <AnaliseSimuladoStudyPro
-          origem="pdf"
-          tentativaId={rascunho?.id ?? "simulado-pdf"}
-          simuladoId={rascunho?.id}
-          nome={nome}
-          data={criadoEm}
-          questoes={questoesResultado}
-          respostas={respostasResultado}
-          marcacoes={
-            {} as Record<
-              string,
-              MarcacaoQuestaoSimulado
-            >
-          }
-        />
+        <EspelhoSimuladoPdf nome={nome} questoes={questoesResultado} respostas={respostasResultado} />
       </main>
     );
   }
