@@ -1874,9 +1874,7 @@ function criarIntervalos(total: number) {
 function validarPayload(valor: Record<string, unknown>): PayloadSimuladoPdf {
   const totalInformado = Math.round(numeroSeguro(valor.totalInformado));
   const prova = validarArquivoPayload(valor.prova, "caderno");
-  const comentado = valor.comentado
-    ? validarArquivoPayload(valor.comentado, "comentado")
-    : null;
+  const comentado = validarArquivoPayload(valor.comentado, "gabarito oficial ou comentado");
 
   if (valor.tipo !== "simulado_pdf") {
     throw new Error("Tipo de job incompatível com análise de simulado.");
