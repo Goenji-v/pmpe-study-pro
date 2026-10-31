@@ -25,6 +25,8 @@ test.beforeAll(async () => {
     const mock = (filter: RegExp, contents: string) => b.onLoad({filter}, () => ({contents,loader:'tsx'}));
     mock(/\/context\/AppContext\.tsx$/, `import React,{createContext,useContext,useState} from 'react'; const C=createContext(null); export const useApp=()=>useContext(C); export function FixtureProvider({children}){const [configuracoes,setConfiguracoes]=useState({nomeUsuario:'Teste',concurso:'PMPE',bancaPadrao:'AOCP',metaQuestoesDiaria:10,metaMinutosDiaria:60,metaRevisoesDiaria:2,economia:{moedas:300,recompensasRecebidas:[]}});return <C.Provider value={{configuracoes,setConfiguracoes,materias:[],questoes:[],sessoes:[],revisoes:[]}}>{children}</C.Provider>}`);
     mock(/\/context\/AuthContext\.tsx$/, `export const useAuth=()=>({usuario:{id:'teste'}});`);
+    // O teste valida PDFs; não inicializa Supabase Auth nem executa fluxos de senha.
+    mock(/\/pages\/Configuracoes\/AlterarSenha\.tsx$/, `import React from 'react'; export default function AlterarSenha(){return <section data-testid="alterar-senha-fixture"/>}`);
     mock(/\/context\/ToastContext\.tsx$/, `export const useToast=()=>({showToast:()=>{}});`);
     mock(/\/services\/armazenamentoConta\.ts$/, `export const armazenamentoLocalDaConta=window.localStorage;`);
     mock(/\/MateriaisDoAssunto\/MateriaisDoAssunto\.tsx$/, `export default function Materiais(){return null}`);
