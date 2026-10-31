@@ -2,7 +2,7 @@ import { Cloud, LockKeyhole, TrendingUp } from "lucide-react";
 
 import "./AuthHero.css";
 
-export default function AuthHero() {
+export default function AuthHero({ logoRecuperacao = false }: { logoRecuperacao?: boolean }) {
   return (
     <section className="auth-apresentacao" aria-label="Study Pro: preparação que aprova">
       <img
@@ -19,7 +19,9 @@ export default function AuthHero() {
         <header className="auth-brand">
           <img
             className="auth-brand-logo auth-brand-logo-completa"
-            src="/assets/study-pro-logo-original-v2.jpg"
+            src={logoRecuperacao
+              ? "https://kibnmdwabpiwyprkrhvq.supabase.co/storage/v1/object/public/imagens-publicas/Gemini_Generated_Image_7vn8lq7vn8lq7vn8.jpg"
+              : "/assets/study-pro-logo-original-v2.jpg"}
             alt="Study Pro"
             fetchPriority="high"
           />
