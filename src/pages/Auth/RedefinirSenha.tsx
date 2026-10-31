@@ -88,7 +88,7 @@ export default function RedefinirSenha() {
 
   return (
     <main className="auth-pagina">
-      <AuthHero />
+      <AuthHero logoRecuperacao />
       <section className="auth-formulario-area">
         <div className="auth-formulario-card">
           <div className="auth-formulario-topo">
