@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import AuthHero from "./AuthHero";
 import "./Auth.css";
@@ -10,6 +11,8 @@ export default function RedefinirSenha() {
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
   const [sucesso, setSucesso] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -97,19 +100,30 @@ export default function RedefinirSenha() {
             <p role="status">Verificando seu link de recuperação...</p>
           ) : sucesso ? (
             <div className="auth-sucesso" role="status">
-              Senha alterada com sucesso. <Link to="/login">Ir para o aplicativo</Link>.
+              <p>Senha alterada com sucesso!</p>
+              <Link className="auth-submit" style={{ display: "block", textAlign: "center", textDecoration: "none" }} to="/login">Entrar no Study Pro</Link>
             </div>
           ) : autorizado ? (
             <form onSubmit={enviar} className="auth-formulario">
               <div className="auth-campo">
                 <label htmlFor="nova-senha">Nova senha</label>
-                <input id="nova-senha" type="password" autoComplete="new-password"
-                  minLength={8} required value={senha} onChange={e => setSenha(e.target.value)} />
+                <div style={{ position: "relative" }}>
+                  <input id="nova-senha" type={mostrarSenha ? "text" : "password"} autoComplete="new-password"
+                    style={{ paddingRight: 50 }} minLength={8} required value={senha} onChange={e => setSenha(e.target.value)} />
+                  <button type="button" aria-label={mostrarSenha ? "Ocultar nova senha" : "Mostrar nova senha"} aria-pressed={mostrarSenha} onClick={() => setMostrarSenha(v => !v)} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: 0, color: "inherit", cursor: "pointer", padding: 8 }}>
+                    {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
               <div className="auth-campo">
                 <label htmlFor="confirmar-nova-senha">Confirmar nova senha</label>
-                <input id="confirmar-nova-senha" type="password" autoComplete="new-password"
-                  minLength={8} required value={confirmacao} onChange={e => setConfirmacao(e.target.value)} />
+                <div style={{ position: "relative" }}>
+                  <input id="confirmar-nova-senha" type={mostrarConfirmacao ? "text" : "password"} autoComplete="new-password"
+                    style={{ paddingRight: 50 }} minLength={8} required value={confirmacao} onChange={e => setConfirmacao(e.target.value)} />
+                  <button type="button" aria-label={mostrarConfirmacao ? "Ocultar confirmação da senha" : "Mostrar confirmação da senha"} aria-pressed={mostrarConfirmacao} onClick={() => setMostrarConfirmacao(v => !v)} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: 0, color: "inherit", cursor: "pointer", padding: 8 }}>
+                    {mostrarConfirmacao ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
               {erro && <div className="auth-erro" role="alert">{erro}</div>}
               <button className="auth-submit" disabled={salvando} type="submit">
