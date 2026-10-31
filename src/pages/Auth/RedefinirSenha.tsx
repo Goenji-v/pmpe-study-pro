@@ -14,6 +14,16 @@ export default function RedefinirSenha() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
+    const parametros = new URLSearchParams(window.location.search);
+    const erroLink = parametros.get("error_code") || parametros.get("error");
+    if (erroLink) {
+      setAutorizado(false);
+      setErro(erroLink === "otp_expired"
+        ? "O link expirou ou já foi utilizado. Solicite um novo e-mail de recuperação."
+        : "Este link de recuperação é inválido. Solicite um novo e-mail.");
+      setVerificando(false);
+      return;
+    }
     let ativo = true;
     const { data: assinatura } = supabase.auth.onAuthStateChange((evento, sessao) => {
       if (!ativo) return;
