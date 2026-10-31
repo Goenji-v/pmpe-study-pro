@@ -24,7 +24,6 @@ import type { Simulado } from "../../types";
 import { contarResultadoSimuladoPdf } from "../../utils/contagemSimuladoPdf";
 import {
   analisarSimuladoStudyPro,
-  type MarcacaoQuestaoSimulado,
   type QuestaoAnaliseSimulado,
 } from "../../utils/analiseSimuladoStudyPro";
 import {
@@ -1228,10 +1227,9 @@ export default function SimuladoPdf() {
               PDF + folha de respostas
             </h1>
             <p>
-              Informe a quantidade para começar
-              imediatamente. A IA analisa o PDF
-              em segundo plano enquanto você resolve
-              a prova.
+              Anexe o PDF da prova e o PDF com gabarito oficial ou comentado.
+              A correção mostra acertos, erros e resultados por matéria,
+              sem gerar diagnóstico completo.
             </p>
           </div>
 
