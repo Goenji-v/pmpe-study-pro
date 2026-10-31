@@ -244,6 +244,12 @@ export default function SimuladoPdf() {
 
   const iniciar = useCallback(
     async (proximo: RascunhoSimuladoPdf) => {
+      // Mesmo quando o simulado vier de um rascunho, o gabarito é obrigatório.
+      if (!proximo.caderno || !proximo.comentado) {
+        setIniciado(false);
+        setErroAnalise("Anexe a prova e o gabarito oficial ou comentado para começar.");
+        return;
+      }
       const agora = new Date().toISOString();
       const processoAnterior = carregarProcessoSimuladoPdf();
 
