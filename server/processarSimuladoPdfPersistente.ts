@@ -391,8 +391,8 @@ async function processar(
       ).filter((numero) => !gabaritoComentado.has(numero));
 
       if (faltantes.length > 0) {
-        alertas.push(
-          `O PDF comentado não confirmou ${faltantes.length} questão(ões). Nesses itens, a IA usou a prova como referência e reduziu a confiança.`
+        throw new Error(
+          `Gabarito obrigatório incompleto: faltam ${faltantes.length} questão(ões) no PDF anexado. Anexe uma versão oficial ou comentada com todas as respostas, inclusive anuladas.`
         );
       }
     } else {
@@ -483,16 +483,21 @@ async function processar(
           payload,
           numeros
         ),
-      resolver: (questao) =>
-        resolverQuestaoExtraida(
-          dependencias.ai,
-          modelos,
-          questao,
-          gabaritoComentado.get(questao.numero),
-          Boolean(payload.comentado),
-          fonteGabaritoConfirmado,
-          materiaDoNumero(secoesDisciplinas, questao.numero)
-        ),
+      // Não pedir à IA para resolver, comentar ou gerar diagnóstico.
+      // A resposta oficial anexada é a única fonte de correção.
+      resolver: async (questao) => {
+        const chave = gabaritoComentado.get(questao.numero);
+        if (!chave) {
+          throw new Error(`Sem gabarito oficial confirmado para a questão ${questao.numero}.`);
+        }
+        return aplicarGabaritoComentado({
+          ...questao,
+          materia: materiaDoNumero(secoesDisciplinas, questao.numero) ?? questao.materia,
+          assunto: "Diagnóstico aprofundado disponível fora do Study Pro",
+          comentario: "",
+          etapaPipeline: "resolvida",
+        }, chave, true, fonteGabaritoConfirmado);
+      },
       salvar: async ({
         fase,
         progresso,
