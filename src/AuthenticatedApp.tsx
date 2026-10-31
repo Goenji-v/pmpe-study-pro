@@ -5,7 +5,6 @@ import { AuthProvider } from "./context/AuthContext";
 import { PARCERIAS_VISIVEIS } from "./config/recursos";
 
 const Auth = lazy(() => import("./pages/Auth/Auth"));
-const RedefinirSenha = lazy(() => import("./pages/Auth/RedefinirSenha"));
 const Convite = lazy(() => import("./pages/Convite/Convite"));
 const PrivateApp = lazy(() => import("./PrivateApp"));
 
@@ -23,7 +22,6 @@ export default function AuthenticatedApp() {
       <Suspense fallback={<CarregandoRota />}>
         <Routes>
           <Route path="/login" element={<Auth />} />
-          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           <Route
             path="/convite/:codigo"
             element={
