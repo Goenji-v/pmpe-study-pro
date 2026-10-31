@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React from "react";
 import type { QuestaoAnaliseSimulado } from "../../utils/analiseSimuladoStudyPro";
 
 type Props = { questoes: QuestaoAnaliseSimulado[]; respostas: Record<string, string | undefined>; nome: string };
@@ -21,8 +21,8 @@ Entregue uma análise detalhada de erros, temas prioritários e plano de revisã
 }
 
 export default function EspelhoSimuladoPdf({questoes, respostas, nome}: Props) {
-  const [copiado, setCopiado] = useState("");
-  const dados = useMemo(() => {
+  const [copiado, setCopiado] = React.useState("");
+  const dados = React.useMemo(() => {
     const ordenadas = [...questoes].sort((a,b) => a.numero-b.numero);
     const materias = new Map<string, { total: number; acertos: number; erros: number; brancos: number; anuladas: number }>();
     let acertos = 0, erros = 0, brancos = 0, anuladas = 0;
