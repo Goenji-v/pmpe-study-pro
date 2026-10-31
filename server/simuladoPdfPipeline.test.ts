@@ -131,3 +131,70 @@ test("pipeline persiste extração antes de começar a resolver", async () => {
   assert.ok(ultimaExtracao >= 0);
   assert.ok(primeiraResolucao > ultimaExtracao);
 });
+
+test("60 questões: falha 503 preserva checkpoint e retomada não refaz questões prontas", async () => {
+  const totalQuestoes = 60;
+  let persistidas: Item[] = [];
+  const resolvidasAntes: number[] = [];
+  const checkpoint = async ({ itens }: { itens: Item[] }) => {
+    persistidas = structuredClone(itens);
+  };
+
+  await assert.rejects(
+    executarPipelineQuestaoAPorQuestao<Item>({
+      totalQuestoes,
+      temExtracao: (item) => item?.extraida === true,
+      estaPronta: (item) => item?.pronta === true,
+      extrair: async (numeros) => numeros.map(itemExtraido),
+      resolver: async (item) => {
+        resolvidasAntes.push(item.numero);
+        if (item.numero === 37) throw Object.assign(new Error("503 temporário"), { status: 503 });
+        return itemPronto(item.numero);
+      },
+      salvar: checkpoint,
+    }),
+    /503 temporário/
+  );
+
+  assert.equal(persistidas.length, 60);
+  assert.equal(persistidas.filter((item) => item.pronta).length, 36);
+  assert.equal(persistidas.find((item) => item.numero === 37)?.pronta, false);
+
+  const retomadas: number[] = [];
+  const resultado = await executarPipelineQuestaoAPorQuestao<Item>({
+    totalQuestoes,
+    estadoAnterior: persistidas,
+    temExtracao: (item) => item?.extraida === true,
+    estaPronta: (item) => item?.pronta === true,
+    extrair: async () => { throw new Error("extração duplicada"); },
+    resolver: async (item) => {
+      retomadas.push(item.numero);
+      return itemPronto(item.numero);
+    },
+    salvar: checkpoint,
+  });
+
+  assert.deepEqual(retomadas, Array.from({length:24}, (_, i)=>i+37));
+  assert.equal(resultado.prontas, 60);
+  assert.equal(resultado.pendentes.length, 0);
+  assert.equal(new Set(resultado.itens.map((item) => item.numero)).size, 60);
+});
+test("checkpoint interrompido em 429 preserva respostas já corrigidas", async () => {
+  let salvo: Item[] = [];
+  await assert.rejects(
+    executarPipelineQuestaoAPorQuestao<Item>({
+      totalQuestoes: 8,
+      estadoAnterior: [itemPronto(1), itemPronto(2)],
+      temExtracao: (item) => item?.extraida === true,
+      estaPronta: (item) => item?.pronta === true,
+      extrair: async (numeros) => numeros.map(itemExtraido),
+      resolver: async (item) => {
+        if (item.numero === 5) throw Object.assign(new Error("limite 429"), { status: 429 });
+        return itemPronto(item.numero);
+      },
+      salvar: async ({ itens }) => { salvo = structuredClone(itens); },
+    }),
+    /429/
+  );
+  assert.deepEqual(salvo.filter(x=>x.pronta).map(x=>x.numero),[1,2,3,4]);
+});
