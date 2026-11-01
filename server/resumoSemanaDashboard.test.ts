@@ -42,3 +42,22 @@ test("sem registros semanais produz números zero e orientações sem inventar d
  assert.equal(resumo.anterior,null);
  assert.ok(resumo.semEstudo.includes("Matemática"));
 });
+
+test("simulados futuros não interferem na comparação de desempenho",()=>{
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[],questoes:[],revisoes:[],simulados:[
+ simulado("2026-11-10T12:00:00",10,0),
+ simulado("2026-10-30T12:00:00",7,3),
+ simulado("2026-10-25T12:00:00",6,4)
+ ]},new Date(2026,9,31,12));
+ assert.equal(resumo.ultimo,70);
+ assert.equal(resumo.anterior,60);
+});
+test("semana que atravessa o ano usa datas corretas",()=>{
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[
+ sessao("virada","2027-01-01T12:00:00","Matemática",50),
+ ],questoes:[],revisoes:[],simulados:[]},new Date(2027,0,1,14));
+ assert.equal(resumo.inicio,"2026-12-28");
+ assert.equal(resumo.fim,"2027-01-03");
+ assert.equal(resumo.totalMinutos,50);
+ assert.equal(resumo.dias,1);
+});
