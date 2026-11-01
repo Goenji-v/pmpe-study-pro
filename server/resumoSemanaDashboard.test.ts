@@ -61,3 +61,16 @@ test("semana que atravessa o ano usa datas corretas",()=>{
  assert.equal(resumo.totalMinutos,50);
  assert.equal(resumo.dias,1);
 });
+
+test("sessões e questões futuras dentro da semana atual não entram no resumo",()=>{
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[
+ sessao("ontem","2026-10-30T12:00:00","Português",40),
+ sessao("amanha","2026-11-01T12:00:00","Português",180),
+ ],questoes:[
+ registro("2026-10-30T12:00:00",8,2),
+ registro("2026-11-01T12:00:00",30,0),
+ ],revisoes:[],simulados:[]},new Date(2026,9,31,12));
+ assert.equal(resumo.totalMinutos,40);
+ assert.equal(resumo.feitas,10);
+ assert.equal(resumo.dias,1);
+});
