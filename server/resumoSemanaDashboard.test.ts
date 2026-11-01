@@ -74,3 +74,24 @@ test("sessões e questões futuras dentro da semana atual não entram no resumo"
  assert.equal(resumo.feitas,10);
  assert.equal(resumo.dias,1);
 });
+
+test("revisões concluídas não contam como atraso e prioridades respeitam ordem",()=>{
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[],questoes:[],revisoes:[
+  revisao("2026-10-20T12:00:00",true),
+  revisao("2026-10-21T12:00:00",false)
+ ],simulados:[]},new Date(2026,9,31,12));
+ assert.equal(resumo.atrasadas,1);
+ assert.equal(resumo.prioridades[0].rota,"/revisoes");
+ assert.ok(resumo.prioridades.length<=3);
+});
+test("registros com números não finitos não contaminam os totais semanais",()=>{
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[
+ sessao("ok","2026-10-30T12:00:00","Português",20),
+ sessao("invalido","2026-10-30T13:00:00","Português",Number.NaN)
+ ],questoes:[
+ registro("2026-10-30T12:00:00",4,1),
+ registro("2026-10-30T13:00:00",Number.NaN,Number.POSITIVE_INFINITY)
+ ],revisoes:[],simulados:[]},new Date(2026,9,31,12));
+ assert.equal(resumo.totalMinutos,20);
+ assert.equal(resumo.feitas,5);
+});
