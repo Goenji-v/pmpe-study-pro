@@ -16,9 +16,9 @@ export function gerarResumoSemanal(p:Omit<Props,"irPara">, hoje=new Date()){
  for(const s of sessoes){const m=s.materia?.trim();if(m){const x=porMateria.get(m)??new Set<string>();x.add(diaLocal(s.data));porMateria.set(m,x);}}
  const atrasadas=p.revisoes.filter(r=>!r.concluida&&new Date(r.dataPrevista)<inicioDoDia(hoje)).length;
  const limite=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()-7);
- const semEstudo=p.materias.filter(m=>!p.sessoes.some(s=>(s.materiaId===m.id||s.materia===m.nome)&&new Date(s.data)>=limite)).map(m=>m.nome).slice(0,4);
- const provas=[...p.simulados].sort((a,b)=>new Date(b.data).getTime()-new Date(a.data).getTime());
- const taxa=(s:Simulado)=>{const n=s.certas+s.erradas;return n?Math.round(100*s.certas/n):null;};
+ const semEstudo=p.materias.filter(m=>!p.sessoes.some(s=>(s.materiaId===m.id||s.materia===m.nome)&&new Date(s.data)>=limite&&new Date(s.data)<=hoje)).map(m=>m.nome).slice(0,4);
+ const provas=p.simulados.filter(s=>{const d=new Date(s.data);return !Number.isNaN(d.getTime())&&d<=hoje;}).sort((a,b)=>new Date(b.data).getTime()-new Date(a.data).getTime());
+ const taxa=(s:Simulado)=>{const certas=Math.max(0,s.certas||0),erradas=Math.max(0,s.erradas||0);const n=certas+erradas;return n?Math.round(100*certas/n):null;};
  const ultimo=provas[0]?taxa(provas[0]):null, anterior=provas[1]?taxa(provas[1]):null;
  const prioridades:{texto:string;rota:string}[]=[];
  if(atrasadas)prioridades.push({texto:`Resolver ${atrasadas} revisão(ões) atrasada(s)`,rota:"/revisoes"});
