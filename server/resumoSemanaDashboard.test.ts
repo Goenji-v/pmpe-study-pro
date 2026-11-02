@@ -95,3 +95,14 @@ test("registros com números não finitos não contaminam os totais semanais",()
  assert.equal(resumo.totalMinutos,20);
  assert.equal(resumo.feitas,5);
 });
+
+test("na segunda-feira usa a meta acumulada de um dia, não os sete dias da semana",()=>{
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[
+ sessao("segunda","2026-11-02T10:00:00","Português",60)
+ ],questoes:[registro("2026-11-02T10:00:00",15,5)],revisoes:[],simulados:[]},new Date(2026,10,2,15));
+ assert.equal(resumo.metaAteHojeMinutos,60);
+ assert.equal(resumo.metaAteHojeQuestoes,20);
+ assert.equal(resumo.metaMinutos,420);
+ assert.ok(!resumo.prioridades.some(x=>x.texto.includes("meta de estudo")));
+ assert.ok(!resumo.prioridades.some(x=>x.texto.includes("meta de questões")));
+});
