@@ -20,21 +20,24 @@ export function gerarResumoSemanal(p:Omit<Props,"irPara">, hoje=new Date()){
  const provas=p.simulados.filter(s=>{const d=new Date(s.data);return !Number.isNaN(d.getTime())&&d<=hoje;}).sort((a,b)=>new Date(b.data).getTime()-new Date(a.data).getTime());
  const taxa=(s:Simulado)=>{const certas=Math.max(0,s.certas||0),erradas=Math.max(0,s.erradas||0);const n=certas+erradas;return n?Math.round(100*certas/n):null;};
  const ultimo=provas[0]?taxa(provas[0]):null, anterior=provas[1]?taxa(provas[1]):null;
+ const diasDecorridos=Math.max(1,Math.min(7,Math.floor((inicioDoDia(hoje).getTime()-inicio.getTime())/86400000)+1));
+ const metaAteHojeMinutos=diasDecorridos*Math.max(0,p.configuracoes.metaMinutosDiaria||0);
+ const metaAteHojeQuestoes=diasDecorridos*Math.max(0,p.configuracoes.metaQuestoesDiaria||0);
  const prioridades:{texto:string;rota:string}[]=[];
  if(atrasadas)prioridades.push({texto:`Resolver ${atrasadas} revisão(ões) atrasada(s)`,rota:"/revisoes"});
  if(semEstudo.length)prioridades.push({texto:`Retomar ${semEstudo[0]} (7 dias sem estudo)`,rota:"/materias"});
- if(totalMinutos<7*p.configuracoes.metaMinutosDiaria)prioridades.push({texto:"Reservar um bloco para a meta de estudo",rota:"/central-estudos"});
- if(feitas<7*p.configuracoes.metaQuestoesDiaria)prioridades.push({texto:"Resolver questões para aproximar-se da meta",rota:"/questoes"});
+ if(metaAteHojeMinutos>0&&totalMinutos<metaAteHojeMinutos)prioridades.push({texto:"Reservar um bloco para a meta de estudo",rota:"/central-estudos"});
+ if(metaAteHojeQuestoes>0&&feitas<metaAteHojeQuestoes)prioridades.push({texto:"Resolver questões para aproximar-se da meta",rota:"/questoes"});
  prioridades.push({texto:"Manter a próxima missão do plano",rota:"/plano"});
- return {inicio:diaLocal(inicio),fim:diaLocal(new Date(fim.getTime()-86400000)),totalMinutos,metaMinutos:7*p.configuracoes.metaMinutosDiaria,feitas,metaQuestoes:7*p.configuracoes.metaQuestoesDiaria,dias:dias.size,porMateria:[...porMateria].map(([nome,set])=>({nome,dias:set.size})),atrasadas,semEstudo,ultimo,anterior,prioridades:prioridades.slice(0,3)};
+ return {inicio:diaLocal(inicio),fim:diaLocal(new Date(fim.getTime()-86400000)),totalMinutos,metaMinutos:7*p.configuracoes.metaMinutosDiaria,metaAteHojeMinutos,feitas,metaQuestoes:7*p.configuracoes.metaQuestoesDiaria,metaAteHojeQuestoes,dias:dias.size,porMateria:[...porMateria].map(([nome,set])=>({nome,dias:set.size})),atrasadas,semEstudo,ultimo,anterior,prioridades:prioridades.slice(0,3)};
 }
 function inicioDoDia(d:Date){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
 export default function ResumoSemanaDashboard({irPara,...dados}:Props){
  const r=React.useMemo(()=>gerarResumoSemanal(dados),[dados.materias,dados.questoes,dados.sessoes,dados.revisoes,dados.simulados,dados.configuracoes]);
  return <section aria-label="Resumo da semana" style={{padding:"18px",border:"1px solid var(--border-color, #9995)",borderRadius:16,margin:"16px 0"}}>
  <h2>Resumo da semana</h2><p>{r.inicio} a {r.fim} · calculado localmente, sem IA</p>
- <p><strong>Estudo:</strong> {Math.round(r.totalMinutos/60*10)/10}h / {Math.round(r.metaMinutos/60*10)/10}h planejadas</p>
- <p><strong>Questões:</strong> {r.feitas} / {r.metaQuestoes} planejadas · <strong>Dias estudados:</strong> {r.dias}/7</p>
+ <p><strong>Estudo:</strong> {Math.round(r.totalMinutos/60*10)/10}h / {Math.round(r.metaMinutos/60*10)/10}h planejadas (até hoje: {Math.round(r.metaAteHojeMinutos/60*10)/10}h)</p>
+ <p><strong>Questões:</strong> {r.feitas} / {r.metaQuestoes} planejadas (até hoje: {r.metaAteHojeQuestoes}) · <strong>Dias estudados:</strong> {r.dias}/7</p>
  <p><strong>Revisões atrasadas:</strong> {r.atrasadas} · <strong>Sem estudo há 7 dias:</strong> {r.semEstudo.length?r.semEstudo.join(", "):"Nenhuma identificada"}</p>
  <p><strong>Último simulado:</strong> {r.ultimo===null?"Sem resultado":`${r.ultimo}%`}{r.anterior===null?"":` · anterior: ${r.anterior}%`}</p>
  <h3>Dias estudados por matéria</h3><p>{r.porMateria.length?r.porMateria.map(x=>`${x.nome}: ${x.dias} dia(s)`).join(" · "):"Ainda sem sessões nesta semana."}</p>
