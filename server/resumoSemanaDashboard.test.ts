@@ -25,7 +25,7 @@ test("resumo semanal considera segunda a domingo, evita dias duplicados e não m
  assert.equal(resumo.fim,"2026-11-01");
  assert.equal(resumo.totalMinutos,150); // 90 min de sessões + 60 min de simulado manual
  assert.equal(resumo.feitas,10);
- assert.equal(resumo.dias,2);
+ assert.equal(resumo.dias,3); // segunda, quarta e quinta (simulado manual)
  assert.equal(resumo.porMateria.find(x=>x.nome==="Português")?.dias,2);
  assert.equal(resumo.atrasadas,1);
  assert.equal(resumo.ultimo,80);
