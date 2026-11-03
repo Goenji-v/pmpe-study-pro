@@ -114,3 +114,12 @@ test("simulado manual de 124 minutos conta como estudo sem criar sessão",()=>{
  assert.equal(r.dias,1);
  assert.equal(r.totalMinutos,124);
 });
+
+test("não soma duas vezes o tempo quando o simulado já tem sessão correspondente",()=>{
+ const dia="2026-10-31T15:00:00";
+ const sessaoSimulado={...sessao("sim-1",dia,"Geral",124),tipo:"simulado" as const};
+ const prova={...simulado(dia,35,25),minutos:124,tentativaId:"sim-1"};
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[sessaoSimulado],questoes:[],revisoes:[],simulados:[prova]},new Date(2026,9,31,18));
+ assert.equal(resumo.totalMinutos,124);
+ assert.equal(resumo.dias,1);
+});
