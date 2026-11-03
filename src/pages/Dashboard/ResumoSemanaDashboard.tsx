@@ -11,7 +11,7 @@ export function gerarResumoSemanal(p:Omit<Props,"irPara">, hoje=new Date()){
  const questoes=p.questoes.filter(q=>pertence(q.data));
  const totalMinutos=sessoes.reduce((n,s)=>n+(Number.isFinite(s.minutos)?Math.max(0,s.minutos):0),0);
  const feitas=questoes.reduce((n,q)=>n+(Number.isFinite(q.certas)?Math.max(0,q.certas):0)+(Number.isFinite(q.erradas)?Math.max(0,q.erradas):0),0);
- const dias=new Set(sessoes.map(s=>diaLocal(s.data)));
+ const dias=new Set([...sessoes.map(s=>diaLocal(s.data)),...p.simulados.filter(s=>pertence(s.data)).map(s=>diaLocal(s.data))]);
  const porMateria=new Map<string,Set<string>>();
  for(const s of sessoes){const m=s.materia?.trim();if(m){const x=porMateria.get(m)??new Set<string>();x.add(diaLocal(s.data));porMateria.set(m,x);}}
  const atrasadas=p.revisoes.filter(r=>!r.concluida&&new Date(r.dataPrevista)<inicioDoDia(hoje)).length;
