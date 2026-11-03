@@ -9,7 +9,9 @@ export function gerarResumoSemanal(p:Omit<Props,"irPara">, hoje=new Date()){
  const pertence=(valor:string)=>{const d=new Date(valor);return !Number.isNaN(d.getTime())&&d>=inicio&&d<fim&&d<=hoje;};
  const sessoes=p.sessoes.filter(s=>pertence(s.data));
  const questoes=p.questoes.filter(q=>pertence(q.data));
- const totalMinutos=sessoes.reduce((n,s)=>n+(Number.isFinite(s.minutos)?Math.max(0,s.minutos):0),0);
+ const minutosSessoes=sessoes.reduce((n,s)=>n+(Number.isFinite(s.minutos)?Math.max(0,s.minutos):0),0);
+ const minutosSimulados=p.simulados.filter(sim=>pertence(sim.data)&&!sessoes.some(sessao=>sessao.tipo==="simulado" && ((Boolean(sim.tentativaId)&&sessao.id===sim.tentativaId)||(diaLocal(sessao.data)===diaLocal(sim.data)&&sessao.minutos===sim.minutos)))).reduce((n,s)=>n+(Number.isFinite(s.minutos)?Math.max(0,s.minutos):0),0);
+ const totalMinutos=minutosSessoes+minutosSimulados;
  const feitas=questoes.reduce((n,q)=>n+(Number.isFinite(q.certas)?Math.max(0,q.certas):0)+(Number.isFinite(q.erradas)?Math.max(0,q.erradas):0),0);
  const dias=new Set([...sessoes.map(s=>diaLocal(s.data)),...p.simulados.filter(s=>pertence(s.data)).map(s=>diaLocal(s.data))]);
  const porMateria=new Map<string,Set<string>>();
