@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gerarResumoSemanal } from "../src/pages/Dashboard/ResumoSemanaDashboard.tsx";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ResumoSemanaDashboard, { gerarResumoSemanal } from "../src/pages/Dashboard/ResumoSemanaDashboard.tsx";
 import type { ConfiguracoesApp, Materia, RegistroQuestao, Revisao, SessaoEstudo, Simulado } from "../src/types/index.ts";
 
 const config = {metaMinutosDiaria:60,metaQuestoesDiaria:20} as ConfiguracoesApp;
@@ -136,4 +138,17 @@ test("simulado de PDF não duplica questões já registradas",()=>{
  const questao={...registro("2026-10-31T16:00:00",35,25),tentativaId:"tentativa"};
  const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[],questoes:[questao],revisoes:[],simulados:[prova]},new Date(2026,9,31,18));
  assert.equal(resumo.feitas,60);
+});
+
+test("Dashboard renderiza 124 minutos e 60 questões de simulado manual",()=>{
+ const agora=new Date();
+ const data=new Date(agora.getTime()-60000).toISOString();
+ const prova={...simulado(data,35,25),minutos:124};
+ const html=renderToStaticMarkup(React.createElement(ResumoSemanaDashboard,{
+   materias, configuracoes:config, sessoes:[], questoes:[], revisoes:[], simulados:[prova],irPara:()=>{}
+ }));
+ assert.match(html,/Resumo da semana/);
+ assert.match(html,/2\.1h/);
+ assert.match(html,/Questões:<\/strong> 60/);
+ assert.match(html,/Dias estudados:<\/strong> 1\/7/);
 });
