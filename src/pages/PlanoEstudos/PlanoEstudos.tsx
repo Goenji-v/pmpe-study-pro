@@ -33,6 +33,7 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getSemanaAtual,
+  getProximaMissao,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
 } from "../../utils/planoUtils";
@@ -252,6 +253,9 @@ export default function PlanoEstudos() {
   const dia = semana?.dias.find(
     (item) => item.numero === diaSelecionado
   );
+  const proximaPendente = getProximaMissao(concluidas, planoCalendario);
+  const diaSemMissaoPendente = diaSelecionado !== 7 && Boolean(dia) &&
+    dia!.missoes.every((missao) => concluidas.includes(missao.id));
 
   const missaoRedacaoDomingo = dia?.missoes.find(
     (missao) => missao.tipo === "redacao"
@@ -715,6 +719,18 @@ export default function PlanoEstudos() {
               concluídas
             </span>
           </div>
+
+          {diaSemMissaoPendente && proximaPendente && (
+            <div className="plano-resumo-semana" role="status">
+              <p>Não há missão pendente neste dia. Seu plano continua: há uma atividade disponível em outra semana ou dia.</p>
+              <button type="button" onClick={() => {
+                setSemanaSelecionada(proximaPendente.semana);
+                setDiaSelecionado(proximaPendente.dia);
+              }}>
+                Ir para próxima missão pendente
+              </button>
+            </div>
+          )}
 
           {(missaoRedacaoDomingo || missaoSimuladoDomingo) && (
             <div className="plano-rotina-dia plano-rotina-domingo">
