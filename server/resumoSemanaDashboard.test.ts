@@ -106,3 +106,11 @@ test("na segunda-feira usa a meta acumulada de um dia, não os sete dias da sema
  assert.ok(!resumo.prioridades.some(x=>x.texto.includes("meta de estudo")));
  assert.ok(!resumo.prioridades.some(x=>x.texto.includes("meta de questões")));
 });
+
+test("simulado manual de 124 minutos conta como estudo sem criar sessão",()=>{
+ const r=gerarResumoSemanal({materias,configuracoes:config,sessoes:[],questoes:[],revisoes:[],simulados:[
+ {...simulado("2026-10-31T15:00:00",35,25),minutos:124}
+ ]},new Date(2026,9,31,18));
+ assert.equal(r.dias,1);
+ assert.equal(r.totalMinutos,124);
+});
