@@ -21,6 +21,7 @@ import {
   selecionarPontosDeAtencao,
 } from "../../utils/desempenhoMaterias";
 import DesempenhoGeralCards from "./DesempenhoGeralCards";
+import ResumoSemanaDashboard from "./ResumoSemanaDashboard";
 import "./DashboardLegibilidade.css";
 import {
   listarAssuntosDaMateria,
@@ -504,6 +505,7 @@ function iniciarProximaAulaPortugues() {
         </div>
       </header>
 
+      <ResumoSemanaDashboard materias={materias} questoes={questoes} sessoes={sessoes} revisoes={revisoes} simulados={simulados} configuracoes={configuracoes} irPara={navigate} />
       <section className="dashboard-pro-hero">
         <article className="dashboard-pro-mission">
           <span className="dashboard-pro-kicker">◎ MISSÃO DE HOJE</span>
