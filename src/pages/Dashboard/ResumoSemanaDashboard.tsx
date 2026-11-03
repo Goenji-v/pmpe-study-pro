@@ -12,7 +12,13 @@ export function gerarResumoSemanal(p:Omit<Props,"irPara">, hoje=new Date()){
  const minutosSessoes=sessoes.reduce((n,s)=>n+(Number.isFinite(s.minutos)?Math.max(0,s.minutos):0),0);
  const minutosSimulados=p.simulados.filter(sim=>pertence(sim.data)&&!sessoes.some(sessao=>sessao.tipo==="simulado" && ((Boolean(sim.tentativaId)&&sessao.id===sim.tentativaId)||(diaLocal(sessao.data)===diaLocal(sim.data)&&sessao.minutos===sim.minutos)))).reduce((n,s)=>n+(Number.isFinite(s.minutos)?Math.max(0,s.minutos):0),0);
  const totalMinutos=minutosSessoes+minutosSimulados;
- const feitas=questoes.reduce((n,q)=>n+(Number.isFinite(q.certas)?Math.max(0,q.certas):0)+(Number.isFinite(q.erradas)?Math.max(0,q.erradas):0),0);
+ const questoesRegistradas=questoes.reduce((n,q)=>n+(Number.isFinite(q.certas)?Math.max(0,q.certas):0)+(Number.isFinite(q.erradas)?Math.max(0,q.erradas):0),0);
+ // Cadastro manual de simulado registra acertos e erros, mas não cria RegistroQuestao.
+ // Só somar simulados manuais; os processados por IA/PDF seguem suas próprias trilhas.
+ const questoesDosSimulados=p.simulados.filter(sim=>pertence(sim.data)&&(sim.origem==="manual"||(!sim.origem&&!sim.tentativaId&&!sim.id.startsWith("pdf-"))))
+   .filter(sim=>!questoes.some(q=>Boolean(sim.tentativaId)&&q.tentativaId===sim.tentativaId))
+   .reduce((n,sim)=>n+(Number.isFinite(sim.certas)?Math.max(0,sim.certas):0)+(Number.isFinite(sim.erradas)?Math.max(0,sim.erradas):0),0);
+ const feitas=questoesRegistradas+questoesDosSimulados;
  const dias=new Set([...sessoes.map(s=>diaLocal(s.data)),...p.simulados.filter(s=>pertence(s.data)).map(s=>diaLocal(s.data))]);
  const porMateria=new Map<string,Set<string>>();
  for(const s of sessoes){const m=s.materia?.trim();if(m){const x=porMateria.get(m)??new Set<string>();x.add(diaLocal(s.data));porMateria.set(m,x);}}
