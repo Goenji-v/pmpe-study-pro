@@ -24,7 +24,7 @@ test("resumo semanal considera segunda a domingo, evita dias duplicados e não m
  assert.equal(resumo.inicio,"2026-10-26");
  assert.equal(resumo.fim,"2026-11-01");
  assert.equal(resumo.totalMinutos,150); // 90 min de sessões + 60 min de simulado manual
- assert.equal(resumo.feitas,10);
+ assert.equal(resumo.feitas,20); // 10 questões registradas + 10 do simulado manual
  assert.equal(resumo.dias,3); // segunda, quarta e quinta (simulado manual)
  assert.equal(resumo.porMateria.find(x=>x.nome==="Português")?.dias,2);
  assert.equal(resumo.atrasadas,1);
@@ -122,4 +122,18 @@ test("não soma duas vezes o tempo quando o simulado já tem sessão corresponde
  const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[sessaoSimulado],questoes:[],revisoes:[],simulados:[prova]},new Date(2026,9,31,18));
  assert.equal(resumo.totalMinutos,124);
  assert.equal(resumo.dias,1);
+});
+
+test("simulado cadastrado manualmente conta questões e minutos sem sessões",()=>{
+ const prova={...simulado("2026-10-31T15:00:00",35,25),minutos:124};
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[],questoes:[],revisoes:[],simulados:[prova]},new Date(2026,9,31,18));
+ assert.equal(resumo.feitas,60);
+ assert.equal(resumo.totalMinutos,124);
+ assert.equal(resumo.dias,1);
+});
+test("simulado de PDF não duplica questões já registradas",()=>{
+ const prova={...simulado("2026-10-31T15:00:00",35,25),id:"pdf-id",tentativaId:"tentativa",origem:"ia" as const};
+ const questao={...registro("2026-10-31T16:00:00",35,25),tentativaId:"tentativa"};
+ const resumo=gerarResumoSemanal({materias,configuracoes:config,sessoes:[],questoes:[questao],revisoes:[],simulados:[prova]},new Date(2026,9,31,18));
+ assert.equal(resumo.feitas,60);
 });
