@@ -7,6 +7,8 @@ import {
   getProximaMissao,
   getSemanaAtual,
   listarPendenciasAteSemana,
+  listarPendenciasAnterioresAoDia,
+  obterDataReferenciaPlano,
   semanaPorDataInicio,
 } from "../src/utils/planoUtils";
 
@@ -51,4 +53,36 @@ test("régua extra e revisões separadas não aparecem no plano",()=>{
   const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
   assert.doesNotMatch(pagina,/reajuste-visual-individual|Aplicar régua nesta conta|Fila separada de revisões/);
   assert.match(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
+});
+
+test("data de começo do plano prevalece sobre primeiro estudo e não é alterada",()=>{
+ const sessoes=[{data:"2026-07-29T15:57:39.868Z"}];
+ assert.deepEqual(obterDataReferenciaPlano("2026-07-28",sessoes),{data:"2026-07-28",estimada:false});
+ assert.deepEqual(obterDataReferenciaPlano(undefined,sessoes),{data:"2026-07-29",estimada:true});
+ assert.deepEqual(obterDataReferenciaPlano(undefined,[]),{data:undefined,estimada:false});
+ assert.equal(semanaPorDataInicio("2026-07-29",new Date(2026,10,3,12)),15);
+});
+test("terça cria missão nova; segunda ausente fica atrasada sem deslocar quarta",()=>{
+ const plano:SemanaPlano[]=[{numero:1,nome:"Semana 1",dias:[
+ {numero:1,missoes:[{id:"seg",numero:1,materia:"Português",assunto:"Crase",tipo:"conteudo"}]},
+ {numero:2,missoes:[{id:"ter",numero:1,materia:"RLM",assunto:"Conectivos",tipo:"conteudo"}]},
+ {numero:3,missoes:[{id:"qua",numero:1,materia:"História",assunto:"República",tipo:"conteudo"}]},
+ ]}];
+ const atrasadas=listarPendenciasAnterioresAoDia([],plano,1,2);
+ assert.deepEqual(atrasadas.map(x=>x.missao.id),["seg"]);
+ assert.equal(plano[0].dias[1].missoes[0].id,"ter");
+ assert.equal(plano[0].dias[2].missoes[0].id,"qua");
+ assert.deepEqual(listarPendenciasAnterioresAoDia(["seg"],plano,1,2),[]);
+});
+test("domingo atrasado aparece na fila, mas não substitui nova missão da terça",()=>{
+ const plano:SemanaPlano[]=[{numero:1,nome:"Semana 1",dias:[{numero:7,missoes:[
+ {id:"domingo",numero:1,materia:"Simulado",assunto:"Simulado semanal",tipo:"simulado"}
+ ]}]},{numero:2,nome:"Semana 2",dias:[{numero:1,missoes:[
+ {id:"segunda",numero:1,materia:"Português",assunto:"Verbos",tipo:"conteudo"}
+ ]},{numero:2,missoes:[
+ {id:"terca",numero:1,materia:"Informática",assunto:"Windows",tipo:"conteudo"}
+ ]}]}];
+ const atrasadas=listarPendenciasAnterioresAoDia([],plano,2,2);
+ assert.deepEqual(atrasadas.map(x=>x.missao.id),["domingo","segunda"]);
+ assert.equal(plano[1].dias[1].missoes[0].id,"terca");
 });
