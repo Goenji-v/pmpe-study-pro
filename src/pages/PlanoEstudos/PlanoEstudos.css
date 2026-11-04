@@ -467,3 +467,36 @@
  .plano-retomada-item button,.plano-retomada-missao button { width:100%; }
  .plano-retomada-tabs button { flex:1; }
 }
+
+
+/* Visão diária e calendário compacto (prévia). */
+.plano-painel-diario { display:grid; grid-template-columns:minmax(0, 1fr) minmax(340px,1.2fr); gap:14px; }
+.plano-painel-indicadores { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.plano-painel-indicadores > div { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:12px 8px; border:1px solid #334155; border-radius:12px; background:#17263b; text-align:center; }
+.plano-painel-indicadores small { color:#aabbd3; font-size:12px; line-height:1.3; }
+.plano-painel-indicadores strong { color:#f8fafc; font-size:24px; }
+.plano-painel-semana { padding:14px; border-radius:12px; background:#17263b; border:1px solid #334155; }
+.plano-painel-semana h3 { margin:0 0 13px; color:#f8fafc; font-size:15px; }
+.plano-painel-dias { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.plano-painel-dia { display:grid; justify-items:center; align-content:center; gap:5px; min-width:0; min-height:62px; padding:7px 3px; border:1px solid #41536b; border-radius:9px; background:#1e293b; color:#cbd5e1; cursor:pointer; }
+.plano-painel-dia span { font-size:11px; }
+.plano-painel-dia strong { font-size:19px; line-height:1; }
+.plano-painel-dia.feito { border-color:#15803d; background:#113b2e; color:#bbf7d0; }
+.plano-painel-dia.atrasado { border-color:#b45309; background:#3b2a19; color:#fde68a; }
+.plano-painel-dia.hoje { border:2px solid #60a5fa; background:#1d4ed8; color:#fff; }
+.plano-painel-dia:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
+.plano-painel-legenda { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
+.plano-painel-legenda > span { display:inline-flex; align-items:center; gap:5px; color:#cbd5e1; font-size:11px; }
+.plano-painel-legenda i { display:inline-block; width:9px; height:9px; border-radius:50%; background:#64748b; }
+.plano-painel-legenda i.feito { background:#22c55e; }
+.plano-painel-legenda i.atrasado { background:#f59e0b; }
+.plano-painel-legenda i.hoje { background:#60a5fa; }
+.plano-painel-checklist { padding:17px; border:1px solid #32445c; border-radius:13px; background:#17263b; }
+.plano-painel-barra { height:8px; background:#334155; border-radius:12px; overflow:hidden; margin:13px 0; }
+.plano-painel-barra span { display:block; height:100%; background:#22c55e; transition:width .2s ease; }
+.plano-painel-tarefas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.plano-painel-tarefas label { display:flex; align-items:center; gap:10px; padding:10px; background:#101d31; border:1px solid #334155; border-radius:9px; color:#e2e8f0; font-size:13px; cursor:pointer; }
+.plano-painel-tarefas input { width:17px; height:17px; flex:none; accent-color:#22c55e; }
+.plano-painel-aviso { display:block; margin-top:12px; color:#93a6c4; font-size:12px; }
+@media(max-width:1050px) { .plano-painel-diario { grid-template-columns:1fr; } }
+@media(max-width:600px) { .plano-painel-indicadores strong { font-size:19px; } .plano-painel-indicadores small { font-size:10px; } .plano-painel-semana { padding:10px; } .plano-painel-dia { min-height:55px; } .plano-painel-tarefas { grid-template-columns:1fr; } }
