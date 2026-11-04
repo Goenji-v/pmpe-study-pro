@@ -7,6 +7,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import "./MissaoDoDia.css";
+import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
 
 import {
   getSemanaAtual,
@@ -32,8 +33,11 @@ export default function MissaoDoDia({
   } = useApp();
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () => aplicarDiasAtividadesSemanais(
+      criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
+      { diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom", diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom" }
+    ),
+    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana, configuracoes.diaRedacaoSemanal, configuracoes.diaSimuladoSemanal]
   );
 
   const dataInicio = useMemo(() => obterDataReferenciaPlano(configuracoes.dataInicioPlano, sessoes).data, [configuracoes.dataInicioPlano, sessoes]);
@@ -48,6 +52,7 @@ export default function MissaoDoDia({
   );
 
   const diaAtual = obterDiaAtualPlano();
+  const diaProgramado = planoCalendario.find(s => s.numero === semanaAtual)?.dias.find(d => d.numero === diaAtual);
   const proxima = useMemo(() => {
     const missao = planoCalendario.find(s => s.numero === semanaAtual)
       ?.dias.find(d => d.numero === diaAtual)
@@ -135,7 +140,7 @@ export default function MissaoDoDia({
             MISSÃO DO DIA
           </span>
 
-          <h2>{planoCalendario.length ? "Missões de hoje concluídas ou não cadastradas" : "Nenhum plano configurado"}</h2>
+          <h2>{!planoCalendario.length ? "Nenhum plano configurado" : diaProgramado?.missoes.length ? "Missões de hoje concluídas" : "Não há missão programada para hoje"}</h2>
 
           <p>
             {planoCalendario.length ? `Semana ${semanaAtual}, ${NOMES_DIAS_PLANO[diaAtual]}. ${atrasadas.length} atividade(s) atrasada(s) continuam disponíveis no Plano de Estudos.` : "Importe seu edital para montar suas missões."}
@@ -214,7 +219,7 @@ export default function MissaoDoDia({
             navigate("/plano")
           }
         >
-          Ver plano
+          {atrasadas.length ? `Ver ${atrasadas.length} atividade(s) atrasada(s)` : "Ver plano"}
         </button>
 
         <button
