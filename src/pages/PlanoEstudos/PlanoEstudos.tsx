@@ -79,6 +79,7 @@ export default function PlanoEstudos() {
 
   const [filtroPendencias, setFiltroPendencias] = useState<"materias" | "revisoes" | "extras">("materias");
   const [mostrarTodasPendencias, setMostrarTodasPendencias] = useState(false);
+  const [checklistLocal, setChecklistLocal] = useState<Record<string, boolean[]>>({});
   const [temaRedacao, setTemaRedacao] = useState("");
   const [minutosRedacao, setMinutosRedacao] = useState("");
   const [notaRedacao, setNotaRedacao] = useState("");
@@ -253,6 +254,23 @@ export default function PlanoEstudos() {
     ?.dias.find((item) => item.numero === diaDeHoje)?.missoes ?? [];
   const missaoAtualConcluida = missoesDeHoje.length > 0 &&
     missoesDeHoje.every((missao) => concluidas.includes(missao.id));
+  const primeiraMissaoPendenteHoje = missoesDeHoje.find((missao) => !concluidas.includes(missao.id));
+  const etapasMissao = primeiraMissaoPendenteHoje?.tipo === "redacao"
+    ? ["Preparar o repertório", "Escrever a redação", "Revisar o texto", "Registrar a redação na missão"]
+    : primeiraMissaoPendenteHoje?.tipo === "simulado"
+      ? ["Preparar o simulado", "Responder às questões", "Conferir o gabarito", "Registrar o resultado na missão"]
+      : ["Estudar a aula ou material", "Fazer anotações", "Resolver questões", "Revisar os erros"];
+  const checklistMarcado = primeiraMissaoPendenteHoje
+    ? (checklistLocal[primeiraMissaoPendenteHoje.id] ?? [])
+    : [];
+  const checklistFeitas = etapasMissao.filter((_, indice) => checklistMarcado[indice]).length;
+  const diasDaSemanaAtual = planoCalendario.find((item) => item.numero === semanaInicial)?.dias ?? [];
+  const situacaoDia = (numero: number) => {
+    const tarefas = diasDaSemanaAtual.find((item) => item.numero === numero)?.missoes ?? [];
+    if (tarefas.length === 0) return "sem-missao";
+    if (tarefas.every((missao) => concluidas.includes(missao.id))) return "feito";
+    return numero < diaDeHoje ? "atrasado" : numero === diaDeHoje ? "hoje" : "futuro";
+  };
   const pendenciasMaterias = pendenciasAnteriores.filter(({ missao }) =>
     missao.tipo !== "revisao" && missao.tipo !== "redacao" && missao.tipo !== "simulado" &&
     !/revis[aã]o\s+(dos\s+)?erros|^revis[aã]o\b/i.test(missao.materia + " " + missao.assunto)
@@ -599,6 +617,43 @@ export default function PlanoEstudos() {
         {!referenciaPlano.data && (
           <p className="plano-retomada-origem">Defina a data de início do plano para fixar sua semana.</p>
         )}
+        <div className="plano-painel-diario" aria-label="Visão geral do dia">
+          <div className="plano-painel-indicadores">
+            <div><small>Missões de hoje</small><strong>{missoesDeHoje.filter((missao) => concluidas.includes(missao.id)).length}/{missoesDeHoje.length}</strong></div>
+            <div><small>Meta diária</small><strong>{configuracoes.metaMinutosDiaria ?? 120} min</strong></div>
+            <div><small>Atividades atrasadas</small><strong>{pendenciasAnteriores.length}</strong></div>
+          </div>
+          <div className="plano-painel-semana">
+            <h3>Calendário da semana {semanaInicial}</h3>
+            <div className="plano-painel-dias">
+              {[1,2,3,4,5,6,7].map((numero) => {
+                const situacao = situacaoDia(numero);
+                const legendas: Record<string,string> = {
+                  feito: "Concluído", atrasado: "Atrasado", hoje: "Hoje",
+                  futuro: "Programado", "sem-missao": "Sem missão",
+                };
+                return (
+                  <button key={numero} type="button" className={`plano-painel-dia ${situacao}`}
+                    title={`${NOMES_DIAS_PLANO[numero]} — ${legendas[situacao]}`}
+                    aria-label={`${NOMES_DIAS_PLANO[numero]}: ${legendas[situacao]}`}
+                    onClick={() => {
+                      setSemanaSelecionada(semanaInicial);
+                      setDiaSelecionado(numero);
+                    }}>
+                    <span>{NOMES_DIAS_PLANO[numero].slice(0,3)}</span>
+                    <strong>{situacao === "feito" ? "✓" : situacao === "atrasado" ? "!" : situacao === "hoje" ? "●" : "·"}</strong>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="plano-painel-legenda">
+              <span><i className="feito"/> Concluído</span>
+              <span><i className="atrasado"/> Atrasado</span>
+              <span><i className="hoje"/> Hoje</span>
+              <span><i className="futuro"/> Futuro</span>
+            </div>
+          </div>
+        </div>
         <div className="plano-retomada-hoje">
           <div className="plano-retomada-section-title">
             <h3>Missão de hoje</h3>
@@ -620,6 +675,38 @@ export default function PlanoEstudos() {
             </div>
           )) : <p className="plano-retomada-vazio">Não há nova missão programada para este dia. Consulte as pendências sem alterar o calendário.</p>}
         </div>
+        {primeiraMissaoPendenteHoje && (
+          <div className="plano-painel-checklist" aria-label="Checklist auxiliar da missão">
+            <div className="plano-retomada-section-title">
+              <div>
+                <h3>Checklist da missão</h3>
+                <p>{primeiraMissaoPendenteHoje.materia} · {primeiraMissaoPendenteHoje.assunto}</p>
+              </div>
+              <span className="plano-retomada-status">{checklistFeitas}/4 etapas</span>
+            </div>
+            <div className="plano-painel-barra" role="progressbar" aria-label="Etapas do checklist marcadas" aria-valuenow={checklistFeitas} aria-valuemin={0} aria-valuemax={4}>
+              <span style={{width: `${checklistFeitas * 25}%`}}/>
+            </div>
+            <div className="plano-painel-tarefas">
+              {etapasMissao.map((etapa, indice) => (
+                <label key={indice}>
+                  <input type="checkbox" checked={Boolean(checklistMarcado[indice])}
+                    onChange={(evento) => {
+                      const id = primeiraMissaoPendenteHoje.id;
+                      const marcado = evento.currentTarget.checked;
+                      setChecklistLocal((anterior) => {
+                        const etapas = [...(anterior[id] ?? [false,false,false,false])];
+                        etapas[indice] = marcado;
+                        return {...anterior, [id]: etapas};
+                      });
+                    }}/>
+                  <span>{etapa}</span>
+                </label>
+              ))}
+            </div>
+            <small className="plano-painel-aviso">Prévia do checklist: as marcações são temporárias e não concluem a missão. A conclusão oficial continua no registro da atividade.</small>
+          </div>
+        )}
         <div className="plano-retomada-atrasadas">
           <div className="plano-retomada-section-title">
             <div>
