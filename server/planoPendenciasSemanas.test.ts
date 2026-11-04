@@ -121,3 +121,17 @@ test("painel de retomada separa matérias, revisões e redações/simulados em a
  assert.match(estilo,/@media\(max-width:600px\)/);
  assert.doesNotMatch(pagina,/Atividades das semanas anteriores<\/h3>/);
 });
+
+test("prévia exibe resumo diário, calendário e checklist sem concluir missões",()=>{
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ const css=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.css","utf8");
+ assert.match(pagina,/Visão geral do dia/);
+ assert.match(pagina,/Calendário da semana/);
+ assert.match(pagina,/situacaoDia\(numero\)/);
+ assert.match(pagina,/Checklist da missão/);
+ assert.match(pagina,/as marcações são temporárias e não concluem a missão/);
+ assert.match(pagina,/setChecklistLocal/);
+ assert.doesNotMatch(pagina,/setChecklistLocal\([^]*setConcluidas/);
+ assert.match(css,/\.plano-painel-diario/);
+ assert.match(css,/\.plano-painel-tarefas/);
+});
