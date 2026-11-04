@@ -77,6 +77,8 @@ export default function PlanoEstudos() {
     configuracoes,
   } = useApp();
 
+  const [filtroPendencias, setFiltroPendencias] = useState<"materias" | "revisoes" | "extras">("materias");
+  const [mostrarTodasPendencias, setMostrarTodasPendencias] = useState(false);
   const [temaRedacao, setTemaRedacao] = useState("");
   const [minutosRedacao, setMinutosRedacao] = useState("");
   const [notaRedacao, setNotaRedacao] = useState("");
@@ -251,6 +253,20 @@ export default function PlanoEstudos() {
     ?.dias.find((item) => item.numero === diaDeHoje)?.missoes ?? [];
   const missaoAtualConcluida = missoesDeHoje.length > 0 &&
     missoesDeHoje.every((missao) => concluidas.includes(missao.id));
+  const pendenciasMaterias = pendenciasAnteriores.filter(({ missao }) =>
+    missao.tipo !== "revisao" && missao.tipo !== "redacao" && missao.tipo !== "simulado" &&
+    !/revis[aã]o\s+(dos\s+)?erros|^revis[aã]o\b/i.test(missao.materia + " " + missao.assunto)
+  );
+  const pendenciasRevisoes = pendenciasAnteriores.filter(({ missao }) =>
+    missao.tipo === "revisao" || /revis[aã]o\s+(dos\s+)?erros|^revis[aã]o\b/i.test(missao.materia + " " + missao.assunto)
+  );
+  const pendenciasExtras = pendenciasAnteriores.filter(({ missao }) =>
+    missao.tipo === "redacao" || missao.tipo === "simulado"
+  );
+  const pendenciasFiltradas = filtroPendencias === "materias"
+    ? pendenciasMaterias : filtroPendencias === "revisoes" ? pendenciasRevisoes : pendenciasExtras;
+  const pendenciasVisiveis = mostrarTodasPendencias ? pendenciasFiltradas : pendenciasFiltradas.slice(0, 6);
+
 
 
   const missaoRedacaoDomingo = dia?.missoes.find(
@@ -568,64 +584,85 @@ export default function PlanoEstudos() {
         </p>
       )}
 
-      <section className="plano-resumo-semana" aria-label="Atividades atrasadas">
-        <div>
-          <h2>Semana atual: {semanaInicial} · {NOMES_DIAS_PLANO[diaDeHoje]}</h2>
-          <p>O calendário avança toda semana, mesmo se você faltar. O que não foi concluído continua na semana de origem.</p>
-          {referenciaPlano.estimada && (
-            <small>Início estimado pelo primeiro estudo ({referenciaPlano.data}). A data exata de criação do cronograma não está registrada; a estimativa não foi gravada na sua conta.</small>
-          )}
-          {!referenciaPlano.data && <small>Defina a data de início do plano nas configurações para ativar a régua semanal.</small>}
-          <h3>Missão de hoje</h3>
-          {missoesDeHoje.length > 0 ? (
-            <ul>
-              {missoesDeHoje.map((missao) => (
-                <li key={missao.id}>
-                  <strong>{missao.materia}</strong> — {missao.assunto}
-                  {" · "}{concluidas.includes(missao.id) ? "Concluída" : "Pendente de hoje"}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>Nenhuma missão programada para esta data. As pendências permanecem disponíveis, sem alterar a programação.</p>
-          )}
-          <h3>Atividades atrasadas</h3>
-          <p><strong>{pendenciasAnteriores.length} atividade(s) pendente(s)</strong> de dias anteriores, sem substituir a missão de hoje.</p>
-          {!missaoAtualConcluida && <p>Priorize a missão desta semana; as atrasadas continuam disponíveis.</p>}
-        </div>
-        <div>
-          <button type="button" onClick={() => {
-            setSemanaSelecionada(semanaInicial);
-            setDiaSelecionado(diaDeHoje);
-          }}>Ver missão de hoje</button>
-          {pendenciasAnteriores.length > 0 && (
-            <button type="button" onClick={() => {
-              const atividade = pendenciasAnteriores[0];
-              setSemanaSelecionada(atividade.semana);
-              setDiaSelecionado(atividade.dia);
-            }}>
-              {missaoAtualConcluida ? "Fazer atividade atrasada" : "Ver atividades atrasadas"} ({pendenciasAnteriores.length})
-            </button>
-          )}
-        </div>
-        {pendenciasAnteriores.length > 0 && (
+      <section className="plano-retomada" aria-label="Missão de hoje e atividades pendentes">
+        <header className="plano-retomada-header">
           <div>
-            <h3>Atividades das semanas anteriores</h3>
-            <ul>
-              {pendenciasAnteriores.slice(0, 12).map((item) => (
-                <li key={item.missao.id}>
+            <span className="plano-retomada-eyebrow">CRONOGRAMA FIXO</span>
+            <h2>Semana {semanaInicial} <span>· {NOMES_DIAS_PLANO[diaDeHoje]}</span></h2>
+            <p>Cada dia tem seu lugar. Atividades não concluídas permanecem na semana de origem.</p>
+          </div>
+          <span className="plano-retomada-counter">{pendenciasAnteriores.length} atrasadas</span>
+        </header>
+        {referenciaPlano.estimada && (
+          <p className="plano-retomada-origem">Data de referência estimada: {referenciaPlano.data} (primeiro estudo salvo). Não alteramos sua conta.</p>
+        )}
+        {!referenciaPlano.data && (
+          <p className="plano-retomada-origem">Defina a data de início do plano para fixar sua semana.</p>
+        )}
+        <div className="plano-retomada-hoje">
+          <div className="plano-retomada-section-title">
+            <h3>Missão de hoje</h3>
+            <span className={missaoAtualConcluida ? "plano-retomada-status concluida" : "plano-retomada-status"}>
+              {missaoAtualConcluida ? "Concluída" : "Programação do dia"}
+            </span>
+          </div>
+          {missoesDeHoje.length > 0 ? missoesDeHoje.map((missao) => (
+            <div className="plano-retomada-missao" key={missao.id}>
+              <div>
+                <strong>{missao.materia}</strong>
+                <p>{missao.assunto}</p>
+                <small>{concluidas.includes(missao.id) ? "Atividade concluída" : "Aguardando conclusão"}</small>
+              </div>
+              <button type="button" onClick={() => {
+                setSemanaSelecionada(semanaInicial);
+                setDiaSelecionado(diaDeHoje);
+              }}>Ver atividade</button>
+            </div>
+          )) : <p className="plano-retomada-vazio">Não há nova missão programada para este dia. Consulte as pendências sem alterar o calendário.</p>}
+        </div>
+        <div className="plano-retomada-atrasadas">
+          <div className="plano-retomada-section-title">
+            <div>
+              <h3>Atividades atrasadas</h3>
+              <p>Recupere quando puder, sem substituir a missão do dia.</p>
+            </div>
+          </div>
+          <div className="plano-retomada-tabs" role="group" aria-label="Filtrar atividades atrasadas">
+            <button type="button" aria-pressed={filtroPendencias === "materias"} className={filtroPendencias === "materias" ? "ativa" : ""} onClick={() => { setFiltroPendencias("materias"); setMostrarTodasPendencias(false); }}>
+              Matérias <span>{pendenciasMaterias.length}</span>
+            </button>
+            <button type="button" aria-pressed={filtroPendencias === "revisoes"} className={filtroPendencias === "revisoes" ? "ativa" : ""} onClick={() => { setFiltroPendencias("revisoes"); setMostrarTodasPendencias(false); }}>
+              Revisões <span>{pendenciasRevisoes.length}</span>
+            </button>
+            <button type="button" aria-pressed={filtroPendencias === "extras"} className={filtroPendencias === "extras" ? "ativa" : ""} onClick={() => { setFiltroPendencias("extras"); setMostrarTodasPendencias(false); }}>
+              Redações e simulados <span>{pendenciasExtras.length}</span>
+            </button>
+          </div>
+          {pendenciasFiltradas.length === 0 ? (
+            <p className="plano-retomada-vazio">Nenhuma pendência nesta categoria.</p>
+          ) : (
+            <div className="plano-retomada-lista">
+              {pendenciasVisiveis.map((item) => (
+                <article className="plano-retomada-item" key={item.missao.id}>
+                  <div>
+                    <small>Semana {item.semana} · {NOMES_DIAS_PLANO[item.dia]}</small>
+                    <strong>{item.missao.materia}</strong>
+                    <p>{item.missao.assunto}</p>
+                  </div>
                   <button type="button" onClick={() => {
                     setSemanaSelecionada(item.semana);
                     setDiaSelecionado(item.dia);
-                  }}>
-                    Semana {item.semana} · {NOMES_DIAS_PLANO[item.dia]} · {item.missao.materia} — {item.missao.assunto}
-                  </button>
-                </li>
+                  }}>Abrir</button>
+                </article>
               ))}
-            </ul>
-            {pendenciasAnteriores.length > 12 && <small>Mostrando 12 pendências; continue concluindo para liberar as próximas.</small>}
-          </div>
-        )}
+            </div>
+          )}
+          {pendenciasFiltradas.length > 6 && (
+            <button className="plano-retomada-mais" type="button" onClick={() => setMostrarTodasPendencias((anterior) => !anterior)}>
+              {mostrarTodasPendencias ? "Mostrar menos" : `Ver todas as ${pendenciasFiltradas.length} atividades desta categoria`}
+            </button>
+          )}
+        </div>
       </section>
 
       <div className="plano-semanas">
