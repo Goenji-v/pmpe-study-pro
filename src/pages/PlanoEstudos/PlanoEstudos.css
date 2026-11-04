@@ -416,3 +416,54 @@
   .plano-pendencia-card { flex-direction: column; align-items: stretch; }
   .plano-pendencia-card button { width: 100%; }
 }
+
+
+/* Painel de retomada: missão diária independente e pendências filtradas. */
+.plano-retomada {
+  display: grid; gap: 16px; padding: 22px; margin-bottom: 20px;
+  border-radius: 18px; border: 1px solid #334155;
+  background: linear-gradient(145deg,#101c31,#111827);
+  color: #f1f5f9;
+}
+.plano-retomada-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.plano-retomada-eyebrow { font-size: 11px; font-weight:800; letter-spacing: .1em; color: #93c5fd; }
+.plano-retomada-header h2 { font-size: 23px; margin: 6px 0 8px; }
+.plano-retomada-header h2 span { color:#cbd5e1; font-weight:500; }
+.plano-retomada p { color:#aabbd3; margin: 4px 0; line-height:1.5; }
+.plano-retomada-counter { border-radius: 100px; padding: 7px 12px; white-space:nowrap; background:#2b211c; border:1px solid #a16207; color:#fde68a; font-size:13px; font-weight:700; }
+.plano-retomada-origem { font-size:12px; }
+.plano-retomada-hoje,.plano-retomada-atrasadas { padding: 17px; border-radius: 13px; border:1px solid #32445c; background:#17263b; }
+.plano-retomada-hoje { border-color:#356ba2; }
+.plano-retomada-section-title { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:13px; }
+.plano-retomada-section-title h3 { margin:0; font-size:17px; color:#f8fafc; }
+.plano-retomada-section-title p { font-size:13px; margin-top:5px; }
+.plano-retomada-status { font-size:12px; border-radius:40px; background:#1e3a5f; color:#bfdbfe; padding:5px 10px; white-space:nowrap; }
+.plano-retomada-status.concluida { background:#14532d; color:#bbf7d0; }
+.plano-retomada-missao,.plano-retomada-item { display:flex; align-items:center; justify-content:space-between; gap:16px; min-width:0; }
+.plano-retomada-missao + .plano-retomada-missao { border-top:1px solid #334155; margin-top:12px; padding-top:12px; }
+.plano-retomada-missao > div,.plano-retomada-item > div { min-width:0; }
+.plano-retomada-missao strong,.plano-retomada-item strong { display:block; font-size:15px; color:#f8fafc; overflow-wrap:anywhere; }
+.plano-retomada-missao small,.plano-retomada-item small { color:#93c5fd; font-size:12px; }
+.plano-retomada button { font:inherit; cursor:pointer; }
+.plano-retomada-missao button,.plano-retomada-item button { flex-shrink:0; padding:9px 14px; border-radius:9px; border:1px solid #3b82f6; background:#1d4ed8; color:#fff; font-size:13px; font-weight:700; }
+.plano-retomada-missao button:hover,.plano-retomada-item button:hover { background:#2563eb; }
+.plano-retomada button:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
+.plano-retomada-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:15px 0; }
+.plano-retomada-tabs button { border:1px solid #41536b; color:#dbeafe; background:#0e1b2e; border-radius:9px; padding:9px 11px; font-size:13px; font-weight:600; }
+.plano-retomada-tabs button.ativa { border-color:#60a5fa; background:#1d4ed8; color:#fff; }
+.plano-retomada-tabs button span { padding:2px 6px; border-radius:8px; background:rgba(255,255,255,.12); margin-left:3px; }
+.plano-retomada-lista { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.plano-retomada-item { padding:12px; border-radius:10px; background:#101d31; border:1px solid #334155; }
+.plano-retomada-item p { font-size:13px; }
+.plano-retomada-mais { justify-self:start; margin-top:12px; border:1px solid #475569; background:#1e293b; color:#e2e8f0; padding:9px 13px; border-radius:9px; font-weight:700; font-size:13px; }
+.plano-retomada-vazio { padding:12px; border-radius:10px; background:#101d31; }
+@media(max-width:900px) { .plano-retomada-lista { grid-template-columns:1fr; } }
+@media(max-width:600px) {
+ .plano-retomada { padding:13px; }
+ .plano-retomada-header { flex-direction:column; }
+ .plano-retomada-header h2 { font-size:20px; }
+ .plano-retomada-hoje,.plano-retomada-atrasadas { padding:12px; }
+ .plano-retomada-item,.plano-retomada-missao { align-items:stretch; flex-direction:column; }
+ .plano-retomada-item button,.plano-retomada-missao button { width:100%; }
+ .plano-retomada-tabs button { flex:1; }
+}
