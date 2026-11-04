@@ -107,3 +107,17 @@ test("missão de amanhã não vira pendência de hoje",()=>{
  assert.deepEqual(listarPendenciasAnterioresAoDia([],plano,3,2).map(x=>x.missao.id),["segunda"]);
  assert.deepEqual(listarPendenciasAnterioresAoDia([],plano,3,3).map(x=>x.missao.id),["segunda","terça"]);
 });
+
+test("painel de retomada separa matérias, revisões e redações/simulados em abas",()=>{
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ const estilo=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.css","utf8");
+ assert.match(pagina,/className="plano-retomada"/);
+ assert.match(pagina,/pendenciasMaterias/);
+ assert.match(pagina,/pendenciasRevisoes/);
+ assert.match(pagina,/pendenciasExtras/);
+ assert.match(pagina,/pendenciasFiltradas\.slice\(0, 6\)/);
+ assert.match(pagina,/aria-pressed=/);
+ assert.match(estilo,/\.plano-retomada-lista\s*\{/);
+ assert.match(estilo,/@media\(max-width:600px\)/);
+ assert.doesNotMatch(pagina,/Atividades das semanas anteriores<\/h3>/);
+});
