@@ -286,3 +286,37 @@ export function ampliarPlanoAteSemana(plano: SemanaPlano[], semanaAtual: number)
   }
   return resultado;
 }
+
+/** Usa a data explicitamente escolhida; se faltar, estima pelo primeiro estudo,
+ * sem gravar a estimativa no histórico ou afirmar que é a criação do plano. */
+export function obterDataReferenciaPlano(
+  dataInicioPlano: string | undefined,
+  sessoes: ReadonlyArray<{ data: string }>,
+): { data: string | undefined; estimada: boolean } {
+  if (semanaPorDataInicio(dataInicioPlano) !== null) {
+    return { data: dataInicioPlano, estimada: false };
+  }
+  const datas = sessoes.map((s) => s.data?.slice(0, 10))
+    .filter((d): d is string => Boolean(d) && semanaPorDataInicio(d) !== null)
+    .sort();
+  return { data: datas[0], estimada: Boolean(datas[0]) };
+}
+
+/** Atrasos são tarefas com dia anterior ao calendário, sem desarrumar os slots.
+ * Não considera missões futuras, mesmo que estejam em uma semana já criada. */
+export function listarPendenciasAnterioresAoDia(
+  concluidasInformadas: readonly string[],
+  plano: SemanaPlano[],
+  semanaAtual: number,
+  diaAtual: number,
+): ProximaMissaoPlano[] {
+  const concluidas = new Set(concluidasInformadas);
+  return plano.flatMap((semana) => semana.dias.flatMap((dia) => {
+    const anterior = semana.numero < semanaAtual ||
+      (semana.numero === semanaAtual && dia.numero < diaAtual);
+    return anterior
+      ? dia.missoes.filter((missao) => !concluidas.has(missao.id))
+          .map((missao) => ({ semana: semana.numero, dia: dia.numero, missao }))
+      : [];
+  }));
+}
