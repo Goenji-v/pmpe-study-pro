@@ -87,3 +87,23 @@ test("domingo atrasado aparece na fila, mas não substitui nova missão da terç
  assert.deepEqual(atrasadas.map(x=>x.missao.id),["domingo","segunda"]);
  assert.equal(plano[1].dias[1].missoes[0].id,"terca");
 });
+
+test("dashboard usa a mesma configuração de redação e simulado do Plano de Estudos",()=>{
+ const dashboard=readFileSync("src/components/MissaoDoDia/MissaoDoDia.tsx","utf8");
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ assert.match(dashboard,/aplicarDiasAtividadesSemanais/);
+ assert.match(pagina,/aplicarDiasAtividadesSemanais/);
+ assert.match(dashboard,/listarPendenciasAnterioresAoDia/);
+ assert.match(pagina,/listarPendenciasAnterioresAoDia/);
+ assert.doesNotMatch(dashboard,/getProximaMissao\(/);
+});
+test("missão de amanhã não vira pendência de hoje",()=>{
+ const plano:SemanaPlano[]=[{numero:3,nome:"Semana 3",dias:[
+ {numero:1,missoes:[{id:"segunda",numero:1,materia:"Português",assunto:"Crase",tipo:"conteudo"}]},
+ {numero:2,missoes:[{id:"terça",numero:1,materia:"RLM",assunto:"Conectivos",tipo:"conteudo"}]},
+ {numero:3,missoes:[{id:"quarta",numero:1,materia:"Informática",assunto:"Excel",tipo:"conteudo"}]},
+ ]}];
+ assert.deepEqual(listarPendenciasAnterioresAoDia(["segunda"],plano,3,2),[]);
+ assert.deepEqual(listarPendenciasAnterioresAoDia([],plano,3,2).map(x=>x.missao.id),["segunda"]);
+ assert.deepEqual(listarPendenciasAnterioresAoDia([],plano,3,3).map(x=>x.missao.id),["segunda","terça"]);
+});
