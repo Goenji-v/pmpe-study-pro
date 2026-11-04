@@ -33,6 +33,8 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getSemanaAtual,
+  obterDataReferenciaPlano,
+  listarPendenciasAnterioresAoDia,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
 } from "../../utils/planoUtils";
@@ -48,7 +50,6 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -181,6 +182,8 @@ export default function PlanoEstudos() {
     configuracoes.missoesPorDia ?? 1
   );
 
+  const referenciaPlano = useMemo(() => obterDataReferenciaPlano(configuracoes.dataInicioPlano, sessoes), [configuracoes.dataInicioPlano, sessoes]);
+
   const planoCalendario = useMemo(() => {
     const base = aplicarDiasAtividadesSemanais(
       criarPlanoCalendario(
@@ -191,32 +194,19 @@ export default function PlanoEstudos() {
         diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
       }
     );
-    const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
-    // Projeção visual automática: não grava IDs, conclusões ou domingos.
-    const organizado = concluidas.length > 0
-      ? projetarPlanoCompactado(base, concluidas)
-      : base;
-    const grade = concluidas.length > 0 ? organizado.map((semana) => ({
-      ...semana,
-      dias: semana.dias.map((dia) => ({
-        ...dia,
-        missoes: dia.numero === 7 ? [...dia.missoes] : dia.missoes.filter((missao) => !(
-          missao.tipo === "revisao" ||
-          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
-        )),
-      })),
-    })) : organizado;
+    // O calendário nunca muda de posição em função das missões concluídas.
+    // Pendências são mostradas em uma fila independente, mantendo IDs e dias de origem.
+    const semanaCalendario = semanaPorDataInicio(referenciaPlano.data) ?? 1;
     return ampliarPlanoAteSemana(
-      grade, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+      base, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
     );
   }, [
     missoesPorDia,
-    concluidas,
+    referenciaPlano.data,
     configuracoes.planoPadraoAtivo,
     configuracoes.materiasPorDiaSemana,
     configuracoes.diaRedacaoSemanal,
     configuracoes.diaSimuladoSemanal,
-    configuracoes.dataInicioPlano,
     configuracoes.semanaAtualPlano,
   ]);
 
@@ -224,7 +214,7 @@ export default function PlanoEstudos() {
     concluidas,
     planoCalendario,
     configuracoes.semanaAtualPlano,
-    configuracoes.dataInicioPlano
+    referenciaPlano.data
   );
   const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
@@ -252,6 +242,15 @@ export default function PlanoEstudos() {
   const dia = semana?.dias.find(
     (item) => item.numero === diaSelecionado
   );
+  const diaDeHoje = obterDiaAtualPlano();
+  const pendenciasAnteriores = useMemo(
+    () => listarPendenciasAnterioresAoDia(concluidas, planoCalendario, semanaInicial, diaDeHoje),
+    [concluidas, planoCalendario, semanaInicial, diaDeHoje]
+  );
+  const missaoAtualConcluida = (planoCalendario.find((item) => item.numero === semanaInicial)
+    ?.dias.find((item) => item.numero === diaDeHoje)?.missoes ?? [])
+    .every((missao) => concluidas.includes(missao.id));
+
 
   const missaoRedacaoDomingo = dia?.missoes.find(
     (missao) => missao.tipo === "redacao"
@@ -567,6 +566,52 @@ export default function PlanoEstudos() {
           para esta semana; continue pelas pendências sem perder o progresso anterior.
         </p>
       )}
+
+      <section className="plano-resumo-semana" aria-label="Atividades atrasadas">
+        <div>
+          <h2>Semana atual: {semanaInicial} · {NOMES_DIAS_PLANO[diaDeHoje]}</h2>
+          <p>O calendário avança toda semana, mesmo se você faltar. O que não foi concluído continua na semana de origem.</p>
+          {referenciaPlano.estimada && (
+            <small>Início estimado pelo primeiro estudo ({referenciaPlano.data}). A data exata de criação do cronograma não está registrada; a estimativa não foi gravada na sua conta.</small>
+          )}
+          {!referenciaPlano.data && <small>Defina a data de início do plano nas configurações para ativar a régua semanal.</small>}
+          <p><strong>{pendenciasAnteriores.length} atividade(s) atrasada(s)</strong> · separadas da missão de hoje.</p>
+          {!missaoAtualConcluida && <p>Priorize a missão desta semana; as atrasadas continuam disponíveis.</p>}
+        </div>
+        <div>
+          <button type="button" onClick={() => {
+            setSemanaSelecionada(semanaInicial);
+            setDiaSelecionado(diaDeHoje);
+          }}>Ver missão de hoje</button>
+          {pendenciasAnteriores.length > 0 && (
+            <button type="button" onClick={() => {
+              const atividade = pendenciasAnteriores[0];
+              setSemanaSelecionada(atividade.semana);
+              setDiaSelecionado(atividade.dia);
+            }}>
+              {missaoAtualConcluida ? "Fazer atividade atrasada" : "Ver atividades atrasadas"} ({pendenciasAnteriores.length})
+            </button>
+          )}
+        </div>
+        {pendenciasAnteriores.length > 0 && (
+          <div>
+            <h3>Atividades das semanas anteriores</h3>
+            <ul>
+              {pendenciasAnteriores.slice(0, 12).map((item) => (
+                <li key={item.missao.id}>
+                  <button type="button" onClick={() => {
+                    setSemanaSelecionada(item.semana);
+                    setDiaSelecionado(item.dia);
+                  }}>
+                    Semana {item.semana} · {NOMES_DIAS_PLANO[item.dia]} · {item.missao.materia} — {item.missao.assunto}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {pendenciasAnteriores.length > 12 && <small>Mostrando 12 pendências; continue concluindo para liberar as próximas.</small>}
+          </div>
+        )}
+      </section>
 
       <div className="plano-semanas">
         {planoCalendario.map(
