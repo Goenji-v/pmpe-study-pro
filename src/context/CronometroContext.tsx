@@ -1,4 +1,5 @@
 import { armazenamentoLocalDaConta as localStorage } from "../services/armazenamentoConta";
+import "./CronometroBloqueio.css";
 /* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
 /* oxlint-disable react/only-export-components */
 import {
@@ -209,9 +210,11 @@ export function CronometroProvider({
 
   const [agora, setAgora] =
     useState(Date.now());
+  const [trocaPendente, setTrocaPendente] = useState<{ acao: "iniciar" | "preparar"; dados: DadosIniciarSessao } | null>(null);
 
   useEffect(() => {
     finalizacaoConsumida.current = false;
+    setTrocaPendente(null);
     setSessaoAtiva(
       carregarSessao(chaveStorage)
     );
@@ -331,20 +334,21 @@ export function CronometroProvider({
   const cronometroAtivo =
     sessaoAtiva.status !== "parado";
 
-  function iniciar(
-    dados: DadosIniciarSessao
-  ) {
-    if (cronometroAtivo) {
-      const substituir =
-        window.confirm(
-          "Já existe uma sessão em andamento. Deseja substituí-la?"
-        );
+  function sessaoEmExecucao() {
+    // Garante o bloqueio também se outra aba iniciou uma atividade
+    // antes de chegar o evento "storage".
+    return cronometroAtivo || carregarSessao(chaveStorage).status !== "parado";
+  }
 
-      if (!substituir) {
-        return false;
-      }
+  function iniciar(dados: DadosIniciarSessao) {
+    if (sessaoEmExecucao()) {
+      setTrocaPendente({ acao: "iniciar", dados });
+      return false;
     }
+    return iniciarSemBloqueio(dados);
+  }
 
+  function iniciarSemBloqueio(dados: DadosIniciarSessao) {
     const materiaEfetiva =
       obterMateriaEfetivaDaSessao(
         dados.tipo,
@@ -437,9 +441,15 @@ export function CronometroProvider({
     );
   }
 
-  function prepararSessao(
-    dados: DadosIniciarSessao
-  ) {
+  function prepararSessao(dados: DadosIniciarSessao) {
+    if (sessaoEmExecucao()) {
+      setTrocaPendente({ acao: "preparar", dados });
+      return;
+    }
+    prepararSessaoSemBloqueio(dados);
+  }
+
+  function prepararSessaoSemBloqueio(dados: DadosIniciarSessao) {
     const novaSessao: SessaoAtiva = {
       ...sessaoInicial,
       materia: dados.materia.trim(),
@@ -1057,6 +1067,29 @@ export function CronometroProvider({
     };
   }
 
+  function confirmarTrocaSessao() {
+    if (!trocaPendente) return;
+    const { acao, dados } = trocaPendente;
+    // Não descartar uma sessão válida por solicitação incompleta.
+    if (acao === "iniciar" &&
+        (!obterMateriaEfetivaDaSessao(dados.tipo, dados.materia) || !dados.assunto.trim())) {
+      setTrocaPendente(null);
+      showToast("Escolha uma matéria e um assunto antes de iniciar.", "warning");
+      return;
+    }
+    setTrocaPendente(null);
+    // O descarte só ocorre APÓS confirmação explícita. Nada é salvo como
+    // sessão concluída e as atividades/revisões anteriores não são afetadas.
+    finalizacaoConsumida.current = false;
+    localStorage.removeItem(chaveStorage);
+    if (acao === "iniciar") {
+      iniciarSemBloqueio(dados);
+    } else {
+      prepararSessaoSemBloqueio(dados);
+      showToast("Atividade anterior descartada. Pronto para começar a nova.", "warning");
+    }
+  }
+
   function cancelar(
     pedirConfirmacao = true
   ) {
@@ -1093,6 +1126,35 @@ export function CronometroProvider({
       }}
     >
       {children}
+      {trocaPendente && (
+        <div className="cronometro-bloqueio-overlay" role="presentation">
+          <div className="cronometro-bloqueio-modal" role="alertdialog"
+            aria-modal="true" aria-labelledby="cronometro-bloqueio-titulo"
+            aria-describedby="cronometro-bloqueio-descricao">
+            <span className="cronometro-bloqueio-tag">Atividade em execução</span>
+            <h2 id="cronometro-bloqueio-titulo">Você já está com uma atividade em andamento</h2>
+            <p id="cronometro-bloqueio-descricao">
+              {sessaoAtiva.materia || "Atividade"} — {sessaoAtiva.assunto || "Sessão atual"}
+              {sessaoAtiva.status === "pausado" ? " (pausada)." : " (cronômetro em execução)."}
+              {" "}Você só pode usar um cronômetro por vez.
+            </p>
+            <p className="cronometro-bloqueio-alerta">
+              Se descartar, o tempo e o progresso não salvos desta sessão serão perdidos.
+              As atividades já finalizadas e salvas continuam intactas.
+            </p>
+            <div className="cronometro-bloqueio-acoes">
+              <button type="button" className="cronometro-bloqueio-manter"
+                onClick={() => setTrocaPendente(null)}>
+                Manter atividade atual
+              </button>
+              <button type="button" className="cronometro-bloqueio-descartar"
+                onClick={confirmarTrocaSessao}>
+                Descartar e começar outra
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </CronometroContext.Provider>
   );
 }
