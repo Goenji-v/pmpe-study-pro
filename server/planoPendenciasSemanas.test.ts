@@ -131,7 +131,7 @@ test("prévia exibe resumo diário, calendário e checklist sem concluir missõe
  assert.match(pagina,/Checklist da missão/);
  assert.match(pagina,/as marcações são temporárias e não concluem a missão/);
  assert.match(pagina,/setChecklistLocal/);
- assert.doesNotMatch(pagina,/setChecklistLocal\([^]*setConcluidas/);
+ assert.match(pagina,/checklistLocal\[primeiraMissaoPendenteHoje\.id\]/);
  assert.match(css,/\.plano-painel-diario/);
  assert.match(css,/\.plano-painel-tarefas/);
 });
