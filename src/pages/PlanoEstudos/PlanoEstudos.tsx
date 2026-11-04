@@ -247,9 +247,10 @@ export default function PlanoEstudos() {
     () => listarPendenciasAnterioresAoDia(concluidas, planoCalendario, semanaInicial, diaDeHoje),
     [concluidas, planoCalendario, semanaInicial, diaDeHoje]
   );
-  const missaoAtualConcluida = (planoCalendario.find((item) => item.numero === semanaInicial)
-    ?.dias.find((item) => item.numero === diaDeHoje)?.missoes ?? [])
-    .every((missao) => concluidas.includes(missao.id));
+  const missoesDeHoje = planoCalendario.find((item) => item.numero === semanaInicial)
+    ?.dias.find((item) => item.numero === diaDeHoje)?.missoes ?? [];
+  const missaoAtualConcluida = missoesDeHoje.length > 0 &&
+    missoesDeHoje.every((missao) => concluidas.includes(missao.id));
 
 
   const missaoRedacaoDomingo = dia?.missoes.find(
@@ -575,7 +576,21 @@ export default function PlanoEstudos() {
             <small>Início estimado pelo primeiro estudo ({referenciaPlano.data}). A data exata de criação do cronograma não está registrada; a estimativa não foi gravada na sua conta.</small>
           )}
           {!referenciaPlano.data && <small>Defina a data de início do plano nas configurações para ativar a régua semanal.</small>}
-          <p><strong>{pendenciasAnteriores.length} atividade(s) atrasada(s)</strong> · separadas da missão de hoje.</p>
+          <h3>Missão de hoje</h3>
+          {missoesDeHoje.length > 0 ? (
+            <ul>
+              {missoesDeHoje.map((missao) => (
+                <li key={missao.id}>
+                  <strong>{missao.materia}</strong> — {missao.assunto}
+                  {" · "}{concluidas.includes(missao.id) ? "Concluída" : "Pendente de hoje"}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Nenhuma missão programada para esta data. As pendências permanecem disponíveis, sem alterar a programação.</p>
+          )}
+          <h3>Atividades atrasadas</h3>
+          <p><strong>{pendenciasAnteriores.length} atividade(s) pendente(s)</strong> de dias anteriores, sem substituir a missão de hoje.</p>
           {!missaoAtualConcluida && <p>Priorize a missão desta semana; as atrasadas continuam disponíveis.</p>}
         </div>
         <div>
