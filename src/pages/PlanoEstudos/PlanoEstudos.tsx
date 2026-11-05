@@ -1,5 +1,6 @@
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -21,10 +22,8 @@ import {
 import {
   useApp,
 } from "../../context/AppContext";
-
-import {
-  useCronometro,
-} from "../../context/CronometroContext";
+import { useAuth } from "../../context/AuthContext";
+import { atualizarEtapaChecklist, carregarChecklistPlano, chaveChecklistPlano, salvarChecklistPlano } from "../../utils/checklistMissaoPlano";
 
 import { localizarConteudoDaMissao, localizarConteudosDaMissao } from "../../services/conteudos/localizarConteudo";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
@@ -33,6 +32,9 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getSemanaAtual,
+  obterDataReferenciaPlano,
+  listarPendenciasAnterioresAoDia,
+  sugerirRecuperacaoPosMissao,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
 } from "../../utils/planoUtils";
@@ -48,7 +50,6 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -57,6 +58,7 @@ type MissaoPlanoExibida = MissaoPlano & {
 };
 
 export default function PlanoEstudos() {
+  const { usuario } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const estadoNavegacao = location.state as { semana?: number; dia?: number } | null;
@@ -76,6 +78,35 @@ export default function PlanoEstudos() {
     configuracoes,
   } = useApp();
 
+  const [filtroPendencias, setFiltroPendencias] = useState<"materias" | "revisoes" | "extras">("materias");
+  const [mostrarTodasPendencias, setMostrarTodasPendencias] = useState(false);
+  const chaveChecklistAtual = usuario?.id
+    ? chaveChecklistPlano(usuario.id, configuracoes.dadosReiniciadosEm)
+    : "";
+  const [checklistSalvo, setChecklistSalvo] = useState(() => ({
+    chave: chaveChecklistAtual,
+    dados: carregarChecklistPlano(usuario?.id, configuracoes.dadosReiniciadosEm),
+  }));
+  const checklistLocal = checklistSalvo.chave === chaveChecklistAtual ? checklistSalvo.dados : {};
+  useEffect(() => {
+    // Nunca apresentar checklist de outra conta durante troca de usuário.
+    setChecklistSalvo({
+      chave: chaveChecklistAtual,
+      dados: carregarChecklistPlano(usuario?.id, configuracoes.dadosReiniciadosEm),
+    });
+  }, [chaveChecklistAtual, usuario?.id, configuracoes.dadosReiniciadosEm]);
+
+  useEffect(() => {
+    function aoModificarChecklistEmOutraAba() {
+      if (!usuario?.id) return;
+      setChecklistSalvo({
+        chave: chaveChecklistAtual,
+        dados: carregarChecklistPlano(usuario.id, configuracoes.dadosReiniciadosEm),
+      });
+    }
+    window.addEventListener("storage", aoModificarChecklistEmOutraAba);
+    return () => window.removeEventListener("storage", aoModificarChecklistEmOutraAba);
+  }, [chaveChecklistAtual, usuario?.id, configuracoes.dadosReiniciadosEm]);
   const [temaRedacao, setTemaRedacao] = useState("");
   const [minutosRedacao, setMinutosRedacao] = useState("");
   const [notaRedacao, setNotaRedacao] = useState("");
@@ -173,13 +204,12 @@ export default function PlanoEstudos() {
     navigate("/simulado-pdf");
   }
 
-  const {
-    cronometroAtivo,
-  } = useCronometro();
 
   const missoesPorDia = normalizarMissoesPorDia(
     configuracoes.missoesPorDia ?? 1
   );
+
+  const referenciaPlano = useMemo(() => obterDataReferenciaPlano(configuracoes.dataInicioPlano, sessoes), [configuracoes.dataInicioPlano, sessoes]);
 
   const planoCalendario = useMemo(() => {
     const base = aplicarDiasAtividadesSemanais(
@@ -191,32 +221,19 @@ export default function PlanoEstudos() {
         diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
       }
     );
-    const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
-    // Projeção visual automática: não grava IDs, conclusões ou domingos.
-    const organizado = concluidas.length > 0
-      ? projetarPlanoCompactado(base, concluidas)
-      : base;
-    const grade = concluidas.length > 0 ? organizado.map((semana) => ({
-      ...semana,
-      dias: semana.dias.map((dia) => ({
-        ...dia,
-        missoes: dia.numero === 7 ? [...dia.missoes] : dia.missoes.filter((missao) => !(
-          missao.tipo === "revisao" ||
-          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
-        )),
-      })),
-    })) : organizado;
+    // O calendário nunca muda de posição em função das missões concluídas.
+    // Pendências são mostradas em uma fila independente, mantendo IDs e dias de origem.
+    const semanaCalendario = semanaPorDataInicio(referenciaPlano.data) ?? 1;
     return ampliarPlanoAteSemana(
-      grade, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+      base, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
     );
   }, [
     missoesPorDia,
-    concluidas,
+    referenciaPlano.data,
     configuracoes.planoPadraoAtivo,
     configuracoes.materiasPorDiaSemana,
     configuracoes.diaRedacaoSemanal,
     configuracoes.diaSimuladoSemanal,
-    configuracoes.dataInicioPlano,
     configuracoes.semanaAtualPlano,
   ]);
 
@@ -224,7 +241,7 @@ export default function PlanoEstudos() {
     concluidas,
     planoCalendario,
     configuracoes.semanaAtualPlano,
-    configuracoes.dataInicioPlano
+    referenciaPlano.data
   );
   const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
@@ -252,6 +269,48 @@ export default function PlanoEstudos() {
   const dia = semana?.dias.find(
     (item) => item.numero === diaSelecionado
   );
+  const diaDeHoje = obterDiaAtualPlano();
+  const pendenciasAnteriores = useMemo(
+    () => listarPendenciasAnterioresAoDia(concluidas, planoCalendario, semanaInicial, diaDeHoje),
+    [concluidas, planoCalendario, semanaInicial, diaDeHoje]
+  );
+  const missoesDeHoje = planoCalendario.find((item) => item.numero === semanaInicial)
+    ?.dias.find((item) => item.numero === diaDeHoje)?.missoes ?? [];
+  const missaoAtualConcluida = missoesDeHoje.length > 0 &&
+    missoesDeHoje.every((missao) => concluidas.includes(missao.id));
+  const recuperacaoSugerida = sugerirRecuperacaoPosMissao(missaoAtualConcluida, pendenciasAnteriores);
+  const primeiraMissaoPendenteHoje = missoesDeHoje.find((missao) => !concluidas.includes(missao.id));
+  const etapasMissao = primeiraMissaoPendenteHoje?.tipo === "redacao"
+    ? ["Preparar o repertório", "Escrever a redação", "Revisar o texto", "Registrar a redação na missão"]
+    : primeiraMissaoPendenteHoje?.tipo === "simulado"
+      ? ["Preparar o simulado", "Responder às questões", "Conferir o gabarito", "Registrar o resultado na missão"]
+      : ["Estudar a aula ou material", "Fazer anotações", "Resolver questões", "Revisar os erros"];
+  const checklistMarcado = primeiraMissaoPendenteHoje
+    ? (checklistLocal[primeiraMissaoPendenteHoje.id] ?? [])
+    : [];
+  const checklistFeitas = etapasMissao.filter((_, indice) => checklistMarcado[indice]).length;
+  const diasDaSemanaAtual = planoCalendario.find((item) => item.numero === semanaInicial)?.dias ?? [];
+  const situacaoDia = (numero: number) => {
+    const tarefas = diasDaSemanaAtual.find((item) => item.numero === numero)?.missoes ?? [];
+    if (tarefas.length === 0) return "sem-missao";
+    if (tarefas.every((missao) => concluidas.includes(missao.id))) return "feito";
+    return numero < diaDeHoje ? "atrasado" : numero === diaDeHoje ? "hoje" : "futuro";
+  };
+  const pendenciasMaterias = pendenciasAnteriores.filter(({ missao }) =>
+    missao.tipo !== "revisao" && missao.tipo !== "redacao" && missao.tipo !== "simulado" &&
+    !/revis[aã]o\s+(dos\s+)?erros|^revis[aã]o\b/i.test(missao.materia + " " + missao.assunto)
+  );
+  const pendenciasRevisoes = pendenciasAnteriores.filter(({ missao }) =>
+    missao.tipo === "revisao" || /revis[aã]o\s+(dos\s+)?erros|^revis[aã]o\b/i.test(missao.materia + " " + missao.assunto)
+  );
+  const pendenciasExtras = pendenciasAnteriores.filter(({ missao }) =>
+    missao.tipo === "redacao" || missao.tipo === "simulado"
+  );
+  const pendenciasFiltradas = filtroPendencias === "materias"
+    ? pendenciasMaterias : filtroPendencias === "revisoes" ? pendenciasRevisoes : pendenciasExtras;
+  const pendenciasVisiveis = mostrarTodasPendencias ? pendenciasFiltradas : pendenciasFiltradas.slice(0, 6);
+
+
 
   const missaoRedacaoDomingo = dia?.missoes.find(
     (missao) => missao.tipo === "redacao"
@@ -398,13 +457,9 @@ export default function PlanoEstudos() {
   function iniciarEstudo(
     missao: MissaoPlanoExibida
   ) {
-    if (cronometroAtivo) {
-      navigate(
-        "/central-estudos"
-      );
-      return;
-    }
-
+    // Sempre encaminhe a missão clicada. A Central administra o conflito
+    // com uma sessão anterior (rodando ou pausada), sem trocar a matéria
+    // silenciosamente nem perder o vínculo original da missão.
     const base = criarDadosSessaoDaMissao(
       materias,
       missao,
@@ -567,6 +622,169 @@ export default function PlanoEstudos() {
           para esta semana; continue pelas pendências sem perder o progresso anterior.
         </p>
       )}
+
+      <section className="plano-retomada" aria-label="Missão de hoje e atividades pendentes">
+        <header className="plano-retomada-header">
+          <div>
+            <span className="plano-retomada-eyebrow">CRONOGRAMA FIXO</span>
+            <h2>Semana {semanaInicial} <span>· {NOMES_DIAS_PLANO[diaDeHoje]}</span></h2>
+            <p>Cada dia tem seu lugar. Atividades não concluídas permanecem na semana de origem.</p>
+          </div>
+          <span className="plano-retomada-counter">{pendenciasAnteriores.length} atrasadas</span>
+        </header>
+        {referenciaPlano.estimada && (
+          <p className="plano-retomada-origem">Data de referência estimada: {referenciaPlano.data} (primeiro estudo salvo). Não alteramos sua conta.</p>
+        )}
+        {!referenciaPlano.data && (
+          <p className="plano-retomada-origem">Defina a data de início do plano para fixar sua semana.</p>
+        )}
+        <div className="plano-painel-diario" aria-label="Visão geral do dia">
+          <div className="plano-painel-indicadores">
+            <div><small>Missões de hoje</small><strong>{missoesDeHoje.filter((missao) => concluidas.includes(missao.id)).length}/{missoesDeHoje.length}</strong></div>
+            <div><small>Meta diária</small><strong>{configuracoes.metaMinutosDiaria ?? 120} min</strong></div>
+            <div><small>Atividades atrasadas</small><strong>{pendenciasAnteriores.length}</strong></div>
+          </div>
+          <div className="plano-painel-semana">
+            <h3>Calendário da semana {semanaInicial}</h3>
+            <div className="plano-painel-dias">
+              {[1,2,3,4,5,6,7].map((numero) => {
+                const situacao = situacaoDia(numero);
+                const legendas: Record<string,string> = {
+                  feito: "Concluído", atrasado: "Atrasado", hoje: "Hoje",
+                  futuro: "Programado", "sem-missao": "Sem missão",
+                };
+                return (
+                  <button key={numero} type="button" className={`plano-painel-dia ${situacao}`}
+                    title={`${NOMES_DIAS_PLANO[numero]} — ${legendas[situacao]}`}
+                    aria-label={`${NOMES_DIAS_PLANO[numero]}: ${legendas[situacao]}`}
+                    onClick={() => {
+                      setSemanaSelecionada(semanaInicial);
+                      setDiaSelecionado(numero);
+                    }}>
+                    <span>{NOMES_DIAS_PLANO[numero].slice(0,3)}</span>
+                    <strong>{situacao === "feito" ? "✓" : situacao === "atrasado" ? "!" : situacao === "hoje" ? "●" : "·"}</strong>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="plano-painel-legenda">
+              <span><i className="feito"/> Concluído</span>
+              <span><i className="atrasado"/> Atrasado</span>
+              <span><i className="hoje"/> Hoje</span>
+              <span><i className="futuro"/> Futuro</span>
+            </div>
+          </div>
+        </div>
+        <div className="plano-retomada-hoje">
+          <div className="plano-retomada-section-title">
+            <h3>Missão de hoje</h3>
+            <span className={missaoAtualConcluida ? "plano-retomada-status concluida" : "plano-retomada-status"}>
+              {missaoAtualConcluida ? "Concluída" : "Programação do dia"}
+            </span>
+          </div>
+          {missoesDeHoje.length > 0 ? missoesDeHoje.map((missao) => (
+            <div className="plano-retomada-missao" key={missao.id}>
+              <div>
+                <strong>{missao.materia}</strong>
+                <p>{missao.assunto}</p>
+                <small>{concluidas.includes(missao.id) ? "Atividade concluída" : "Aguardando conclusão"}</small>
+              </div>
+              <button type="button" onClick={() => {
+                setSemanaSelecionada(semanaInicial);
+                setDiaSelecionado(diaDeHoje);
+              }}>Ver atividade</button>
+            </div>
+          )) : <p className="plano-retomada-vazio">Não há nova missão programada para este dia. Consulte as pendências sem alterar o calendário.</p>}
+        </div>
+        {recuperacaoSugerida && (
+          <section className="plano-retomada-sugestao" aria-label="Sugestão de recuperação após concluir a missão">
+            <div className="plano-retomada-sugestao-texto">
+              <span className="plano-retomada-eyebrow">MISSÃO DE HOJE CONCLUÍDA</span>
+              <h3>Quer recuperar uma atividade antiga?</h3>
+              <p>Sugestão opcional: <strong>{recuperacaoSugerida.missao.materia}</strong> — {recuperacaoSugerida.missao.assunto}</p>
+              <small>Semana {recuperacaoSugerida.semana} · {NOMES_DIAS_PLANO[recuperacaoSugerida.dia]} · Continua na semana original até você concluir.</small>
+            </div>
+            <button type="button" onClick={() => {
+              setSemanaSelecionada(recuperacaoSugerida.semana);
+              setDiaSelecionado(recuperacaoSugerida.dia);
+            }}>Ver atividade atrasada</button>
+          </section>
+        )}
+        {primeiraMissaoPendenteHoje && (
+          <div className="plano-painel-checklist" aria-label="Checklist auxiliar da missão">
+            <div className="plano-retomada-section-title">
+              <div>
+                <h3>Checklist da missão</h3>
+                <p>{primeiraMissaoPendenteHoje.materia} · {primeiraMissaoPendenteHoje.assunto}</p>
+              </div>
+              <span className="plano-retomada-status">{checklistFeitas}/4 etapas</span>
+            </div>
+            <div className="plano-painel-barra" role="progressbar" aria-label="Etapas do checklist marcadas" aria-valuenow={checklistFeitas} aria-valuemin={0} aria-valuemax={4}>
+              <span style={{width: `${checklistFeitas * 25}%`}}/>
+            </div>
+            <div className="plano-painel-tarefas">
+              {etapasMissao.map((etapa, indice) => (
+                <label key={indice}>
+                  <input type="checkbox" checked={Boolean(checklistMarcado[indice])}
+                    onChange={(evento) => {
+                      const id = primeiraMissaoPendenteHoje.id;
+                      const marcado = evento.currentTarget.checked;
+                      if (!usuario?.id) return;
+                      const atualizado = atualizarEtapaChecklist(checklistLocal, id, indice, marcado);
+                      salvarChecklistPlano(usuario.id, configuracoes.dadosReiniciadosEm, atualizado);
+                      setChecklistSalvo({ chave: chaveChecklistAtual, dados: atualizado });
+                    }}/>
+                  <span>{etapa}</span>
+                </label>
+              ))}
+            </div>
+            <small className="plano-painel-aviso">Checklist salvo neste navegador e separado por conta. Marcar etapas não conclui a missão; a conclusão oficial continua no registro da atividade.</small>
+          </div>
+        )}
+        <div className="plano-retomada-atrasadas">
+          <div className="plano-retomada-section-title">
+            <div>
+              <h3>Atividades atrasadas</h3>
+              <p>Recupere quando puder, sem substituir a missão do dia.</p>
+            </div>
+          </div>
+          <div className="plano-retomada-tabs" role="group" aria-label="Filtrar atividades atrasadas">
+            <button type="button" aria-pressed={filtroPendencias === "materias"} className={filtroPendencias === "materias" ? "ativa" : ""} onClick={() => { setFiltroPendencias("materias"); setMostrarTodasPendencias(false); }}>
+              Matérias <span>{pendenciasMaterias.length}</span>
+            </button>
+            <button type="button" aria-pressed={filtroPendencias === "revisoes"} className={filtroPendencias === "revisoes" ? "ativa" : ""} onClick={() => { setFiltroPendencias("revisoes"); setMostrarTodasPendencias(false); }}>
+              Revisões <span>{pendenciasRevisoes.length}</span>
+            </button>
+            <button type="button" aria-pressed={filtroPendencias === "extras"} className={filtroPendencias === "extras" ? "ativa" : ""} onClick={() => { setFiltroPendencias("extras"); setMostrarTodasPendencias(false); }}>
+              Redações e simulados <span>{pendenciasExtras.length}</span>
+            </button>
+          </div>
+          {pendenciasFiltradas.length === 0 ? (
+            <p className="plano-retomada-vazio">Nenhuma pendência nesta categoria.</p>
+          ) : (
+            <div className="plano-retomada-lista">
+              {pendenciasVisiveis.map((item) => (
+                <article className="plano-retomada-item" key={item.missao.id}>
+                  <div>
+                    <small>Semana {item.semana} · {NOMES_DIAS_PLANO[item.dia]}</small>
+                    <strong>{item.missao.materia}</strong>
+                    <p>{item.missao.assunto}</p>
+                  </div>
+                  <button type="button" onClick={() => {
+                    setSemanaSelecionada(item.semana);
+                    setDiaSelecionado(item.dia);
+                  }}>Abrir</button>
+                </article>
+              ))}
+            </div>
+          )}
+          {pendenciasFiltradas.length > 6 && (
+            <button className="plano-retomada-mais" type="button" onClick={() => setMostrarTodasPendencias((anterior) => !anterior)}>
+              {mostrarTodasPendencias ? "Mostrar menos" : `Ver todas as ${pendenciasFiltradas.length} atividades desta categoria`}
+            </button>
+          )}
+        </div>
+      </section>
 
       <div className="plano-semanas">
         {planoCalendario.map(

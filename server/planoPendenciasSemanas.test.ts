@@ -7,6 +7,9 @@ import {
   getProximaMissao,
   getSemanaAtual,
   listarPendenciasAteSemana,
+  listarPendenciasAnterioresAoDia,
+  sugerirRecuperacaoPosMissao,
+  obterDataReferenciaPlano,
   semanaPorDataInicio,
 } from "../src/utils/planoUtils";
 
@@ -50,5 +53,131 @@ test("pendências antigas aparecem antes das novas; semana avançada não diz pl
 test("régua extra e revisões separadas não aparecem no plano",()=>{
   const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
   assert.doesNotMatch(pagina,/reajuste-visual-individual|Aplicar régua nesta conta|Fila separada de revisões/);
-  assert.match(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
+  assert.doesNotMatch(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
+  assert.match(pagina,/listarPendenciasAnterioresAoDia/);
+});
+
+test("data de começo do plano prevalece sobre primeiro estudo e não é alterada",()=>{
+ const sessoes=[{data:"2026-07-29T15:57:39.868Z"}];
+ assert.deepEqual(obterDataReferenciaPlano("2026-07-28",sessoes),{data:"2026-07-28",estimada:false});
+ assert.deepEqual(obterDataReferenciaPlano(undefined,sessoes),{data:"2026-07-29",estimada:true});
+ assert.deepEqual(obterDataReferenciaPlano(undefined,[]),{data:undefined,estimada:false});
+ assert.equal(semanaPorDataInicio("2026-07-29",new Date(2026,10,3,12)),15);
+});
+test("terça cria missão nova; segunda ausente fica atrasada sem deslocar quarta",()=>{
+ const plano:SemanaPlano[]=[{numero:1,nome:"Semana 1",dias:[
+ {numero:1,missoes:[{id:"seg",numero:1,materia:"Português",assunto:"Crase",tipo:"conteudo"}]},
+ {numero:2,missoes:[{id:"ter",numero:1,materia:"RLM",assunto:"Conectivos",tipo:"conteudo"}]},
+ {numero:3,missoes:[{id:"qua",numero:1,materia:"História",assunto:"República",tipo:"conteudo"}]},
+ ]}];
+ const atrasadas=listarPendenciasAnterioresAoDia([],plano,1,2);
+ assert.deepEqual(atrasadas.map(x=>x.missao.id),["seg"]);
+ assert.equal(plano[0].dias[1].missoes[0].id,"ter");
+ assert.equal(plano[0].dias[2].missoes[0].id,"qua");
+ assert.deepEqual(listarPendenciasAnterioresAoDia(["seg"],plano,1,2),[]);
+});
+test("domingo atrasado aparece na fila, mas não substitui nova missão da terça",()=>{
+ const plano:SemanaPlano[]=[{numero:1,nome:"Semana 1",dias:[{numero:7,missoes:[
+ {id:"domingo",numero:1,materia:"Simulado",assunto:"Simulado semanal",tipo:"simulado"}
+ ]}]},{numero:2,nome:"Semana 2",dias:[{numero:1,missoes:[
+ {id:"segunda",numero:1,materia:"Português",assunto:"Verbos",tipo:"conteudo"}
+ ]},{numero:2,missoes:[
+ {id:"terca",numero:1,materia:"Informática",assunto:"Windows",tipo:"conteudo"}
+ ]}]}];
+ const atrasadas=listarPendenciasAnterioresAoDia([],plano,2,2);
+ assert.deepEqual(atrasadas.map(x=>x.missao.id),["domingo","segunda"]);
+ assert.equal(plano[1].dias[1].missoes[0].id,"terca");
+});
+
+test("dashboard usa a mesma configuração de redação e simulado do Plano de Estudos",()=>{
+ const dashboard=readFileSync("src/components/MissaoDoDia/MissaoDoDia.tsx","utf8");
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ assert.match(dashboard,/aplicarDiasAtividadesSemanais/);
+ assert.match(pagina,/aplicarDiasAtividadesSemanais/);
+ assert.match(dashboard,/listarPendenciasAnterioresAoDia/);
+ assert.match(pagina,/listarPendenciasAnterioresAoDia/);
+ assert.doesNotMatch(dashboard,/getProximaMissao\(/);
+});
+test("missão de amanhã não vira pendência de hoje",()=>{
+ const plano:SemanaPlano[]=[{numero:3,nome:"Semana 3",dias:[
+ {numero:1,missoes:[{id:"segunda",numero:1,materia:"Português",assunto:"Crase",tipo:"conteudo"}]},
+ {numero:2,missoes:[{id:"terça",numero:1,materia:"RLM",assunto:"Conectivos",tipo:"conteudo"}]},
+ {numero:3,missoes:[{id:"quarta",numero:1,materia:"Informática",assunto:"Excel",tipo:"conteudo"}]},
+ ]}];
+ assert.deepEqual(listarPendenciasAnterioresAoDia(["segunda"],plano,3,2),[]);
+ assert.deepEqual(listarPendenciasAnterioresAoDia([],plano,3,2).map(x=>x.missao.id),["segunda"]);
+ assert.deepEqual(listarPendenciasAnterioresAoDia([],plano,3,3).map(x=>x.missao.id),["segunda","terça"]);
+});
+
+test("painel de retomada separa matérias, revisões e redações/simulados em abas",()=>{
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ const estilo=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.css","utf8");
+ assert.match(pagina,/className="plano-retomada"/);
+ assert.match(pagina,/pendenciasMaterias/);
+ assert.match(pagina,/pendenciasRevisoes/);
+ assert.match(pagina,/pendenciasExtras/);
+ assert.match(pagina,/pendenciasFiltradas\.slice\(0, 6\)/);
+ assert.match(pagina,/aria-pressed=/);
+ assert.match(estilo,/\.plano-retomada-lista\s*\{/);
+ assert.match(estilo,/@media\(max-width:600px\)/);
+ assert.doesNotMatch(pagina,/Atividades das semanas anteriores<\/h3>/);
+});
+
+test("prévia exibe resumo diário, calendário e checklist sem concluir missões",()=>{
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ const css=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.css","utf8");
+ assert.match(pagina,/Visão geral do dia/);
+ assert.match(pagina,/Calendário da semana/);
+ assert.match(pagina,/situacaoDia\(numero\)/);
+ assert.match(pagina,/Checklist da missão/);
+ assert.match(pagina,/Marcar etapas não conclui a missão/);
+ assert.match(pagina,/salvarChecklistPlano/);
+ assert.match(pagina,/checklistLocal\[primeiraMissaoPendenteHoje\.id\]/);
+ assert.match(pagina,/chaveChecklistPlano\(usuario\.id, configuracoes\.dadosReiniciadosEm\)/);
+ assert.match(css,/\.plano-painel-diario/);
+ assert.match(css,/\.plano-painel-tarefas/);
+});
+
+test("sugestão de pendência aparece somente após concluir a missão de hoje",()=>{
+ const p: SemanaPlano[]=[{numero:1,nome:"Semana 1",dias:[
+  {numero:1,missoes:[{id:"antiga",numero:1,materia:"Português",assunto:"Crase",tipo:"conteudo"}]},
+  {numero:2,missoes:[{id:"hoje",numero:1,materia:"Informática",assunto:"Windows",tipo:"conteudo"}]}
+ ]}];
+ const fila=listarPendenciasAnterioresAoDia([],p,1,2);
+ assert.equal(sugerirRecuperacaoPosMissao(false,fila),null);
+ assert.equal(sugerirRecuperacaoPosMissao(true,fila)?.missao.id,"antiga");
+ assert.equal(p[0].dias[1].missoes[0].id,"hoje");
+ assert.deepEqual(fila.map(x=>x.missao.id),["antiga"]);
+ assert.equal(sugerirRecuperacaoPosMissao(true,[]),null);
+});
+test("sugestão prioriza matéria antiga em vez de revisão e simulado, sem mexer nos dados",()=>{
+ const fila=[
+  {semana:1,dia:7,missao:{id:"sim",numero:1,materia:"Simulado",assunto:"Semanal",tipo:"simulado" as const}},
+  {semana:2,dia:1,missao:{id:"rev",numero:1,materia:"Revisão dos erros",assunto:"Crase",tipo:"conteudo" as const}},
+  {semana:2,dia:2,missao:{id:"conteudo",numero:1,materia:"História",assunto:"República",tipo:"conteudo" as const}}
+ ];
+ const antes=JSON.stringify(fila);
+ assert.equal(sugerirRecuperacaoPosMissao(true,fila)?.missao.id,"conteudo");
+ assert.equal(JSON.stringify(fila),antes);
+});
+test("interface recomenda somente uma recuperação, opcional e após missão concluída",()=>{
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ assert.match(pagina,/sugerirRecuperacaoPosMissao\(missaoAtualConcluida, pendenciasAnteriores\)/);
+ assert.match(pagina,/recuperacaoSugerida &&/);
+ assert.match(pagina,/Sugestão opcional/);
+ assert.match(pagina,/Ver atividade atrasada/);
+ assert.doesNotMatch(pagina,/setConcluidas\(.*recuperacaoSugerida/);
+});
+
+test("clicar Estudar na missão atual não abre sessão anterior silenciosamente", () => {
+  const pagina = readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx", "utf8");
+  const inicio = pagina.indexOf("function iniciarEstudo(");
+  const fim = pagina.indexOf("function iniciarQuestoesReforco(", inicio);
+  assert.ok(inicio > 0 && fim > inicio);
+  const trecho = pagina.slice(inicio, fim);
+  assert.doesNotMatch(trecho, /if \(cronometroAtivo\)/);
+  assert.match(trecho, /criarDadosSessaoDaMissao\(/);
+  assert.match(trecho, /prefillSessao: dadosSessao/);
+  assert.match(trecho, /navigate\([\s\S]*?"\/central-estudos"/);
+  assert.match(pagina, /onClick=\{\(\) => iniciarEstudo\(missaoExibida\)\}/);
 });
