@@ -464,13 +464,9 @@ export default function PlanoEstudos() {
   function iniciarEstudo(
     missao: MissaoPlanoExibida
   ) {
-    if (cronometroAtivo) {
-      navigate(
-        "/central-estudos"
-      );
-      return;
-    }
-
+    // Sempre encaminhe a missão clicada. A Central administra o conflito
+    // com uma sessão anterior (rodando ou pausada), sem trocar a matéria
+    // silenciosamente nem perder o vínculo original da missão.
     const base = criarDadosSessaoDaMissao(
       materias,
       missao,
