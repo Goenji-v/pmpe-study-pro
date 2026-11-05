@@ -58,7 +58,7 @@ export default function MissaoDoDia({
       ?.dias.find(d => d.numero === diaAtual)
       ?.missoes.find(m => !missoesConcluidas.includes(m.id));
     return missao ? { semana: semanaAtual, dia: diaAtual, missao } : null;
-  }, [atualizacao, missoesConcluidas, planoCalendario, semanaAtual, diaAtual]);
+  }, [missoesConcluidas, planoCalendario, semanaAtual, diaAtual]);
   const atrasadas = useMemo(
     () => listarPendenciasAnterioresAoDia(missoesConcluidas, planoCalendario, semanaAtual, diaAtual),
     [missoesConcluidas, planoCalendario, semanaAtual, diaAtual]
