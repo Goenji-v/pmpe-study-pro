@@ -46,10 +46,11 @@ test("backup local preserva 59 respostas, cronômetro e progresso sem carregar P
 
 test("restauração sem PDF não pode apagar processo automaticamente", async () => {
   const codigo = await readFile("src/pages/SimuladoPdf/SimuladoPdf.tsx", "utf8");
-  const inicio = codigo.indexOf("async function continuarProcessoAnterior()");
+  const inicio = codigo.indexOf("async function continuarProcessoAnteriorSemBloqueio()");
   const fim = codigo.indexOf("async function excluirProcessoAnterior()");
   assert.ok(inicio > 0 && fim > inicio);
   const recuperacao = codigo.slice(inicio, fim);
+  assert.match(codigo, /solicitarInicioExterno\(\(\) => \{ void continuarProcessoAnteriorSemBloqueio\(\); \}\)/);
   assert.doesNotMatch(recuperacao, /excluirProcessoSimuladoPdf\(/);
   assert.match(recuperacao, /setFaltaPdfRecuperacao\(true\)/);
   assert.match(recuperacao, /pdfReanexado/);
