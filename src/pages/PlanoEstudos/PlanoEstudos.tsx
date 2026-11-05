@@ -25,10 +25,6 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { atualizarEtapaChecklist, carregarChecklistPlano, chaveChecklistPlano, salvarChecklistPlano } from "../../utils/checklistMissaoPlano";
 
-import {
-  useCronometro,
-} from "../../context/CronometroContext";
-
 import { localizarConteudoDaMissao, localizarConteudosDaMissao } from "../../services/conteudos/localizarConteudo";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { guardarRascunhoSimuladoPdf } from "../../services/simuladoPdfDraft";
@@ -208,9 +204,6 @@ export default function PlanoEstudos() {
     navigate("/simulado-pdf");
   }
 
-  const {
-    cronometroAtivo,
-  } = useCronometro();
 
   const missoesPorDia = normalizarMissoesPorDia(
     configuracoes.missoesPorDia ?? 1
