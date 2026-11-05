@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 
 import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
 import { useApp } from "../../context/AppContext";
+import { useCronometro } from "../../context/CronometroContext";
 import type { Simulado } from "../../types";
 import { contarResultadoSimuladoPdf } from "../../utils/contagemSimuladoPdf";
 import {
@@ -98,6 +99,7 @@ export default function SimuladoPdf() {
   const navigate = useNavigate();
   const recebido = obterRascunhoSimuladoPdf();
   const { setSimulados, setMissoesConcluidas } = useApp();
+  const { solicitarInicioExterno } = useCronometro();
 
   const [rascunho, setRascunho] =
     useState<RascunhoSimuladoPdf | null>(recebido);
@@ -243,21 +245,19 @@ export default function SimuladoPdf() {
     [aplicarJob]
   );
 
-  const iniciar = useCallback(
+  const iniciarSemBloqueio = useCallback(
     async (proximo: RascunhoSimuladoPdf) => {
       const agora = new Date().toISOString();
       const processoAnterior = carregarProcessoSimuladoPdf();
 
-      if (
-        processoAnterior?.id &&
-        processoAnterior.id !== proximo.id
-      ) {
-        await Promise.allSettled([
-          excluirProcessoSimuladoPdf(processoAnterior.id),
-          excluirAnaliseSimuladoPdf(
-            requestIdDoProcesso(processoAnterior.id)
-          ),
-        ]);
+      if (processoAnterior && !processoAnterior.finalizado) {
+        // Nunca zerar respostas e anotações de uma prova recuperável.
+        setProcessoRecuperavel(processoAnterior);
+        setAvisoRecuperacao("Já existe um Simulado PDF em andamento. Retome-o ou faça backup e exclua explicitamente antes de começar outro.");
+        return;
+      }
+      if (processoAnterior && processoAnterior.id !== proximo.id) {
+        await excluirProcessoSimuladoPdf(processoAnterior.id);
       }
 
       setRascunho(proximo);
@@ -317,6 +317,17 @@ export default function SimuladoPdf() {
     },
     [iniciarOuRetomarJob]
   );
+
+  const iniciar = useCallback((proximo: RascunhoSimuladoPdf) => {
+    // A mesma proteção cobre aulas, revisões, questões IA e provas PDF.
+    const existente = carregarProcessoSimuladoPdf();
+    if (existente && !existente.finalizado) {
+      setProcessoRecuperavel(existente);
+      setAvisoRecuperacao("Simulado PDF anterior ainda em andamento. Nada foi apagado.");
+      return;
+    }
+    solicitarInicioExterno(() => { void iniciarSemBloqueio(proximo); });
+  }, [iniciarSemBloqueio, solicitarInicioExterno]);
 
   useEffect(() => {
     if (recebido) {
@@ -794,7 +805,11 @@ export default function SimuladoPdf() {
     }
   }
 
-  async function continuarProcessoAnterior() {
+  function continuarProcessoAnterior() {
+    solicitarInicioExterno(() => { void continuarProcessoAnteriorSemBloqueio(); });
+  }
+
+  async function continuarProcessoAnteriorSemBloqueio() {
     const processo = processoRecuperavel;
     if (!processo) return;
 
