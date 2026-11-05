@@ -500,3 +500,24 @@
 .plano-painel-aviso { display:block; margin-top:12px; color:#93a6c4; font-size:12px; }
 @media(max-width:1050px) { .plano-painel-diario { grid-template-columns:1fr; } }
 @media(max-width:600px) { .plano-painel-indicadores strong { font-size:19px; } .plano-painel-indicadores small { font-size:10px; } .plano-painel-semana { padding:10px; } .plano-painel-dia { min-height:55px; } .plano-painel-tarefas { grid-template-columns:1fr; } }
+
+/* Recomendação de recuperação: aparece apenas com a missão do dia concluída. */
+.plano-retomada-sugestao {
+  display:flex; justify-content:space-between; align-items:center; gap:18px;
+  border:1px solid #28734f; border-radius:13px; background:#102b27; padding:17px;
+}
+.plano-retomada-sugestao-texto { min-width:0; }
+.plano-retomada-sugestao h3 { color:#dcfce7; margin:5px 0; font-size:17px; }
+.plano-retomada-sugestao p { color:#d1fae5; }
+.plano-retomada-sugestao strong { color:#f0fdf4; }
+.plano-retomada-sugestao small { color:#a7f3d0; font-size:12px; }
+.plano-retomada-sugestao button {
+  border:1px solid #86efac; background:#166534; color:#fff; border-radius:9px;
+  padding:10px 13px; font-size:13px; font-weight:700; cursor:pointer; flex-shrink:0;
+}
+.plano-retomada-sugestao button:hover { background:#15803d; }
+.plano-retomada-sugestao button:focus-visible { outline:3px solid #bbf7d0; outline-offset:3px; }
+@media(max-width:600px) {
+  .plano-retomada-sugestao { flex-direction:column; align-items:stretch; padding:13px; }
+  .plano-retomada-sugestao button { width:100%; }
+}
