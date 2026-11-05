@@ -8,6 +8,7 @@ import {
   getSemanaAtual,
   listarPendenciasAteSemana,
   listarPendenciasAnterioresAoDia,
+  sugerirRecuperacaoPosMissao,
   obterDataReferenciaPlano,
   semanaPorDataInicio,
 } from "../src/utils/planoUtils";
@@ -135,4 +136,35 @@ test("prévia exibe resumo diário, calendário e checklist sem concluir missõe
  assert.match(pagina,/chaveChecklistPlano\(usuario\.id, configuracoes\.dadosReiniciadosEm\)/);
  assert.match(css,/\.plano-painel-diario/);
  assert.match(css,/\.plano-painel-tarefas/);
+});
+
+test("sugestão de pendência aparece somente após concluir a missão de hoje",()=>{
+ const p: SemanaPlano[]=[{numero:1,nome:"Semana 1",dias:[
+  {numero:1,missoes:[{id:"antiga",numero:1,materia:"Português",assunto:"Crase",tipo:"conteudo"}]},
+  {numero:2,missoes:[{id:"hoje",numero:1,materia:"Informática",assunto:"Windows",tipo:"conteudo"}]}
+ ]}];
+ const fila=listarPendenciasAnterioresAoDia([],p,1,2);
+ assert.equal(sugerirRecuperacaoPosMissao(false,fila),null);
+ assert.equal(sugerirRecuperacaoPosMissao(true,fila)?.missao.id,"antiga");
+ assert.equal(p[0].dias[1].missoes[0].id,"hoje");
+ assert.deepEqual(fila.map(x=>x.missao.id),["antiga"]);
+ assert.equal(sugerirRecuperacaoPosMissao(true,[]),null);
+});
+test("sugestão prioriza matéria antiga em vez de revisão e simulado, sem mexer nos dados",()=>{
+ const fila=[
+  {semana:1,dia:7,missao:{id:"sim",numero:1,materia:"Simulado",assunto:"Semanal",tipo:"simulado" as const}},
+  {semana:2,dia:1,missao:{id:"rev",numero:1,materia:"Revisão dos erros",assunto:"Crase",tipo:"conteudo" as const}},
+  {semana:2,dia:2,missao:{id:"conteudo",numero:1,materia:"História",assunto:"República",tipo:"conteudo" as const}}
+ ];
+ const antes=JSON.stringify(fila);
+ assert.equal(sugerirRecuperacaoPosMissao(true,fila)?.missao.id,"conteudo");
+ assert.equal(JSON.stringify(fila),antes);
+});
+test("interface recomenda somente uma recuperação, opcional e após missão concluída",()=>{
+ const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+ assert.match(pagina,/sugerirRecuperacaoPosMissao\(missaoAtualConcluida, pendenciasAnteriores\)/);
+ assert.match(pagina,/recuperacaoSugerida &&/);
+ assert.match(pagina,/Sugestão opcional/);
+ assert.match(pagina,/Ver atividade atrasada/);
+ assert.doesNotMatch(pagina,/setConcluidas\(.*recuperacaoSugerida/);
 });
