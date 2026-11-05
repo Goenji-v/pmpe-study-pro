@@ -41,3 +41,25 @@ test("conflito mostra atividade em andamento e controles acessíveis",()=>{
  assert.match(estilo,/\.cronometro-bloqueio-overlay/);
  assert.match(estilo,/@media\(min-width:520px\)/);
 });
+
+const codigoPlano = readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx", "utf8");
+const codigoCentral = readFileSync("src/pages/CentralEstudos/CentralEstudos.tsx", "utf8");
+
+test("Plano Tático encaminha a missão escolhida mesmo havendo cronômetro anterior", () => {
+  const inicio = codigoPlano.indexOf("function iniciarEstudo(");
+  const fim = codigoPlano.indexOf("function iniciarQuestoesReforco(", inicio);
+  assert.ok(inicio >= 0 && fim > inicio);
+  const abrirEstudo = codigoPlano.slice(inicio, fim);
+  assert.doesNotMatch(abrirEstudo, /if\s*\(\s*cronometroAtivo\s*\)/);
+  assert.match(abrirEstudo, /criarDadosSessaoDaMissao\s*\(/);
+  assert.match(abrirEstudo, /sessionStorage\.setItem\s*\(/);
+  assert.match(abrirEstudo, /prefillSessao:\s*dadosSessao/);
+
+  const preparar = codigoCentral.slice(
+    codigoCentral.indexOf("const prefillAplicadoRef"),
+    codigoCentral.indexOf("const materiaSelecionada")
+  );
+  assert.match(preparar, /location\.state as EstadoNavegacaoCentral/);
+  assert.match(preparar, /prepararSessao\s*\(\s*\{/);
+  assert.match(preparar, /missaoId:\s*prefill\.missaoId/);
+});
