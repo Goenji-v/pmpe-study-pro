@@ -38,6 +38,7 @@ import {
   getSemanaAtual,
   obterDataReferenciaPlano,
   listarPendenciasAnterioresAoDia,
+  sugerirRecuperacaoPosMissao,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
 } from "../../utils/planoUtils";
@@ -284,6 +285,7 @@ export default function PlanoEstudos() {
     ?.dias.find((item) => item.numero === diaDeHoje)?.missoes ?? [];
   const missaoAtualConcluida = missoesDeHoje.length > 0 &&
     missoesDeHoje.every((missao) => concluidas.includes(missao.id));
+  const recuperacaoSugerida = sugerirRecuperacaoPosMissao(missaoAtualConcluida, pendenciasAnteriores);
   const primeiraMissaoPendenteHoje = missoesDeHoje.find((missao) => !concluidas.includes(missao.id));
   const etapasMissao = primeiraMissaoPendenteHoje?.tipo === "redacao"
     ? ["Preparar o repertório", "Escrever a redação", "Revisar o texto", "Registrar a redação na missão"]
@@ -705,6 +707,20 @@ export default function PlanoEstudos() {
             </div>
           )) : <p className="plano-retomada-vazio">Não há nova missão programada para este dia. Consulte as pendências sem alterar o calendário.</p>}
         </div>
+        {recuperacaoSugerida && (
+          <section className="plano-retomada-sugestao" aria-label="Sugestão de recuperação após concluir a missão">
+            <div className="plano-retomada-sugestao-texto">
+              <span className="plano-retomada-eyebrow">MISSÃO DE HOJE CONCLUÍDA</span>
+              <h3>Quer recuperar uma atividade antiga?</h3>
+              <p>Sugestão opcional: <strong>{recuperacaoSugerida.missao.materia}</strong> — {recuperacaoSugerida.missao.assunto}</p>
+              <small>Semana {recuperacaoSugerida.semana} · {NOMES_DIAS_PLANO[recuperacaoSugerida.dia]} · Continua na semana original até você concluir.</small>
+            </div>
+            <button type="button" onClick={() => {
+              setSemanaSelecionada(recuperacaoSugerida.semana);
+              setDiaSelecionado(recuperacaoSugerida.dia);
+            }}>Ver atividade atrasada</button>
+          </section>
+        )}
         {primeiraMissaoPendenteHoje && (
           <div className="plano-painel-checklist" aria-label="Checklist auxiliar da missão">
             <div className="plano-retomada-section-title">
