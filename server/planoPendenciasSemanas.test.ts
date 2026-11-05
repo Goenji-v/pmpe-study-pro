@@ -168,3 +168,16 @@ test("interface recomenda somente uma recuperação, opcional e após missão co
  assert.match(pagina,/Ver atividade atrasada/);
  assert.doesNotMatch(pagina,/setConcluidas\(.*recuperacaoSugerida/);
 });
+
+test("clicar Estudar na missão atual não abre sessão anterior silenciosamente", () => {
+  const pagina = readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx", "utf8");
+  const inicio = pagina.indexOf("function iniciarEstudo(");
+  const fim = pagina.indexOf("function iniciarQuestoesReforco(", inicio);
+  assert.ok(inicio > 0 && fim > inicio);
+  const trecho = pagina.slice(inicio, fim);
+  assert.doesNotMatch(trecho, /if \(cronometroAtivo\)/);
+  assert.match(trecho, /criarDadosSessaoDaMissao\(/);
+  assert.match(trecho, /prefillSessao: dadosSessao/);
+  assert.match(trecho, /navigate\([\s\S]*?"\/central-estudos"/);
+  assert.match(pagina, /onClick=\{\(\) => iniciarEstudo\(missaoExibida\)\}/);
+});
