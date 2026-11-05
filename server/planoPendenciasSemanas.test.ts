@@ -129,9 +129,10 @@ test("prévia exibe resumo diário, calendário e checklist sem concluir missõe
  assert.match(pagina,/Calendário da semana/);
  assert.match(pagina,/situacaoDia\(numero\)/);
  assert.match(pagina,/Checklist da missão/);
- assert.match(pagina,/as marcações são temporárias e não concluem a missão/);
- assert.match(pagina,/setChecklistLocal/);
+ assert.match(pagina,/Marcar etapas não conclui a missão/);
+ assert.match(pagina,/salvarChecklistPlano/);
  assert.match(pagina,/checklistLocal\[primeiraMissaoPendenteHoje\.id\]/);
+ assert.match(pagina,/chaveChecklistPlano\(usuario\.id, configuracoes\.dadosReiniciadosEm\)/);
  assert.match(css,/\.plano-painel-diario/);
  assert.match(css,/\.plano-painel-tarefas/);
 });
