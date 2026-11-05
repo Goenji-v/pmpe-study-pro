@@ -21,9 +21,7 @@ type MissaoDoDiaProps = {
   atualizacao?: number;
 };
 
-export default function MissaoDoDia({
-  atualizacao = 0,
-}: MissaoDoDiaProps) {
+export default function MissaoDoDia(_props: MissaoDoDiaProps) {
   const navigate = useNavigate();
   const {
     materias,
