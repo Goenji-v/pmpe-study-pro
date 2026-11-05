@@ -22,10 +22,6 @@ import {
   useApp,
 } from "../../context/AppContext";
 
-import {
-  useCronometro,
-} from "../../context/CronometroContext";
-
 import { localizarConteudoDaMissao, localizarConteudosDaMissao } from "../../services/conteudos/localizarConteudo";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { guardarRascunhoSimuladoPdf } from "../../services/simuladoPdfDraft";
@@ -172,10 +168,6 @@ export default function PlanoEstudos() {
 
     navigate("/simulado-pdf");
   }
-
-  const {
-    cronometroAtivo,
-  } = useCronometro();
 
   const missoesPorDia = normalizarMissoesPorDia(
     configuracoes.missoesPorDia ?? 1
@@ -398,13 +390,6 @@ export default function PlanoEstudos() {
   function iniciarEstudo(
     missao: MissaoPlanoExibida
   ) {
-    if (cronometroAtivo) {
-      navigate(
-        "/central-estudos"
-      );
-      return;
-    }
-
     const base = criarDadosSessaoDaMissao(
       materias,
       missao,
