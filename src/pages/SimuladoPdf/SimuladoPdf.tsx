@@ -150,6 +150,7 @@ export default function SimuladoPdf() {
   const [pdfReanexado, setPdfReanexado] = useState<File | null>(null);
   const [comentadoReanexado, setComentadoReanexado] = useState<File | null>(null);
   const resultadoPersistidoRef = useRef("");
+  const tentativaInicioAutomaticoRef = useRef<string | null>(null);
   const [salvandoResultadoFinal, setSalvandoResultadoFinal] =
     useState(false);
   const [avisoResultadoFinal, setAvisoResultadoFinal] =
@@ -347,7 +348,9 @@ export default function SimuladoPdf() {
       estadoAnalise === "parado" &&
       !processoRecuperavel
     ) {
-      void iniciar(rascunho);
+      if (tentativaInicioAutomaticoRef.current === rascunho.id) return;
+      tentativaInicioAutomaticoRef.current = rascunho.id;
+      iniciar(rascunho);
     }
   }, [
     estadoAnalise,
@@ -436,6 +439,8 @@ export default function SimuladoPdf() {
   const persistirEstadoAtual = useCallback(
     (segundosAtuais = segundos) => {
       if (!iniciado || !rascunho) return;
+      const gravado = carregarProcessoSimuladoPdf();
+      if (!gravado || gravado.id !== rascunho.id) return;
 
       salvarProcessoSimuladoPdf({
         id: rascunho.id,
@@ -489,6 +494,19 @@ export default function SimuladoPdf() {
     respostas,
     persistirEstadoAtual,
   ]);
+
+  useEffect(() => {
+    if (!iniciado || finalizado || !rascunho) return;
+    function verificarDescarteOutraAba() {
+      const existente = carregarProcessoSimuladoPdf();
+      if (existente?.id === rascunho?.id) return;
+      // A outra aba confirmou descarte; não ressuscitar a prova excluída.
+      setPausado(true);
+      setAvisoRecuperacao("Este simulado foi substituído em outra aba. O cronômetro foi interrompido.");
+    }
+    window.addEventListener("storage", verificarDescarteOutraAba);
+    return () => window.removeEventListener("storage", verificarDescarteOutraAba);
+  }, [iniciado, finalizado, rascunho]);
 
   useEffect(() => {
     if (segundos === 0 || segundos % 5 !== 0) return;
