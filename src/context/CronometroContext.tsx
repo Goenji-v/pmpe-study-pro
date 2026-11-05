@@ -1,5 +1,6 @@
 import { armazenamentoLocalDaConta as localStorage } from "../services/armazenamentoConta";
 import "./CronometroBloqueio.css";
+import { carregarProcessoSimuladoPdf, excluirProcessoSimuladoPdf } from "../services/simuladoPdfPersistencia";
 /* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
 /* oxlint-disable react/only-export-components */
 import {
@@ -124,6 +125,7 @@ type CronometroContextType = {
   segundosDecorridos: number;
   cronometroAtivo: boolean;
   iniciar: (dados: DadosIniciarSessao) => boolean;
+  solicitarInicioExterno: (executar: () => void) => void;
   atualizarDados: (
     dados: Partial<
       Pick<
@@ -210,7 +212,12 @@ export function CronometroProvider({
 
   const [agora, setAgora] =
     useState(Date.now());
-  const [trocaPendente, setTrocaPendente] = useState<{ acao: "iniciar" | "preparar"; dados: DadosIniciarSessao } | null>(null);
+  const [trocaPendente, setTrocaPendente] = useState<
+    | { acao: "iniciar" | "preparar"; dados: DadosIniciarSessao; pdfId?: string }
+    | { acao: "externo"; executar: () => void }
+    | null
+  >(null);
+  const [descartandoSessao, setDescartandoSessao] = useState(false);
 
   useEffect(() => {
     finalizacaoConsumida.current = false;
@@ -335,14 +342,27 @@ export function CronometroProvider({
     sessaoAtiva.status !== "parado";
 
   function sessaoEmExecucao() {
-    // Garante o bloqueio também se outra aba iniciou uma atividade
-    // antes de chegar o evento "storage".
     return cronometroAtivo || carregarSessao(chaveStorage).status !== "parado";
   }
 
-  function iniciar(dados: DadosIniciarSessao) {
+  function simuladoPdfEmExecucao() {
+    const processo = carregarProcessoSimuladoPdf();
+    return processo && !processo.finalizado ? processo : null;
+  }
+
+  function solicitarInicioExterno(executar: () => void) {
+    // Ex.: a prova PDF tem relógio próprio, mas usa a mesma exclusividade.
     if (sessaoEmExecucao()) {
-      setTrocaPendente({ acao: "iniciar", dados });
+      setTrocaPendente({ acao: "externo", executar });
+      return;
+    }
+    executar();
+  }
+
+  function iniciar(dados: DadosIniciarSessao) {
+    const pdf = simuladoPdfEmExecucao();
+    if (pdf || sessaoEmExecucao()) {
+      setTrocaPendente({ acao: "iniciar", dados, pdfId: pdf?.id });
       return false;
     }
     return iniciarSemBloqueio(dados);
@@ -442,8 +462,9 @@ export function CronometroProvider({
   }
 
   function prepararSessao(dados: DadosIniciarSessao) {
-    if (sessaoEmExecucao()) {
-      setTrocaPendente({ acao: "preparar", dados });
+    const pdf = simuladoPdfEmExecucao();
+    if (pdf || sessaoEmExecucao()) {
+      setTrocaPendente({ acao: "preparar", dados, pdfId: pdf?.id });
       return;
     }
     prepararSessaoSemBloqueio(dados);
@@ -1067,26 +1088,40 @@ export function CronometroProvider({
     };
   }
 
-  function confirmarTrocaSessao() {
-    if (!trocaPendente) return;
-    const { acao, dados } = trocaPendente;
-    // Não descartar uma sessão válida por solicitação incompleta.
-    if (acao === "iniciar" &&
-        (!obterMateriaEfetivaDaSessao(dados.tipo, dados.materia) || !dados.assunto.trim())) {
+  async function confirmarTrocaSessao() {
+    if (!trocaPendente || descartandoSessao) return;
+    if (trocaPendente.acao !== "externo" && trocaPendente.acao === "iniciar" &&
+        (!obterMateriaEfetivaDaSessao(trocaPendente.dados.tipo, trocaPendente.dados.materia) ||
+         !trocaPendente.dados.assunto.trim())) {
       setTrocaPendente(null);
       showToast("Escolha uma matéria e um assunto antes de iniciar.", "warning");
       return;
     }
-    setTrocaPendente(null);
-    // O descarte só ocorre APÓS confirmação explícita. Nada é salvo como
-    // sessão concluída e as atividades/revisões anteriores não são afetadas.
-    finalizacaoConsumida.current = false;
-    localStorage.removeItem(chaveStorage);
-    if (acao === "iniciar") {
-      iniciarSemBloqueio(dados);
-    } else {
-      prepararSessaoSemBloqueio(dados);
-      showToast("Atividade anterior descartada. Pronto para começar a nova.", "warning");
+
+    setDescartandoSessao(true);
+    try {
+      if (trocaPendente.acao !== "externo" && trocaPendente.pdfId) {
+        // Apenas após o consentimento explícito. Apaga os anexos/anotações
+        // da tentativa PDF anterior, mantendo resultados já finalizados.
+        await excluirProcessoSimuladoPdf(trocaPendente.pdfId);
+      }
+      finalizacaoConsumida.current = false;
+      localStorage.removeItem(chaveStorage);
+      setSessaoAtiva({ ...sessaoInicial });
+      const pendente = trocaPendente;
+      setTrocaPendente(null);
+      if (pendente.acao === "externo") {
+        pendente.executar();
+      } else if (pendente.acao === "iniciar") {
+        iniciarSemBloqueio(pendente.dados);
+      } else {
+        prepararSessaoSemBloqueio(pendente.dados);
+        showToast("Atividade anterior descartada. Pronto para começar a nova.", "warning");
+      }
+    } catch {
+      showToast("Não foi possível descartar a atividade anterior. Seus dados foram preservados.", "error");
+    } finally {
+      setDescartandoSessao(false);
     }
   }
 
@@ -1117,6 +1152,7 @@ export function CronometroProvider({
         segundosDecorridos,
         cronometroAtivo,
         iniciar,
+        solicitarInicioExterno,
         atualizarDados,
         prepararSessao,
         pausar,
@@ -1134,21 +1170,27 @@ export function CronometroProvider({
             <span className="cronometro-bloqueio-tag">Atividade em execução</span>
             <h2 id="cronometro-bloqueio-titulo">Você já está com uma atividade em andamento</h2>
             <p id="cronometro-bloqueio-descricao">
-              {sessaoAtiva.materia || "Atividade"} — {sessaoAtiva.assunto || "Sessão atual"}
-              {sessaoAtiva.status === "pausado" ? " (pausada)." : " (cronômetro em execução)."}
+              {trocaPendente.acao !== "externo" && trocaPendente.pdfId
+                ? `Simulado PDF — ${carregarProcessoSimuladoPdf()?.nome ?? "Prova em andamento"}`
+                : `${sessaoAtiva.materia || "Atividade"} — ${sessaoAtiva.assunto || "Sessão atual"}`}
+              {trocaPendente.acao !== "externo" && trocaPendente.pdfId
+                ? " (prova em andamento ou pausada)."
+                : sessaoAtiva.status === "pausado" ? " (pausada)." : " (cronômetro em execução)."}
               {" "}Você só pode usar um cronômetro por vez.
             </p>
             <p className="cronometro-bloqueio-alerta">
-              Se descartar, o tempo e o progresso não salvos desta sessão serão perdidos.
+              Se descartar, o tempo, as respostas e anotações não salvas desta atividade serão perdidos. No Simulado PDF, os arquivos e respostas locais da tentativa são excluídos.
               As atividades já finalizadas e salvas continuam intactas.
             </p>
             <div className="cronometro-bloqueio-acoes">
               <button type="button" className="cronometro-bloqueio-manter"
+                disabled={descartandoSessao}
                 onClick={() => setTrocaPendente(null)}>
                 Manter atividade atual
               </button>
               <button type="button" className="cronometro-bloqueio-descartar"
-                onClick={confirmarTrocaSessao}>
+                disabled={descartandoSessao}
+                onClick={() => void confirmarTrocaSessao()}>
                 Descartar e começar outra
               </button>
             </div>
