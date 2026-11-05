@@ -1,5 +1,6 @@
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -21,6 +22,8 @@ import {
 import {
   useApp,
 } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
+import { atualizarEtapaChecklist, carregarChecklistPlano, chaveChecklistPlano, salvarChecklistPlano } from "../../utils/checklistMissaoPlano";
 
 import {
   useCronometro,
@@ -58,6 +61,7 @@ type MissaoPlanoExibida = MissaoPlano & {
 };
 
 export default function PlanoEstudos() {
+  const { usuario } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const estadoNavegacao = location.state as { semana?: number; dia?: number } | null;
@@ -79,7 +83,33 @@ export default function PlanoEstudos() {
 
   const [filtroPendencias, setFiltroPendencias] = useState<"materias" | "revisoes" | "extras">("materias");
   const [mostrarTodasPendencias, setMostrarTodasPendencias] = useState(false);
-  const [checklistLocal, setChecklistLocal] = useState<Record<string, boolean[]>>({});
+  const chaveChecklistAtual = usuario?.id
+    ? chaveChecklistPlano(usuario.id, configuracoes.dadosReiniciadosEm)
+    : "";
+  const [checklistSalvo, setChecklistSalvo] = useState(() => ({
+    chave: chaveChecklistAtual,
+    dados: carregarChecklistPlano(usuario?.id, configuracoes.dadosReiniciadosEm),
+  }));
+  const checklistLocal = checklistSalvo.chave === chaveChecklistAtual ? checklistSalvo.dados : {};
+  useEffect(() => {
+    // Nunca apresentar checklist de outra conta durante troca de usuário.
+    setChecklistSalvo({
+      chave: chaveChecklistAtual,
+      dados: carregarChecklistPlano(usuario?.id, configuracoes.dadosReiniciadosEm),
+    });
+  }, [chaveChecklistAtual, usuario?.id, configuracoes.dadosReiniciadosEm]);
+
+  useEffect(() => {
+    function aoModificarChecklistEmOutraAba() {
+      if (!usuario?.id) return;
+      setChecklistSalvo({
+        chave: chaveChecklistAtual,
+        dados: carregarChecklistPlano(usuario.id, configuracoes.dadosReiniciadosEm),
+      });
+    }
+    window.addEventListener("storage", aoModificarChecklistEmOutraAba);
+    return () => window.removeEventListener("storage", aoModificarChecklistEmOutraAba);
+  }, [chaveChecklistAtual, usuario?.id, configuracoes.dadosReiniciadosEm]);
   const [temaRedacao, setTemaRedacao] = useState("");
   const [minutosRedacao, setMinutosRedacao] = useState("");
   const [notaRedacao, setNotaRedacao] = useState("");
@@ -694,17 +724,16 @@ export default function PlanoEstudos() {
                     onChange={(evento) => {
                       const id = primeiraMissaoPendenteHoje.id;
                       const marcado = evento.currentTarget.checked;
-                      setChecklistLocal((anterior) => {
-                        const etapas = [...(anterior[id] ?? [false,false,false,false])];
-                        etapas[indice] = marcado;
-                        return {...anterior, [id]: etapas};
-                      });
+                      if (!usuario?.id) return;
+                      const atualizado = atualizarEtapaChecklist(checklistLocal, id, indice, marcado);
+                      salvarChecklistPlano(usuario.id, configuracoes.dadosReiniciadosEm, atualizado);
+                      setChecklistSalvo({ chave: chaveChecklistAtual, dados: atualizado });
                     }}/>
                   <span>{etapa}</span>
                 </label>
               ))}
             </div>
-            <small className="plano-painel-aviso">Prévia do checklist: as marcações são temporárias e não concluem a missão. A conclusão oficial continua no registro da atividade.</small>
+            <small className="plano-painel-aviso">Checklist salvo neste navegador e separado por conta. Marcar etapas não conclui a missão; a conclusão oficial continua no registro da atividade.</small>
           </div>
         )}
         <div className="plano-retomada-atrasadas">
