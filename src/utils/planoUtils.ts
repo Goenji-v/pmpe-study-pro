@@ -320,3 +320,25 @@ export function listarPendenciasAnterioresAoDia(
       : [];
   }));
 }
+
+/** Sugere somente UMA recuperação após cumprir a missão atual.
+ * Prioriza matéria atrasada, depois revisão, depois redação/simulado.
+ * Nunca muda o dia ou o status de qualquer missão. */
+export function sugerirRecuperacaoPosMissao(
+  diaConcluido: boolean,
+  pendencias: readonly ProximaMissaoPlano[],
+): ProximaMissaoPlano | null {
+  if (!diaConcluido || pendencias.length === 0) return null;
+  const prioridade = (item: ProximaMissaoPlano) =>
+    item.missao.tipo === "redacao" || item.missao.tipo === "simulado" ? 2
+      : item.missao.tipo === "revisao" ||
+        /revis[aã]o\s+(dos\s+)?erros|^revis[aã]o\b/i.test(
+          item.missao.materia + " " + item.missao.assunto
+        ) ? 1 : 0;
+  return [...pendencias].sort((a, b) =>
+    prioridade(a) - prioridade(b) ||
+    a.semana - b.semana ||
+    a.dia - b.dia ||
+    a.missao.numero - b.missao.numero
+  )[0] ?? null;
+}
