@@ -682,18 +682,21 @@ export default function ResolverSimuladoIA() {
         })
     );
 
-    const resumo = aplicarRevisoesDoResultadoIA({
-      revisoes,
-      diagnostico: diagnosticoAtual,
-      materias,
-    });
+    // Simulados são apenas diagnóstico e treino voluntário: não criam
+    // pendências na agenda. Questões avulsas mantêm a revisão adaptativa.
+    const revisaoAutomaticaPermitida = novoResultado.tipo !== "simulado";
+    const resumo: ResumoRevisoesResultadoIA = revisaoAutomaticaPermitida
+      ? aplicarRevisoesDoResultadoIA({ revisoes, diagnostico: diagnosticoAtual, materias })
+      : { revisoes, criadas: 0, atualizadas: 0, semReferencia: 0 };
 
-    setRevisoes((anteriores) => {
-      let proximas = aplicarRevisoesDoResultadoIA({
-        revisoes: anteriores,
-        diagnostico: diagnosticoAtual,
-        materias,
-      }).revisoes;
+    if (revisaoAutomaticaPermitida || revisaoDireta) setRevisoes((anteriores) => {
+      let proximas = revisaoAutomaticaPermitida
+        ? aplicarRevisoesDoResultadoIA({
+            revisoes: anteriores,
+            diagnostico: diagnosticoAtual,
+            materias,
+          }).revisoes
+        : anteriores;
 
       if (
         revisaoDireta &&
