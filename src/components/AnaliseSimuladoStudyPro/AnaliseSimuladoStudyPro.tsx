@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
+  BookOpenCheck,
   Brain,
   CheckCircle2,
   ChevronDown,
