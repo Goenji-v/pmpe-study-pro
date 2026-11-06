@@ -26,17 +26,6 @@ type Diagnostico = {
   percentual: number;
 };
 
-type RevisaoIA = {
-  id: string;
-  materia: string;
-  assunto: string;
-  origem: "simulado-ia";
-  criadaEm: string;
-  concluida: boolean;
-};
-
-const CHAVE_REVISOES_IA = "pmpe_revisoes_ia";
-
 export default function DiagnosticoSimuladoIA({
   questoes,
   respostas,
@@ -48,10 +37,6 @@ export default function DiagnosticoSimuladoIA({
   const diagnostico = useMemo(
     () => calcularDiagnostico(questoes, respostas),
     [questoes, respostas]
-  );
-
-  const assuntosCriticos = diagnostico.filter(
-    (item) => item.erradas > 0 || item.emBranco > 0
   );
 
   if (!finalizado) {
@@ -88,60 +73,6 @@ export default function DiagnosticoSimuladoIA({
     );
   }
 
-  function criarRevisoes() {
-    if (assuntosCriticos.length === 0) {
-      setMensagem("Não há assuntos com erro para revisar.");
-      return;
-    }
-
-    const revisoesAtuais = carregarRevisoes();
-    const chavesAtuais = new Set(
-      revisoesAtuais.map((item) =>
-        normalizar(`${item.materia}::${item.assunto}`)
-      )
-    );
-
-    const novasRevisoes: RevisaoIA[] = [];
-
-    assuntosCriticos.forEach((item) => {
-      const chave = normalizar(
-        `${item.materia}::${item.assunto}`
-      );
-
-      if (chavesAtuais.has(chave)) {
-        return;
-      }
-
-      novasRevisoes.push({
-        id: crypto.randomUUID(),
-        materia: item.materia,
-        assunto: item.assunto,
-        origem: "simulado-ia",
-        criadaEm: new Date().toISOString(),
-        concluida: false,
-      });
-
-      chavesAtuais.add(chave);
-    });
-
-    localStorage.setItem(
-      CHAVE_REVISOES_IA,
-      JSON.stringify([...novasRevisoes, ...revisoesAtuais])
-    );
-
-    window.dispatchEvent(
-      new Event("pmpe-revisoes-ia-atualizadas")
-    );
-
-    setMensagem(
-      novasRevisoes.length > 0
-        ? `${novasRevisoes.length} revisão${
-            novasRevisoes.length === 1 ? "" : "ões"
-          } criada${novasRevisoes.length === 1 ? "" : "s"}.`
-        : "Esses assuntos já estavam na fila de revisões."
-    );
-  }
-
   return (
     <section className="diagnostico-ia">
       <div className="diagnostico-ia-topo">
@@ -151,10 +82,6 @@ export default function DiagnosticoSimuladoIA({
         </div>
 
         <div className="diagnostico-ia-acoes">
-          <button type="button" onClick={criarRevisoes}>
-            🔁 Criar revisões
-          </button>
-
           <button type="button" onClick={treinarErros}>
             🎯 Treinar erros
           </button>
@@ -244,21 +171,6 @@ function calcularDiagnostico(
           : Math.round((item.certas / item.total) * 100),
     }))
     .sort((a, b) => a.percentual - b.percentual);
-}
-
-function carregarRevisoes(): RevisaoIA[] {
-  const salvo = localStorage.getItem(CHAVE_REVISOES_IA);
-
-  if (!salvo) {
-    return [];
-  }
-
-  try {
-    const valor: unknown = JSON.parse(salvo);
-    return Array.isArray(valor) ? (valor as RevisaoIA[]) : [];
-  } catch {
-    return [];
-  }
 }
 
 function normalizar(texto: string) {
