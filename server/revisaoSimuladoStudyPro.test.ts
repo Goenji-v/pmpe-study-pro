@@ -219,7 +219,7 @@ function pendenteDomingo(
   };
 }
 
-test("Simulado de domingo: oito prioridades ficam na agenda sem duplicar e respeitando meta diária", () => {
+test("função legada preserva diagnósticos sem transformá-los em revisões regulares", () => {
   const grade = gradeDomingo();
   const analise = analiseDomingo();
   const existentes: Revisao[] = [
@@ -274,12 +274,11 @@ test("Simulado de domingo: oito prioridades ficam na agenda sem duplicar e respe
     item.assunto === "A presença Holandesa, O governo Nassau e a Insurreição Pernambucana"
   ));
 
-  for (const data of new Set(novas.map((item) => item.dataPrevista.slice(0,10)))) {
-    const totalDia = primeira.revisoes.filter((item) =>
-      !item.concluida && item.dataPrevista.slice(0,10) === data
-    ).length;
-    assert.ok(totalDia <= 2, `Dia ${data} ultrapassou 2 revisões`);
-  }
+  // As novas revisões legadas carregam origem identificável e ficam
+  // fora da agenda regular. Os registros existentes não são apagados.
+  assert.equal(novas.every((item) => Boolean(item.origemSimulado)), true);
+  assert.equal(primeira.revisoes.filter((item) => !item.origemSimulado).length, existentes.length);
+
 
   const segunda = executar(primeira.revisoes);
   assert.equal(segunda.criadas, 0);
@@ -307,10 +306,10 @@ test("reabrir a mesma análise não recria etapa que já foi concluída", () => 
   assert.equal(segunda.revisoes.length, concluidas.length);
 });
 
-test("recuperação do diagnóstico recente espera a nuvem sincronizar e não repete autosave vazio", async () => {
+test("abertura da conta não importa revisões do diagnóstico antigo", async () => {
   const { readFile } = await import("node:fs/promises");
   const contexto = await readFile("src/context/AppContext.tsx", "utf8");
-  assert.match(contexto, /listarAnalisesSimulados\(12\)/);
-  assert.match(contexto, /statusNuvem !== "sincronizado"/);
-  assert.match(contexto, /resultado\.criadas \+ resultado\.atualizadas > 0/);
+  assert.doesNotMatch(contexto, /listarAnalisesSimulados\(12\)/);
+  assert.doesNotMatch(contexto, /adicionarErrosSimuladoARevisao/);
+  assert.match(contexto, /revisoes: revisoesRegulares/);
 });
