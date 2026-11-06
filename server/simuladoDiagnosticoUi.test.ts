@@ -9,7 +9,7 @@ test("diagnóstico do simulado mantém resumo enxuto e sem rótulos antigos", as
   );
 
   assert.match(codigo, /Prioridades principais/);
-  assert.match(codigo, /Plano de revisão/);
+  assert.match(codigo, /Focos sugeridos/);
   assert.match(codigo, /Até 8 focos/);
   assert.match(codigo, /analise\.assuntos\.slice\(0, 12\)/);
   assert.match(codigo, /Ver todos os \$\{analise\.assuntos\.length\} assuntos/);
