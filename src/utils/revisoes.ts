@@ -4,6 +4,7 @@ import type {
   SessaoEstudo,
   TipoSessao,
 } from "../types";
+import { revisaoOriginadaDeSimulado } from "./revisoesRegulares";
 
 export const INTERVALOS_REVISAO_DIAS: Record<EtapaRevisao, number> = {
   1: 1,
@@ -41,7 +42,7 @@ export function encontrarDataDisponivelParaRevisao(params: {
   for (let i = 0; i < 365; i += 1) {
     const chave = chaveData(candidato);
     const quantidade = revisoes.filter(
-      (revisao) => !revisao.concluida && chaveData(revisao.dataPrevista) === chave
+      (revisao) => !revisaoOriginadaDeSimulado(revisao) && !revisao.concluida && chaveData(revisao.dataPrevista) === chave
     ).length;
 
     if (quantidade < limiteDiario) return candidato;
