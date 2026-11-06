@@ -1,16 +1,14 @@
-import { armazenamentoLocalDaConta as localStorage, armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
-import { useEffect, useMemo, useState } from "react";
+import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./Revisoes.css";
 
 import { useApp } from "../../context/AppContext";
-import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import {
   calcularDiasDiferenca,
-  criarPrimeiraRevisao,
   concluirRevisaoNaLista,
   formatarDataRevisao,
   preverProximaRevisaoPorDesempenho,
@@ -18,120 +16,21 @@ import {
   redistribuirRevisoesPendentes,
   reagendarRevisao,
 } from "../../utils/revisoes";
-import type { Materia, Revisao } from "../../types";
+import type { Revisao } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 
-type RevisaoIA = {
-  id: string;
-  materia: string;
-  assunto: string;
-  origem: "simulado-ia";
-  criadaEm: string;
-  concluida: boolean;
-};
-
 type DesempenhoRevisao = "facil" | "media" | "dificil";
 
-const CHAVE_REVISOES_IA_LEGADA = "pmpe_revisoes_ia";
 const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
-
-function chaveRevisoesIA(userId: string) {
-  return `pmpe:${userId}:revisoes-ia`;
-}
 
 export default function Revisoes() {
   const { materias, revisoes, setRevisoes, configuracoes } = useApp();
-  const { usuario } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
-
-  // A função é local, mas todas as capturas relevantes são enumeradas para
-  // renovar os listeners quando o estado usado na importação mudar.
-  /* oxlint-disable react-hooks/exhaustive-deps */
-  useEffect(() => {
-    if (!usuario) return;
-
-    importarRevisoesIA();
-
-    function atualizarRevisoesIA() {
-      importarRevisoesIA();
-    }
-
-    window.addEventListener("pmpe-revisoes-ia-atualizadas", atualizarRevisoesIA);
-    window.addEventListener("storage", atualizarRevisoesIA);
-
-    return () => {
-      window.removeEventListener("pmpe-revisoes-ia-atualizadas", atualizarRevisoesIA);
-      window.removeEventListener("storage", atualizarRevisoesIA);
-    };
-  }, [usuario, revisoes, materias, configuracoes.metaRevisoesDiaria, setRevisoes, showToast]);
-  /* oxlint-enable react-hooks/exhaustive-deps */
-
-  function importarRevisoesIA() {
-    if (!usuario) return;
-
-    const revisoesIA = carregarRevisoesIA(usuario.id);
-    if (revisoesIA.length === 0) return;
-
-    const pendentesPorChave = new Map(
-      revisoes
-        .filter((revisao) => !revisao.concluida)
-        .map((revisao) => [normalizar(`${revisao.materia}::${revisao.assunto}`), revisao])
-    );
-
-    const novasRevisoes: Revisao[] = [];
-    const jaAgendadas: Revisao[] = [];
-    let revisoesParaDistribuicao = [...revisoes];
-
-    revisoesIA.forEach((revisaoIA) => {
-      const chave = normalizar(`${revisaoIA.materia}::${revisaoIA.assunto}`);
-      const existente = pendentesPorChave.get(chave);
-
-      if (existente) {
-        jaAgendadas.push(existente);
-        return;
-      }
-
-      const novaRevisao = criarRevisaoInicialIA(
-        revisaoIA,
-        materias,
-        revisoesParaDistribuicao,
-        configuracoes.metaRevisoesDiaria
-      );
-
-      novasRevisoes.push(novaRevisao);
-      revisoesParaDistribuicao = [novaRevisao, ...revisoesParaDistribuicao];
-      pendentesPorChave.set(chave, novaRevisao);
-    });
-
-    limparFilaRevisoesIA(usuario.id);
-
-    if (novasRevisoes.length === 0) {
-      if (jaAgendadas.length > 0) {
-        showToast(
-          `A revisão já estava agendada para ${formatarDataRevisao(jaAgendadas[0].dataPrevista)}.`,
-          "info"
-        );
-      }
-      return;
-    }
-
-    setRevisoes((anteriores) => [...novasRevisoes, ...anteriores]);
-
-    const primeiraData = novasRevisoes.map((revisao) => revisao.dataPrevista).sort()[0];
-    showToast(
-      `${novasRevisoes.length} revisão${novasRevisoes.length === 1 ? "" : "ões"} do Simulado IA adicionada${novasRevisoes.length === 1 ? "" : "s"} para ${formatarDataRevisao(primeiraData)}.${
-        jaAgendadas.length > 0
-          ? ` ${jaAgendadas.length} já estava${jaAgendadas.length === 1 ? "" : "m"} agendada${jaAgendadas.length === 1 ? "" : "s"}.`
-          : ""
-      }`,
-      "success"
-    );
-  }
 
   const revisoesComModulo = useMemo(
     () =>
@@ -354,7 +253,6 @@ export default function Revisoes() {
       anteriores.filter((revisao) => revisao.id !== revisaoExcluida.id)
     );
 
-    if (usuario) removerDaFilaRevisoesIA(usuario.id, revisaoExcluida);
     showToast("Revisão excluída.", "info");
   }
 
@@ -429,7 +327,7 @@ export default function Revisoes() {
       {revisoesPendentes.length === 0 ? (
         <div className="revisoes-vazio">
           <h2>Nenhuma revisão pendente</h2>
-          <p>Marque assuntos como concluídos na página Estudos ou crie revisões após um Simulado IA.</p>
+          <p>Revisões de simulados não são adicionadas a esta agenda. Consulte os erros no diagnóstico do simulado e treine com IA se desejar.</p>
         </div>
       ) : (
         <>
@@ -754,93 +652,6 @@ function GrupoRevisoes({
       </div>
     </div>
   );
-}
-
-function carregarRevisoesIA(userId: string): RevisaoIA[] {
-  const chaves = [chaveRevisoesIA(userId), CHAVE_REVISOES_IA_LEGADA];
-  const todas: RevisaoIA[] = [];
-
-  chaves.forEach((chave) => {
-    const salvo = localStorage.getItem(chave);
-    if (!salvo) return;
-
-    try {
-      const valor: unknown = JSON.parse(salvo);
-      if (Array.isArray(valor)) todas.push(...(valor as RevisaoIA[]));
-    } catch {
-      localStorage.removeItem(chave);
-    }
-  });
-
-  const unicas = new Map<string, RevisaoIA>();
-  todas.forEach((revisao) => {
-    const chave = normalizar(`${revisao.materia}::${revisao.assunto}`);
-    if (!unicas.has(chave)) unicas.set(chave, revisao);
-  });
-
-  return Array.from(unicas.values());
-}
-
-function limparFilaRevisoesIA(userId: string) {
-  localStorage.removeItem(chaveRevisoesIA(userId));
-  localStorage.removeItem(CHAVE_REVISOES_IA_LEGADA);
-}
-
-function removerDaFilaRevisoesIA(userId: string, revisaoExcluida: Revisao) {
-  const chaveExcluida = normalizar(`${revisaoExcluida.materia}::${revisaoExcluida.assunto}`);
-
-  [chaveRevisoesIA(userId), CHAVE_REVISOES_IA_LEGADA].forEach((chaveStorage) => {
-    const salvo = localStorage.getItem(chaveStorage);
-    if (!salvo) return;
-
-    try {
-      const valor: unknown = JSON.parse(salvo);
-      if (!Array.isArray(valor)) {
-        localStorage.removeItem(chaveStorage);
-        return;
-      }
-
-      const listaFiltrada = (valor as RevisaoIA[]).filter(
-        (item) => normalizar(`${item.materia}::${item.assunto}`) !== chaveExcluida
-      );
-
-      if (listaFiltrada.length === 0) localStorage.removeItem(chaveStorage);
-      else localStorage.setItem(chaveStorage, JSON.stringify(listaFiltrada));
-    } catch {
-      localStorage.removeItem(chaveStorage);
-    }
-  });
-}
-
-function criarRevisaoInicialIA(
-  revisaoIA: RevisaoIA,
-  materias: Materia[],
-  revisoesExistentes: Revisao[],
-  limiteDiario: number
-): Revisao {
-  const referencia = localizarReferenciaCanonica(materias, {
-    materia: revisaoIA.materia,
-    assunto: revisaoIA.assunto,
-  });
-
-  const revisao = criarPrimeiraRevisao({
-    materiaId: referencia?.materia.id ?? `legado-${normalizar(revisaoIA.materia)}`,
-    moduloId: referencia?.modulo.id,
-    assuntoId:
-      referencia?.assunto.id ??
-      `legado-${normalizar(revisaoIA.materia)}-${normalizar(revisaoIA.assunto)}`,
-    materia: referencia?.materia.nome ?? revisaoIA.materia,
-    modulo: referencia?.modulo.nome,
-    assunto: referencia?.assunto.nome ?? revisaoIA.assunto,
-    revisoesExistentes,
-    limiteDiario,
-  });
-
-  return {
-    ...revisao,
-    id: `ia-${revisaoIA.id}`,
-    dataCriacao: revisaoIA.criadaEm || revisao.dataCriacao,
-  };
 }
 
 function formatarDesempenho(desempenho: DesempenhoRevisao) {
