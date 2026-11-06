@@ -21,7 +21,7 @@ export function mesclarRevisoesRegulares(
   atualizadas: Revisao[]
 ): Revisao[] {
   const regulares = filtrarRevisoesRegulares(anteriores);
-  if (regulares === atualizadas) return anteriores;
+  if (regulares.length === atualizadas.length && regulares.every((item, i) => item === atualizadas[i])) return anteriores;
 
   const atualizadasPorId = new Map(atualizadas.map((item) => [item.id, item]));
   const idsAnteriores = new Set(regulares.map((item) => item.id));
