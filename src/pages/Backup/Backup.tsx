@@ -1,5 +1,6 @@
+import { listarBackupsAutomaticosDuraveis } from "../../services/seguranca/backupAutomaticoDuravel";
 import {
-  useMemo,
+  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -62,16 +63,26 @@ export default function Backup() {
   const [arquivoAnalisado, setArquivoAnalisado] =
     useState<ArquivoBackupStudyPro | null>(null);
 
-  const backupsAutomaticos = useMemo(
-    () =>
-      usuarioId
-        ? listarBackupsAutomaticosLocais(usuarioId)
-        : [],
-    // ultimoBackup e statusNuvem são gatilhos explícitos para reler backups locais.
-    /* oxlint-disable react-hooks/exhaustive-deps */
-    [usuarioId, ultimoBackup, statusNuvem]
-    /* oxlint-enable react-hooks/exhaustive-deps */
-  );
+  const [backupsAutomaticos, setBackupsAutomaticos] = useState<BackupAutomaticoLocal[]>([]);
+  const [erroListagem, setErroListagem] = useState("");
+  useEffect(() => {
+    let ativo = true;
+    const atualizar = async () => {
+      if (!usuarioId) { setBackupsAutomaticos([]); return; }
+      try {
+        const backups = await listarBackupsAutomaticosDuraveis(usuarioId);
+        if (ativo) { setBackupsAutomaticos(backups); setErroListagem(""); }
+      } catch {
+        if (ativo) {
+          setBackupsAutomaticos(listarBackupsAutomaticosLocais(usuarioId));
+          setErroListagem("Não foi possível consultar o armazenamento adicional de backups neste aparelho. Tente novamente.");
+        }
+      }
+    };
+    void atualizar();
+    window.addEventListener("pmpe-backup-atualizado", atualizar);
+    return () => { ativo = false; window.removeEventListener("pmpe-backup-atualizado", atualizar); };
+  }, [usuarioId, ultimoBackup, statusNuvem]);
 
   const totalAssuntos = materias.reduce(
     (total, materia) => total + listarAssuntosDaMateria(materia).length,
@@ -371,12 +382,13 @@ export default function Backup() {
             <h2>Backups automáticos de segurança</h2>
             <p>
               Criados antes de migrações, restaurações, rollbacks e resolução de conflitos.
-              São mantidas até 10 cópias locais.
+              São mantidas até 10 cópias por armazenamento local. Quando o espaço padrão acaba, usamos o armazenamento adicional deste aparelho.
             </p>
           </div>
-          <strong>{backupsAutomaticos.length}/10</strong>
+          <strong>{backupsAutomaticos.length} cópias</strong>
         </div>
 
+        {erroListagem && <p role="alert">{erroListagem}</p>}
         {backupsAutomaticos.length === 0 ? (
           <div className="backup-empty">Nenhum backup automático foi necessário ainda.</div>
         ) : (

@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom";
+import { usePlanoAtivo } from "../../hooks/usePlanoAtivo";
+import { indexarPlanoPorData } from "../../utils/planoAtivo";
 import {
   useMemo,
   useState,
@@ -64,12 +67,17 @@ const DIAS_SEMANA = [
 ];
 
 export default function Calendario() {
+  const navigate = useNavigate();
+  const planoAtivo = usePlanoAtivo();
   const {
     questoes,
     sessoes,
     revisoes,
     simulados,
+    configuracoes,
+    missoesConcluidas,
   } = useApp();
+  const programacao = useMemo(() => indexarPlanoPorData(planoAtivo, configuracoes.dataInicioPlano), [planoAtivo, configuracoes.dataInicioPlano]);
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
 
   const hoje =
@@ -411,6 +419,11 @@ export default function Calendario() {
                     </div>
 
                     <div className="calendario-indicadores">
+                      {(programacao.get(dia.chave)?.missoes.length ?? 0) > 0 && (
+                        <span className="calendario-planejado-indicador" title="Missões planejadas">
+                          {programacao.get(dia.chave)!.missoes.filter(m => missoesConcluidas.includes(m.id)).length}/{programacao.get(dia.chave)!.missoes.length} do plano
+                        </span>
+                      )}
                       {dia.sessoes >
                         0 && (
                         <i className="indicador-sessao">
@@ -518,6 +531,21 @@ export default function Calendario() {
             )}
           </div>
 
+          <div className="calendario-programacao">
+            <h3>Programação do plano</h3>
+            {!configuracoes.dataInicioPlano ? (
+              <p>Defina a data de início do plano nas configurações para ver as missões nas datas certas. <button type="button" onClick={() => navigate("/configuracoes")}>Configurar início</button></p>
+            ) : (programacao.get(diaSelecionado)?.missoes.length ?? 0) === 0 ? (
+              <p>Sem missão planejada para esta data.</p>
+            ) : <>
+              <ul>{programacao.get(diaSelecionado)!.missoes.map(m => <li key={m.id}>
+                <strong>{m.materia}</strong> — {m.assunto}<br />
+                <span>{missoesConcluidas.includes(m.id) ? "✓ Concluída" : "Pendente"}</span>
+              </li>)}</ul>
+              <button type="button" onClick={() => { const data = programacao.get(diaSelecionado)!; navigate("/plano", {state: {semana: data.semana, dia: data.dia}}); }}>Abrir este dia no plano</button>
+            </>}
+          </div>
+          <h3>Atividades registradas</h3>
           {!detalheDia ||
           detalheDia.eventos.length ===
             0 ? (

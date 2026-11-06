@@ -65,7 +65,7 @@ function PainelPdf({ pedido, fechar }: { pedido: PedidoLeitor; fechar: () => voi
     void (async () => {
       try {
         const resposta = await fetch(pedido.url, { signal: controle.signal, credentials: 'omit' });
-        if (!resposta.ok) throw new Error('Arquivo indisponível.');
+        if (!resposta.ok) throw new Error(resposta.status === 404 ? 'Este arquivo não foi encontrado no provedor. Reenvie o PDF na central de materiais para corrigir o vínculo.' : 'Arquivo indisponível.');
         const blob = await resposta.blob();
         if (!(await blob.slice(0, 5).text()).startsWith('%PDF-')) throw new Error('O endereço não fornece um PDF diretamente.');
         setArquivo(new File([blob], pedido.nome, { type: 'application/pdf' }));

@@ -57,6 +57,12 @@ export default function RedefinirSenha() {
       setSalvando(true);
       const { error } = await supabase.auth.updateUser({ password: senha });
       if (error) throw error;
+      // A sessão concedida pelo link de recuperação não deve manter
+      // o aluno autenticado no aplicativo depois da troca da senha.
+      const { error: erroSaida } = await supabase.auth.signOut({ scope: "local" });
+      if (erroSaida) {
+        throw new Error("Senha alterada, mas não foi possível encerrar a sessão.");
+      }
       setSucesso(true);
       setSenha("");
       setConfirmacao("");

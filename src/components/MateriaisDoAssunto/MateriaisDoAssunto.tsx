@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   useEffect,
   useRef,
@@ -194,7 +195,10 @@ export default function MateriaisDoAssunto({
 
       {erro && (
         <div className="materiais-assunto-erro">
-          {erro}
+          <p>{erro}</p>
+          <p>Se o arquivo foi removido, ele precisa ser reenviado. Se o material estiver no assunto errado, corrija o vínculo na central de materiais.</p>
+          <button type="button" onClick={() => void carregar()}>Atualizar materiais</button>{" "}
+          <Link to="/materiais">Gerenciar materiais</Link>
         </div>
       )}
 

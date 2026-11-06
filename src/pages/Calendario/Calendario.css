@@ -434,3 +434,8 @@
     grid-template-columns: 1fr;
   }
 }
+.calendario-programacao { padding: 16px 0; border-bottom: 1px solid var(--border-color, #334155); margin-bottom: 16px; }
+.calendario-programacao ul { padding-left: 18px; }
+.calendario-programacao li { margin-bottom: 12px; overflow-wrap: anywhere; }
+.calendario-programacao button { padding: 10px 14px; border-radius: 8px; cursor: pointer; max-width: 100%; }
+.calendario-planejado-indicador { font-size: 10px; overflow-wrap: anywhere; }

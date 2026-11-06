@@ -629,7 +629,7 @@ export default function Estudos() {
                 const feitos = modulo.assuntos.filter((a) => a.concluido).length;
                 const pct = calcularProgressoAssuntos(modulo.assuntos).percentual;
                 const chaveModulo = `${materia.id}:${modulo.id}`;
-                const moduloFechado = modulosFechados[chaveModulo] ?? true;
+                const moduloFechado = busca.trim() ? false : (modulosFechados[chaveModulo] ?? true);
                 return (
                   <section key={modulo.id} className={`conteudos-modulo-card${moduloFechado ? " fechado" : ""}`}>
                     <header className="conteudos-modulo-topo">

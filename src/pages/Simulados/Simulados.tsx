@@ -1260,7 +1260,7 @@ export default function Simulados() {
 
                       <div className="simulado-dados">
                         <span>
-                          Válidas: {total}
+                          Válidas: {total} (base da nota)
                         </span>
 
                         <span className="simulado-bom">
@@ -1273,6 +1273,9 @@ export default function Simulados() {
                           {simulado.erradas}
                         </span>
 
+                        <span>
+                          Em branco: {resumirSimulado(simulado).emBranco}
+                        </span>
                         <span>
                           Anuladas:{" "}
                           {simulado.anuladas}

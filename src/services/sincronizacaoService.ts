@@ -1,3 +1,4 @@
+import { criarBackupAutomaticoDuravel } from "./seguranca/backupAutomaticoDuravel";
 import {
   supabase,
 } from "../lib/supabase";
@@ -10,7 +11,6 @@ import {
 } from "../utils/normalizarEstruturaEstado";
 
 import {
-  criarBackupAutomaticoLocal,
   type MotivoBackupAutomatico,
 } from "./seguranca/backupAutomaticoService";
 
@@ -143,7 +143,7 @@ export async function carregarEstadoDaNuvem(
 
   if (versaoOrigem < SCHEMA_VERSION_ATUAL) {
     try {
-      const backup = criarBackupAutomaticoLocal(
+      const backup = await criarBackupAutomaticoDuravel(
         userId,
         estadoBruto,
         "antes_migracao_schema"
@@ -243,7 +243,7 @@ export async function salvarEstadoEstruturalComSeguranca(
   estadoNovo: EstadoAppNuvem,
   motivo: MotivoBackupAutomatico = "antes_reconciliacao_estrutural"
 ): Promise<void> {
-  const backup = criarBackupAutomaticoLocal(
+  const backup = await criarBackupAutomaticoDuravel(
     userId,
     estadoAnterior,
     motivo
@@ -272,7 +272,7 @@ export async function salvarEstadoEstruturalComSeguranca(
     let rollbackConcluido = false;
 
     try {
-      criarBackupAutomaticoLocal(
+      await criarBackupAutomaticoDuravel(
         userId,
         estadoAnterior,
         "antes_rollback"
@@ -302,7 +302,7 @@ export async function salvarEstadoEstruturalComSeguranca(
       `Alteração estrutural cancelada. Backup ${backup.id} preservado. ${
         rollbackConcluido
           ? "O estado anterior foi restaurado na nuvem."
-          : "O rollback automático não pôde ser confirmado; o backup local continua disponível."
+          : "O rollback automático não pôde ser confirmado; o backup neste aparelho continua disponível."
       } Motivo: ${detalhe}`
     );
   }

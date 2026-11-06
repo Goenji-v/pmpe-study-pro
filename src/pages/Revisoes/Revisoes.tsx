@@ -124,7 +124,7 @@ export default function Revisoes() {
 
     const primeiraData = novasRevisoes.map((revisao) => revisao.dataPrevista).sort()[0];
     showToast(
-      `${novasRevisoes.length} revisão${novasRevisoes.length === 1 ? "" : "ões"} do Simulado IA adicionada${novasRevisoes.length === 1 ? "" : "s"} para ${formatarDataRevisao(primeiraData)}.${
+      `${novasRevisoes.length} ${novasRevisoes.length === 1 ? "revisão" : "revisões"} do Simulado IA adicionada${novasRevisoes.length === 1 ? "" : "s"} para ${formatarDataRevisao(primeiraData)}.${
         jaAgendadas.length > 0
           ? ` ${jaAgendadas.length} já estava${jaAgendadas.length === 1 ? "" : "m"} agendada${jaAgendadas.length === 1 ? "" : "s"}.`
           : ""
@@ -388,7 +388,7 @@ export default function Revisoes() {
 
     setRevisoes(reorganizadas);
     showToast(
-      `${alteradas} revisão${alteradas === 1 ? " foi reorganizada" : "ões foram reorganizadas"}. Conclusões foram preservadas e nenhuma revisão futura foi antecipada.`,
+      `${alteradas} ${alteradas === 1 ? "revisão foi reorganizada" : "revisões foram reorganizadas"}. Conclusões foram preservadas e nenhuma revisão futura foi antecipada.`,
       "success"
     );
   }

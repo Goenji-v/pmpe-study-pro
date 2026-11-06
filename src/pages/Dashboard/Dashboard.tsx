@@ -1,3 +1,4 @@
+import { usePlanoAtivo } from '../../hooks/usePlanoAtivo';
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
@@ -45,7 +46,7 @@ import {
   getTotalPendentes,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
-import { criarPlanoCalendario, normalizarMissoesPorDia, obterDiaAtualPlano } from "../../utils/planoCalendario";
+import { obterDiaAtualPlano } from "../../utils/planoCalendario";
 
 import type { RegistroQuestao, Revisao, SessaoEstudo, Simulado } from "../../types/index";
 
@@ -70,10 +71,7 @@ export default function Dashboard() {
     setAtualizacaoPlano,
   ] = useState(0);
 
-  const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
-  );
+  const planoCalendario = usePlanoAtivo();
 
   useEffect(() => {
     function atualizarPlano() {
@@ -518,7 +516,7 @@ function iniciarProximaAulaPortugues() {
               <div className="dashboard-pro-actions">
                 <button type="button" className="primary" onClick={iniciarProximaMissao}>
                   ▶ {dadosPlano.missaoHoje.dia === 7 || dadosPlano.missaoHoje.missao.tipo === "redacao" || dadosPlano.missaoHoje.missao.tipo === "simulado"
-                    ? "Abrir domingo"
+                    ? "Abrir atividade"
                     : cronometroAtivo
                       ? "Ir para estudo"
                       : "Iniciar estudo"}
@@ -531,7 +529,7 @@ function iniciarProximaAulaPortugues() {
                       navigate("/plano", { state: { semana, dia } });
                       return;
                     }
-                    navigate("/estudos");
+                    navigate("/estudos", { state: { termoBusca: missao.assunto, focoBusca: true } });
                   }}
                 >
                   {dadosPlano.missaoHoje.dia === 7 || dadosPlano.missaoHoje.missao.tipo === "redacao" || dadosPlano.missaoHoje.missao.tipo === "simulado"
@@ -604,7 +602,7 @@ function iniciarProximaAulaPortugues() {
                   ? "Finalizar"
                   : dadosPlano.missaoHoje
                     ? dadosPlano.missaoHoje.dia === 7 || dadosPlano.missaoHoje.missao.tipo === "redacao" || dadosPlano.missaoHoje.missao.tipo === "simulado"
-                      ? "Abrir domingo"
+                      ? "Abrir atividade"
                       : "▶ Iniciar missão"
                     : dadosPlano.hojeConcluido
                       ? "Ver dia de hoje"

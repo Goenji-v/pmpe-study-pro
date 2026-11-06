@@ -30,3 +30,7 @@ jobs:
         run: npx tsc -b
       - name: Build Vite sem upload de sourcemaps
         run: npx vite build
+      - name: Instalar Chromium para testes isolados
+        run: npx playwright install --with-deps chromium
+      - name: Testar cronograma e backup com conta sintética
+        run: npx playwright test e2e/plano-preview-regression.spec.ts --project=desktop-chrome

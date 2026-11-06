@@ -1359,7 +1359,7 @@ export default function ResolverSimuladoIA() {
             <span>
               Questão{" "}
               {questaoAtual + 1}
-              de {questoes.length}
+              {" "}de {questoes.length}
             </span>
 
             <div>

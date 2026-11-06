@@ -1,3 +1,5 @@
+import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
+import { usePlanoAtivo } from '../../hooks/usePlanoAtivo';
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useMemo,
@@ -33,8 +35,7 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getSemanaAtual,
-  semanaPorDataInicio,
-  ampliarPlanoAteSemana,
+  listarPendenciasAteSemana,
 } from "../../utils/planoUtils";
 import {
   adaptarMissaoFlexivel,
@@ -42,13 +43,9 @@ import {
   type DadosReforcoAdaptado,
 } from "../../utils/adaptacaoPlano";
 import {
-  criarPlanoCalendario,
   NOMES_DIAS_PLANO,
-  normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
-import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -177,48 +174,7 @@ export default function PlanoEstudos() {
     cronometroAtivo,
   } = useCronometro();
 
-  const missoesPorDia = normalizarMissoesPorDia(
-    configuracoes.missoesPorDia ?? 1
-  );
-
-  const planoCalendario = useMemo(() => {
-    const base = aplicarDiasAtividadesSemanais(
-      criarPlanoCalendario(
-        missoesPorDia,
-        configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
-      ), {
-        diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
-        diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
-      }
-    );
-    const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
-    // Projeção visual automática: não grava IDs, conclusões ou domingos.
-    const organizado = concluidas.length > 0
-      ? projetarPlanoCompactado(base, concluidas)
-      : base;
-    const grade = concluidas.length > 0 ? organizado.map((semana) => ({
-      ...semana,
-      dias: semana.dias.map((dia) => ({
-        ...dia,
-        missoes: dia.numero === 7 ? [...dia.missoes] : dia.missoes.filter((missao) => !(
-          missao.tipo === "revisao" ||
-          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
-        )),
-      })),
-    })) : organizado;
-    return ampliarPlanoAteSemana(
-      grade, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
-    );
-  }, [
-    missoesPorDia,
-    concluidas,
-    configuracoes.planoPadraoAtivo,
-    configuracoes.materiasPorDiaSemana,
-    configuracoes.diaRedacaoSemanal,
-    configuracoes.diaSimuladoSemanal,
-    configuracoes.dataInicioPlano,
-    configuracoes.semanaAtualPlano,
-  ]);
+  const planoCalendario = usePlanoAtivo();
 
   const semanaInicial = getSemanaAtual(
     concluidas,
@@ -226,6 +182,7 @@ export default function PlanoEstudos() {
     configuracoes.semanaAtualPlano,
     configuracoes.dataInicioPlano
   );
+  const pendenciasAnteriores = listarPendenciasAteSemana(concluidas, planoCalendario, semanaInicial);
   const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
     planoCalendario.find((item) => item.numero === semanaInicial) ?? planoCalendario[0];
@@ -333,8 +290,7 @@ export default function PlanoEstudos() {
 
     const materiaRelacionada = materias.find(
       (materia) =>
-        normalizarTexto(materia.nome) ===
-        normalizarTexto(missao.materia)
+        materiasEquivalentes(materia.nome, missao.materia)
     );
 
     const localizacao = materiaRelacionada
@@ -356,13 +312,12 @@ export default function PlanoEstudos() {
         concluindo,
         localizacao.modulo.id
       );
-    } else {
-      setConcluidas((anteriores) =>
+    }
+    setConcluidas((anteriores) =>
         concluindo
           ? Array.from(new Set([...anteriores, id]))
           : anteriores.filter((item) => item !== id)
-      );
-    }
+    );
 
     window.dispatchEvent(
       new Event(
@@ -495,6 +450,13 @@ export default function PlanoEstudos() {
 
   return (
     <section className="plano-container">
+      {pendenciasAnteriores.length > 0 && <details className="plano-pendencias-anteriores">
+        <summary>Pendências das semanas anteriores ({pendenciasAnteriores.length})</summary>
+        <p>Estas atividades não impedem a missão de hoje. Escolha quando retomá-las.</p>
+        <ul>{pendenciasAnteriores.map(p => <li key={p.missao.id}><button type="button" onClick={() => {setSemanaSelecionada(p.semana); setDiaSelecionado(p.dia);}}>
+          Semana {p.semana} · {NOMES_DIAS_PLANO[p.dia]} · {p.missao.materia}: {p.missao.assunto}
+        </button></li>)}</ul>
+      </details>}
       <div className="plano-cabecalho">
         <div>
           <h1>
@@ -502,7 +464,7 @@ export default function PlanoEstudos() {
           </h1>
 
           <p>
-            {planoCalendario.length} semanas no ritmo atual de {missoesPorDia} {missoesPorDia === 1 ? "missão" : "missões"} por dia. Domingo é exclusivo para redação e simulado.
+            {planoCalendario.length} semanas. Missões, redação e simulado seguem os dias definidos nas suas configurações.
           </p>
         </div>
 
@@ -557,7 +519,7 @@ export default function PlanoEstudos() {
         </div>
 
         <p className="plano-adaptacao-regra">
-          A sequência fixa não é alterada. A adaptação atua somente nas missões flexíveis de reforço; domingos continuam exclusivos para redação + simulado.
+          A sequência fixa não é alterada. A adaptação atua somente nas missões flexíveis de reforço. Redação e simulado têm atividades próprias.
         </p>
       </section>
 
@@ -821,13 +783,13 @@ export default function PlanoEstudos() {
             </div>
           )}
 
-          {diaSelecionado !== 7 && (
+          {dia.missoes.some(m => m.tipo !== "redacao" && m.tipo !== "simulado") && (
             <div className="plano-missoes-grid">
-              {dia.missoes.map((missao: MissaoPlano) => {
+              {dia.missoes.filter(m => m.tipo !== "redacao" && m.tipo !== "simulado").map((missao: MissaoPlano) => {
                 const missaoExibida = adaptarMissaoFlexivel(missao, diagnosticoSemanal);
                 const concluida = concluidas.includes(missao.id);
                 const materia = materias.find(
-                  (item) => normalizarTexto(item.nome) === normalizarTexto(missaoExibida.materia)
+                  (item) => materiasEquivalentes(item.nome, missaoExibida.materia)
                 );
                 const missaoParaLocalizar = missaoExibida.adaptada ? missaoExibida : missao;
                 const localizacoes = materia
@@ -956,7 +918,7 @@ export default function PlanoEstudos() {
             </div>
           )}
 
-          {diaSelecionado !== 7 && (dia.revisao ||
+          {dia.missoes.some(m => m.tipo !== "redacao" && m.tipo !== "simulado") && (dia.revisao ||
             dia.atividadeExtra) && (
             <div className="plano-extras">
               {dia.revisao && (
@@ -990,23 +952,6 @@ export default function PlanoEstudos() {
       )}
     </section>
   );
-}
-
-function normalizarTexto(
-  texto: string
-) {
-  return texto
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      ""
-    )
-    .trim()
-    .toLowerCase()
-    .replace(
-      /\s+/g,
-      " "
-    );
 }
 
 function formatarTipo(

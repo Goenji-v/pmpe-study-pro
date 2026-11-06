@@ -1,3 +1,4 @@
+import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { armazenamentoLocalDaConta as localStorage, armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
@@ -26,9 +27,7 @@ import {
   calcularDistribuicaoAdaptativaSemanal,
 } from "../../utils/adaptacaoPlano";
 
-import {
-  planoPMPE,
-} from "../../data/planoPMPE";
+import { usePlanoAtivo } from "../../hooks/usePlanoAtivo";
 
 import {
   aprovarCronogramaIA,
@@ -145,9 +144,10 @@ export default function CronogramaIA() {
   const [historicoAberto, setHistoricoAberto] = useState(false);
   const [diaAberto, setDiaAberto] = useState<number | null>(null);
 
+  const planoAtivo = usePlanoAtivo();
   const missoesPendentes = useMemo(
     () =>
-      (configuracoes.planoPadraoAtivo === false ? [] : planoPMPE).flatMap((semana) =>
+      planoAtivo.flatMap((semana) =>
         semana.dias.flatMap((dia) =>
           dia.missoes
             .filter((missao) => !missoesConcluidas.includes(missao.id))
@@ -162,7 +162,7 @@ export default function CronogramaIA() {
             }))
         )
       ),
-    [missoesConcluidas, configuracoes.planoPadraoAtivo]
+    [missoesConcluidas, planoAtivo]
   );
 
   const relatorioMensal = useMemo(
@@ -512,7 +512,7 @@ export default function CronogramaIA() {
 
   function iniciarTarefa(tarefa: TarefaCronogramaIA) {
     const vinculoPlano = tarefa.missaoId
-      ? planoPMPE
+      ? planoAtivo
           .flatMap((semana) =>
             semana.dias.flatMap((dia) =>
               dia.missoes.map((missao) => ({
@@ -524,6 +524,14 @@ export default function CronogramaIA() {
           )
           .find((item) => item.missao.id === tarefa.missaoId)
       : undefined;
+    if (tarefa.missaoId && !vinculoPlano) {
+      setErro("Esta tarefa pertence a um plano anterior. Gere um novo cronograma para usar seu plano ativo.");
+      return;
+    }
+    if (vinculoPlano && ["redacao", "simulado"].includes(vinculoPlano.missao.tipo)) {
+      navigate("/plano", { state: { semana: vinculoPlano.semana, dia: vinculoPlano.dia } });
+      return;
+    }
     const revisaoRelacionada =
       tarefa.tipo === "revisao"
         ? revisoes.find(
@@ -536,6 +544,7 @@ export default function CronogramaIA() {
           )
         : undefined;
     const prefill = {
+      ...(vinculoPlano ? criarDadosSessaoDaMissao(materias, vinculoPlano.missao, vinculoPlano.semana, vinculoPlano.dia) : {}),
       materia: tarefa.materia,
       assunto: tarefa.assunto,
       tipo:
@@ -636,7 +645,7 @@ export default function CronogramaIA() {
             </span>
           </div>
           <span className="tatico-prioridade-badge">
-            Prioridade: {prioridadeAtiva || "coletando dados"}
+            Sugestão atual: {prioridadeAtiva || "coletando dados"}
           </span>
         </div>
 
@@ -1055,10 +1064,10 @@ export default function CronogramaIA() {
         </div>
 
         <div className="tatico-explicacao-prioridade">
-          <span>Decisão do plano</span>
+          <span>Recomendação para a próxima geração</span>
           <strong>
             {prioridadeAtiva
-              ? `Por isso seu plano está priorizando ${prioridadeAtiva}.`
+              ? `Os dados atuais sugerem reforçar ${prioridadeAtiva}. O cronograma salvo mantém as tarefas geradas anteriormente.`
               : "Registre questões, sessões ou revisões para a IA calcular uma prioridade confiável."}
           </strong>
           {diagnosticoSemanal.motivos[0] && <p>{diagnosticoSemanal.motivos[0]}</p>}
@@ -1066,6 +1075,7 @@ export default function CronogramaIA() {
 
         {diagnosticoAberto && (
           <div className="tatico-diagnostico-detalhes">
+            <p>Indicadores por matéria. Revisões atrasadas abaixo são daquela matéria; o painel de Revisões mostra o total da fila.</p>
             {diagnosticoSemanal.materias.length === 0 ? (
               <div className="tatico-vazio compacto">
                 Ainda não há evidência suficiente nos últimos {diagnosticoSemanal.janelaDias} dias.
