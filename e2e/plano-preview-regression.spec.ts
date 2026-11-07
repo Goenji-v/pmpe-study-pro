@@ -16,7 +16,8 @@ test.beforeAll(async()=>{
  import Plano from './src/pages/PlanoEdital/PlanoEditalGateway';
  import Calendario from './src/pages/Calendario/Calendario';
  import Revisoes from './src/pages/Revisoes/Revisoes';
- import {armazenamentoSessaoDaConta} from './src/services/armazenamentoConta';
+ import {armazenamentoSessaoDaConta,definirEscopoArmazenamento} from './src/services/armazenamentoConta';
+ definirEscopoArmazenamento({usuarioId:'teste',isolado:true,reinicio:''});
  function RevisaoDestino(){return <pre data-testid='revisao-destino'>{armazenamentoSessaoDaConta.getItem('pmpe:central-estudos:prefill')}</pre>}
  import * as backups from './src/services/seguranca/backupAutomaticoDuravel';
  window.backups=backups;
@@ -33,6 +34,7 @@ test.beforeAll(async()=>{
  const config={...criarConfiguracoesIniciais('Teste'),concurso:'PMPE',dataInicioPlano:new URLSearchParams(location.search).get('inicio')??'2026-11-02',diasEstudo:['seg','ter','qua','qui','sex','sab'],materiasPorDia:1};config.editalAtivo={analise,plano:gerarPlanoEdital(analise,config,[])};
  export function FixtureProvider({children}){const [configuracoes,setConfiguracoes]=useState(()=>inicializarInicioPlano(config));const [missoesConcluidas,setMissoesConcluidas]=useState([]);return <C.Provider value={{configuracoes,setConfiguracoes,materias:[],questoes:[{id:'q1',materia:'Informática',assunto:'Segurança',certas:15,erradas:2,data:'2026-11-06T06:00:00'}],sessoes:[{id:'s1',materia:'Informática',assunto:'Segurança',tipo:'teoria',minutos:30,data:'2026-11-06T06:00:00'},{id:'s2',materia:'Estatuto PMPE',assunto:'Estatuto',tipo:'teoria',minutos:14,data:'2026-11-06T06:00:00'},{id:'s3',materia:'Estatuto PMPE',assunto:'Estatuto',tipo:'teoria',minutos:31,data:'2026-11-06T06:00:00'},{id:'s4',materia:'Legislação Extravagante',assunto:'Abuso de autoridade',tipo:'teoria',minutos:20,data:'2026-11-06T06:00:00'}],revisoes:[{id:'r1',materia:'Informática',assunto:'Segurança',etapa:1,concluida:false,dataPrevista:'2026-11-06T12:00:00'}],setRevisoes:()=>{},simulados:[],missoesConcluidas,setMissoesConcluidas,setSessoes:()=>{},definirConclusaoAssunto:()=>{},definirConclusaoAula:()=>{}}}>{children}</C.Provider>}
  `);
+ mock(/\/data\/questoes\/index\.ts$/,`export const buscarPacoteQuestoesFlashcards=()=>undefined;`);
  mock(/\/context\/CronometroContext\.tsx$/,`export const useCronometro=()=>({cronometroAtivo:false});`);
  mock(/\/context\/AuthContext\.tsx$/,`export const useAuth=()=>({usuario:{id:'teste'}});`);
  mock(/\/context\/ToastContext\.tsx$/,`export const useToast=()=>({showToast:()=>{}});`);
@@ -42,6 +44,7 @@ test.beforeAll(async()=>{
  css=(await Promise.all(['src/global.css','src/pages/Calendario/Calendario.css','src/pages/Dashboard/ResumoSemanaDashboard.css','src/pages/Configuracoes/Configuracoes.css','src/pages/PlanoEstudos/PlanoEstudos.css','src/pages/PlanoEstudos/SimuladoPdfUpload.css'].map(p=>readFile(p,'utf8')))).join('\n');
 });
 async function abrir(page:import('@playwright/test').Page,inicio='2026-11-02'){
+ page.on('pageerror',error=>{throw error;});
  await page.clock.install({time:new Date('2026-11-06T07:00:00')});
  await page.route('https://fixture.test/**',r=>r.fulfill({contentType:'text/html',body:'<html><body><div id="root"></div></body></html>'}));
  await page.goto('https://fixture.test/?inicio='+encodeURIComponent(inicio));await page.addStyleTag({content:css});await page.addScriptTag({content:bundle});
