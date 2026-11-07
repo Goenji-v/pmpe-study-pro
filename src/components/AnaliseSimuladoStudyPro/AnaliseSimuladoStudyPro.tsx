@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -9,12 +9,10 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardList,
-  RefreshCcw,
   Sparkles,
   Target,
 } from "lucide-react";
 
-import { useApp } from "../../context/AppContext";
 import {
   listarAnalisesSimulados,
   salvarAnaliseSimulado,
@@ -30,7 +28,6 @@ import {
   type MotivoErroSimulado,
   type QuestaoAnaliseSimulado,
 } from "../../utils/analiseSimuladoStudyPro";
-import { adicionarErrosSimuladoARevisao } from "../../utils/revisaoSimuladoStudyPro";
 import "./AnaliseSimuladoStudyPro.css";
 
 const MOTIVOS: Array<{ id: MotivoErroSimulado; texto: string }> = [
@@ -51,8 +48,6 @@ export default function AnaliseSimuladoStudyPro({
   respostas,
   marcacoes,
   persistir = true,
-  agendarAutomaticamente = true,
-  somenteLeitura = false,
 }: {
   origem: OrigemAnaliseSimulado;
   tentativaId: string;
@@ -67,7 +62,6 @@ export default function AnaliseSimuladoStudyPro({
   somenteLeitura?: boolean;
 }) {
   const navigate = useNavigate();
-  const { materias, revisoes, setRevisoes, configuracoes, statusNuvem } = useApp();
   const [historico, setHistorico] = useState<HistoricoAnaliseSimulado[]>([]);
   const [motivosErro, setMotivosErro] = useState<
     Record<string, MotivoErroSimulado | undefined>
@@ -77,9 +71,7 @@ export default function AnaliseSimuladoStudyPro({
   const [correcaoAberta, setCorrecaoAberta] = useState(false);
   const [evolucaoAberta, setEvolucaoAberta] = useState(false);
   const [todosAssuntosAbertos, setTodosAssuntosAbertos] = useState(false);
-  const [mensagem, setMensagem] = useState("");
   const [avisoPersistencia, setAvisoPersistencia] = useState("");
-  const revisaoAutomaticaRef = useRef("");
 
   useEffect(() => {
     let ativo = true;
@@ -209,100 +201,6 @@ export default function AnaliseSimuladoStudyPro({
     persistir,
   ]);
 
-  const assinaturaPlanoRevisao = useMemo(
-    () =>
-      analise.planoRevisao
-        .map(
-          (item) =>
-            `${item.chave}:${item.prioridadeIndice}:${item.quantidadeQuestoes}`
-        )
-        .join("|"),
-    [analise.planoRevisao]
-  );
-
-  useEffect(() => {
-    if (
-      !historicoCarregado ||
-      !agendarAutomaticamente ||
-      somenteLeitura ||
-      !persistir ||
-      statusNuvem !== "sincronizado" ||
-      materias.length === 0 ||
-      analise.planoRevisao.length === 0
-    ) return;
-
-    const chaveExecucao = `${tentativaId}:${assinaturaPlanoRevisao}`;
-    if (revisaoAutomaticaRef.current === chaveExecucao) return;
-    revisaoAutomaticaRef.current = chaveExecucao;
-
-    setRevisoes((anteriores) => {
-      const resultado = adicionarErrosSimuladoARevisao({
-        revisoes: anteriores,
-        materias,
-        analise,
-        limiteDiario: configuracoes.metaRevisoesDiaria,
-      });
-      return resultado.criadas + resultado.atualizadas > 0
-        ? resultado.revisoes
-        : anteriores;
-    });
-  }, [
-    analise,
-    assinaturaPlanoRevisao,
-    historicoCarregado,
-    materias,
-    setRevisoes,
-    tentativaId,
-    agendarAutomaticamente,
-    somenteLeitura,
-    persistir,
-    statusNuvem,
-    configuracoes.metaRevisoesDiaria,
-  ]);
-
-  function adicionarARevisao() {
-    if (somenteLeitura) {
-      setMensagem("Prévia de teste: nenhuma revisão da sua conta foi alterada.");
-      return;
-    }
-
-    const resultado = adicionarErrosSimuladoARevisao({
-      revisoes,
-      materias,
-      analise,
-      limiteDiario: configuracoes.metaRevisoesDiaria,
-    });
-
-    setRevisoes((anteriores) => {
-      const resultado = adicionarErrosSimuladoARevisao({
-        revisoes: anteriores,
-        materias,
-        analise,
-        limiteDiario: configuracoes.metaRevisoesDiaria,
-      });
-      return resultado.criadas + resultado.atualizadas > 0
-        ? resultado.revisoes
-        : anteriores;
-    });
-
-    const total = resultado.criadas + resultado.atualizadas;
-    if (total > 0) {
-      setMensagem(
-        `${resultado.criadas} revisão(ões) criada(s) e ${resultado.atualizadas} atualizada(s), respeitando a capacidade diária quando houver espaço. ${resultado.semReferencia ? `${resultado.semReferencia} assunto(s) podem ser revisados por questões IA, sem aula vinculada.` : ""} O ciclo segue 1, 5, 7, 14 e 30 dias conforme o desempenho.`
-      );
-      return;
-    }
-
-    if (resultado.semReferencia > 0) {
-      setMensagem(
-        "As prioridades estão na agenda, mas alguns assuntos não têm aula correspondente na grade. Você pode revisá-los por questões IA."
-      );
-      return;
-    }
-
-    setMensagem("Esses assuntos já estão na sua fila de revisões.");
-  }
-
   function marcarMotivo(
     questaoId: string,
     motivo: MotivoErroSimulado
@@ -329,8 +227,8 @@ export default function AnaliseSimuladoStudyPro({
           <span>ANÁLISE STUDY PRO</span>
           <h2>Diagnóstico inteligente do simulado</h2>
           <p>
-            O resultado vira um ciclo de diagnóstico → revisão → questões → nova medição,
-            sem interromper o seu cronograma normal.
+            O diagnóstico mostra pontos fracos e oferece treino voluntário,
+            sem criar revisões ou alterar sua agenda de estudos.
           </p>
         </div>
         <div className="analise-simulado-study__dificuldade">
@@ -343,10 +241,6 @@ export default function AnaliseSimuladoStudyPro({
           </span>
         </div>
       </header>
-
-      {mensagem && (
-        <div className="analise-simulado-study__mensagem">{mensagem}</div>
-      )}
 
       {avisoPersistencia && (
         <div className="analise-simulado-study__mensagem">
@@ -399,7 +293,7 @@ export default function AnaliseSimuladoStudyPro({
           <Brain size={20} aria-hidden="true" />
           <span>Acertos por chute</span>
           <strong>{analise.resumo.totalAcertosPorChute}</strong>
-          <small>Entram na revisão mesmo tendo pontuado.</small>
+          <small>Vale reforçar mesmo quando pontuaram.</small>
         </article>
         <article>
           <BookOpenCheck size={20} aria-hidden="true" />
@@ -409,9 +303,9 @@ export default function AnaliseSimuladoStudyPro({
         </article>
         <article>
           <Sparkles size={20} aria-hidden="true" />
-          <span>Plano de revisão</span>
+          <span>Focos sugeridos</span>
           <strong>{analise.planoRevisao.length}</strong>
-          <small>Até 8 focos · ciclo 1 · 5 · 7 · 14 · 30 dias.</small>
+          <small>Até 8 focos para treino voluntário, sem agendamento.</small>
         </article>
       </div>
 
@@ -611,12 +505,12 @@ export default function AnaliseSimuladoStudyPro({
       <section className="analise-simulado-study__painel">
         <div className="analise-simulado-study__titulo">
           <div>
-            <span>PLANO DE REVISÃO</span>
+            <span>REFORÇO VOLUNTÁRIO</span>
             <h3>Top prioridades para corrigir sem parar o edital</h3>
           </div>
           <small>
-            O Study Pro seleciona no máximo 8 focos, evitando transformar cada
-            questão errada em uma revisão diferente.
+            Até 8 focos para você escolher como estudar, sem criar pendências
+            na fila de Revisões nem antecipar missões.
           </small>
         </div>
 
@@ -638,7 +532,7 @@ export default function AnaliseSimuladoStudyPro({
                     {item.quantidadeQuestoes > 0
                       ? `Bloco sugerido: ${item.quantidadeQuestoes} questões · `
                       : ""}
-                    Revisões em 1, 5, 7, 14 e 30 dias
+                    Sugestão individual, sem agendamento
                     {item.reincidencia ? " · erro reincidente" : ""}
                   </small>
                 </div>
@@ -659,13 +553,9 @@ export default function AnaliseSimuladoStudyPro({
           <ClipboardList size={18} aria-hidden="true" />
           Gerar caderno de erros
         </button>
-        <button type="button" onClick={adicionarARevisao}>
-          <RefreshCcw size={18} aria-hidden="true" />
-          Adicionar erros à revisão
-        </button>
-        <button type="button" onClick={() => navigate("/revisoes")}>
-          <BookOpenCheck size={18} aria-hidden="true" />
-          Revisar agora
+        <button type="button" onClick={() => navigate("/gerar-simulado-ia")}>
+          <Sparkles size={18} aria-hidden="true" />
+          Treinar com IA
         </button>
         <button
           type="button"
