@@ -29,14 +29,13 @@ export default function Header() {
           >
             <img
               className="header-brand-mark"
-              src="/assets/study-pro-logo-original-v2.jpg"
+              src="/assets/study-pro-sp-v7.png"
               alt=""
               draggable={false}
             />
           </span>
           <div className="header-brand-copy">
             <strong>STUDY <span>PRO</span></strong>
-            <small>ESTUDO HOJE. CONQUISTA SEMPRE.</small>
           </div>
         </div>
         <span className="header-concurso">{configuracoes.concurso}</span>

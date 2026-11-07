@@ -1,3 +1,4 @@
+import { validarDataInicioPlano } from "../../utils/dataInicioPlano";
 import AlterarSenha from "./AlterarSenha";
 import { gerarPlanoEdital, preservarIdsPlanoAnterior } from "../../utils/planoEdital";
 import { useRef, useState } from "react";
@@ -138,15 +139,15 @@ export default function Configuracoes() {
       return;
     }
     if (paraValidar.dataInicioPlano) {
-      const [ano, mes, dia] = paraValidar.dataInicioPlano.split("-").map(Number);
-      const selecionada = new Date(ano, mes - 1, dia, 12);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(paraValidar.dataInicioPlano) ||
-          selecionada.getFullYear() !== ano || selecionada.getMonth() !== mes - 1 ||
-          selecionada.getDate() !== dia || selecionada.getTime() > Date.now()) {
-        showToast("Informe uma data válida de início do plano, não futura.", "warning");
+      const resultadoData = validarDataInicioPlano(paraValidar.dataInicioPlano);
+      if (resultadoData !== "valida") {
+        showToast(resultadoData === "futura"
+          ? "A data de início deve ser hoje ou um dia anterior. Informe quando você começou o plano."
+          : "Informe uma data de início válida.", "warning");
         return;
       }
     }
+
     if ((paraValidar.diasEstudo?.length ?? 0) === 0) {
       showToast("Escolha pelo menos um dia da semana para estudar.", "warning");
       return;

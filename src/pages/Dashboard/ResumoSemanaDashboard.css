@@ -1,0 +1,19 @@
+.resumo-semana { min-width:0; width:100%; box-sizing:border-box; padding:24px; margin:16px 0; border:1px solid var(--studio-border,#334155); border-radius:18px; background:var(--studio-surface,#0c192c); color:var(--text-primary,#f1f5f9); overflow-wrap:anywhere; }
+.resumo-semana-topo { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+.resumo-semana h2 { margin:0 0 6px; font-size:22px; line-height:1.3; }
+.resumo-semana h3 { margin:0 0 12px; font-size:16px; line-height:1.4; }
+.resumo-semana p { margin:6px 0; font-size:14px; line-height:1.6; }
+.resumo-semana-topo>span { color:#7dd3fc; font-size:12px; }
+.resumo-semana-metricas { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.resumo-semana-metricas>div { display:flex; flex-direction:column; gap:6px; padding:16px; border:1px solid #334155; border-radius:12px; min-width:0; }
+.resumo-semana-metricas span,.resumo-semana-metricas small { font-size:12px; color:#a9bbd1; font-weight:400; }
+.resumo-semana-metricas strong { font-size:24px; }
+.resumo-semana .resumo-semana-alerta { margin:18px 0; color:#b8c9dd; }
+.resumo-semana-detalhes { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:24px; }
+.resumo-semana-materias,.resumo-semana-prioridades { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.resumo-semana-materias li { display:flex; justify-content:space-between; align-items:baseline; gap:12px; border-bottom:1px solid #334155; padding:7px 0; font-size:13px; }
+.resumo-semana-materias strong { white-space:nowrap; color:#7dd3fc; }
+.resumo-semana-prioridades button { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#13283e; border:1px solid #365775; color:#e8f4ff; font:inherit; font-size:13px; padding:12px 14px; border-radius:10px; text-align:left; cursor:pointer; line-height:1.5; }
+.resumo-semana-prioridades button:hover { background:#1b3855; }
+.resumo-semana button:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
+@media(max-width:700px) { .resumo-semana {padding:16px;} .resumo-semana-metricas {grid-template-columns:repeat(2,minmax(0,1fr));} .resumo-semana-detalhes {grid-template-columns:minmax(0,1fr);} }

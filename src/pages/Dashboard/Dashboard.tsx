@@ -1,3 +1,4 @@
+import "./ResumoSemanaDashboard.css";
 import { usePlanoAtivo } from '../../hooks/usePlanoAtivo';
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {

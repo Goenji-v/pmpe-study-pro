@@ -439,3 +439,7 @@
 .calendario-programacao li { margin-bottom: 12px; overflow-wrap: anywhere; }
 .calendario-programacao button { padding: 10px 14px; border-radius: 8px; cursor: pointer; max-width: 100%; }
 .calendario-planejado-indicador { font-size: 10px; overflow-wrap: anywhere; }
+
+.calendario-programacao button { display:block; margin-top:12px; background:#13283e; color:#e8f4ff; border:1px solid #365775; font:inherit; font-size:14px; line-height:1.4; }
+.calendario-programacao button:hover { background:#1b3855; }
+.calendario-programacao button:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }

@@ -12,7 +12,7 @@ export default function TermosUso() {
             Voltar
           </Link>
           <div className="legal-brand">
-            <img src="/assets/study-pro-logo-original-v2.jpg" alt="Study Pro" />
+            <img src="/assets/study-pro-sp-v7.png" alt="Study Pro" />
             <div>
               <span>DOCUMENTO LEGAL</span>
               <h1>Termos de Uso</h1>
