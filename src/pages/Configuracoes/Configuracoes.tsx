@@ -1,4 +1,3 @@
-import { validarDataInicioPlano } from "../../utils/dataInicioPlano";
 import AlterarSenha from "./AlterarSenha";
 import { gerarPlanoEdital, preservarIdsPlanoAnterior } from "../../utils/planoEdital";
 import { useRef, useState } from "react";
@@ -137,15 +136,6 @@ export default function Configuracoes() {
     if (!paraValidar.concurso.trim()) {
       showToast("Informe o concurso.", "warning");
       return;
-    }
-    if (paraValidar.dataInicioPlano) {
-      const resultadoData = validarDataInicioPlano(paraValidar.dataInicioPlano);
-      if (resultadoData !== "valida") {
-        showToast(resultadoData === "futura"
-          ? "A data de início deve ser hoje ou um dia anterior. Informe quando você começou o plano."
-          : "Informe uma data de início válida.", "warning");
-        return;
-      }
     }
 
     if ((paraValidar.diasEstudo?.length ?? 0) === 0) {
@@ -315,16 +305,9 @@ export default function Configuracoes() {
           </div>
 
           <div className="configuracoes-form-group">
-            <label htmlFor="dataInicioPlano">Data de início do seu cronograma</label>
-            <input
-              id="dataInicioPlano"
-              type="date"
-              value={formulario.dataInicioPlano ?? ""}
-              onChange={(evento) => atualizarCampo("dataInicioPlano", evento.target.value || undefined)}
-            />
-            <small>
-              Esta data posiciona a semana 1 do plano no calendário. Não é a data da prova nem necessariamente o primeiro dia em que você estudou na vida. Uma data antiga pode colocar hoje depois do fim do plano. Alterá-la muda as datas previstas, mas preserva as conclusões.
-            </small>
+            <span>Início do cronograma</span>
+            <strong>{configuracoes.dataInicioPlano?.split('-').reverse().join('/') ?? 'Aguardando sincronização da conta'}</strong>
+            <small>Registrado automaticamente após o acesso à conta. A data fica salva e não reinicia a cada login.</small>
           </div>
 
           <div className="configuracoes-form-group">

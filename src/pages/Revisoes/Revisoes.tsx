@@ -1,6 +1,6 @@
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import "./Revisoes.css";
 
@@ -30,6 +30,8 @@ export default function Revisoes() {
   const { materias, revisoes, setRevisoes, configuracoes } = useApp();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const revisaoAbertaRef = useRef<string | null>(null);
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
 
   const revisoesComModulo = useMemo(
@@ -129,6 +131,16 @@ export default function Revisoes() {
         (!materiaMudou ? revisao.assuntoId : undefined),
     };
   }
+
+  useEffect(() => {
+    const id = (location.state as {revisaoId?: string} | null)?.revisaoId;
+    if (!id || revisaoAbertaRef.current === id) return;
+    const revisao = revisoesComModulo.find(r => r.id === id);
+    if (!revisao) return;
+    revisaoAbertaRef.current = id;
+    if (revisao.concluida) {showToast('Esta revisão já foi concluída.', 'info'); return;}
+    abrirRevisao(revisao);
+  }, [location.state, revisoesComModulo]);
 
   function abrirRevisao(revisao: Revisao) {
     if (revisao.origemSimulado?.vinculo === "sem_conteudo") {

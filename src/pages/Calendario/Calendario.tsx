@@ -1,3 +1,4 @@
+import { agruparEventosCalendario } from "../../utils/agruparEventosCalendario";
 import { useNavigate } from "react-router-dom";
 import { usePlanoAtivo } from "../../hooks/usePlanoAtivo";
 import { indexarPlanoPorData } from "../../utils/planoAtivo";
@@ -27,6 +28,7 @@ type EventoCalendario = {
   data: string;
   status?: "concluida" | "pendente" | "atrasada";
   quantidadeQuestoes?: number;
+  revisaoId?: string;
 };
 
 type ResumoDia = {
@@ -242,8 +244,8 @@ export default function Calendario() {
     <section className="calendario-container">
       <div className="calendario-horizonte">
         <div><span>SUA PROVA</span><strong>{diasProva === null || !Number.isFinite(diasProva) ? 'Defina a data da prova' : diasProva > 0 ? `Faltam ${diasProva} dias` : diasProva === 0 ? 'A prova é hoje' : 'A data da prova já passou'}</strong>{configuracoes.dataProva && <small>{dataBR(configuracoes.dataProva)}</small>}</div>
-        <div><span>PERÍODO DO PLANO</span><strong>{datasPlano.length ? `${dataBR(datasPlano[0])} a ${dataBR(datasPlano[datasPlano.length - 1])}` : 'Início ainda não configurado'}</strong><small>{planoAtivo.length} semanas · {pendenciasPlano} missões pendentes</small></div>
-        <button type="button" onClick={() => navigate('/configuracoes')}>Configurar datas</button>
+        <div><span>PERÍODO DO PLANO</span><strong>{datasPlano.length ? `${dataBR(datasPlano[0])} a ${dataBR(datasPlano[datasPlano.length - 1])}` : 'Aguardando início automático'}</strong><small>{planoAtivo.length} semanas · {pendenciasPlano} missões pendentes</small></div>
+        <button type="button" onClick={() => navigate('/configuracoes')}>Data da prova</button>
       </div>
       <div className="calendario-cabecalho">
         <div>
@@ -542,9 +544,9 @@ export default function Calendario() {
           <div className="calendario-programacao">
             <h3>Programação do plano</h3>
             {!configuracoes.dataInicioPlano ? (
-              <p>Defina a data de início do plano nas configurações para ver as missões nas datas certas. <button type="button" onClick={() => navigate("/configuracoes")}>Configurar início</button></p>
+              <p>O início é registrado automaticamente após a sincronização da conta.</p>
             ) : (programacao.get(diaSelecionado)?.missoes.length ?? 0) === 0 ? (
-              <div><p>{motivoSemMissao}</p><p>{pendenciasPlano} missões ainda pendentes no plano.</p><button type="button" onClick={() => navigate('/plano')}>Ver plano e pendências</button><button type="button" onClick={() => navigate('/configuracoes')}>Conferir início do plano</button></div>
+              <div><p>{motivoSemMissao}</p><p>{pendenciasPlano} missões ainda pendentes no plano.</p><button type="button" onClick={() => navigate('/plano')}>Ver plano e pendências</button></div>
             ) : <>
               <ul>{programacao.get(diaSelecionado)!.missoes.map(m => <li key={m.id}>
                 <strong>{m.materia}</strong> — {m.assunto}<br />
@@ -594,49 +596,14 @@ export default function Calendario() {
               </div>
 
               <div className="calendario-eventos">
-                {detalheDia.eventos.map(
-                  (evento) => (
-                    <article
-                      key={
-                        evento.id
-                      }
-                      className={
-                        `calendario-evento calendario-evento-${evento.tipo}`
-                      }
-                    >
-                      <div className="calendario-evento-icone">
-                        {iconeEvento(
-                          evento.tipo
-                        )}
-                      </div>
-
-                      <div>
-                        <strong>
-                          {
-                            evento.titulo
-                          }
-                        </strong>
-
-                        <p>
-                          {
-                            evento.detalhe
-                          }
-                        </p>
-
-                        <span>
-                          {evento.minutos >
-                          0
-                            ? formatarMinutos(
-                                evento.minutos
-                              )
-                            : formatarStatus(
-                                evento.status
-                              )}
-                        </span>
-                      </div>
-                    </article>
-                  )
-                )}
+                {agruparEventosCalendario(detalheDia.eventos).map(grupo => <details className="calendario-grupo" key={grupo.materia}>
+                  <summary><strong>{grupo.materia}</strong><span>{formatarMinutos(grupo.minutos)} de estudo · {grupo.questoes} questões</span><small>{grupo.revisoesConcluidas > 0 ? `${grupo.revisoesConcluidas} revisões concluídas` : ''}{grupo.revisoesPendentes > 0 ? ` · ${grupo.revisoesPendentes} revisões pendentes` : ''}</small></summary>
+                  {grupo.eventos.map(evento => <article key={evento.id} className={`calendario-evento calendario-evento-${evento.tipo}`}>
+                    <div className="calendario-evento-icone">{iconeEvento(evento.tipo)}</div>
+                    <div><p>{evento.detalhe}</p><span>{evento.minutos > 0 ? formatarMinutos(evento.minutos) : evento.tipo==='revisao' ? formatarStatus(evento.status) : ''}</span>
+                    {evento.revisaoId && evento.status !== 'concluida' && <button type="button" onClick={() => navigate('/revisoes', {state:{revisaoId:evento.revisaoId}})}>Fazer revisão</button>}</div>
+                  </article>)}
+                </details>)}
               </div>
             </>
           )}
@@ -796,6 +763,7 @@ function montarEventos({
           `revisao-${revisao.id}-${status}`,
         tipo:
           "revisao",
+        revisaoId: revisao.id,
         titulo:
           revisao.materia ||
           "Revisão",

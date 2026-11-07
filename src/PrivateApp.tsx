@@ -60,6 +60,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
 const Estudos = lazy(() => import("./pages/Estudos/Estudos"));
 const Questoes = lazy(() => import("./pages/Questoes/Questoes"));
 const Historico = lazy(() => import("./pages/Historico/Historico"));
+const ResumoSemanal = lazy(() => import("./pages/Dashboard/ResumoSemanal"));
 const Estatisticas = lazy(() => import("./pages/Estatisticas/Estatisticas"));
 const Revisoes = lazy(() => import("./pages/Revisoes/Revisoes"));
 const CentralEstudosGateway = lazy(() => import("./pages/CentralEstudos/CentralEstudosGateway"));
@@ -188,6 +189,7 @@ function ConteudoPrivado() {
                         <Route path="/historico" element={<Historico />} />
                         <Route path="/banco-questoes" element={<BancoQuestoes />} />
                         <Route path="/estatisticas" element={<Estatisticas />} />
+                        <Route path="/resumo-semanal" element={<ResumoSemanal />} />
 
                         <Route path="/simulados" element={<SimuladosGateway />} />
                         <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />
