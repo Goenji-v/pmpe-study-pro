@@ -309,6 +309,12 @@ export default function Configuracoes() {
           </div>
 
           <div className="configuracoes-form-group">
+            <label htmlFor="dataProva">Data da prova</label>
+            <input id="dataProva" type="date" value={formulario.dataProva ?? ""} onChange={evento => atualizarCampo("dataProva", evento.target.value || undefined)} />
+            <small>Opcional. Mostra quantos dias faltam no calendário, sem reorganizar missões nem alterar seu histórico.</small>
+          </div>
+
+          <div className="configuracoes-form-group">
             <label htmlFor="dataInicioPlano">Data de início do seu cronograma</label>
             <input
               id="dataInicioPlano"
@@ -317,9 +323,7 @@ export default function Configuracoes() {
               onChange={(evento) => atualizarCampo("dataInicioPlano", evento.target.value || undefined)}
             />
             <small>
-              A semana avança pelo calendário, mesmo que você não tenha estudado.
-              Pendências anteriores continuam disponíveis. Informe a data real de início:
-              nenhum progresso será marcado automaticamente.
+              Esta data posiciona a semana 1 do plano no calendário. Não é a data da prova nem necessariamente o primeiro dia em que você estudou na vida. Uma data antiga pode colocar hoje depois do fim do plano. Alterá-la muda as datas previstas, mas preserva as conclusões.
             </small>
           </div>
 

@@ -81,7 +81,24 @@ test('configurações salva hoje às 7h e calendário usa a data',async({page})=
 for(const width of [1440,390]) test(`resumo semanal organizado em ${width}px`,async({page})=>{
  await page.setViewportSize({width,height:900});await abrir(page);
  await page.getByRole('link',{name:'Resumo',exact:true}).click();
+ await expect(page.locator('.resumo-semana')).not.toBeVisible();
+ await page.locator('summary').click();
+ await expect(page.locator('.resumo-semana')).toBeVisible();
  await expect(page.locator('.resumo-semana-metricas>div')).toHaveCount(4);
  await expect(page.locator('.resumo-semana-prioridades button').first()).toHaveCSS('border-radius','10px');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
+
+ test('prova tem contagem e início antigo explica fim sem criar semana 50',async({page})=>{
+ await abrir(page);
+ await page.getByRole('link',{name:'Configurações',exact:true}).click();
+ await page.getByLabel('Data da prova',{exact:true}).fill('2026-11-16');
+ await page.getByLabel('Data de início do seu cronograma').fill('2025-11-24');
+ await page.getByRole('button',{name:'Salvar configurações',exact:true}).click();
+ await page.getByRole('link',{name:'Calendário',exact:true}).click();
+ await expect(page.getByText('Faltam 10 dias',{exact:true})).toBeVisible();
+ await expect(page.getByText('Esta data está depois do fim do plano.',{exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'Ver plano e pendências'}).click();
+ await expect(page.locator('.plano-semana-botao')).toHaveCount(3);
+ await expect(page.getByText('O período previsto para este plano terminou.',{exact:false})).toBeVisible();
+ });

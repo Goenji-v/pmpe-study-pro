@@ -443,3 +443,12 @@
 .calendario-programacao button { display:block; margin-top:12px; background:#13283e; color:#e8f4ff; border:1px solid #365775; font:inherit; font-size:14px; line-height:1.4; }
 .calendario-programacao button:hover { background:#1b3855; }
 .calendario-programacao button:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
+
+.calendario-horizonte {display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:20px;margin-bottom:24px;border:1px solid #365775;border-radius:16px;background:#101e32;}
+.calendario-horizonte>div {display:grid;gap:8px;flex:1;min-width:180px;}
+.calendario-horizonte span {font-size:11px;color:#7dd3fc;letter-spacing:1px;}
+.calendario-horizonte strong {font-size:18px;color:#f1f5f9;}
+.calendario-horizonte small {color:#a9bbd1;}
+.calendario-horizonte button {background:#183651;color:#e8f4ff;border:1px solid #365775;border-radius:10px;padding:12px;cursor:pointer;}
+.calendario-dia .calendario-planejado {font-size:10px;color:#7dd3fc;line-height:1.3;overflow-wrap:anywhere;}
+.calendario-prova-marca {font-size:10px;color:#facc15;font-weight:bold;}

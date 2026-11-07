@@ -78,6 +78,10 @@ export default function Calendario() {
     missoesConcluidas,
   } = useApp();
   const programacao = useMemo(() => indexarPlanoPorData(planoAtivo, configuracoes.dataInicioPlano), [planoAtivo, configuracoes.dataInicioPlano]);
+  const datasPlano = [...programacao.keys()].sort();
+  const dataBR = (data: string) => data.split('-').reverse().join('/');
+  const diasProva = configuracoes.dataProva ? Math.round((Date.parse(configuracoes.dataProva + 'T00:00:00Z') - Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 86400000) : null;
+  const pendenciasPlano = planoAtivo.flatMap(s => s.dias.flatMap(d => d.missoes)).filter(m => !missoesConcluidas.includes(m.id)).length;
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
 
   const hoje =
@@ -104,6 +108,8 @@ export default function Calendario() {
       hoje
     )
   );
+
+  const motivoSemMissao = !datasPlano.length ? 'Seu plano não tem missões cadastradas. Confira o plano ou o edital ativo.' : diaSelecionado < datasPlano[0] ? 'Esta data é anterior ao início do plano.' : diaSelecionado > datasPlano[datasPlano.length - 1] ? 'Esta data está depois do fim do plano. As missões anteriores continuam disponíveis; não criamos semanas vazias.' : 'Dia sem missão na programação atual. Você pode estudar livremente ou retomar pendências.';
 
   const eventos =
     useMemo(
@@ -234,6 +240,11 @@ export default function Calendario() {
 
   return (
     <section className="calendario-container">
+      <div className="calendario-horizonte">
+        <div><span>SUA PROVA</span><strong>{diasProva === null || !Number.isFinite(diasProva) ? 'Defina a data da prova' : diasProva > 0 ? `Faltam ${diasProva} dias` : diasProva === 0 ? 'A prova é hoje' : 'A data da prova já passou'}</strong>{configuracoes.dataProva && <small>{dataBR(configuracoes.dataProva)}</small>}</div>
+        <div><span>PERÍODO DO PLANO</span><strong>{datasPlano.length ? `${dataBR(datasPlano[0])} a ${dataBR(datasPlano[datasPlano.length - 1])}` : 'Início ainda não configurado'}</strong><small>{planoAtivo.length} semanas · {pendenciasPlano} missões pendentes</small></div>
+        <button type="button" onClick={() => navigate('/configuracoes')}>Configurar datas</button>
+      </div>
       <div className="calendario-cabecalho">
         <div>
           <span className="calendario-etiqueta">
@@ -245,8 +256,7 @@ export default function Calendario() {
           </h1>
 
           <p>
-            Acompanhe sessões, questões,
-            revisões e simulados por dia.
+            Veja o que está planejado e o que você realizou. Registrar questões não conclui automaticamente uma missão do plano.
           </p>
         </div>
 
@@ -401,6 +411,7 @@ export default function Calendario() {
                       )
                     }
                   >
+                    {configuracoes.dataProva === dia.chave && <span className="calendario-prova-marca">DIA DA PROVA</span>}
                     <div className="calendario-dia-topo">
                       <strong>
                         {
@@ -459,17 +470,14 @@ export default function Calendario() {
                       )}
                     </div>
 
+                    {!!programacao.get(dia.chave)?.missoes.length && <span className="calendario-planejado">{programacao.get(dia.chave)!.missoes.filter(m => missoesConcluidas.includes(m.id)).length}/{programacao.get(dia.chave)!.missoes.length} missões concluídas</span>}
                     {dia.revisoesPendentes >
                       0 && (
                       <small>
                         {
                           dia.revisoesPendentes
                         }{" "}
-                        revisão
-                        {dia.revisoesPendentes >
-                        1
-                          ? "ões"
-                          : ""}{" "}
+                        {dia.revisoesPendentes > 1 ? "revisões" : "revisão"}{" "}
                         pendente
                         {dia.revisoesPendentes >
                         1
@@ -536,7 +544,7 @@ export default function Calendario() {
             {!configuracoes.dataInicioPlano ? (
               <p>Defina a data de início do plano nas configurações para ver as missões nas datas certas. <button type="button" onClick={() => navigate("/configuracoes")}>Configurar início</button></p>
             ) : (programacao.get(diaSelecionado)?.missoes.length ?? 0) === 0 ? (
-              <p>Sem missão planejada para esta data.</p>
+              <div><p>{motivoSemMissao}</p><p>{pendenciasPlano} missões ainda pendentes no plano.</p><button type="button" onClick={() => navigate('/plano')}>Ver plano e pendências</button><button type="button" onClick={() => navigate('/configuracoes')}>Conferir início do plano</button></div>
             ) : <>
               <ul>{programacao.get(diaSelecionado)!.missoes.map(m => <li key={m.id}>
                 <strong>{m.materia}</strong> — {m.assunto}<br />

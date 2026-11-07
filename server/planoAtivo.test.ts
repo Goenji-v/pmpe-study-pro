@@ -46,3 +46,11 @@ test('aula de conectivos não é sugerida para diagramas lógicos',()=>{
  assert.equal(encontrarAulasParaMissao([curso],['c'],'RLM','Diagramas lógicos').length,0);
  assert.equal(encontrarAulasParaMissao([curso],['c'],'RLM','Conectivos lógicos').length,1);
 });
+
+ test('início antigo não infla plano com semanas vazias nem altera IDs',()=>{
+ const original=criarPlanoAtivo(config,[]);
+ const antigo=criarPlanoAtivo({...config,dataInicioPlano:'2025-11-24',semanaAtualPlano:50},[],new Date(2026,10,7));
+ assert.equal(antigo.length,original.length);
+ assert.deepEqual(ids(antigo),ids(original));
+ assert.equal(indexarPlanoPorData(antigo,'2025-11-24').has('2026-11-07'),false);
+ });

@@ -193,7 +193,7 @@ export default function PlanoEstudos() {
   const [
     semanaSelecionada,
     setSemanaSelecionada,
-  ] = useState(estadoNavegacao?.semana ?? semanaInicial);
+  ] = useState(estadoNavegacao?.semana ?? Math.min(semanaInicial, planoCalendario.at(-1)?.numero ?? 1));
 
   const [
     diaSelecionado,
@@ -525,8 +525,7 @@ export default function PlanoEstudos() {
 
       {semanaInicial > (planoCalendario.findLast((item) => item.dias.some((d) => d.missoes.length))?.numero ?? 0) && (
         <p className="plano-sem-novos-assuntos">
-          A semana {semanaInicial} chegou pelo calendário. Ainda não há novos assuntos cadastrados
-          para esta semana; continue pelas pendências sem perder o progresso anterior.
+          O período previsto para este plano terminou. O plano mantém suas {planoCalendario.length} semanas originais; nenhuma semana vazia foi acrescentada. Continue pelas pendências ou confira a data de início nas configurações.
         </p>
       )}
 

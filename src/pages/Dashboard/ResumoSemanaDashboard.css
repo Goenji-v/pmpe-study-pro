@@ -17,3 +17,10 @@
 .resumo-semana-prioridades button:hover { background:#1b3855; }
 .resumo-semana button:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
 @media(max-width:700px) { .resumo-semana {padding:16px;} .resumo-semana-metricas {grid-template-columns:repeat(2,minmax(0,1fr));} .resumo-semana-detalhes {grid-template-columns:minmax(0,1fr);} }
+
+.resumo-semana-recolhido { margin:0 0 18px; min-width:0; }
+.resumo-semana-recolhido>summary { display:flex; align-items:center; gap:16px; width:fit-content; padding:12px 18px; border:1px solid #365775; border-radius:12px; background:#13283e; color:#e8f4ff; cursor:pointer; font-weight:700; list-style:none; }
+.resumo-semana-recolhido>summary span {font-size:12px;font-weight:400;color:#a9bbd1;}
+.resumo-semana-recolhido>summary::after {content:'＋';}
+.resumo-semana-recolhido[open]>summary::after {content:'−';}
+.resumo-semana-recolhido>summary:focus-visible {outline:2px solid #7dd3fc;outline-offset:3px;}

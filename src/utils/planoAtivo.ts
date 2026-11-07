@@ -7,10 +7,10 @@ import type { ConfiguracoesComEdital } from '../types/editalInteligente';
 import { gerarPlanoEdital, preservarIdsPlanoAnterior } from './planoEdital';
 import { criarPlanoCalendario } from './planoCalendario';
 import { aplicarDiasAtividadesSemanais } from './atividadesSemanaisPlano';
-import { ampliarPlanoAteSemana, semanaPorDataInicio } from './planoUtils';
+import { semanaPorDataInicio } from './planoUtils';
 
 /** A mesma grade e os mesmos IDs em todas as telas. Não grava nem reordena conclusões. */
-export function criarPlanoAtivo(config: ConfiguracoesApp, materias: Materia[], agora = new Date()): SemanaPlano[] {
+export function criarPlanoAtivo(config: ConfiguracoesApp, materias: Materia[], _agora = new Date()): SemanaPlano[] {
   const edital = (config as ConfiguracoesComEdital).editalAtivo;
   let base: SemanaPlano[];
   if (edital?.analise) {
@@ -32,7 +32,7 @@ export function criarPlanoAtivo(config: ConfiguracoesApp, materias: Materia[], a
     base = aplicarDiasAtividadesSemanais(criarPlanoCalendario(config.missoesPorDia ?? 1, config.planoPadraoAtivo !== false, config.materiasPorDiaSemana), config);
   }
   const grade = base.map(s => ({...s, dias: s.dias.map(d => ({...d, missoes: d.missoes.filter(m => m.tipo !== 'revisao')}))}));
-  return ampliarPlanoAteSemana(grade, Math.max(semanaPorDataInicio(config.dataInicioPlano, agora) ?? 1, config.semanaAtualPlano ?? 1));
+  return grade;
 }
 
 /** Usa datas locais e o mesmo início de semana do painel, inclusive na virada do ano. */

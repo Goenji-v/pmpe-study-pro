@@ -10,3 +10,8 @@ test('data passada é válida; amanhã é futura',()=>{
 test('validação rejeita dia inexistente, formato incorreto e reconhece bissexto',()=>{
  const hoje=new Date(2026,10,7);assert.equal(validarDataInicioPlano('2026-02-30',hoje),'invalida');assert.equal(validarDataInicioPlano('07/11/2026',hoje),'invalida');assert.equal(validarDataInicioPlano('2024-02-29',hoje),'valida');
 });
+
+ test('data explícita substitui semana manual antiga', async()=>{
+ const {getSemanaAtual}=await import('../src/utils/planoUtils');
+ assert.equal(getSemanaAtual([],[],50,'2026-11-02',new Date(2026,10,7)),1);
+ });
