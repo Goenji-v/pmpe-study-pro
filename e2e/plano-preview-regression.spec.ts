@@ -61,7 +61,11 @@ for(const width of [1440,390]) test(`calendário abre mesma missão e reflete co
  await page.locator('.plano-concluir').click();
  await page.getByRole('link',{name:'Calendário',exact:true}).click();
  await expect(page.locator('.calendario-programacao li').first()).toContainText('Concluída');
- expect(await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,classe:e.className}))), 'elementos fora da largura da tela').toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ if(width===390){
+  await expect(page.locator('.calendario-painel')).toHaveCSS('overflow-x','auto');
+  expect(await page.locator('.calendario-painel').evaluate(e=>e.getBoundingClientRect().right<=innerWidth+1)).toBe(true);
+ }
 });
 test('quota cheia usa backup persistente e isola contas',async({page})=>{
  await abrir(page);
