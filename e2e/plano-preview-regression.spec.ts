@@ -21,7 +21,7 @@ test.beforeAll(async()=>{
  function RevisaoDestino(){return <pre data-testid='revisao-destino'>{armazenamentoSessaoDaConta.getItem('pmpe:central-estudos:prefill')}</pre>}
  import * as backups from './src/services/seguranca/backupAutomaticoDuravel';
  window.backups=backups;
- createRoot(document.getElementById('root')).render(<FixtureProvider><MemoryRouter initialEntries={['/calendario']}><nav><Link to="/calendario">Calendário</Link><Link to="/plano">Plano</Link><Link to="/configuracoes">Configurações</Link><Link to="/resumo">Resumo</Link><Link to="/desempenho-teste">Desempenho</Link></nav><Routes><Route path="/desempenho-teste" element={<DesempenhoTeste/>}/><Route path="/resumo-semanal" element={<ResumoPagina/>}/><Route path="/revisoes" element={<Revisoes/>}/><Route path="/central-estudos" element={<RevisaoDestino/>}/><Route path="/configuracoes" element={<><Configuracoes/><ResumoTeste/></>}/><Route path="/resumo" element={<ResumoTeste/>}/><Route path="/calendario" element={<Calendario/>}/><Route path="/plano" element={<Plano/>}/></Routes></MemoryRouter></FixtureProvider>);
+ createRoot(document.getElementById('root')).render(<FixtureProvider><MemoryRouter initialEntries={['/calendario']}><nav style={{display:"flex",flexWrap:"wrap",gap:8}}><Link to="/calendario">Calendário</Link><Link to="/plano">Plano</Link><Link to="/configuracoes">Configurações</Link><Link to="/resumo">Resumo</Link><Link to="/desempenho-teste">Desempenho</Link></nav><Routes><Route path="/desempenho-teste" element={<DesempenhoTeste/>}/><Route path="/resumo-semanal" element={<ResumoPagina/>}/><Route path="/revisoes" element={<Revisoes/>}/><Route path="/central-estudos" element={<RevisaoDestino/>}/><Route path="/configuracoes" element={<><Configuracoes/><ResumoTeste/></>}/><Route path="/resumo" element={<ResumoTeste/>}/><Route path="/calendario" element={<Calendario/>}/><Route path="/plano" element={<Plano/>}/></Routes></MemoryRouter></FixtureProvider>);
  `},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"','import.meta.env':'{}'},loader:{'.css':'empty'},plugins:[{name:'fixtures',setup(b){
  const mock=(filter:RegExp,contents:string)=>b.onLoad({filter},()=>({contents,loader:'tsx',resolveDir:process.cwd()}));
  mock(/\/context\/AppContext\.tsx$/, `
@@ -61,7 +61,7 @@ for(const width of [1440,390]) test(`calendário abre mesma missão e reflete co
  await page.locator('.plano-concluir').click();
  await page.getByRole('link',{name:'Calendário',exact:true}).click();
  await expect(page.locator('.calendario-programacao li').first()).toContainText('Concluída');
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,classe:e.className}))), 'elementos fora da largura da tela').toEqual([]);
 });
 test('quota cheia usa backup persistente e isola contas',async({page})=>{
  await abrir(page);
@@ -94,7 +94,7 @@ for(const width of [1440,390]) test(`resumo semanal organizado em ${width}px`,as
  await expect(page.locator('.resumo-semana')).toBeVisible();
  await expect(page.locator('.resumo-semana-metricas>div')).toHaveCount(4);
  await expect(page.locator('.resumo-semana-prioridades button').first()).toHaveCSS('border-radius','10px');
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,classe:e.className}))), 'elementos fora da largura da tela').toEqual([]);
 });
 
  test('prova tem contagem e início antigo explica fim sem criar semana 50',async({page})=>{
