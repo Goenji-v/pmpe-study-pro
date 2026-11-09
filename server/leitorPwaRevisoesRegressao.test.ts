@@ -11,9 +11,9 @@ test("PWA publica tamanhos reais e mantém marca maskable segura", () => {
     icons: Array<{ src: string; sizes: string; purpose: string }>;
   };
   const esperados = [
-    ["192x192", "any", "study-pro-192.png"],
-    ["512x512", "any", "study-pro-512.png"],
-    ["512x512", "maskable", "study-pro-maskable-512.png"],
+    ["192x192", "any", "study-pro-192-v7.png"],
+    ["512x512", "any", "study-pro-sp-v7.png"],
+    ["512x512", "maskable", "study-pro-maskable-v7.png"],
   ] as const;
   for (const [sizes, purpose, file] of esperados) {
     const icone = manifest.icons.find((i) => i.sizes === sizes && i.purpose === purpose);
@@ -26,9 +26,9 @@ test("PWA publica tamanhos reais e mantém marca maskable segura", () => {
     assert.equal(buffer.readUInt32BE(20), altura);
   }
   const html = ler("index.html");
-  assert.match(html, /study-pro-apple-180\.png\?v=6/);
-  assert.match(html, /study-pro-favicon-64\.png\?v=6/);
-  assert.match(html, /manifest\.webmanifest\?v=6/);
+  assert.match(html, /study-pro-apple-v7\.png/);
+  assert.match(html, /study-pro-favicon-v7\.png/);
+  assert.match(html, /manifest\.webmanifest\?v=7/);
 });
 
 test("leitor PDF ocupa a janela e conserva leitor/anotações e alternativa de pop-up", () => {
