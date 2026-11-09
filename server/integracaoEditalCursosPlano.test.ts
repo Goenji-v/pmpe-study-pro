@@ -67,23 +67,10 @@ test("relaciona aula do curso ao edital mesmo quando o link não foi capturado",
   assert.equal(aulas[0].concluida, false);
 });
 
-test("Plano Tático envia a aula relacionada para a Central com o vínculo da missão", async () => {
-  const codigo = await readFile(
-    "src/pages/PlanoEdital/PlanoEditalGateway.tsx",
-    "utf8"
-  );
-
-  assert.match(
-    codigo,
-    /sincronizarProgressoCursos\(configCursos\.cursos \?\? \[\], materias\)/
-  );
-  assert.match(codigo, /cursosSincronizados/);
+test("Plano Tático compartilha a resolução canônica com o Dashboard", async () => {
+  const codigo = await readFile("src/pages/PlanoEstudos/PlanoEstudos.tsx", "utf8");
+  assert.match(codigo, /criarDadosSessaoDaMissao/);
   assert.match(codigo, /pmpe:central-estudos:prefill/);
-  assert.match(codigo, /moduloId: aula\.moduloId/);
-  assert.match(codigo, /assuntoId: aula\.assuntoId/);
-  assert.match(codigo, /aulaId: aula\.aulaId/);
-  assert.match(codigo, /missaoId: missao\.id/);
-  assert.match(codigo, /navigate\("\/central-estudos"\)/);
 });
 
 test("finalizar missão dinâmica conclui o conteúdo do curso e a Central reconhece o vínculo", async () => {
@@ -104,37 +91,15 @@ test("finalizar missão dinâmica conclui o conteúdo do curso e a Central recon
 });
 
 
-test("Plano dinâmico usa o mesmo layout didático do PlanoEstudos", async () => {
-  const codigo = await readFile(
-    "src/pages/PlanoEdital/PlanoEditalGateway.tsx",
-    "utf8"
-  );
-
-  assert.match(codigo, /\.\.\/PlanoEstudos\/PlanoEstudos\.css/);
-  assert.match(codigo, /className="plano-container plano-unificado"/);
-  assert.match(codigo, /className="plano-semanas"/);
-  assert.match(codigo, /className="plano-resumo-semana"/);
-  assert.match(codigo, /className="plano-dias"/);
-  assert.match(codigo, /className="plano-conteudo-dia"/);
-  assert.match(codigo, /plano-missao-card/);
-  assert.match(codigo, /plano-estudar/);
-  assert.match(codigo, /plano-desmarcar/);
-  assert.match(codigo, /plano-concluir/);
+test("Plano do edital reutiliza a tela com redação e simulado", async () => {
+  const codigo = await readFile("src/pages/PlanoEdital/PlanoEditalGateway.tsx", "utf8");
+  assert.match(codigo, /<PlanoEstudos/);
 });
 
-test("missão do edital abre aula do curso quando houver correspondência", async () => {
-  const codigo = await readFile(
-    "src/pages/PlanoEdital/PlanoEditalGateway.tsx",
-    "utf8"
-  );
-
-  assert.match(codigo, /function iniciarMissaoDoPlano/);
-  assert.match(
-    codigo,
-    /aulasRelacionadas\.find\(\(aula\) => Boolean\(aula\.url\)\)/
-  );
-  assert.match(codigo, /iniciarAulaDoCurso\(missao, primeiraAula\)/);
-  assert.match(codigo, /Módulo: \{aulaPrincipal\?\.modulo \?\? "Edital atual"\}/);
+test("Plano ativo resolve aulas no conteúdo canônico", async () => {
+  const codigo = await readFile("src/utils/planoAtivo.ts", "utf8");
+  assert.match(codigo, /encontrarAulasNosConteudos/);
+  assert.match(codigo, /conteudo: aula && materia/);
 });
 
 
@@ -189,14 +154,8 @@ test("recupera link da aula pela árvore canônica de Conteúdos", () => {
   );
 });
 
-test("Plano Tático procura link no curso e também em Conteúdos", async () => {
-  const codigo = await readFile(
-    "src/pages/PlanoEdital/PlanoEditalGateway.tsx",
-    "utf8"
-  );
-
-  assert.match(codigo, /encontrarAulasNosConteudos/);
-  assert.match(codigo, /function aulasDaMissao/);
-  assert.match(codigo, /aulasRelacionadas\.find\(\(aula\) => Boolean\(aula\.url\)\)/);
-  assert.match(codigo, /urlAula: aula\.url/);
+test("Plano envia o link resolvido pela mesma referência da aula", async () => {
+  const codigo = await readFile("src/services/conteudos/sincronizacaoCanonica.ts", "utf8");
+  assert.match(codigo, /aulaId: localizacao\?\.aula\?\.id/);
+  assert.match(codigo, /localizacao\?\.aula\?\.url/);
 });

@@ -220,7 +220,7 @@ export function getSemanaAtual(
   const minimo = Number.isFinite(semanaMinimaInformada)
     ? Math.max(1, Math.floor(semanaMinimaInformada!))
     : 1;
-  if (peloCalendario !== null) return Math.max(minimo, peloCalendario);
+  if (peloCalendario !== null) return peloCalendario;
   if (plano.length === 0) return minimo;
   const concluidas = new Set(concluidasInformadas ?? getMissoesConcluidas());
   return Math.max(minimo, inferirSemanaComProgresso(concluidas, plano));

@@ -187,7 +187,7 @@ export default function Sidebar() {
         <div className="sidebar-logo">
           <img
             className="sidebar-logo-oficial"
-            src="/assets/study-pro-logo-original-v2.jpg"
+            src="/assets/study-pro-wordmark-v7.png"
             alt="Study Pro"
             draggable={false}
           />

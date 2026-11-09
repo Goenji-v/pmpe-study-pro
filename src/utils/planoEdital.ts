@@ -7,6 +7,7 @@ import {
   type DiaPlanoEdital,
   type DiaSemanaId,
   type MateriaEdital,
+  type MissaoPlanoEdital,
   type PlanoEdital,
   type PrioridadeEdital,
   type SemanaPlanoEdital,
@@ -198,7 +199,12 @@ export function gerarPlanoEdital(
   const revisoesPorDia = Math.max(0, Math.round(configuracoes.metaRevisoesDiaria || 0));
   const metaQuestoesDia = Math.max(0, Math.round(configuracoes.metaQuestoesDiaria || 0));
   const quantidadeNoDia = (dia: DiaSemanaId) => Math.max(1, Math.min(4, Math.round(configuracoes.materiasPorDiaSemana?.[dia] ?? materiasPorDia)));
-  const totalSlotsSemana = diasEstudo.reduce((total, dia) => total + quantidadeNoDia(dia), 0);
+  const diaRedacao = configuracoes.diaRedacaoSemanal ?? "dom";
+  const diaSimulado = configuracoes.diaSimuladoSemanal ?? "dom";
+  // Quando ambas as atividades ocupam o domingo, o conteúdo avança de seg–sáb.
+  const diasConteudo = diasEstudo.filter(d => !(d === "dom" && diaRedacao === d && diaSimulado === d));
+  if (!diasConteudo.length) diasConteudo.push(...diasEstudo);
+  const totalSlotsSemana = diasConteudo.reduce((total, dia) => total + quantidadeNoDia(dia), 0);
 
   const filas = criarFilas(analise);
   const sequencia = montarSequenciaEquilibrada(filas, totalSlotsSemana);
@@ -219,7 +225,7 @@ export function gerarPlanoEdital(
       const diaSemana = diaCalendario.id;
       const ehDiaEstudo = diasEstudo.includes(diaSemana);
       const restantes = Math.max(0, sequencia.length - ponteiro);
-      const quantidadeMissoes = ehDiaEstudo
+      const quantidadeMissoes = diasConteudo.includes(diaSemana)
         ? Math.min(quantidadeNoDia(diaSemana), restantes)
         : 0;
       const duracaoMissao = quantidadeMissoes > 0
@@ -229,7 +235,7 @@ export function gerarPlanoEdital(
         ? Math.floor(metaQuestoesDia / quantidadeMissoes)
         : 0;
 
-      const missoes = Array.from({ length: quantidadeMissoes }, () => {
+      const missoes: MissaoPlanoEdital[] = Array.from({ length: quantidadeMissoes }, () => {
         const item = sequencia[ponteiro++];
         const missao = {
           id: `edital-conteudo-${slugEdital(item.materia.id)}-${slugEdital(item.assuntoId)}`,
@@ -246,12 +252,25 @@ export function gerarPlanoEdital(
         return missao;
       });
 
+      const especiais = (["redacao", "simulado"] as const).filter(tipo =>
+        diaSemana === (tipo === "redacao" ? diaRedacao : diaSimulado));
+      for (const tipo of especiais) {
+        missoes.push({ id: `edital-s${semana}-atividade-${tipo}`, tipo,
+          ordem: ordemGlobal++, materiaId: tipo, assuntoId: tipo,
+          materia: tipo === "redacao" ? "Redação" : "Simulado",
+          assunto: tipo === "redacao" ? "Redação semanal" : "Simulado semanal",
+          prioridade: "alta", duracaoMinutos: 0, metaQuestoes: 0 });
+      }
+      if (especiais.length) {
+        const duracao = Math.floor(minutosConteudo / missoes.length);
+        missoes.forEach(m => { m.duracaoMinutos = duracao; });
+      }
       dias.push({
         id: `edital-s${semana}-${diaSemana}`,
         semana,
         diaSemana,
         nomeDia: diaCalendario.nome,
-        minutosDisponiveis: ehDiaEstudo ? minutosPorDia : 0,
+        minutosDisponiveis: (ehDiaEstudo || especiais.length > 0) ? minutosPorDia : 0,
         revisoesPlanejadas: ehDiaEstudo ? revisoesPorDia : 0,
         missoes,
       });
@@ -401,6 +420,7 @@ export function preservarIdsPlanoAnterior(
     dias: semana.dias.map((dia) => ({
       ...dia,
       missoes: dia.missoes.map((missao) => {
+        if (missao.tipo === "redacao" || missao.tipo === "simulado") return missao;
         const idAntigo =
           porIds.get(`${missao.materiaId}::${missao.assuntoId}`) ??
           porNomes.get(

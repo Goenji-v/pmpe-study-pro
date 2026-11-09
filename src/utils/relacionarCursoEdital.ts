@@ -50,7 +50,7 @@ export function encontrarAulasParaMissao(
             modulo.nome
           );
           const score = scoreMateria * 0.3 + scoreAssunto * 0.7;
-          if (score < 0.38) continue;
+          if (scoreAssunto < 0.65 || score < 0.72) continue;
 
           resultados.push({
             cursoId: curso.id,
@@ -137,7 +137,7 @@ export function encontrarAulasNosConteudos(
             moduloNome
           );
           const score = scoreMateria * 0.3 + scoreAssunto * 0.7;
-          if (score < 0.38) continue;
+          if (scoreAssunto < 0.65 || score < 0.72) continue;
 
           resultados.push({
             cursoId,

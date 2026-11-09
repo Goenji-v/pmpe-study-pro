@@ -86,10 +86,10 @@ test("cronograma mostra os sete dias e usa missões apenas nos dias escolhidos",
   const diasComMissao = dias
     .filter((dia) => dia.missoes.length > 0)
     .map((dia) => dia.diaSemana);
-  assert.deepEqual(diasComMissao, ["seg", "qua", "sex"]);
+  assert.deepEqual(diasComMissao, ["seg", "qua", "sex", "dom"]);
 
   const diasInativos = dias.filter(
-    (dia) => !configuracoes.diasEstudo?.includes(dia.diaSemana)
+    (dia) => !configuracoes.diasEstudo?.includes(dia.diaSemana) && dia.diaSemana !== "dom"
   );
   assert.ok(diasInativos.every((dia) => dia.missoes.length === 0));
   assert.ok(diasInativos.every((dia) => dia.minutosDisponiveis === 0));
@@ -109,7 +109,7 @@ test("duas primeiras semanas equilibram básicas e específicas", () => {
   const plano = gerarPlanoEdital(analise, configuracoes);
   const primeiras = plano.semanas
     .slice(0, 2)
-    .flatMap((semana) => semana.dias.flatMap((dia) => dia.missoes));
+    .flatMap((semana) => semana.dias.flatMap((dia) => dia.missoes)).filter(m => !m.tipo || m.tipo === "conteudo");
 
   const basicas = new Set(["Língua Portuguesa", "Raciocínio Lógico e Matemática"]);
   assert.ok(primeiras.length >= 8);
@@ -235,7 +235,7 @@ test("após a semana dois o pior desempenho sobe no cronograma sem mexer em conc
 
   const futuraOriginal = plano.semanas
     .filter((semana) => semana.numero > 2)
-    .flatMap((semana) => semana.dias.flatMap((dia) => dia.missoes));
+    .flatMap((semana) => semana.dias.flatMap((dia) => dia.missoes)).filter(m => !m.tipo || m.tipo === "conteudo");
   const concluida = futuraOriginal[0];
   assert.ok(concluida);
 
@@ -262,7 +262,7 @@ test("após a semana dois o pior desempenho sobe no cronograma sem mexer em conc
   );
   const futuras = adaptado.semanas
     .filter((semana) => semana.numero > 2)
-    .flatMap((semana) => semana.dias.flatMap((dia) => dia.missoes));
+    .flatMap((semana) => semana.dias.flatMap((dia) => dia.missoes)).filter(m => !m.tipo || m.tipo === "conteudo");
 
   assert.equal(futuras[0].materia, concluida.materia);
   assert.equal(futuras[0].assunto, concluida.assunto);

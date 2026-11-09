@@ -856,17 +856,10 @@ test("Central usa Matéria -> Assunto -> Aula sem seletor visual de módulo", as
   assert.match(codigo, /urlAula: proximaAula\?\.url \?\? assunto\?\.aula/);
 });
 
-test("Plano abre a referência canônica e a aula real antes do fallback por nome", async () => {
-  const codigo = await readFile(
-    "src/pages/PlanoEdital/PlanoEditalGateway.tsx",
-    "utf8"
-  );
-
-  assert.match(codigo, /function localizarMissaoNaGrade/);
-  assert.match(codigo, /function abrirMissaoCanonica/);
-  assert.match(codigo, /aulaId: aula\?\.id/);
-  assert.match(codigo, /urlAula: aula\?\.url \?\? localizacao\.assunto\.aula/);
-  assert.match(codigo, /if \(abrirMissaoCanonica\(missao\)\)/);
+test("Plano abre a referência canônica antes do fallback por nome", async () => {
+  const codigo = await readFile("src/services/conteudos/sincronizacaoCanonica.ts", "utf8");
+  assert.match(codigo, /const materia = materiaPorId \?\? materiaPorNome/);
+  assert.match(codigo, /aulaId: localizacao\?\.aula\?\.id/);
 });
 
 test("Central unifica duplicatas de Direitos Humanos em plano legado sem migrar o plano", () => {
