@@ -2,7 +2,7 @@ import type { ConfiguracoesApp, Materia, RegistroQuestao, Revisao, SessaoEstudo,
 
 type Props={materias:Materia[];questoes:RegistroQuestao[];sessoes:SessaoEstudo[];revisoes:Revisao[];simulados:Simulado[];configuracoes:ConfiguracoesApp;irPara:(rota:string)=>void};
 function diaLocal(valor:string|Date){const data=new Date(valor);return Number.isNaN(data.getTime())?"":`${data.getFullYear()}-${String(data.getMonth()+1).padStart(2,"0")}-${String(data.getDate()).padStart(2,"0")}`;}
-export function gerarResumoSemanal(p:Omit<Props,"irPara">, hoje=new Date()){
+function gerarResumoSemanal(p:Omit<Props,"irPara">, hoje=new Date()){
  const inicio=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate());inicio.setDate(inicio.getDate() - ((inicio.getDay()+6)%7));
  const fim=new Date(inicio);fim.setDate(fim.getDate()+7);
  const pertence=(valor:string)=>{const d=new Date(valor);return !Number.isNaN(d.getTime())&&d>=inicio&&d<fim&&d<=hoje;};
