@@ -8,7 +8,10 @@ export function agruparEventosCalendario<T extends EventoAgrupavel>(eventos:T[])
   // Sessões representam tempo estudado; registros de questões podem espelhar a mesma sessão.
   if(evento.tipo==='sessao') grupo.minutos+=Math.max(0,evento.minutos);
   if(evento.tipo==='questoes') grupo.questoes+=Math.max(0,evento.quantidadeQuestoes??0);
-  if(evento.tipo==='revisao') evento.status==='concluida'?grupo.revisoesConcluidas++:grupo.revisoesPendentes++;
+  if(evento.tipo==='revisao') {
+   if(evento.status==='concluida') grupo.revisoesConcluidas++;
+   else grupo.revisoesPendentes++;
+  }
   grupos.set(chave,grupo);
  }
  return [...grupos.values()];

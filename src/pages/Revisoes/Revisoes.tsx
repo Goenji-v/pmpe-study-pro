@@ -1,5 +1,5 @@
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import "./Revisoes.css";
@@ -132,14 +132,18 @@ export default function Revisoes() {
     };
   }
 
+  const abrirRevisaoDoCalendario = useEffectEvent((revisao: Revisao) => {
+    if (revisao.concluida) { showToast("Esta revisão já foi concluída.", "info"); return; }
+    abrirRevisao(revisao);
+  });
+
   useEffect(() => {
     const id = (location.state as {revisaoId?: string} | null)?.revisaoId;
     if (!id || revisaoAbertaRef.current === id) return;
     const revisao = revisoesComModulo.find(r => r.id === id);
     if (!revisao) return;
     revisaoAbertaRef.current = id;
-    if (revisao.concluida) {showToast('Esta revisão já foi concluída.', 'info'); return;}
-    abrirRevisao(revisao);
+    abrirRevisaoDoCalendario(revisao);
   }, [location.state, revisoesComModulo]);
 
   function abrirRevisao(revisao: Revisao) {
