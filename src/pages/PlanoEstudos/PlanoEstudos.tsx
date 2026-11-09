@@ -33,6 +33,7 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getSemanaAtual,
+  listarPendenciasAteSemana,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
 } from "../../utils/planoUtils";
@@ -154,6 +155,11 @@ export default function PlanoEstudos() {
       return;
     }
 
+    if (!comentadoPdf) {
+      setMensagemDomingo("Selecione também o PDF do gabarito oficial ou do simulado comentado.");
+      return;
+    }
+
     if (!Number.isInteger(total) || total < 1 || total > 200) {
       setMensagemDomingo("Informe a quantidade de questões entre 1 e 200.");
       return;
@@ -225,6 +231,11 @@ export default function PlanoEstudos() {
     planoCalendario,
     configuracoes.semanaAtualPlano,
     configuracoes.dataInicioPlano
+  );
+  const pendenciasAnteriores = listarPendenciasAteSemana(
+    concluidas,
+    planoCalendario,
+    semanaInicial
   );
   const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
@@ -495,6 +506,31 @@ export default function PlanoEstudos() {
 
   return (
     <section className="plano-container">
+      {pendenciasAnteriores.length > 0 && (
+        <details className="plano-pendencias-anteriores">
+          <summary>Pendências das semanas anteriores ({pendenciasAnteriores.length})</summary>
+          <p>Estas atividades não impedem a missão de hoje. Escolha quando retomá-las.</p>
+          <ul className="plano-pendencias-lista">
+            {pendenciasAnteriores.map((p) => (
+              <li key={p.missao.id}>
+                <button
+                  type="button"
+                  className="plano-pendencia-link"
+                  onClick={() => {
+                    setSemanaSelecionada(p.semana);
+                    setDiaSelecionado(p.dia);
+                  }}
+                >
+                  <span className="plano-pendencia-meta">Semana {p.semana} · {NOMES_DIAS_PLANO[p.dia]}</span>
+                  <strong>{p.missao.materia}</strong>
+                  <span className="plano-pendencia-assunto">{p.missao.assunto}</span>
+                  <span className="plano-pendencia-abrir">Abrir atividade →</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <div className="plano-cabecalho">
         <div>
           <h1>
@@ -789,7 +825,7 @@ export default function PlanoEstudos() {
                       </label>
                     </div>
                     <div className="plano-domingo-arquivo">
-                      <span>PDF comentado/gabarito (opcional)</span>
+                      <span>PDF de gabarito oficial ou simulado comentado (obrigatório)</span>
                       <label className={"plano-domingo-upload " + (simuladoDomingoConcluido ? "plano-domingo-upload-desabilitado" : "")}>
                         <input
                           hidden
@@ -799,7 +835,7 @@ export default function PlanoEstudos() {
                           onChange={(e) => setComentadoPdf(e.target.files?.[0] ?? null)}
                         />
                         <strong>📎 {comentadoPdf ? "Substituir PDF" : "Adicionar PDF comentado"}</strong>
-                        <small>{comentadoPdf?.name ?? "Opcional · melhora a validação do gabarito"}</small>
+                        <small>{comentadoPdf?.name ?? "Obrigatório para iniciar a correção"}</small>
                       </label>
                     </div>
                   </div>
