@@ -20,6 +20,7 @@ export default function DesempenhoGeralCards({
   materias,
   pontosAtencao,
   onDetalhes,
+  onResumo,
 }: {
   aproveitamento: number;
   totalQuestoes: number;
@@ -28,6 +29,7 @@ export default function DesempenhoGeralCards({
   /** Pontos de atenção calculados sobre TODAS as matérias (amostra mínima). */
   pontosAtencao: DesempenhoMateria[];
   onDetalhes: () => void;
+  onResumo?: () => void;
 }) {
   const mensagem = obterMensagemDesempenho(aproveitamento, totalQuestoes);
   const nomesAtencao = pontosAtencao.map((item) => item.materia);
@@ -46,7 +48,10 @@ export default function DesempenhoGeralCards({
           </div>
           <p>Seu esforço, traduzido em evolução.</p>
         </div>
-        <button type="button" onClick={onDetalhes}>Ver detalhes ↗</button>
+        <div className="desempenho-acoes">
+          <button type="button" onClick={onDetalhes}>Ver detalhes ↗</button>
+          {onResumo && <button type="button" onClick={onResumo}>Ver resumo da semana ↗</button>}
+        </div>
       </header>
 
       <div className="dashboard-geral-cards-content">
