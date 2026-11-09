@@ -628,6 +628,7 @@ function iniciarProximaAulaPortugues() {
             materias={materiasDosCards}
             pontosAtencao={pontosAtencaoMaterias}
             onDetalhes={() => navigate("/desempenho")}
+            onResumo={() => navigate("/resumo-semanal")}
           />
         </article>
 
