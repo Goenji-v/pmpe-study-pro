@@ -1,0 +1,36 @@
+name: Validar calendário e identidade
+on:
+  push:
+    branches:
+      - release/calendario-identidade
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualidade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Configurar Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Testes unitários
+        run: npm test
+      - name: TypeScript
+        run: npx tsc -b
+      - name: Build Vite sem upload de sourcemaps
+        run: npx vite build
+      - name: Instalar Chromium para testes isolados
+        run: npx playwright install --with-deps chromium
+      - name: Testar calendário e revisões com conta sintética
+        run: npx playwright test e2e/calendario-identidade.spec.ts --project=desktop-chrome

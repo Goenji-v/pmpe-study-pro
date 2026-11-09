@@ -1,4 +1,4 @@
-const CACHE_OFFLINE = "studio-pro-offline-v1";
+const CACHE_OFFLINE = "studio-pro-offline-v7";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {

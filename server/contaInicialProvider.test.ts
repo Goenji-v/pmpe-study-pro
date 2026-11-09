@@ -75,7 +75,17 @@ test("Provider real cria vazio, troca conta sem herdar estado e descarta fila an
     ambiente.usuario = { id: "conta-a", user_metadata: { nome: "Ana" } };
     await render("reabrir");
     assert.equal(document.querySelector("output")?.textContent, "Ana:0");
-    assert.equal(app.obterEstadoPendenteSincronizacao("conta-a"), null);
+    // O início automático pode já ter enfileirado uma nova preferência.
+    // A fila antiga deve sumir; uma nova fila só pode conter a conta reiniciada.
+    const pendente = app.obterEstadoPendenteSincronizacao("conta-a");
+    if (pendente) {
+      assert.equal(pendente.usuarioId, "conta-a");
+      assert.deepEqual(pendente.estado.materias, []);
+      assert.deepEqual(pendente.estado.missoesConcluidas, []);
+      assert.equal(pendente.estado.configuracoes.dadosReiniciadosEm, reiniciado.configuracoes.dadosReiniciadosEm);
+      assert.equal(pendente.estado.configuracoes.dataInicioPlano, atual.configuracoes.dataInicioPlano);
+      assert.match(pendente.estado.configuracoes.dataInicioPlano, /^\d{4}-\d{2}-\d{2}$/);
+    }
     assert.equal(nuvem.get("conta-a").materias.length, 0);
     assert.equal(JSON.stringify(nuvem.get("conta-b")), outraConta);
     assert.equal(local.getItem("pmpe_cadernos_simulados_ia"), '[{"id":"de-outra-conta"}]');

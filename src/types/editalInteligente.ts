@@ -53,6 +53,7 @@ export type AnaliseEdital = {
 };
 
 export type MissaoPlanoEdital = {
+  tipo?: "conteudo" | "redacao" | "simulado";
   id: string;
   ordem: number;
   materiaId: string;

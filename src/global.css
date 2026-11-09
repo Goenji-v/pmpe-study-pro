@@ -101,3 +101,9 @@ p {
   writing-mode: horizontal-tb !important;
   line-height: 1 !important;
 }
+/* Identidade v7: mesma marca vermelha em todos os tamanhos. */
+.header .header-identidade .header-brand-mark-shell { background:#000; border-color:#54242a; box-shadow:none; }
+.header .header-identidade .header-brand-copy strong { display:block; line-height:1.1; white-space:nowrap; }
+.header .header-identidade .header-brand-copy strong span { display:block; font-size:14px; color:#f87171; margin-top:2px; }
+.sidebar .sidebar-logo { background:#000!important; flex-shrink:0; }
+.sidebar .sidebar-logo-oficial { object-fit:contain; background:#000; }

@@ -385,6 +385,7 @@ export type ConfiguracoesApp = {
   semanaAtualPlano?: number;
   /** Data escolhida pelo aluno para iniciar contagem das semanas (AAAA-MM-DD). */
   dataInicioPlano?: string;
+  dataProva?: string;
   tema: Tema;
 };
 

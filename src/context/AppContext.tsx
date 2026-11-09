@@ -1,3 +1,4 @@
+import { inicializarInicioPlano } from "../utils/inicioAutomaticoPlano";
 /* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
 /* oxlint-disable react/only-export-components */
 import {
@@ -1072,6 +1073,11 @@ function EstadoDaConta({
 
   const revisaoBaseRef = useRef(0);
   const conflitoRef = useRef(false);
+
+  useEffect(() => {
+    if (!usuarioId || statusNuvem !== "sincronizado" || !nuvemInicializadaRef.current || hidratandoRef.current) return;
+    setConfiguracoes(atuais => inicializarInicioPlano(atuais));
+  }, [usuarioId, statusNuvem, setConfiguracoes]);
 
   // A importação do histórico de questões IA deve acontecer apenas uma vez
   // quando a conta entra no estado sincronizado. Antes ela era disparada
