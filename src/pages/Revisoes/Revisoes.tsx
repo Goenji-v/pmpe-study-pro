@@ -132,6 +132,7 @@ export default function Revisoes() {
     };
   }
 
+  /* oxlint-disable react-hooks/exhaustive-deps -- abertura por navegação é protegida por revisaoAbertaRef */
   useEffect(() => {
     const id = (location.state as {revisaoId?: string} | null)?.revisaoId;
     if (!id || revisaoAbertaRef.current === id) return;
@@ -141,6 +142,7 @@ export default function Revisoes() {
     if (revisao.concluida) {showToast('Esta revisão já foi concluída.', 'info'); return;}
     abrirRevisao(revisao);
   }, [location.state, revisoesComModulo]);
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   function abrirRevisao(revisao: Revisao) {
     if (revisao.origemSimulado?.vinculo === "sem_conteudo") {
