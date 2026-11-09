@@ -434,3 +434,28 @@
     grid-template-columns: 1fr;
   }
 }
+.calendario-programacao { padding: 16px 0; border-bottom: 1px solid var(--border-color, #334155); margin-bottom: 16px; }
+.calendario-programacao ul { padding-left: 18px; }
+.calendario-programacao li { margin-bottom: 12px; overflow-wrap: anywhere; }
+.calendario-programacao button { padding: 10px 14px; border-radius: 8px; cursor: pointer; max-width: 100%; }
+.calendario-planejado-indicador { font-size: 10px; overflow-wrap: anywhere; }
+
+.calendario-programacao button { display:block; margin-top:12px; background:#13283e; color:#e8f4ff; border:1px solid #365775; font:inherit; font-size:14px; line-height:1.4; }
+.calendario-programacao button:hover { background:#1b3855; }
+.calendario-programacao button:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
+
+.calendario-horizonte {display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:20px;margin-bottom:24px;border:1px solid #365775;border-radius:16px;background:#101e32;}
+.calendario-horizonte>div {display:grid;gap:8px;flex:1;min-width:180px;}
+.calendario-horizonte span {font-size:11px;color:#7dd3fc;letter-spacing:1px;}
+.calendario-horizonte strong {font-size:18px;color:#f1f5f9;}
+.calendario-horizonte small {color:#a9bbd1;}
+.calendario-horizonte button {background:#183651;color:#e8f4ff;border:1px solid #365775;border-radius:10px;padding:12px;cursor:pointer;}
+.calendario-dia .calendario-planejado {font-size:10px;color:#7dd3fc;line-height:1.3;overflow-wrap:anywhere;}
+.calendario-prova-marca {font-size:10px;color:#facc15;font-weight:bold;}
+
+.calendario-grupo {border:1px solid #365775;border-radius:12px;background:#101e32;overflow:hidden;}
+.calendario-grupo>summary {padding:16px;cursor:pointer;color:#f1f5f9;}
+.calendario-grupo>summary span,.calendario-grupo>summary small {display:block;font-size:12px;color:#a9bbd1;margin-top:7px;line-height:1.5;}
+.calendario-grupo .calendario-evento {border:0;border-top:1px solid #26374e;border-radius:0;}
+.calendario-grupo button {margin-top:10px;border:1px solid #365775;background:#183651;color:#e8f4ff;border-radius:8px;padding:10px;cursor:pointer;}
+.resumo-semanal-pagina {min-width:0;}
