@@ -300,3 +300,82 @@
 
 /* Área de toque das preferências em telas pequenas: evita alvos de 20 px. */
 .configuracoes-card input[type="checkbox"]{box-sizing:border-box;min-width:28px;width:28px;min-height:28px;height:28px;flex:0 0 28px;cursor:pointer}
+
+
+/* Alterar senha: mantém o fluxo aprovado e remove controles brancos fora do tema. */
+.configuracoes-senha-card {
+  border-color: #2d4260;
+  background: linear-gradient(145deg, #132238, #0f1b2e);
+}
+.configuracoes-senha-card > p {
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+.configuracoes-senha-card .configuracoes-form-group {
+  gap: 8px;
+  margin-top: 16px;
+}
+.configuracoes-senha-card .configuracoes-form-group > label {
+  margin-bottom: 0;
+}
+.configuracoes-senha-card .configuracoes-form-group > input {
+  min-height: 50px;
+  border-color: #3a506f;
+  background: #0b1628;
+}
+.configuracoes-senha-visibilidade {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 6px;
+  cursor: pointer;
+}
+.configuracoes-senha-card .configuracoes-senha-visibilidade input[type="checkbox"] {
+  appearance: none;
+  min-width: 24px;
+  width: 24px;
+  min-height: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border: 1px solid #4a6384;
+  border-radius: 6px;
+  background: #0b1628;
+}
+.configuracoes-senha-card .configuracoes-senha-visibilidade input[type="checkbox"]:checked {
+  border-color: #60a5fa;
+  background: #2563eb;
+}
+.configuracoes-senha-card .configuracoes-senha-visibilidade input[type="checkbox"]:checked::after {
+  content: "✓";
+  color: white;
+  font-size: 15px;
+  font-weight: 900;
+}
+.configuracoes-senha-card .configuracoes-form-group > button {
+  min-height: 43px;
+  padding: 0 16px;
+  border-radius: 9px;
+  color: #f8fafc;
+  font-weight: 800;
+  cursor: pointer;
+}
+.configuracoes-senha-primario {
+  border: 1px solid #3b82f6;
+  background: #1d4ed8;
+}
+.configuracoes-senha-primario:hover { background: #2563eb; }
+.configuracoes-senha-secundario {
+  border: 1px solid #3a506f;
+  background: #14243a;
+}
+.configuracoes-senha-secundario:hover {
+  border-color: #5a7ca7;
+  background: #19304f;
+}
+.configuracoes-senha-card button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}

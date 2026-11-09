@@ -420,3 +420,90 @@
 .plano-pendencias-anteriores { padding: 16px; margin-bottom: 16px; border: 1px solid #64748b; border-radius: 12px; }
 .plano-pendencias-anteriores ul { max-height: 280px; overflow-y: auto; padding-left: 18px; }
 .plano-pendencias-anteriores button { text-align: left; white-space: normal; overflow-wrap: anywhere; padding: 8px; max-width: 100%; cursor: pointer; }
+
+
+/* Pendências antigas: cards nativos do tema, sem os botões brancos do navegador. */
+.plano-pendencias-anteriores {
+  border-color: #344b68;
+  background: linear-gradient(145deg, rgba(18, 33, 55, .96), rgba(12, 24, 42, .96));
+}
+.plano-pendencias-anteriores > summary {
+  color: #f8fafc;
+  font-size: 17px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.plano-pendencias-anteriores > p {
+  margin-top: 8px;
+  color: #aebdd0;
+}
+.plano-pendencias-anteriores .plano-pendencias-lista {
+  display: grid;
+  gap: 9px;
+  max-height: 330px;
+  margin: 14px 0 0;
+  padding: 0 4px 0 0;
+  list-style: none;
+  overflow-y: auto;
+}
+.plano-pendencias-lista li { min-width: 0; }
+.plano-pendencias-anteriores .plano-pendencia-link {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "meta action"
+    "materia action"
+    "assunto action";
+  align-items: center;
+  gap: 4px 14px;
+  min-height: 82px;
+  padding: 12px 14px;
+  border: 1px solid #2d4260;
+  border-radius: 11px;
+  background: #0d1a2c;
+  color: #eaf2ff;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+.plano-pendencias-anteriores .plano-pendencia-link:hover {
+  border-color: #4e78aa;
+  background: #11243c;
+  transform: translateY(-1px);
+}
+.plano-pendencia-meta {
+  grid-area: meta;
+  color: #7fb7f5;
+  font-size: 11px;
+  font-weight: 800;
+}
+.plano-pendencia-link > strong {
+  grid-area: materia;
+  color: #f8fafc;
+  font-size: 14px;
+  overflow-wrap: break-word;
+}
+.plano-pendencia-assunto {
+  grid-area: assunto;
+  color: #aebdd0;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+.plano-pendencia-abrir {
+  grid-area: action;
+  color: #93c5fd;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+@media (max-width: 650px) {
+  .plano-pendencias-anteriores .plano-pendencia-link {
+    grid-template-columns: 1fr;
+    grid-template-areas: "meta" "materia" "assunto" "action";
+  }
+  .plano-pendencia-abrir { margin-top: 5px; }
+}

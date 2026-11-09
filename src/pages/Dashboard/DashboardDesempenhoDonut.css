@@ -294,3 +294,46 @@
     padding-top: 20px;
   }
 }
+
+
+/* Ações de desempenho visíveis como botões, no mesmo padrão da fila de revisão. */
+.dashboard-geral-donut-header .desempenho-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 9px;
+}
+.dashboard-geral-donut-header .desempenho-acoes button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #304866;
+  border-radius: 9px;
+  background: #14243a;
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.dashboard-geral-donut-header .desempenho-acoes button:hover {
+  border-color: #5a8fd0;
+  background: #19304f;
+  transform: translateY(-1px);
+}
+.dashboard-geral-donut-header .desempenho-acoes button:last-child {
+  border-color: rgba(59, 130, 246, .62);
+  background: rgba(37, 99, 235, .18);
+  color: #93c5fd;
+}
+@media (max-width: 600px) {
+  .dashboard-geral-donut-header {
+    flex-direction: column;
+  }
+  .dashboard-geral-donut-header .desempenho-acoes {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .dashboard-geral-donut-header .desempenho-acoes button {
+    flex: 1 1 150px;
+  }
+}

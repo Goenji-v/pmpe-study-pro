@@ -453,9 +453,22 @@ export default function PlanoEstudos() {
       {pendenciasAnteriores.length > 0 && <details className="plano-pendencias-anteriores">
         <summary>Pendências das semanas anteriores ({pendenciasAnteriores.length})</summary>
         <p>Estas atividades não impedem a missão de hoje. Escolha quando retomá-las.</p>
-        <ul>{pendenciasAnteriores.map(p => <li key={p.missao.id}><button type="button" onClick={() => {setSemanaSelecionada(p.semana); setDiaSelecionado(p.dia);}}>
-          Semana {p.semana} · {NOMES_DIAS_PLANO[p.dia]} · {p.missao.materia}: {p.missao.assunto}
-        </button></li>)}</ul>
+        <ul className="plano-pendencias-lista">
+          {pendenciasAnteriores.map(p => (
+            <li key={p.missao.id}>
+              <button
+                type="button"
+                className="plano-pendencia-link"
+                onClick={() => { setSemanaSelecionada(p.semana); setDiaSelecionado(p.dia); }}
+              >
+                <span className="plano-pendencia-meta">Semana {p.semana} · {NOMES_DIAS_PLANO[p.dia]}</span>
+                <strong>{p.missao.materia}</strong>
+                <span className="plano-pendencia-assunto">{p.missao.assunto}</span>
+                <span className="plano-pendencia-abrir">Abrir atividade →</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </details>}
       <div className="plano-cabecalho">
         <div>

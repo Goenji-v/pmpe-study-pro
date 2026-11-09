@@ -70,31 +70,31 @@ export default function AlterarSenha() {
     });
   }
 
-  return <section className="configuracoes-card" aria-labelledby="config-senha">
+  return <section className="configuracoes-card configuracoes-senha-card" aria-labelledby="config-senha">
     <h2 id="config-senha">Alterar senha</h2>
     <p>Proteja sua conta Study Pro. A senha armazenada não pode ser exibida; o ícone permite ver apenas o que você digitar.</p>
     <p><strong>Conta:</strong> {email}</p>
     {etapa === "senha" && <form onSubmit={e => void confirmarAtual(e)} className="configuracoes-form-group">
       <label htmlFor="senha-atual">Senha atual</label>
       <input id="senha-atual" type={mostrar ? "text" : "password"} autoComplete="current-password" value={atual} onChange={e => setAtual(e.target.value)} required />
-      <label><input type="checkbox" checked={mostrar} onChange={e => setMostrar(e.target.checked)} /> Mostrar senha digitada</label>
-      <button type="submit" disabled={ocupado}>Continuar</button>
-      <button type="button" disabled={ocupado} onClick={() => void pedirCodigo()}>Não sei a senha atual</button>
+      <label className="configuracoes-senha-visibilidade"><input type="checkbox" checked={mostrar} onChange={e => setMostrar(e.target.checked)} /> Mostrar senha digitada</label>
+      <button className="configuracoes-senha-primario" type="submit" disabled={ocupado}>Continuar</button>
+      <button className="configuracoes-senha-secundario" type="button" disabled={ocupado} onClick={() => void pedirCodigo()}>Não sei a senha atual</button>
     </form>}
     {etapa === "codigo" && <form onSubmit={e => void verificarCodigo(e)} className="configuracoes-form-group">
       <label htmlFor="codigo-senha">Código enviado ao e-mail</label>
       <input id="codigo-senha" inputMode="numeric" autoComplete="one-time-code" value={codigo} onChange={e => setCodigo(e.target.value)} required />
-      <button type="submit" disabled={ocupado}>Confirmar código</button>
-      <button type="button" disabled={ocupado} onClick={() => void pedirCodigo()}>Reenviar código</button>
-      <button type="button" onClick={() => setEtapa("senha")}>Voltar</button>
+      <button className="configuracoes-senha-primario" type="submit" disabled={ocupado}>Confirmar código</button>
+      <button className="configuracoes-senha-secundario" type="button" disabled={ocupado} onClick={() => void pedirCodigo()}>Reenviar código</button>
+      <button className="configuracoes-senha-secundario" type="button" onClick={() => setEtapa("senha")}>Voltar</button>
     </form>}
     {etapa === "nova" && <form onSubmit={e => void salvar(e)} className="configuracoes-form-group">
       <label htmlFor="senha-nova">Nova senha</label>
       <input id="senha-nova" type="password" autoComplete="new-password" minLength={8} value={nova} onChange={e => setNova(e.target.value)} required />
       <label htmlFor="senha-confirmacao">Confirmar nova senha</label>
       <input id="senha-confirmacao" type="password" autoComplete="new-password" minLength={8} value={confirmacao} onChange={e => setConfirmacao(e.target.value)} required />
-      <button type="submit" disabled={ocupado}>Salvar nova senha</button>
-      <button type="button" onClick={() => setEtapa("senha")}>Cancelar</button>
+      <button className="configuracoes-senha-primario" type="submit" disabled={ocupado}>Salvar nova senha</button>
+      <button className="configuracoes-senha-secundario" type="button" onClick={() => setEtapa("senha")}>Cancelar</button>
     </form>}
     {erro && <p role="alert" style={{color:"#cf3636"}}>{erro}</p>}
     {mensagem && <p role="status">{mensagem}</p>}
