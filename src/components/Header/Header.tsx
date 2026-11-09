@@ -1,6 +1,6 @@
 import "./Header.css";
 import { Bell, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   useApp,
@@ -11,9 +11,11 @@ import UserProfileMenu from "../UserProfileMenu/UserProfileMenu";
 
 export default function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     configuracoes,
   } = useApp();
+  const resumoProva = location.pathname === "/" ? calcularResumoProva(configuracoes.dataProva) : null;
 
   function abrirNotificacoes() {
     window.dispatchEvent(new Event("pmpe:notificacoes:abrir"));
@@ -41,6 +43,20 @@ export default function Header() {
         <span className="header-concurso">{configuracoes.concurso}</span>
       </div>
 
+      {resumoProva && (
+        <button
+          type="button"
+          className="header-prova"
+          onClick={() => navigate("/configuracoes")}
+          title="Ver ou alterar a data da prova"
+          aria-label={`${resumoProva.rotulo}. Prova em ${resumoProva.dataFormatada}`}
+        >
+          <span>QUANTO FALTA PARA A PROVA</span>
+          <strong>{resumoProva.rotulo}</strong>
+          <small>{resumoProva.dataFormatada}</small>
+        </button>
+      )}
+
       <button
         type="button"
         className="header-search"
@@ -65,4 +81,23 @@ export default function Header() {
       </div>
     </header>
   );
+}
+
+
+function calcularResumoProva(dataProva?: string) {
+  if (!dataProva) return null;
+  const [ano, mes, dia] = dataProva.split("-").map(Number);
+  if (!ano || !mes || !dia) return null;
+  const prova = new Date(ano, mes - 1, dia);
+  if (Number.isNaN(prova.getTime())) return null;
+  const agora = new Date();
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const alvo = new Date(prova.getFullYear(), prova.getMonth(), prova.getDate());
+  const dias = Math.ceil((alvo.getTime() - hoje.getTime()) / 86_400_000);
+  const rotulo =
+    dias > 1 ? `Faltam ${dias} dias` :
+    dias === 1 ? "Falta 1 dia" :
+    dias === 0 ? "A prova é hoje" :
+    "Data da prova encerrada";
+  return { rotulo, dataFormatada: alvo.toLocaleDateString("pt-BR") };
 }
