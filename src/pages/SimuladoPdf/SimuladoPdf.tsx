@@ -245,6 +245,12 @@ export default function SimuladoPdf() {
 
   const iniciar = useCallback(
     async (proximo: RascunhoSimuladoPdf) => {
+      // Mesmo quando o simulado vier de um rascunho, o gabarito é obrigatório.
+      if (!proximo.caderno || !proximo.comentado) {
+        setIniciado(false);
+        setErroAnalise("Anexe a prova e o gabarito oficial ou comentado para começar.");
+        return;
+      }
       const agora = new Date().toISOString();
       const processoAnterior = carregarProcessoSimuladoPdf();
 
@@ -706,6 +712,11 @@ export default function SimuladoPdf() {
       window.alert(
         "Selecione o PDF do caderno de questões."
       );
+      return;
+    }
+
+    if (!comentado) {
+      window.alert("Anexe também o PDF do gabarito oficial ou do simulado comentado para iniciar.");
       return;
     }
 
@@ -1200,10 +1211,8 @@ export default function SimuladoPdf() {
               PDF + folha de respostas
             </h1>
             <p>
-              Informe a quantidade para começar
-              imediatamente. A IA analisa o PDF
-              em segundo plano enquanto você resolve
-              a prova.
+              Anexe o PDF da prova e o PDF com gabarito oficial ou comentado.
+              A análise só começa com os dois documentos anexados.
             </p>
           </div>
 
@@ -1258,7 +1267,7 @@ export default function SimuladoPdf() {
 
           <label className="arquivo">
             <span>
-              PDF comentado/gabarito · opcional
+              PDF de gabarito oficial ou simulado comentado · obrigatório
             </span>
             <input
               type="file"
