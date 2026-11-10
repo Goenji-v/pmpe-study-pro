@@ -18,44 +18,13 @@ function estado(params: {
     schemaVersion: 18,
     versao: 18,
     materias: [],
-    questoes: Array.from({ length: params.questoes }, (_, i) => ({
-      id: `q-${i}`,
-      data: "2026-11-10T12:00:00.000Z",
-      materia: "Teste",
-      assunto: "Teste",
-      certas: 1,
-      erradas: 0,
-      minutos: 1,
-    })),
-    sessoes: Array.from({ length: params.sessoes }, (_, i) => ({
-      id: `s-${i}`,
-      data: "2026-11-10T12:00:00.000Z",
-      materia: "Teste",
-      assunto: "Teste",
-      minutos: 30,
-      tipo: "conteudo",
-    })),
-    revisoes: Array.from({ length: params.revisoes }, (_, i) => ({
-      id: `r-${i}`,
-      materia: "Teste",
-      assunto: "Teste",
-      dataPrevista: "2026-11-10T12:00:00.000Z",
-      concluida: false,
-      origem: "manual",
-    })),
-    simulados: Array.from({ length: params.simulados }, (_, i) => ({
-      id: `sim-${i}`,
-      nome: "Teste",
-      data: "2026-11-10T12:00:00.000Z",
-      totalQuestoes: 10,
-      acertos: 5,
-      tempoMinutos: 20,
-    })),
+    questoes: Array.from({ length: params.questoes }, () => ({})) as EstadoAppNuvem["questoes"],
+    sessoes: Array.from({ length: params.sessoes }, () => ({})) as EstadoAppNuvem["sessoes"],
+    revisoes: Array.from({ length: params.revisoes }, () => ({})) as EstadoAppNuvem["revisoes"],
+    simulados: Array.from({ length: params.simulados }, () => ({})) as EstadoAppNuvem["simulados"],
     bancoQuestoes: [],
     simuladosGerados: [],
     configuracoes: {
-      nomeUsuario: "Teste",
-      concurso: "PMPE",
       metaQuestoesDiaria: 30,
       metaMinutosDiaria: 120,
       metaRevisoesDiaria: 5,
@@ -63,14 +32,14 @@ function estado(params: {
       ...(params.reinicio
         ? { dadosReiniciadosEm: params.reinicio }
         : {}),
-    },
+    } as EstadoAppNuvem["configuracoes"],
     missoesConcluidas: Array.from(
       { length: params.missoes },
       (_, i) => `m-${i}`
     ),
     salvoEm: "2026-11-10T12:00:00.000Z",
     syncRevision: 10,
-  } as EstadoAppNuvem;
+  };
 }
 
 test("bloqueia aparelho que tenta reduzir histórico cumulativo", () => {
