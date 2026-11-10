@@ -34,7 +34,7 @@ test("PWA publica tamanhos reais e mantém marca maskable segura", () => {
   const header = ler("src/components/Header/Header.tsx");
   const headerCss = ler("src/components/Header/Header.css");
   assert.match(header, /study-pro-sp-v8\.svg/);
-  assert.match(headerCss, /\.header-brand-mark-shell[\\s\\S]*background:\s*transparent/);
+  assert.match(headerCss, /\.header-brand-mark-shell[\s\S]*background:\s*transparent/);
   assert.match(headerCss, /width:\s*62px/);
 });
 
