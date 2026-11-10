@@ -16,9 +16,6 @@ import {
 import {
   registrarBackupIncrementalNuvem,
 } from "./seguranca/backupHistoricoService";
-import {
-  diagnosticarRegressaoHistorico,
-} from "../utils/sincronizacaoConflito";
 
 import {
   SCHEMA_VERSION_ATUAL,
@@ -390,35 +387,9 @@ export async function salvarEstadoComControleDeRevisao(
       : revisaoEsperada;
 
   if (!resultado?.ok) {
-    let detalhe: string | undefined;
-
-    try {
-      const estadoNuvem = await carregarEstadoDaNuvem(userId);
-
-      if (estadoNuvem) {
-        const diagnostico = diagnosticarRegressaoHistorico(
-          estadoNuvem,
-          estadoParaSalvar
-        );
-
-        if (diagnostico.bloqueada) {
-          detalhe =
-            "Possível perda de histórico detectada. Este aparelho possui menos dados que a nuvem (" +
-            diagnostico.perdas.join(", ") +
-            "). A substituição automática foi bloqueada e as duas versões foram preservadas.";
-        }
-      }
-    } catch (erroDiagnostico) {
-      console.warn(
-        "Não foi possível detalhar o conflito de sincronização:",
-        erroDiagnostico
-      );
-    }
-
     throw new ConflitoSincronizacaoError(
       revisaoAtual,
-      revisaoEsperada,
-      detalhe
+      revisaoEsperada
     );
   }
 
