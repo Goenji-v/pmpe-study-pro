@@ -378,3 +378,28 @@
   cursor: not-allowed;
   opacity: .58;
 }
+
+.configuracoes-backup-card {
+  border-color: rgba(59, 130, 246, .4);
+  background: linear-gradient(145deg, #14243a, #101b2d);
+}
+.configuracoes-backup-card > p {
+  margin: 0 0 16px;
+  color: #aebdd0;
+  line-height: 1.55;
+}
+.configuracoes-backup-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #3b82f6;
+  border-radius: 9px;
+  background: rgba(37, 99, 235, .18);
+  color: #bfdbfe;
+  font-weight: 800;
+  text-decoration: none;
+}
+.configuracoes-backup-link:hover {
+  background: rgba(37, 99, 235, .28);
+}
