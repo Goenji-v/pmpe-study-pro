@@ -41,7 +41,7 @@ export default function MissaoDoDia({
   );
 
   const semanaAtual = useMemo(
-    () => getSemanaAtual(
+    () => getSemanaOperacional(
       missoesConcluidas,
       planoCalendario,
       configuracoes.semanaAtualPlano,
