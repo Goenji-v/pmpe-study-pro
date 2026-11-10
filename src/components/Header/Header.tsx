@@ -31,7 +31,7 @@ export default function Header() {
           >
             <img
               className="header-brand-mark"
-              src="/assets/study-pro-sp-v7.png"
+              src="/assets/study-pro-sp-v8.svg"
               alt=""
               draggable={false}
             />
