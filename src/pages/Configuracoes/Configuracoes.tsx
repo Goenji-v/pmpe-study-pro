@@ -1,3 +1,4 @@
+import AlterarSenha from "./AlterarSenha";
 import { gerarPlanoEdital, preservarIdsPlanoAnterior } from "../../utils/planoEdital";
 import { useRef, useState } from "react";
 import { mesclarConfiguracoesEditadas } from "../../utils/mesclarConfiguracoesEditadas";
@@ -237,8 +238,9 @@ export default function Configuracoes() {
         Defina seu perfil, disponibilidade e metas. O Edital Inteligente usa essas regras para montar o plano.
       </p>
 
-      <nav className="configuracoes-nav" aria-label="Seções das configurações">{[['identidade','Meu perfil'],['rotina','Rotina semanal'],['atividades','Redação e simulado'],['metas','Metas'],['aparencia','Aparência'],['leitura','Leitura de PDFs']].map(([id,nome]) => <a key={id} href={`#config-${id}`}>{nome}</a>)}</nav>
+      <nav className="configuracoes-nav" aria-label="Seções das configurações">{[['identidade','Meu perfil'],['rotina','Rotina semanal'],['atividades','Redação e simulado'],['metas','Metas'],['aparencia','Aparência'],['senha','Alterar senha'],['leitura','Leitura de PDFs']].map(([id,nome]) => <a key={id} href={`#config-${id}`}>{nome}</a>)}</nav>
       <div className="configuracoes-grid">
+        <AlterarSenha />
         <div className="configuracoes-card">
           <h2 id="config-identidade">Perfil</h2>
 
@@ -303,6 +305,20 @@ export default function Configuracoes() {
                 </button>
               );
             })}
+          </div>
+
+          <div className="configuracoes-form-group">
+            <label htmlFor="dataProva">Data da prova</label>
+            <input
+              id="dataProva"
+              type="date"
+              value={formulario.dataProva ?? ""}
+              onChange={(evento) => atualizarCampo("dataProva", evento.target.value || undefined)}
+            />
+            <small>
+              Opcional. Mostra quantos dias faltam no Dashboard e no Calendário,
+              sem reorganizar missões nem alterar seu histórico.
+            </small>
           </div>
 
           <div className="configuracoes-form-group">

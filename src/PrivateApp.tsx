@@ -56,6 +56,7 @@ const CronogramaGateway = lazy(() => import("./pages/CronogramaIA/CronogramaGate
 const GerarSimuladoIA = lazy(() => import("./pages/GerarSimuladoIA/GerarSimuladoIA"));
 const CentroMateriais = lazy(() => import("./pages/CentroMateriais/CentroMateriais"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
+const ResumoSemanal = lazy(() => import("./pages/Dashboard/ResumoSemanal"));
 const Estudos = lazy(() => import("./pages/Estudos/Estudos"));
 const Questoes = lazy(() => import("./pages/Questoes/Questoes"));
 const Historico = lazy(() => import("./pages/Historico/Historico"));
@@ -187,6 +188,7 @@ function ConteudoPrivado() {
                         <Route path="/historico" element={<Historico />} />
                         <Route path="/banco-questoes" element={<BancoQuestoes />} />
                         <Route path="/estatisticas" element={<Estatisticas />} />
+                        <Route path="/resumo-semanal" element={<ResumoSemanal />} />
 
                         <Route path="/simulados" element={<SimuladosGateway />} />
                         <Route path="/simulados-oficiais" element={<SimuladosOficiais />} />

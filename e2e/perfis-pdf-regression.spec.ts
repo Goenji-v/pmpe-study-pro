@@ -24,7 +24,8 @@ test.beforeAll(async () => {
   ` }, bundle: true, write: false, platform: 'browser', format: 'iife', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': '{}' }, loader: { '.css': 'empty' }, plugins: [{ name: 'fixture', setup(b) {
     const mock = (filter: RegExp, contents: string) => b.onLoad({filter}, () => ({contents,loader:'tsx'}));
     mock(/\/context\/AppContext\.tsx$/, `import React,{createContext,useContext,useState} from 'react'; const C=createContext(null); export const useApp=()=>useContext(C); export function FixtureProvider({children}){const [configuracoes,setConfiguracoes]=useState({nomeUsuario:'Teste',concurso:'PMPE',bancaPadrao:'AOCP',metaQuestoesDiaria:10,metaMinutosDiaria:60,metaRevisoesDiaria:2,economia:{moedas:300,recompensasRecebidas:[]}});return <C.Provider value={{configuracoes,setConfiguracoes,materias:[],questoes:[],sessoes:[],revisoes:[]}}>{children}</C.Provider>}`);
-    mock(/\/context\/AuthContext\.tsx$/, `export const useAuth=()=>({usuario:{id:'teste'}});`);
+    mock(/\/context\/AuthContext\.tsx$/, `export const useAuth=()=>({usuario:{id:'teste',email:'teste@example.com'}});`);
+    mock(/\/lib\/supabase\.ts$/, `export const supabase={auth:{signInWithPassword:async()=>({data:{user:{id:'teste'}},error:null}),resetPasswordForEmail:async()=>({error:null}),verifyOtp:async()=>({data:{user:{id:'teste'}},error:null}),updateUser:async()=>({error:null})}};`);
     mock(/\/context\/ToastContext\.tsx$/, `export const useToast=()=>({showToast:()=>{}});`);
     mock(/\/services\/armazenamentoConta\.ts$/, `export const armazenamentoLocalDaConta=window.localStorage;`);
     mock(/\/MateriaisDoAssunto\/MateriaisDoAssunto\.tsx$/, `export default function Materiais(){return null}`);

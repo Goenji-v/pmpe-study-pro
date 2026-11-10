@@ -1,3 +1,4 @@
+import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
 import { useEffect, useMemo, useState } from "react";
@@ -265,14 +266,14 @@ export default function BancoQuestoes() {
   }, [estatisticasPorQuestao, idsRespondidosOnline, questoesBiblioteca]);
 
   const materiasDisponiveis = useMemo(
-    () => Array.from(new Set(questoesBiblioteca.map((questao) => questao.materia))).sort(),
+    () => questoesBiblioteca.map((q) => q.materia).filter((nome, i, lista) => lista.findIndex((outro) => materiasEquivalentes(outro, nome)) === i).sort(),
     [questoesBiblioteca]
   );
 
   const assuntosDisponiveis = useMemo(
     () => Array.from(new Set(
       questoesBiblioteca
-        .filter((questao) => !filtroMateria || questao.materia === filtroMateria)
+        .filter((questao) => !filtroMateria || materiasEquivalentes(questao.materia, filtroMateria))
         .map((questao) => questao.assunto)
         .filter(Boolean)
     )).sort((a, b) => a.localeCompare(b, "pt-BR")),
@@ -283,7 +284,7 @@ export default function BancoQuestoes() {
     () => Array.from(new Set(
       questoesBiblioteca
         .filter((questao) =>
-          (!filtroMateria || questao.materia === filtroMateria) &&
+          (!filtroMateria || materiasEquivalentes(questao.materia, filtroMateria)) &&
           (!filtroAssunto || questao.assunto === filtroAssunto)
         )
         .map((questao) => questao.subassunto?.trim())
@@ -299,7 +300,7 @@ export default function BancoQuestoes() {
       const estatistica = estatisticasPorQuestao.get(chaveQuestao(questao)) ?? estatisticaVazia;
       const respondida = idsRespondidosOnline.has(questao.id) || estatistica.tentativas > 0;
 
-      if (filtroMateria && questao.materia !== filtroMateria) return false;
+      if (filtroMateria && !materiasEquivalentes(questao.materia, filtroMateria)) return false;
       if (filtroAssunto && questao.assunto !== filtroAssunto) return false;
       if (filtroSubassunto && questao.subassunto !== filtroSubassunto) return false;
       if (filtroDificuldade && questao.dificuldade !== filtroDificuldade) return false;
