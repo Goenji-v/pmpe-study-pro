@@ -9,11 +9,12 @@ import { useNavigate } from "react-router-dom";
 import "./MissaoDoDia.css";
 
 import {
-  getProximaMissao,
-  getSemanaAtual,
+  getMissaoDoDiaOuProxima,
+  getSemanaOperacional,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
-import { criarPlanoCalendario, normalizarMissoesPorDia, NOMES_DIAS_PLANO } from "../../utils/planoCalendario";
+import { NOMES_DIAS_PLANO, obterDiaAtualPlano } from "../../utils/planoCalendario";
+import { criarPlanoOperacional } from "../../utils/planoOperacional";
 
 type MissaoDoDiaProps = {
   atualizacao?: number;
@@ -30,8 +31,13 @@ export default function MissaoDoDia({
   } = useApp();
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () =>
+      criarPlanoOperacional(
+        materias,
+        missoesConcluidas,
+        configuracoes
+      ),
+    [materias, missoesConcluidas, configuracoes]
   );
 
   const semanaAtual = useMemo(
@@ -47,7 +53,13 @@ export default function MissaoDoDia({
   // atualizacao é um token explícito para invalidar o cálculo após eventos externos.
   /* oxlint-disable react-hooks/exhaustive-deps */
   const proxima = useMemo(
-    () => getProximaMissao(missoesConcluidas, planoCalendario, semanaAtual),
+    () =>
+      getMissaoDoDiaOuProxima(
+        missoesConcluidas,
+        planoCalendario,
+        semanaAtual,
+        obterDiaAtualPlano()
+      ),
     [atualizacao, missoesConcluidas, planoCalendario, semanaAtual]
   );
   /* oxlint-enable react-hooks/exhaustive-deps */
