@@ -34,8 +34,6 @@ import {
   getProgressoSemana,
   getPrimeiraPendenciaUtil,
   listarPendenciasAteSemana,
-  semanaPorDataInicio,
-  ampliarPlanoAteSemana,
 } from "../../utils/planoUtils";
 import {
   adaptarMissaoFlexivel,
@@ -43,13 +41,10 @@ import {
   type DadosReforcoAdaptado,
 } from "../../utils/adaptacaoPlano";
 import {
-  criarPlanoCalendario,
   NOMES_DIAS_PLANO,
-  normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
-import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
+import { criarPlanoOperacional } from "../../utils/planoOperacional";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -183,48 +178,19 @@ export default function PlanoEstudos() {
     cronometroAtivo,
   } = useCronometro();
 
-  const missoesPorDia = normalizarMissoesPorDia(
-    configuracoes.missoesPorDia ?? 1
+  const planoCalendario = useMemo(
+    () =>
+      criarPlanoOperacional(
+        materias,
+        concluidas,
+        configuracoes
+      ),
+    [
+      materias,
+      concluidas,
+      configuracoes,
+    ]
   );
-
-  const planoCalendario = useMemo(() => {
-    const base = aplicarDiasAtividadesSemanais(
-      criarPlanoCalendario(
-        missoesPorDia,
-        configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
-      ), {
-        diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
-        diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
-      }
-    );
-    const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
-    // Projeção visual automática: não grava IDs, conclusões ou domingos.
-    const organizado = concluidas.length > 0
-      ? projetarPlanoCompactado(base, concluidas)
-      : base;
-    const grade = concluidas.length > 0 ? organizado.map((semana) => ({
-      ...semana,
-      dias: semana.dias.map((dia) => ({
-        ...dia,
-        missoes: dia.numero === 7 ? [...dia.missoes] : dia.missoes.filter((missao) => !(
-          missao.tipo === "revisao" ||
-          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
-        )),
-      })),
-    })) : organizado;
-    return ampliarPlanoAteSemana(
-      grade,
-      semanaCalendario
-    );
-  }, [
-    missoesPorDia,
-    concluidas,
-    configuracoes.planoPadraoAtivo,
-    configuracoes.materiasPorDiaSemana,
-    configuracoes.diaRedacaoSemanal,
-    configuracoes.diaSimuladoSemanal,
-    configuracoes.dataInicioPlano,
-  ]);
 
   const primeiraPendenciaUtil = getPrimeiraPendenciaUtil(
     concluidas,
