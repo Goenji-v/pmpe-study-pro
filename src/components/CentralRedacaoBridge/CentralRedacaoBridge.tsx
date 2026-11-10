@@ -14,12 +14,10 @@ import { useApp } from "../../context/AppContext";
 import { formatarTempo, useCronometro } from "../../context/CronometroContext";
 import { useToast } from "../../context/ToastContext";
 import {
-  criarPlanoCalendario,
-  normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
-import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { getSemanaAtual } from "../../utils/planoUtils";
+import { getSemanaOperacional } from "../../utils/planoUtils";
+import { criarPlanoOperacional } from "../../utils/planoOperacional";
 import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
 import {
   montarObservacaoRedacao,
@@ -46,6 +44,7 @@ export default function CentralRedacaoBridge() {
   const location = useLocation();
   const { showToast } = useToast();
   const {
+    materias,
     sessoes,
     setSessoes,
     missoesConcluidas,
@@ -77,28 +76,17 @@ export default function CentralRedacaoBridge() {
 
   const planoCalendario = useMemo(
     () =>
-      aplicarDiasAtividadesSemanais(
-        criarPlanoCalendario(
-          normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
-          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
-        ),
-        {
-          diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
-          diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
-        }
+      criarPlanoOperacional(
+        materias,
+        missoesConcluidas,
+        configuracoes
       ),
-    [
-      configuracoes.missoesPorDia,
-      configuracoes.planoPadraoAtivo,
-      configuracoes.materiasPorDiaSemana,
-      configuracoes.diaRedacaoSemanal,
-      configuracoes.diaSimuladoSemanal,
-    ]
+    [materias, missoesConcluidas, configuracoes]
   );
 
   const semanaAtual = useMemo(
     () =>
-      getSemanaAtual(
+      getSemanaOperacional(
         missoesConcluidas,
         planoCalendario,
         configuracoes.semanaAtualPlano,
