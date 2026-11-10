@@ -510,7 +510,7 @@ export default function PlanoEstudos() {
           </h1>
 
           <p>
-            {planoCalendario.length} semanas no ritmo atual de {missoesPorDia} {missoesPorDia === 1 ? "missão" : "missões"} por dia. Domingo é exclusivo para redação e simulado.
+            {planoCalendario.length} semanas no ritmo atual de {configuracoes.missoesPorDia ?? 1} {(configuracoes.missoesPorDia ?? 1) === 1 ? "missão" : "missões"} por dia. Domingo é exclusivo para redação e simulado.
           </p>
         </div>
 
