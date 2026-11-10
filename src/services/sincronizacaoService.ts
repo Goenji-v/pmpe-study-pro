@@ -13,6 +13,12 @@ import {
   criarBackupAutomaticoLocal,
   type MotivoBackupAutomatico,
 } from "./seguranca/backupAutomaticoService";
+import {
+  registrarBackupIncrementalNuvem,
+} from "./seguranca/backupHistoricoService";
+import {
+  diagnosticarRegressaoHistorico,
+} from "../utils/sincronizacaoConflito";
 
 import {
   SCHEMA_VERSION_ATUAL,
@@ -313,9 +319,14 @@ export class ConflitoSincronizacaoError extends Error {
   revisaoNuvem: number;
   revisaoBase: number;
 
-  constructor(revisaoNuvem: number, revisaoBase: number) {
+  constructor(
+    revisaoNuvem: number,
+    revisaoBase: number,
+    detalhe?: string
+  ) {
     super(
-      `Conflito de sincronização: a nuvem está na revisão ${revisaoNuvem}, mas este aparelho partiu da revisão ${revisaoBase}. Nenhum dado foi sobrescrito.`
+      detalhe ??
+        `Conflito de sincronização: a nuvem está na revisão ${revisaoNuvem}, mas este aparelho partiu da revisão ${revisaoBase}. Nenhum dado foi sobrescrito.`
     );
     this.name = "ConflitoSincronizacaoError";
     this.revisaoNuvem = revisaoNuvem;
@@ -379,16 +390,56 @@ export async function salvarEstadoComControleDeRevisao(
       : revisaoEsperada;
 
   if (!resultado?.ok) {
+    let detalhe: string | undefined;
+
+    try {
+      const estadoNuvem = await carregarEstadoDaNuvem(userId);
+
+      if (estadoNuvem) {
+        const diagnostico = diagnosticarRegressaoHistorico(
+          estadoNuvem,
+          estadoParaSalvar
+        );
+
+        if (diagnostico.bloqueada) {
+          detalhe =
+            "Possível perda de histórico detectada. Este aparelho possui menos dados que a nuvem (" +
+            diagnostico.perdas.join(", ") +
+            "). A substituição automática foi bloqueada e as duas versões foram preservadas.";
+        }
+      }
+    } catch (erroDiagnostico) {
+      console.warn(
+        "Não foi possível detalhar o conflito de sincronização:",
+        erroDiagnostico
+      );
+    }
+
     throw new ConflitoSincronizacaoError(
       revisaoAtual,
-      revisaoEsperada
+      revisaoEsperada,
+      detalhe
     );
   }
 
-  return normalizarEstadoParaSalvar({
+  const salvo = normalizarEstadoParaSalvar({
     ...estadoParaSalvar,
     syncRevision: revisaoAtual,
   });
+
+  try {
+    await registrarBackupIncrementalNuvem(
+      userId,
+      salvo
+    );
+  } catch (erroBackup) {
+    console.warn(
+      "Estado sincronizado, mas o checkpoint incremental não pôde ser atualizado:",
+      erroBackup
+    );
+  }
+
+  return salvo;
 }
 
 export function montarEstadoNuvem(
