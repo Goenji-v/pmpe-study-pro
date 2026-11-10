@@ -32,7 +32,7 @@ import { guardarRascunhoSimuladoPdf } from "../../services/simuladoPdfDraft";
 import {
   getProgressoPlano,
   getProgressoSemana,
-  getSemanaAtual,
+  getPrimeiraPendenciaUtil,
   listarPendenciasAteSemana,
   semanaPorDataInicio,
   ampliarPlanoAteSemana,
@@ -213,7 +213,8 @@ export default function PlanoEstudos() {
       })),
     })) : organizado;
     return ampliarPlanoAteSemana(
-      grade, Math.max(semanaCalendario, configuracoes.semanaAtualPlano ?? 1)
+      grade,
+      semanaCalendario
     );
   }, [
     missoesPorDia,
@@ -223,15 +224,17 @@ export default function PlanoEstudos() {
     configuracoes.diaRedacaoSemanal,
     configuracoes.diaSimuladoSemanal,
     configuracoes.dataInicioPlano,
-    configuracoes.semanaAtualPlano,
   ]);
 
-  const semanaInicial = getSemanaAtual(
+  const primeiraPendenciaUtil = getPrimeiraPendenciaUtil(
     concluidas,
-    planoCalendario,
-    configuracoes.semanaAtualPlano,
-    configuracoes.dataInicioPlano
+    planoCalendario
   );
+  const semanaInicial =
+    primeiraPendenciaUtil?.semana ??
+    planoCalendario.findLast((item) => item.dias.some((dia) => dia.missoes.length > 0))?.numero ??
+    planoCalendario[0]?.numero ??
+    1;
   const pendenciasAnteriores = listarPendenciasAteSemana(
     concluidas,
     planoCalendario,
@@ -240,9 +243,12 @@ export default function PlanoEstudos() {
   const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
     planoCalendario.find((item) => item.numero === semanaInicial) ?? planoCalendario[0];
-  const diaInicial = semanaInicialDisponivel?.dias.some((item) => item.numero === diaCalendarioHoje)
-    ? diaCalendarioHoje
-    : (semanaInicialDisponivel?.dias[0]?.numero ?? 1);
+  const diaInicial =
+    primeiraPendenciaUtil?.semana === semanaInicial
+      ? primeiraPendenciaUtil.dia
+      : semanaInicialDisponivel?.dias.some((item) => item.numero === diaCalendarioHoje)
+        ? diaCalendarioHoje
+        : (semanaInicialDisponivel?.dias[0]?.numero ?? 1);
 
   const [
     semanaSelecionada,
@@ -597,10 +603,10 @@ export default function PlanoEstudos() {
         </p>
       </section>
 
-      {semanaInicial > (planoCalendario.findLast((item) => item.dias.some((d) => d.missoes.length))?.numero ?? 0) && (
+      {!primeiraPendenciaUtil && (
         <p className="plano-sem-novos-assuntos">
-          A semana {semanaInicial} chegou pelo calendário. Ainda não há novos assuntos cadastrados
-          para esta semana; continue pelas pendências sem perder o progresso anterior.
+          Todas as missões úteis de segunda a sábado foram concluídas. Pendências de domingo
+          continuam disponíveis no bloco acima sem alterar a semana ativa do plano.
         </p>
       )}
 

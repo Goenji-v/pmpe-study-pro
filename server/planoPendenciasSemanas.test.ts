@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import type { SemanaPlano } from "../src/data/planoPMPE";
 import {
   ampliarPlanoAteSemana,
+  getPrimeiraPendenciaUtil,
   getProximaMissao,
   getSemanaAtual,
   listarPendenciasAteSemana,
@@ -51,4 +52,43 @@ test("régua extra e revisões separadas não aparecem no plano",()=>{
   const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
   assert.doesNotMatch(pagina,/reajuste-visual-individual|Aplicar régua nesta conta|Fila separada de revisões/);
   assert.match(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
+});
+
+
+test("plano operacional ignora domingo atrasado e progresso espalhado em semana futura", () => {
+  const plano: SemanaPlano[] = [
+    {
+      numero: 1,
+      nome: "Semana 1",
+      dias: [
+        { numero: 1, missoes: [{ id: "s1-seg", numero: 1, materia: "Português", assunto: "Feita", tipo: "conteudo" }] },
+        { numero: 7, missoes: [{ id: "s1-dom", numero: 1, materia: "Simulado", assunto: "Domingo atrasado", tipo: "simulado" }] },
+      ],
+    },
+    {
+      numero: 2,
+      nome: "Semana 2",
+      dias: [
+        { numero: 3, missoes: [{ id: "s2-qua", numero: 1, materia: "Informática", assunto: "Primeira pendência útil", tipo: "conteudo" }] },
+        { numero: 7, missoes: [{ id: "s2-dom", numero: 1, materia: "Redação", assunto: "Redação semanal", tipo: "redacao" }] },
+      ],
+    },
+    {
+      numero: 20,
+      nome: "Semana 20",
+      dias: [
+        { numero: 2, missoes: [{ id: "s20-ter", numero: 1, materia: "História", assunto: "Conclusão antiga espalhada", tipo: "conteudo" }] },
+      ],
+    },
+  ];
+
+  const concluidas = ["s1-seg", "s20-ter"];
+  const primeira = getPrimeiraPendenciaUtil(concluidas, plano);
+
+  assert.equal(primeira?.semana, 2);
+  assert.equal(primeira?.dia, 3);
+  assert.equal(primeira?.missao.id, "s2-qua");
+
+  const atrasadas = listarPendenciasAteSemana(concluidas, plano, primeira!.semana);
+  assert.deepEqual(atrasadas.map((item) => item.missao.id), ["s1-dom"]);
 });
