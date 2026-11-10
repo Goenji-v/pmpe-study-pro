@@ -194,6 +194,36 @@ export function semanaPorDataInicio(
   return Math.max(1, Math.floor((hojeSegunda - inicioSegunda) / (7 * 86400000)) + 1);
 }
 
+export function getPrimeiraPendenciaUtil(
+  concluidasInformadas: string[],
+  plano: SemanaPlano[]
+): ProximaMissaoPlano | null {
+  const concluidas = new Set(concluidasInformadas);
+
+  for (const semana of plano) {
+    for (const dia of semana.dias) {
+      if (dia.numero === 7) continue;
+
+      for (const missao of dia.missoes) {
+        const texto = `${missao.materia} ${missao.assunto}`;
+        const ehRevisao =
+          missao.tipo === "revisao" ||
+          /revis[aã]o|erros dos simulados/i.test(texto);
+
+        if (!ehRevisao && !concluidas.has(missao.id)) {
+          return {
+            semana: semana.numero,
+            dia: dia.numero,
+            missao,
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export function listarPendenciasAteSemana(
   concluidasInformadas: string[],
   plano: SemanaPlano[],
