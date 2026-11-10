@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -25,6 +26,11 @@ import {
   listarBackupsAutomaticosLocais,
   type BackupAutomaticoLocal,
 } from "../../services/seguranca/backupAutomaticoService";
+import {
+  listarBackupsHistoricoNuvem,
+  resumirEstado,
+  type BackupHistoricoNuvem,
+} from "../../services/seguranca/backupHistoricoService";
 import { criarDadosIniciaisDaConta } from "../../utils/contaInicial";
 import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
 
@@ -61,6 +67,9 @@ export default function Backup() {
   );
   const [arquivoAnalisado, setArquivoAnalisado] =
     useState<ArquivoBackupStudyPro | null>(null);
+  const [backupsHistorico, setBackupsHistorico] =
+    useState<BackupHistoricoNuvem[]>([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
   const backupsAutomaticos = useMemo(
     () =>
@@ -71,6 +80,36 @@ export default function Backup() {
     /* oxlint-disable react-hooks/exhaustive-deps */
     [usuarioId, ultimoBackup, statusNuvem]
     /* oxlint-enable react-hooks/exhaustive-deps */
+  );
+
+  useEffect(() => {
+    if (!usuarioId) {
+      setBackupsHistorico([]);
+      return;
+    }
+
+    let ativo = true;
+    setCarregandoHistorico(true);
+
+    void listarBackupsHistoricoNuvem(usuarioId)
+      .then((itens) => {
+        if (ativo) setBackupsHistorico(itens);
+      })
+      .catch((erro) => {
+        console.error("Erro ao carregar histórico de backups:", erro);
+      })
+      .finally(() => {
+        if (ativo) setCarregandoHistorico(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [usuarioId, statusNuvem, ultimaSincronizacao]);
+
+  const gruposHistorico = useMemo(
+    () => agruparHistoricoPorSemana(backupsHistorico),
+    [backupsHistorico]
   );
 
   const totalAssuntos = materias.reduce(
@@ -214,6 +253,45 @@ export default function Backup() {
       console.error("Erro ao restaurar backup automático:", erro);
       showToast(
         erro instanceof Error ? erro.message : "Não foi possível restaurar o backup automático.",
+        "error"
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  async function restaurarBackupHistorico(
+    backup: BackupHistoricoNuvem
+  ) {
+    const atual = resumirEstado(criarEstadoAtual());
+    const alvo = backup.resumo;
+
+    const confirmar = window.confirm(
+      `Restaurar ${rotuloTipoHistorico(backup)} de ${formatarDataHora(backup.criadoEm)}?\n\n` +
+        `Sessões: ${atual.sessoes} → ${alvo.sessoes}\n` +
+        `Registros de questões: ${atual.questoes} → ${alvo.questoes}\n` +
+        `Revisões: ${atual.revisoes} → ${alvo.revisoes}\n` +
+        `Simulados: ${atual.simulados} → ${alvo.simulados}\n` +
+        `Missões concluídas: ${atual.missoesConcluidas} → ${alvo.missoesConcluidas}\n\n` +
+        "O estado atual será preservado antes da restauração."
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setImportando(true);
+      await restaurarEstadoCompleto(backup.estado);
+      showToast("Backup da linha do tempo restaurado com segurança.", "success");
+
+      if (usuarioId) {
+        setBackupsHistorico(
+          await listarBackupsHistoricoNuvem(usuarioId)
+        );
+      }
+    } catch (erro) {
+      console.error("Erro ao restaurar backup da linha do tempo:", erro);
+      showToast(
+        erro instanceof Error ? erro.message : "Não foi possível restaurar este backup.",
         "error"
       );
     } finally {
@@ -365,6 +443,57 @@ export default function Backup() {
         </div>
       </div>
 
+      <div className="backup-card backup-historico-card">
+        <div className="backup-section-heading">
+          <div>
+            <h2>Histórico de segurança — 14 dias</h2>
+            <p>
+              Checkpoints incrementais aparecem apenas quando houve alteração.
+              Às 12h há um backup oficial completo; às 22h há fechamento se o estado mudou depois do meio-dia.
+            </p>
+          </div>
+          <strong>{backupsHistorico.length}</strong>
+        </div>
+
+        {carregandoHistorico ? (
+          <div className="backup-empty">Carregando linha do tempo...</div>
+        ) : backupsHistorico.length === 0 ? (
+          <div className="backup-empty">A linha do tempo ainda não possui backups.</div>
+        ) : (
+          <div className="backup-historico-semanas">
+            {gruposHistorico.map((grupo) => (
+              <section className="backup-historico-semana" key={grupo.titulo}>
+                <h3>{grupo.titulo}</h3>
+                <div className="backup-auto-lista">
+                  {grupo.itens.map((backup) => (
+                    <div className="backup-auto-item backup-historico-item" key={backup.id}>
+                      <div>
+                        <strong>{rotuloTipoHistorico(backup)}</strong>
+                        <span>
+                          {formatarDataHora(backup.criadoEm)}
+                          {backup.janela ? ` · ${backup.janela}` : ""}
+                          {" · "}rev. {backup.syncRevision}
+                        </span>
+                        {backup.alteracoes && (
+                          <small>{resumirAlteracoes(backup)}</small>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void restaurarBackupHistorico(backup)}
+                        disabled={importando}
+                      >
+                        Comparar e restaurar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="backup-card backup-automaticos-card">
         <div className="backup-section-heading">
           <div>
@@ -487,4 +616,67 @@ function rotuloMotivo(motivo: string) {
   };
 
   return rotulos[motivo] ?? "Backup de segurança";
+}
+
+
+function agruparHistoricoPorSemana(backups: BackupHistoricoNuvem[]) {
+  const agora = new Date();
+  const hoje = inicioDia(agora);
+  const indice = (hoje.getDay() + 6) % 7;
+  const inicioSemanaAtual = new Date(hoje);
+  inicioSemanaAtual.setDate(inicioSemanaAtual.getDate() - indice);
+  const inicioSemanaAnterior = new Date(inicioSemanaAtual);
+  inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
+
+  const atual: BackupHistoricoNuvem[] = [];
+  const anterior: BackupHistoricoNuvem[] = [];
+
+  backups.forEach((backup) => {
+    const data = new Date(backup.criadoEm);
+    if (data >= inicioSemanaAtual) atual.push(backup);
+    else if (data >= inicioSemanaAnterior) anterior.push(backup);
+  });
+
+  return [
+    { titulo: "Semana atual", itens: atual },
+    { titulo: "Semana anterior", itens: anterior },
+  ].filter((grupo) => grupo.itens.length > 0);
+}
+
+function inicioDia(data: Date) {
+  return new Date(
+    data.getFullYear(),
+    data.getMonth(),
+    data.getDate(),
+    0, 0, 0, 0
+  );
+}
+
+function rotuloTipoHistorico(backup: BackupHistoricoNuvem) {
+  if (backup.tipo === "backup_oficial_meio_dia") {
+    return "🛡️ Backup oficial · 12h";
+  }
+  if (backup.tipo === "backup_oficial_fechamento") {
+    return "🛡️ Fechamento oficial · 22h";
+  }
+  return "↻ Backup incremental";
+}
+
+function resumirAlteracoes(backup: BackupHistoricoNuvem) {
+  const a = backup.alteracoes;
+  if (!a) return "";
+
+  const partes = [
+    ["sessão", a.sessoes],
+    ["questão", a.questoes],
+    ["revisão", a.revisoes],
+    ["simulado", a.simulados],
+    ["missão", a.missoesConcluidas],
+  ]
+    .filter(([, valor]) => typeof valor === "number" && valor !== 0)
+    .map(([rotulo, valor]) => `${Number(valor) > 0 ? "+" : ""}${valor} ${rotulo}`);
+
+  return partes.length > 0
+    ? `Alterações: ${partes.join(" · ")}`
+    : "Checkpoint atualizado nesta janela.";
 }

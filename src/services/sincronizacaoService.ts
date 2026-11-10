@@ -13,6 +13,9 @@ import {
   criarBackupAutomaticoLocal,
   type MotivoBackupAutomatico,
 } from "./seguranca/backupAutomaticoService";
+import {
+  registrarBackupIncrementalNuvem,
+} from "./seguranca/backupHistoricoService";
 
 import {
   SCHEMA_VERSION_ATUAL,
@@ -313,9 +316,14 @@ export class ConflitoSincronizacaoError extends Error {
   revisaoNuvem: number;
   revisaoBase: number;
 
-  constructor(revisaoNuvem: number, revisaoBase: number) {
+  constructor(
+    revisaoNuvem: number,
+    revisaoBase: number,
+    detalhe?: string
+  ) {
     super(
-      `Conflito de sincronização: a nuvem está na revisão ${revisaoNuvem}, mas este aparelho partiu da revisão ${revisaoBase}. Nenhum dado foi sobrescrito.`
+      detalhe ??
+        `Conflito de sincronização: a nuvem está na revisão ${revisaoNuvem}, mas este aparelho partiu da revisão ${revisaoBase}. Nenhum dado foi sobrescrito.`
     );
     this.name = "ConflitoSincronizacaoError";
     this.revisaoNuvem = revisaoNuvem;
@@ -385,10 +393,24 @@ export async function salvarEstadoComControleDeRevisao(
     );
   }
 
-  return normalizarEstadoParaSalvar({
+  const salvo = normalizarEstadoParaSalvar({
     ...estadoParaSalvar,
     syncRevision: revisaoAtual,
   });
+
+  try {
+    await registrarBackupIncrementalNuvem(
+      userId,
+      salvo
+    );
+  } catch (erroBackup) {
+    console.warn(
+      "Estado sincronizado, mas o checkpoint incremental não pôde ser atualizado:",
+      erroBackup
+    );
+  }
+
+  return salvo;
 }
 
 export function montarEstadoNuvem(
