@@ -28,7 +28,14 @@ test("PWA publica tamanhos reais e mantém marca maskable segura", () => {
   const html = ler("index.html");
   assert.match(html, /study-pro-apple-v7\.png/);
   assert.match(html, /study-pro-favicon-v7\.png/);
+  assert.match(html, /study-pro-favicon-v8\.svg/);
   assert.match(html, /manifest\.webmanifest\?v=7/);
+
+  const header = ler("src/components/Header/Header.tsx");
+  const headerCss = ler("src/components/Header/Header.css");
+  assert.match(header, /study-pro-sp-v8\.svg/);
+  assert.match(headerCss, /\.header-brand-mark-shell[\\s\\S]*background:\s*transparent/);
+  assert.match(headerCss, /width:\s*62px/);
 });
 
 test("leitor PDF ocupa a janela e conserva leitor/anotações e alternativa de pop-up", () => {
