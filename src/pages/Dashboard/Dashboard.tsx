@@ -38,13 +38,15 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getProximaMissao,
-  getSemanaAtual,
+  getSemanaOperacional,
+  getMissaoDoDiaOuProxima,
   getTotalConcluidas,
   getTotalMissoes,
   getTotalPendentes,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
-import { criarPlanoCalendario, normalizarMissoesPorDia, obterDiaAtualPlano } from "../../utils/planoCalendario";
+import { obterDiaAtualPlano } from "../../utils/planoCalendario";
+import { criarPlanoOperacional } from "../../utils/planoOperacional";
 
 import type { RegistroQuestao, Revisao, SessaoEstudo, Simulado } from "../../types/index";
 
@@ -70,8 +72,13 @@ export default function Dashboard() {
   ] = useState(0);
 
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () =>
+      criarPlanoOperacional(
+        materias,
+        missoesConcluidas,
+        configuracoes
+      ),
+    [materias, missoesConcluidas, configuracoes]
   );
 
   useEffect(() => {
@@ -146,7 +153,7 @@ export default function Dashboard() {
 
   const dadosPlano = useMemo(() => {
     const semanaAtual =
-      getSemanaAtual(
+      getSemanaOperacional(
         missoesConcluidas,
         planoCalendario,
         configuracoes.semanaAtualPlano,
@@ -160,16 +167,12 @@ export default function Dashboard() {
     const diaDoCalendario = semanaDoCalendario?.dias.find(
       (dia) => dia.numero === diaAtual
     );
-    const missaoPendenteHoje = diaDoCalendario?.missoes.find(
-      (missao) => !concluidasSet.has(missao.id)
+    const missaoHoje = getMissaoDoDiaOuProxima(
+      missoesConcluidas,
+      planoCalendario,
+      semanaAtual,
+      diaAtual
     );
-    const missaoHoje = missaoPendenteHoje
-      ? {
-          semana: semanaAtual,
-          dia: diaAtual,
-          missao: missaoPendenteHoje,
-        }
-      : null;
     const hojeConcluido = Boolean(
       diaDoCalendario &&
       diaDoCalendario.missoes.length > 0 &&
