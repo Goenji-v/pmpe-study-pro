@@ -74,23 +74,24 @@ export default function Dashboard() {
     setAtualizacaoPlano,
   ] = useState(0);
 
-  const concluidasPlano = useMemo(
-    () =>
-      obterConclusoesPlanoOperacional(
-        materias,
-        missoesConcluidas
-      ),
-    [materias, missoesConcluidas]
-  );
-
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        concluidasPlano,
+        missoesConcluidas,
         configuracoes
       ),
-    [materias, concluidasPlano, configuracoes]
+    [materias, missoesConcluidas, configuracoes]
+  );
+
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas,
+        planoCalendario
+      ),
+    [materias, missoesConcluidas, planoCalendario]
   );
 
   useEffect(() => {
