@@ -77,23 +77,24 @@ export default function CentralRedacaoBridge() {
   const naCentral = location.pathname === "/central-estudos";
   const redacaoAtiva = sessaoAtiva.tipo === TIPO_REDACAO;
 
-  const concluidasPlano = useMemo(
-    () =>
-      obterConclusoesPlanoOperacional(
-        materias,
-        missoesConcluidas
-      ),
-    [materias, missoesConcluidas]
-  );
-
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        concluidasPlano,
+        missoesConcluidas,
         configuracoes
       ),
-    [materias, concluidasPlano, configuracoes]
+    [materias, missoesConcluidas, configuracoes]
+  );
+
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas,
+        planoCalendario
+      ),
+    [materias, missoesConcluidas, planoCalendario]
   );
 
   const semanaAtual = useMemo(
