@@ -134,6 +134,50 @@ export function criarProximaRevisao(
   };
 }
 
+export type DetalhesPrevisaoRevisao = {
+  proxima: Revisao;
+  dataIdeal: string;
+  dataAgendada: string;
+  adiadaPorCapacidade: boolean;
+  diasIdeais: number;
+};
+
+export function preverDetalhesProximaRevisaoPorDesempenho(params: {
+  revisao: Revisao;
+  desempenho: NonNullable<Revisao["desempenho"]>;
+  revisoesExistentes?: Revisao[];
+  limiteDiario?: number;
+  agora?: Date;
+}): DetalhesPrevisaoRevisao | null {
+  if (params.revisao.etapa >= 5) return null;
+
+  const agora = params.agora ?? new Date();
+  const proximaEtapa = (params.revisao.etapa + 1) as EtapaRevisao;
+  const diasIdeais =
+    params.desempenho === "dificil"
+      ? 1
+      : params.desempenho === "media"
+        ? 3
+        : INTERVALOS_REVISAO_DIAS[proximaEtapa];
+
+  const dataIdeal = adicionarDias(agora, diasIdeais);
+  dataIdeal.setHours(12, 0, 0, 0);
+
+  const proxima = preverProximaRevisaoPorDesempenho(params);
+  if (!proxima) return null;
+
+  const ideal = chaveData(dataIdeal);
+  const agendada = chaveData(proxima.dataPrevista);
+
+  return {
+    proxima,
+    dataIdeal: dataIdeal.toISOString(),
+    dataAgendada: proxima.dataPrevista,
+    adiadaPorCapacidade: ideal !== agendada,
+    diasIdeais,
+  };
+}
+
 export function preverProximaRevisaoPorDesempenho(params: {
   revisao: Revisao;
   desempenho: NonNullable<Revisao["desempenho"]>;
