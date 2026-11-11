@@ -243,3 +243,96 @@ test("assunto concluído antes da troca do edital continua concluído na grade a
   assert.ok(concluidas.includes("conteudo-portugues-crase"));
   assert.ok(!concluidas.includes("conteudo-portugues-concordancia"));
 });
+
+
+test("quarta-feira pula o sábado antigo e busca a próxima quarta pendente", () => {
+  const plano: SemanaPlano[] = [
+    {
+      numero: 8,
+      nome: "Semana 8",
+      dias: [
+        { numero: 3, missoes: [{ id: "s8-qua", numero: 1, materia: "A", assunto: "Quarta concluída", tipo: "conteudo" }] },
+        { numero: 6, missoes: [{ id: "s8-sab", numero: 1, materia: "B", assunto: "Sábado pendente", tipo: "conteudo" }] },
+      ],
+    },
+    {
+      numero: 9,
+      nome: "Semana 9",
+      dias: [
+        { numero: 3, missoes: [{ id: "s9-qua", numero: 1, materia: "C", assunto: "Quarta da semana 9", tipo: "conteudo" }] },
+        { numero: 4, missoes: [{ id: "s9-qui", numero: 1, materia: "D", assunto: "Quinta da semana 9", tipo: "conteudo" }] },
+        { numero: 5, missoes: [{ id: "s9-sex", numero: 1, materia: "E", assunto: "Sexta da semana 9", tipo: "conteudo" }] },
+      ],
+    },
+  ];
+
+  const concluidas = ["s8-qua"];
+  const quarta = getMissaoDoDiaOuProxima(concluidas, plano, 8, 3);
+  const sabado = getMissaoDoDiaOuProxima(concluidas, plano, 8, 6);
+
+  assert.equal(quarta?.semana, 9);
+  assert.equal(quarta?.dia, 3);
+  assert.equal(quarta?.missao.id, "s9-qua");
+  assert.equal(sabado?.semana, 8);
+  assert.equal(sabado?.dia, 6);
+  assert.equal(sabado?.missao.id, "s8-sab");
+
+  const quartaReal = new Date(2026, 10, 11, 12);
+  assert.equal(
+    getSemanaOperacional(concluidas, plano, undefined, undefined, quartaReal),
+    9
+  );
+});
+
+test("conclusões antigas de domingo são compactadas por tipo sem duplicar aliases", () => {
+  const plano: SemanaPlano[] = Array.from({ length: 5 }, (_, indice) => ({
+    numero: indice + 1,
+    nome: `Semana ${indice + 1}`,
+    dias: [{
+      numero: 7,
+      missoes: [
+        {
+          id: `runtime-s${indice + 1}-d7-redacao`,
+          numero: 1,
+          materia: "Redação",
+          assunto: "Redação semanal",
+          tipo: "redacao" as const,
+        },
+        {
+          id: `runtime-s${indice + 1}-d7-simulado`,
+          numero: 2,
+          materia: "Simulado",
+          assunto: "Simulado semanal",
+          tipo: "simulado" as const,
+        },
+      ],
+    }],
+  }));
+
+  const concluidas = obterConclusoesPlanoOperacional(
+    [],
+    [
+      "runtime-s1-d7-simulado",
+      "s1-d7-simulado",
+      "s20-d7-simulado",
+      "s1-d7-redacao",
+      "s4-d7-redacao",
+    ],
+    plano
+  );
+
+  // Simulado da semana 20 vira crédito para o primeiro domingo vazio.
+  // O alias da semana 1 não conta duas vezes.
+  assert.ok(concluidas.includes("runtime-s1-d7-simulado"));
+  assert.ok(concluidas.includes("runtime-s2-d7-simulado"));
+  assert.ok(!concluidas.includes("runtime-s3-d7-simulado"));
+
+  // Duas redações históricas ocupam as duas primeiras vagas.
+  assert.ok(concluidas.includes("runtime-s1-d7-redacao"));
+  assert.ok(concluidas.includes("runtime-s2-d7-redacao"));
+  assert.ok(!concluidas.includes("runtime-s3-d7-redacao"));
+
+  // Histórico bruto continua presente.
+  assert.ok(concluidas.includes("s20-d7-simulado"));
+  assert.ok(concluidas.includes("s4-d7-redacao"));
+});
