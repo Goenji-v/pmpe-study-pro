@@ -19,7 +19,8 @@ import {
 
 export function obterConclusoesPlanoOperacional(
   materias: Materia[],
-  concluidasInformadas: readonly string[]
+  concluidasInformadas: readonly string[],
+  plano?: SemanaPlano[]
 ): string[] {
   const concluidas = new Set(concluidasInformadas);
 
@@ -35,7 +36,81 @@ export function obterConclusoesPlanoOperacional(
     }
   }
 
+  if (plano) {
+    compactarConclusoesDomingo(
+      concluidas,
+      concluidasInformadas,
+      plano
+    );
+  }
+
   return [...concluidas];
+}
+
+function compactarConclusoesDomingo(
+  destino: Set<string>,
+  concluidasInformadas: readonly string[],
+  plano: SemanaPlano[]
+) {
+  const semanasRedacao = new Set<number>();
+  const semanasSimulado = new Set<number>();
+
+  for (const id of concluidasInformadas) {
+    const match = id.match(
+      /^(?:runtime-|cal-)?s(\d+)-d7-(redacao|simulado)$/
+    );
+
+    if (!match) continue;
+
+    const semana = Number(match[1]);
+    if (!Number.isFinite(semana)) continue;
+
+    if (match[2] === "redacao") {
+      semanasRedacao.add(semana);
+    } else {
+      semanasSimulado.add(semana);
+    }
+  }
+
+  aplicarCreditosDomingo(
+    destino,
+    plano,
+    "redacao",
+    semanasRedacao.size
+  );
+  aplicarCreditosDomingo(
+    destino,
+    plano,
+    "simulado",
+    semanasSimulado.size
+  );
+}
+
+function aplicarCreditosDomingo(
+  destino: Set<string>,
+  plano: SemanaPlano[],
+  tipo: "redacao" | "simulado",
+  quantidade: number
+) {
+  if (quantidade <= 0) return;
+
+  let restantes = quantidade;
+
+  for (const semana of plano) {
+    const domingo = semana.dias.find(
+      (dia) => dia.numero === 7
+    );
+    const missao = domingo?.missoes.find(
+      (item) => item.tipo === tipo
+    );
+
+    if (!missao) continue;
+
+    destino.add(missao.id);
+    restantes -= 1;
+
+    if (restantes <= 0) break;
+  }
 }
 
 export function criarPlanoOperacional(
@@ -43,11 +118,6 @@ export function criarPlanoOperacional(
   concluidasInformadas: readonly string[],
   configuracoes: ConfiguracoesApp
 ): SemanaPlano[] {
-  const concluidas = obterConclusoesPlanoOperacional(
-    materias,
-    concluidasInformadas
-  );
-
   const base = aplicarDiasAtividadesSemanais(
     criarPlanoCalendario(
       normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
@@ -59,6 +129,12 @@ export function criarPlanoOperacional(
       diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
       diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
     }
+  );
+
+  const concluidas = obterConclusoesPlanoOperacional(
+    materias,
+    concluidasInformadas,
+    base
   );
 
   const organizado =
