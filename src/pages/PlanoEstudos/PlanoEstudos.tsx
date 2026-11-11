@@ -30,9 +30,11 @@ import { localizarConteudoDaMissao, localizarConteudosDaMissao } from "../../ser
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { guardarRascunhoSimuladoPdf } from "../../services/simuladoPdfDraft";
 import {
+  getMissaoDoDiaOuProxima,
+  getPrimeiraPendenciaUtil,
   getProgressoPlano,
   getProgressoSemana,
-  getPrimeiraPendenciaUtil,
+  getSemanaOperacional,
   listarPendenciasAteSemana,
 } from "../../utils/planoUtils";
 import {
@@ -110,7 +112,7 @@ export default function PlanoEstudos() {
       ?.dias.find((itemDia) => itemDia.numero === diaSelecionado);
     const missaoRedacao = domingoAtual?.missoes.find((item) => item.tipo === "redacao");
 
-    if (missaoRedacao && concluidas.includes(missaoRedacao.id)) {
+    if (missaoRedacao && concluidasPlano.includes(missaoRedacao.id)) {
       setMensagemDomingo("A redação desta semana já foi salva.");
       return;
     }
@@ -181,52 +183,60 @@ export default function PlanoEstudos() {
     cronometroAtivo,
   } = useCronometro();
 
-  const concluidasPlano = useMemo(
-    () =>
-      obterConclusoesPlanoOperacional(
-        materias,
-        concluidas
-      ),
-    [materias, concluidas]
-  );
-
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        concluidasPlano,
+        concluidas,
         configuracoes
       ),
     [
       materias,
-      concluidasPlano,
+      concluidas,
       configuracoes,
     ]
+  );
+
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        concluidas,
+        planoCalendario
+      ),
+    [materias, concluidas, planoCalendario]
   );
 
   const primeiraPendenciaUtil = getPrimeiraPendenciaUtil(
     concluidasPlano,
     planoCalendario
   );
-  const semanaInicial =
-    primeiraPendenciaUtil?.semana ??
-    planoCalendario.findLast((item) => item.dias.some((dia) => dia.missoes.length > 0))?.numero ??
-    planoCalendario[0]?.numero ??
-    1;
+
+  const diaCalendarioHoje = obterDiaAtualPlano();
+  const semanaInicial = getSemanaOperacional(
+    concluidasPlano,
+    planoCalendario,
+    configuracoes.semanaAtualPlano,
+    configuracoes.dataInicioPlano
+  );
+  const missaoInicialHoje = getMissaoDoDiaOuProxima(
+    concluidasPlano,
+    planoCalendario,
+    semanaInicial,
+    diaCalendarioHoje
+  );
   const pendenciasAnteriores = listarPendenciasAteSemana(
     concluidasPlano,
     planoCalendario,
     semanaInicial
   );
-  const diaCalendarioHoje = obterDiaAtualPlano();
   const semanaInicialDisponivel =
     planoCalendario.find((item) => item.numero === semanaInicial) ?? planoCalendario[0];
   const diaInicial =
-    primeiraPendenciaUtil?.semana === semanaInicial
-      ? primeiraPendenciaUtil.dia
-      : semanaInicialDisponivel?.dias.some((item) => item.numero === diaCalendarioHoje)
-        ? diaCalendarioHoje
-        : (semanaInicialDisponivel?.dias[0]?.numero ?? 1);
+    missaoInicialHoje?.dia ??
+    (semanaInicialDisponivel?.dias.some((item) => item.numero === diaCalendarioHoje)
+      ? diaCalendarioHoje
+      : (semanaInicialDisponivel?.dias[0]?.numero ?? 1));
 
   const [
     semanaSelecionada,
@@ -255,10 +265,10 @@ export default function PlanoEstudos() {
     (missao) => missao.tipo === "simulado"
   );
   const redacaoDomingoConcluida = Boolean(
-    missaoRedacaoDomingo && concluidas.includes(missaoRedacaoDomingo.id)
+    missaoRedacaoDomingo && concluidasPlano.includes(missaoRedacaoDomingo.id)
   );
   const simuladoDomingoConcluido = Boolean(
-    missaoSimuladoDomingo && concluidas.includes(missaoSimuladoDomingo.id)
+    missaoSimuladoDomingo && concluidasPlano.includes(missaoSimuladoDomingo.id)
   );
 
   const todasAsMissoes =
@@ -323,8 +333,20 @@ export default function PlanoEstudos() {
       return;
     }
 
+    const concluidaNoPlano =
+      concluidasPlano.includes(id);
+    const conclusaoCompactada =
+      concluidaNoPlano && !concluidas.includes(id);
+
+    if (conclusaoCompactada) {
+      window.alert(
+        "Esta conclusão veio do histórico reorganizado. O registro original foi preservado e não é removido por esta tela."
+      );
+      return;
+    }
+
     const concluindo =
-      !concluidas.includes(id);
+      !concluidaNoPlano;
 
     const materiaRelacionada = materias.find(
       (materia) =>
@@ -603,7 +625,7 @@ export default function PlanoEstudos() {
             const feitas =
               idsDaSemana.filter(
                 (id) =>
-                  concluidas.includes(
+                  concluidasPlano.includes(
                     id
                   )
               ).length;
@@ -674,7 +696,7 @@ export default function PlanoEstudos() {
             const concluidasDia =
               itemDia.missoes.filter(
                 (missao) =>
-                  concluidas.includes(
+                  concluidasPlano.includes(
                     missao.id
                   )
               ).length;
@@ -726,7 +748,7 @@ export default function PlanoEstudos() {
               {
                 dia.missoes.filter(
                   (missao) =>
-                    concluidas.includes(
+                    concluidasPlano.includes(
                       missao.id
                     )
                 ).length
@@ -845,7 +867,7 @@ export default function PlanoEstudos() {
             <div className="plano-missoes-grid">
               {dia.missoes.map((missao: MissaoPlano) => {
                 const missaoExibida = adaptarMissaoFlexivel(missao, diagnosticoSemanal);
-                const concluida = concluidas.includes(missao.id);
+                const concluida = concluidasPlano.includes(missao.id);
                 const materia = materias.find(
                   (item) => normalizarTexto(item.nome) === normalizarTexto(missaoExibida.materia)
                 );

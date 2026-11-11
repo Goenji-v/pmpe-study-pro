@@ -62,23 +62,24 @@ export default function NotificationCenter() {
   );
   const [jobsGeracao, setJobsGeracao] = useState<JobGeracaoIAPublico[]>([]);
 
-  const concluidasPlano = useMemo(
-    () =>
-      obterConclusoesPlanoOperacional(
-        materias,
-        missoesConcluidas
-      ),
-    [materias, missoesConcluidas]
-  );
-
   const plano = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        concluidasPlano,
+        missoesConcluidas,
         configuracoes
       ),
-    [materias, concluidasPlano, configuracoes]
+    [materias, missoesConcluidas, configuracoes]
+  );
+
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas,
+        plano
+      ),
+    [materias, missoesConcluidas, plano]
   );
 
   const missaoHoje = useMemo(() => {
