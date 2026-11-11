@@ -118,7 +118,7 @@ export default function CentralRedacaoBridge() {
     () =>
       localizarMissaoRedacaoPendenteDoDia(
         planoCalendario,
-        missoesConcluidas,
+        concluidasPlano,
         semanaAtual,
         diaAtual
       ),
