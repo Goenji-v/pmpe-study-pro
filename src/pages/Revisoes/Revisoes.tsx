@@ -11,12 +11,12 @@ import {
   calcularDiasDiferenca,
   concluirRevisaoNaLista,
   formatarDataRevisao,
-  preverProximaRevisaoPorDesempenho,
+  preverDetalhesProximaRevisaoPorDesempenho,
   statusDaRevisao,
   redistribuirRevisoesPendentes,
   reagendarRevisao,
 } from "../../utils/revisoes";
-import type { Revisao } from "../../types";
+import type { Revisao, SessaoEstudo } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
@@ -27,7 +27,7 @@ type DesempenhoRevisao = "facil" | "media" | "dificil";
 const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
 
 export default function Revisoes() {
-  const { materias, revisoes, setRevisoes, configuracoes } = useApp();
+  const { materias, revisoes, setRevisoes, configuracoes, sessoes } = useApp();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -315,6 +315,7 @@ export default function Revisoes() {
     revisoesBase: revisoesComModulo,
     limiteDiario: configuracoes.metaRevisoesDiaria,
     nomesSimulados,
+    sessoes,
   };
 
   return (
@@ -414,6 +415,7 @@ type GrupoRevisoesProps = {
   revisoesBase: Revisao[];
   limiteDiario: number;
   nomesSimulados: Record<string, string>;
+  sessoes: SessaoEstudo[];
 };
 
 function GrupoRevisoes({
@@ -428,9 +430,11 @@ function GrupoRevisoes({
   revisoesBase,
   limiteDiario,
   nomesSimulados,
+  sessoes,
 }: GrupoRevisoesProps) {
   const [avaliandoId, setAvaliandoId] = useState<string | null>(null);
   const [opcoesId, setOpcoesId] = useState<string | null>(null);
+  const [historicoId, setHistoricoId] = useState<string | null>(null);
 
   function alternarAvaliacao(id: string) {
     setAvaliandoId((atual) => (atual === id ? null : id));
@@ -440,6 +444,13 @@ function GrupoRevisoes({
   function alternarOpcoes(id: string) {
     setOpcoesId((atual) => (atual === id ? null : id));
     setAvaliandoId(null);
+    setHistoricoId(null);
+  }
+
+  function alternarHistorico(id: string) {
+    setHistoricoId((atual) => (atual === id ? null : id));
+    setAvaliandoId(null);
+    setOpcoesId(null);
   }
 
   return (
@@ -470,24 +481,31 @@ function GrupoRevisoes({
                 : diferenca === 1
                   ? "Amanhã"
                   : `Daqui a ${diferenca} dias`;
-          const previsaoDificil = preverProximaRevisaoPorDesempenho({
+          const previsaoDificil = preverDetalhesProximaRevisaoPorDesempenho({
             revisao,
             desempenho: "dificil",
             revisoesExistentes: revisoesBase,
             limiteDiario,
           });
-          const previsaoMedia = preverProximaRevisaoPorDesempenho({
+          const previsaoMedia = preverDetalhesProximaRevisaoPorDesempenho({
             revisao,
             desempenho: "media",
             revisoesExistentes: revisoesBase,
             limiteDiario,
           });
-          const previsaoFacil = preverProximaRevisaoPorDesempenho({
+          const previsaoFacil = preverDetalhesProximaRevisaoPorDesempenho({
             revisao,
             desempenho: "facil",
             revisoesExistentes: revisoesBase,
             limiteDiario,
           });
+
+          const mostrandoHistorico = historicoId === revisao.id;
+          const historico = montarHistoricoRevisao(
+            revisao,
+            revisoesBase,
+            sessoes
+          );
 
           return (
             <article key={revisao.id} className="revisao-card">
@@ -512,7 +530,7 @@ function GrupoRevisoes({
                     <strong>{quando} · {plano.titulo}</strong>
                     {typeof plano.percentual === "number" && typeof plano.total === "number" ? (
                       <span>
-                        Último resultado: {revisao.certas}/{plano.total} ({plano.percentual}%)
+                        Último resultado: {revisao.certas} acerto(s) de {plano.total} ({plano.percentual}%)
                       </span>
                     ) : (
                       <span>Sem nota medida ainda</span>
@@ -520,24 +538,18 @@ function GrupoRevisoes({
                   </div>
                   <p>{plano.descricao}</p>
                   <div className="revisao-proximos-retornos">
-                    <span>
-                      <b>Difícil</b>
-                      {previsaoDificil
-                        ? ` → ${formatarDataRevisao(previsaoDificil.dataPrevista)} · repete etapa ${previsaoDificil.etapa}`
-                        : " → sem novo agendamento"}
-                    </span>
-                    <span>
-                      <b>Médio</b>
-                      {previsaoMedia
-                        ? ` → ${formatarDataRevisao(previsaoMedia.dataPrevista)} · repete etapa ${previsaoMedia.etapa}`
-                        : " → sem novo agendamento"}
-                    </span>
-                    <span>
-                      <b>Fácil</b>
-                      {previsaoFacil
-                        ? ` → ${formatarDataRevisao(previsaoFacil.dataPrevista)} · etapa ${previsaoFacil.etapa}`
-                        : " → encerra o ciclo"}
-                    </span>
+                    <PrevisaoRetorno
+                      rotulo="Difícil"
+                      previsao={previsaoDificil}
+                    />
+                    <PrevisaoRetorno
+                      rotulo="Médio"
+                      previsao={previsaoMedia}
+                    />
+                    <PrevisaoRetorno
+                      rotulo="Fácil"
+                      previsao={previsaoFacil}
+                    />
                   </div>
                   {temFlashcards && (
                     <small className="revisao-flashcards-recomendacao">
@@ -576,6 +588,14 @@ function GrupoRevisoes({
                       🃏 {modoFlashcardsRecomendado}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    className={`revisao-historico-toggle ${mostrandoHistorico ? "ativo" : ""}`}
+                    onClick={() => alternarHistorico(revisao.id)}
+                    aria-expanded={mostrandoHistorico}
+                  >
+                    📋 Histórico
+                  </button>
                   <button
                     type="button"
                     className={`revisao-concluir-toggle ${avaliando ? "ativo" : ""}`}
@@ -660,6 +680,13 @@ function GrupoRevisoes({
                   </div>
                 )}
               </div>
+
+              {mostrandoHistorico && (
+                <HistoricoRevisao
+                  revisaoAtual={revisao}
+                  itens={historico}
+                />
+              )}
             </article>
           );
         })}
@@ -686,4 +713,194 @@ function normalizar(texto: string) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+
+type DetalhesPrevisao = ReturnType<
+  typeof preverDetalhesProximaRevisaoPorDesempenho
+>;
+
+function PrevisaoRetorno({
+  rotulo,
+  previsao,
+}: {
+  rotulo: string;
+  previsao: DetalhesPrevisao;
+}) {
+  if (!previsao) {
+    return (
+      <span>
+        <b>{rotulo}</b> → encerra o ciclo
+      </span>
+    );
+  }
+
+  const etapa = previsao.proxima.etapa;
+  if (!previsao.adiadaPorCapacidade) {
+    return (
+      <span>
+        <b>{rotulo}</b> → {formatarDataRevisao(previsao.dataAgendada)}
+        {" · "}Etapa {etapa}
+      </span>
+    );
+  }
+
+  return (
+    <span>
+      <b>{rotulo}</b> → ideal {formatarDataRevisao(previsao.dataIdeal)}
+      {" · "}agenda cheia → {formatarDataRevisao(previsao.dataAgendada)}
+      {" · "}Etapa {etapa}
+    </span>
+  );
+}
+
+type ItemHistoricoRevisao = {
+  revisao: Revisao;
+  sessao?: SessaoEstudo;
+};
+
+function montarHistoricoRevisao(
+  atual: Revisao,
+  revisoes: Revisao[],
+  sessoes: SessaoEstudo[]
+): ItemHistoricoRevisao[] {
+  const trilha = revisoes
+    .filter((item) => mesmaTrilhaRevisao(item, atual))
+    .sort(
+      (a, b) =>
+        dataOrdenacaoRevisao(a) - dataOrdenacaoRevisao(b)
+    );
+
+  return trilha.map((revisao) => ({
+    revisao,
+    sessao:
+      sessoes.find((sessao) => sessao.id === revisao.sessaoId) ??
+      sessoes.find((sessao) => sessao.revisaoId === revisao.id),
+  }));
+}
+
+function HistoricoRevisao({
+  revisaoAtual,
+  itens,
+}: {
+  revisaoAtual: Revisao;
+  itens: ItemHistoricoRevisao[];
+}) {
+  return (
+    <div className="revisao-historico-assunto">
+      <div className="revisao-historico-cabecalho">
+        <div>
+          <strong>📋 Histórico deste assunto</strong>
+          <span>{revisaoAtual.assunto}</span>
+        </div>
+        <small>{itens.length} etapa(s) registrada(s)</small>
+      </div>
+
+      <div className="revisao-historico-linha">
+        {itens.map(({ revisao, sessao }, indice) => {
+          const concluida = revisao.concluida;
+          const data = concluida
+            ? revisao.dataConclusao ?? revisao.dataPrevista
+            : revisao.dataPrevista;
+          const total =
+            typeof revisao.certas === "number" &&
+            typeof revisao.erradas === "number"
+              ? revisao.certas + revisao.erradas
+              : undefined;
+          const proxima = itens
+            .slice(indice + 1)
+            .find((item) => item.revisao.etapa > revisao.etapa)?.revisao;
+
+          return (
+            <div
+              key={revisao.id}
+              className={`revisao-historico-item ${
+                concluida ? "concluido" : "pendente"
+              }`}
+            >
+              <div className="revisao-historico-marcador" />
+              <div>
+                <strong>
+                  Etapa {revisao.etapa}
+                  {concluida ? " · concluída" : " · pendente"}
+                </strong>
+                <span>{formatarDataRevisao(data)}</span>
+                <small>{rotuloAtividadeHistorico(revisao, sessao)}</small>
+
+                {typeof total === "number" && total > 0 && (
+                  <small>
+                    Resultado: {revisao.certas}/{total}
+                    {" · "}
+                    {Math.round(((revisao.certas ?? 0) / total) * 100)}%
+                    {revisao.desempenho
+                      ? ` · ${formatarDesempenho(revisao.desempenho)}`
+                      : ""}
+                  </small>
+                )}
+
+                {typeof total !== "number" && revisao.desempenho && (
+                  <small>
+                    Resultado: {formatarDesempenho(revisao.desempenho)}
+                  </small>
+                )}
+
+                {concluida && proxima && (
+                  <small>
+                    Próxima: Etapa {proxima.etapa} · agendada para{" "}
+                    {formatarDataRevisao(proxima.dataPrevista)}
+                  </small>
+                )}
+
+                {!concluida && (
+                  <small>
+                    Status atual · {planejarRevisaoPendente(revisao).titulo}
+                  </small>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function rotuloAtividadeHistorico(
+  revisao: Revisao,
+  sessao?: SessaoEstudo
+) {
+  if (sessao?.formatoRevisao === "teoria") {
+    return "📖 Revisão de teoria";
+  }
+  if (
+    sessao?.formatoRevisao === "questoes" ||
+    typeof revisao.certas === "number"
+  ) {
+    return "🧩 Revisão por questões";
+  }
+  return "✓ Revisão registrada";
+}
+
+function mesmaTrilhaRevisao(a: Revisao, b: Revisao) {
+  if (
+    a.materiaId === b.materiaId &&
+    a.assuntoId === b.assuntoId &&
+    (!a.moduloId || !b.moduloId || a.moduloId === b.moduloId)
+  ) {
+    return true;
+  }
+
+  return (
+    normalizar(a.materia) === normalizar(b.materia) &&
+    normalizar(a.assunto) === normalizar(b.assunto)
+  );
+}
+
+function dataOrdenacaoRevisao(revisao: Revisao) {
+  const data =
+    revisao.dataConclusao ??
+    revisao.dataCriacao ??
+    revisao.dataPrevista;
+  const valor = new Date(data).getTime();
+  return Number.isFinite(valor) ? valor : 0;
 }

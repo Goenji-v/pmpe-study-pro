@@ -87,8 +87,9 @@
   gap: 9px;
 }
 
-.revisao-card {
+ .revisao-card {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -533,4 +534,118 @@
   overflow-wrap: anywhere;
   font-size: .8rem;
   line-height: 1.35;
+}
+
+.revisao-historico-toggle {
+  background: #0f766e;
+  border-color: rgba(94, 234, 212, .3) !important;
+}
+
+.revisao-historico-toggle:hover,
+.revisao-historico-toggle.ativo {
+  background: #115e59;
+  border-color: #5eead4 !important;
+}
+
+.revisao-historico-assunto {
+  flex: 0 0 100%;
+  width: 100%;
+  margin-top: 4px;
+  padding: 13px 14px;
+  border: 1px solid rgba(94, 234, 212, .22);
+  border-radius: 11px;
+  background: #0b1525;
+}
+
+.revisao-historico-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, .14);
+}
+
+.revisao-historico-cabecalho strong {
+  display: block;
+  color: #ccfbf1;
+  font-size: 12px;
+}
+
+.revisao-historico-cabecalho span,
+.revisao-historico-cabecalho small {
+  display: block;
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.revisao-historico-linha {
+  display: grid;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.revisao-historico-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+  padding: 8px 0;
+}
+
+.revisao-historico-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 20px;
+  bottom: -8px;
+  width: 2px;
+  background: #334155;
+}
+
+.revisao-historico-marcador {
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
+  border: 2px solid #64748b;
+  border-radius: 50%;
+  background: #0f172a;
+  z-index: 1;
+}
+
+.revisao-historico-item.concluido .revisao-historico-marcador {
+  border-color: #22c55e;
+  background: #166534;
+}
+
+.revisao-historico-item.pendente .revisao-historico-marcador {
+  border-color: #f59e0b;
+  background: #92400e;
+}
+
+.revisao-historico-item strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 11px;
+}
+
+.revisao-historico-item span,
+.revisao-historico-item small {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+@media (max-width: 550px) {
+  .revisao-historico-assunto {
+    padding: 10px;
+  }
+
+  .revisao-historico-cabecalho {
+    flex-direction: column;
+    gap: 4px;
+  }
 }
