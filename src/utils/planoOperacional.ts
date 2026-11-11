@@ -5,6 +5,7 @@ import {
   criarPlanoCalendario,
   normalizarMissoesPorDia,
 } from "./planoCalendario";
+import { listarModulosDaMateria } from "../services/conteudos/navegarConteudos";
 import {
   aplicarDiasAtividadesSemanais,
 } from "./atividadesSemanaisPlano";
@@ -16,11 +17,37 @@ import {
   semanaPorDataInicio,
 } from "./planoUtils";
 
+export function obterConclusoesPlanoOperacional(
+  materias: Materia[],
+  concluidasInformadas: readonly string[]
+): string[] {
+  const concluidas = new Set(concluidasInformadas);
+
+  for (const materia of materias) {
+    for (const modulo of listarModulosDaMateria(materia)) {
+      for (const assunto of modulo.assuntos) {
+        if (assunto.concluido) {
+          concluidas.add(
+            `conteudo-${materia.id}-${assunto.id}`
+          );
+        }
+      }
+    }
+  }
+
+  return [...concluidas];
+}
+
 export function criarPlanoOperacional(
   materias: Materia[],
-  concluidas: readonly string[],
+  concluidasInformadas: readonly string[],
   configuracoes: ConfiguracoesApp
 ): SemanaPlano[] {
+  const concluidas = obterConclusoesPlanoOperacional(
+    materias,
+    concluidasInformadas
+  );
+
   const base = aplicarDiasAtividadesSemanais(
     criarPlanoCalendario(
       normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
