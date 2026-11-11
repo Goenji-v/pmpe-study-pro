@@ -1,0 +1,383 @@
+.cal-semanal {
+  display: grid;
+  gap: 18px;
+}
+
+.cal-semanal-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(124, 58, 237, .12), transparent 34%),
+    #111827;
+}
+
+.cal-semanal-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: #a78bfa;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .9px;
+}
+
+.cal-semanal-topo h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 24px;
+}
+
+.cal-semanal-topo p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.cal-semanal-navegacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cal-semanal-navegacao button,
+.cal-semanal-lista button {
+  min-height: 38px;
+  padding: 8px 12px;
+  color: #e2e8f0;
+  background: #172033;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cal-semanal-navegacao .cal-semanal-atual {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  border-color: #8b5cf6;
+}
+
+.cal-semanal-metricas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cal-semanal-metricas > div {
+  padding: 12px 14px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #111827;
+}
+
+.cal-semanal-metricas span,
+.cal-semanal-metricas strong {
+  display: block;
+}
+
+.cal-semanal-metricas span {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cal-semanal-metricas strong {
+  margin-top: 5px;
+  color: #f8fafc;
+  font-size: 20px;
+}
+
+.cal-semanal-grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.cal-semanal-dia {
+  min-width: 122px;
+  min-height: 280px;
+  padding: 0;
+  text-align: left;
+  color: #e2e8f0;
+  background: #0b1220;
+  border: 1px solid #273449;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.cal-semanal-dia:hover,
+.cal-semanal-dia.selecionado {
+  border-color: #8b5cf6;
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, .18);
+}
+
+.cal-semanal-dia.hoje header {
+  background: rgba(124, 58, 237, .16);
+}
+
+.cal-semanal-dia header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 11px;
+  border-bottom: 1px solid #273449;
+  background: #101827;
+}
+
+.cal-semanal-dia header span {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cal-semanal-dia header strong {
+  color: #f8fafc;
+  font-size: 18px;
+}
+
+.cal-semanal-blocos {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+}
+
+.cal-semanal-bloco {
+  display: block;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.08);
+  line-height: 1.15;
+}
+
+.cal-semanal-bloco b,
+.cal-semanal-bloco small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-semanal-bloco b {
+  color: #fff;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.cal-semanal-bloco small {
+  margin-top: 4px;
+  color: rgba(255,255,255,.78);
+  font-size: 8.5px;
+  line-height: 1.2;
+}
+
+.cal-semanal-bloco.concluido {
+  opacity: .48;
+  filter: saturate(.7);
+}
+
+.cal-semanal-bloco.concluido b::before {
+  content: "✓ ";
+}
+
+.cal-semanal-bloco.tipo-revisao {
+  background: rgba(21, 128, 61, .8) !important;
+}
+
+.cal-semanal-bloco.tipo-redacao {
+  background: rgba(190, 24, 93, .82) !important;
+}
+
+.cal-semanal-bloco.tipo-simulado {
+  background: rgba(217, 119, 6, .88) !important;
+}
+
+.cal-semanal-bloco.cor-0 { background: rgba(3, 105, 161, .86); }
+.cal-semanal-bloco.cor-1 { background: rgba(14, 116, 144, .86); }
+.cal-semanal-bloco.cor-2 { background: rgba(67, 56, 202, .86); }
+.cal-semanal-bloco.cor-3 { background: rgba(109, 40, 217, .84); }
+.cal-semanal-bloco.cor-4 { background: rgba(4, 120, 87, .86); }
+.cal-semanal-bloco.cor-5 { background: rgba(180, 83, 9, .84); }
+
+.cal-semanal-livre,
+.cal-semanal-mais {
+  display: block;
+  padding: 12px 8px;
+  color: #64748b;
+  font-size: 10px;
+  text-align: center;
+}
+
+.cal-semanal-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.cal-semanal-legenda span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-semanal-legenda i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.leg-conteudo { background: #0369a1; }
+.leg-revisao { background: #15803d; }
+.leg-redacao { background: #be185d; }
+.leg-simulado { background: #d97706; }
+.leg-concluido { background: #475569; }
+
+.cal-semanal-detalhes {
+  padding: 18px;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  background: #111827;
+}
+
+.cal-semanal-detalhes-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.cal-semanal-detalhes-topo span {
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .8px;
+}
+
+.cal-semanal-detalhes-topo h3 {
+  margin: 4px 0 0;
+  color: #f8fafc;
+  font-size: 19px;
+  text-transform: capitalize;
+}
+
+.cal-semanal-detalhes-topo > strong {
+  color: #c4b5fd;
+  font-size: 12px;
+}
+
+.cal-semanal-lista {
+  display: grid;
+  gap: 8px;
+}
+
+.cal-semanal-item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid #273449;
+  border-left: 4px solid #3b82f6;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.cal-semanal-item.tipo-revisao { border-left-color: #22c55e; }
+.cal-semanal-item.tipo-redacao { border-left-color: #ec4899; }
+.cal-semanal-item.tipo-simulado { border-left-color: #f59e0b; }
+
+.cal-semanal-check {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #475569;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+}
+
+.cal-semanal-check.feito {
+  background: #15803d;
+  border-color: #22c55e;
+}
+
+.cal-semanal-item strong {
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.cal-semanal-item p {
+  margin: 3px 0 5px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.cal-semanal-item small {
+  color: #7dd3fc;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.cal-semanal-vazio {
+  display: grid;
+  gap: 5px;
+  padding: 26px;
+  border: 1px dashed #475569;
+  border-radius: 12px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.cal-semanal-vazio strong {
+  color: #e2e8f0;
+}
+
+@media (max-width: 900px) {
+  .cal-semanal-topo {
+    flex-direction: column;
+  }
+
+  .cal-semanal-navegacao {
+    justify-content: flex-start;
+  }
+
+  .cal-semanal-metricas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cal-semanal-grade {
+    grid-template-columns: repeat(7, 128px);
+  }
+}
+
+@media (max-width: 600px) {
+  .cal-semanal-metricas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cal-semanal-navegacao button {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .cal-semanal-item {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .cal-semanal-item button {
+    grid-column: 1 / -1;
+  }
+}
