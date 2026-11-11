@@ -224,6 +224,39 @@ export function getPrimeiraPendenciaUtil(
   return null;
 }
 
+export function getPrimeiraPendenciaDoDia(
+  concluidasInformadas: string[],
+  plano: SemanaPlano[],
+  diaAtual: number
+): ProximaMissaoPlano | null {
+  const concluidas = new Set(concluidasInformadas);
+
+  for (const semana of plano) {
+    const dia = semana.dias.find(
+      (item) => item.numero === diaAtual
+    );
+
+    if (!dia) continue;
+
+    for (const missao of dia.missoes) {
+      const texto = `${missao.materia} ${missao.assunto}`;
+      const ehRevisao =
+        missao.tipo === "revisao" ||
+        /revis[aã]o|erros dos simulados/i.test(texto);
+
+      if (!ehRevisao && !concluidas.has(missao.id)) {
+        return {
+          semana: semana.numero,
+          dia: diaAtual,
+          missao,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 export function getSemanaOperacional(
   concluidasInformadas: string[],
   plano: SemanaPlano[],
@@ -242,6 +275,22 @@ export function getSemanaOperacional(
       : 1;
 
     return Math.max(minimo, peloCalendario);
+  }
+
+  const diaAtual = agora.getDay() === 0
+    ? 7
+    : agora.getDay();
+
+  if (diaAtual >= 1 && diaAtual <= 6) {
+    const pendenciaDoDia = getPrimeiraPendenciaDoDia(
+      concluidasInformadas,
+      plano,
+      diaAtual
+    );
+
+    if (pendenciaDoDia) {
+      return pendenciaDoDia.semana;
+    }
   }
 
   const primeiraPendencia = getPrimeiraPendenciaUtil(
@@ -269,31 +318,45 @@ export function getMissaoDoDiaOuProxima(
   diaAtual: number
 ): ProximaMissaoPlano | null {
   const concluidas = new Set(concluidasInformadas);
-  const semana = plano.find(
-    (item) => item.numero === semanaAtual
-  );
-  const dia = semana?.dias.find(
-    (item) => item.numero === diaAtual
-  );
 
-  const pendenteHoje = dia?.missoes.find(
-    (missao) => !concluidas.has(missao.id)
-  );
-
-  if (pendenteHoje) {
-    return {
-      semana: semanaAtual,
-      dia: diaAtual,
-      missao: pendenteHoje,
-    };
-  }
-
-  // Domingo é uma rotina fixa. Se redação/simulado do domingo já foram
-  // concluídos, não antecipamos conteúdo de segunda para o domingo.
+  // Domingo continua preso à semana corrente: domingos antigos ficam
+  // apenas como pendência e nunca puxam uma atividade de outro dia.
   if (diaAtual === 7) {
-    return null;
+    const semana = plano.find(
+      (item) => item.numero === semanaAtual
+    );
+    const dia = semana?.dias.find(
+      (item) => item.numero === 7
+    );
+    const pendenteDomingo = dia?.missoes.find(
+      (missao) => !concluidas.has(missao.id)
+    );
+
+    return pendenteDomingo
+      ? {
+          semana: semanaAtual,
+          dia: 7,
+          missao: pendenteDomingo,
+        }
+      : null;
   }
 
+  // Segunda a sábado funcionam como colunas independentes.
+  // Ex.: se a quarta da semana 8 já acabou, a quarta busca a próxima
+  // quarta pendente (semana 9, 10...), sem cair num sábado antigo.
+  const pendenciaDoDia = getPrimeiraPendenciaDoDia(
+    concluidasInformadas,
+    plano,
+    diaAtual
+  );
+
+  if (pendenciaDoDia) {
+    return pendenciaDoDia;
+  }
+
+  // No fim do plano, quando não houver mais missão naquele dia específico,
+  // ainda mantemos a promessa de "sempre ter missão" usando a primeira
+  // pendência útil restante.
   return getPrimeiraPendenciaUtil(
     concluidasInformadas,
     plano
