@@ -110,3 +110,21 @@ test("trocar para Questões dentro de revisão vinculada preserva o vínculo", (
   );
 });
 
+
+
+test("revisão explica data ideal, capacidade da agenda e não diz que a etapa repete", () => {
+  assert.match(fonteRevisoes, /ideal/);
+  assert.match(fonteRevisoes, /agenda cheia/);
+  assert.match(fonteRevisoes, /Etapa \{etapa\}/);
+  assert.doesNotMatch(fonteRevisoes, /repete etapa/);
+  assert.match(fonteRevisoes, /acerto\(s\) de/);
+});
+
+test("cada card de revisão oferece histórico próprio do assunto", () => {
+  assert.match(fonteRevisoes, /📋 Histórico/);
+  assert.match(fonteRevisoes, /Histórico deste assunto/);
+  assert.match(fonteRevisoes, /montarHistoricoRevisao/);
+  assert.match(fonteRevisoes, /Próxima: Etapa/);
+  assert.match(fonteRevisoes, /Revisão de teoria/);
+  assert.match(fonteRevisoes, /Revisão por questões/);
+});
