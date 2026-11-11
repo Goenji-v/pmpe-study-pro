@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import "./Calendario.css";
+import CalendarioSemanalPreview from "./CalendarioSemanalPreview";
 
 import {
   useApp,
@@ -110,6 +111,8 @@ export default function Calendario() {
       hoje
     )
   );
+
+  const [visao, setVisao] = useState<"semana" | "mes">("semana");
 
   const motivoSemMissao = !datasPlano.length ? 'Seu plano não tem missões cadastradas. Confira o plano ou o edital ativo.' : diaSelecionado < datasPlano[0] ? 'Esta data é anterior ao início do plano.' : diaSelecionado > datasPlano[datasPlano.length - 1] ? 'Esta data está depois do fim do plano. As missões anteriores continuam disponíveis; não criamos semanas vazias.' : 'Dia sem missão na programação atual. Você pode estudar livremente ou retomar pendências.';
 
@@ -250,7 +253,7 @@ export default function Calendario() {
       <div className="calendario-cabecalho">
         <div>
           <span className="calendario-etiqueta">
-            VISÃO MENSAL
+            {visao === "semana" ? "PLANEJAMENTO SEMANAL" : "VISÃO MENSAL"}
           </span>
 
           <h1>
@@ -258,11 +261,34 @@ export default function Calendario() {
           </h1>
 
           <p>
-            Veja o que está planejado e o que você realizou. Registrar questões não conclui automaticamente uma missão do plano.
+            {visao === "semana"
+              ? "Veja a semana como uma grade de estudo: matérias, revisões, redação e simulado aparecem no dia em que devem ser feitos."
+              : "Veja o que está planejado e o que você realizou. Registrar questões não conclui automaticamente uma missão do plano."}
           </p>
+
+          <div className="calendario-alternar-visao" role="tablist" aria-label="Visualização do calendário">
+            <button
+              type="button"
+              className={visao === "semana" ? "ativo" : ""}
+              onClick={() => setVisao("semana")}
+              role="tab"
+              aria-selected={visao === "semana"}
+            >
+              Semana
+            </button>
+            <button
+              type="button"
+              className={visao === "mes" ? "ativo" : ""}
+              onClick={() => setVisao("mes")}
+              role="tab"
+              aria-selected={visao === "mes"}
+            >
+              Mês
+            </button>
+          </div>
         </div>
 
-        <div className="calendario-controles">
+        {visao === "mes" && <div className="calendario-controles">
           <button
             type="button"
             onClick={() =>
@@ -301,9 +327,17 @@ export default function Calendario() {
           >
             Hoje
           </button>
-        </div>
+        </div>}
       </div>
 
+      {visao === "semana" ? (
+        <CalendarioSemanalPreview
+          programacao={programacao}
+          revisoes={revisoes}
+          missoesConcluidas={missoesConcluidas}
+        />
+      ) : (
+        <>
       <div className="calendario-resumo">
         <ResumoCard
           titulo="Dias ativos"
@@ -609,6 +643,8 @@ export default function Calendario() {
           )}
         </aside>
       </div>
+        </>
+      )}
     </section>
   );
 }
