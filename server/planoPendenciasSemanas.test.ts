@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import type { SemanaPlano } from "../src/data/planoPMPE";
+import type { Materia } from "../src/types";
+import { obterConclusoesPlanoOperacional } from "../src/utils/planoOperacional";
 import {
   ampliarPlanoAteSemana,
   getMissaoDoDiaOuProxima,
@@ -207,4 +209,37 @@ test("Plano, Dashboard e Missão do dia compartilham a mesma grade operacional",
   for (const fonte of [plano, dashboard, missao, notificacoes]) {
     assert.match(fonte, /criarPlanoOperacional\(/);
   }
+});
+
+
+test("assunto concluído antes da troca do edital continua concluído na grade atual", () => {
+  const materias = [{
+    id: "portugues",
+    nome: "Português",
+    modulos: [{
+      id: "gramatica",
+      nome: "Gramática",
+      assuntos: [
+        {
+          id: "crase",
+          nome: "Crase",
+          concluido: true,
+        },
+        {
+          id: "concordancia",
+          nome: "Concordância",
+          concluido: false,
+        },
+      ],
+    }],
+  }] as unknown as Materia[];
+
+  const concluidas = obterConclusoesPlanoOperacional(
+    materias,
+    ["missao-legada-que-nao-existe-mais"]
+  );
+
+  assert.ok(concluidas.includes("missao-legada-que-nao-existe-mais"));
+  assert.ok(concluidas.includes("conteudo-portugues-crase"));
+  assert.ok(!concluidas.includes("conteudo-portugues-concordancia"));
 });
