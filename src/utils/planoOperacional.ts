@@ -37,6 +37,15 @@ export function obterConclusoesPlanoOperacional(
   }
 
   if (plano) {
+    // IDs históricos de domingo continuam guardados no estado bruto,
+    // mas saem da régua lógica antes da compactação para não contar
+    // o mesmo simulado/redação duas vezes (ex.: semana 20 + semana 2).
+    for (const id of [...concluidas]) {
+      if (ehConclusaoDomingoTipada(id)) {
+        concluidas.delete(id);
+      }
+    }
+
     compactarConclusoesDomingo(
       concluidas,
       concluidasInformadas,
@@ -45,6 +54,10 @@ export function obterConclusoesPlanoOperacional(
   }
 
   return [...concluidas];
+}
+
+function ehConclusaoDomingoTipada(id: string) {
+  return /^(?:runtime-|cal-)?s\d+-d7-(redacao|simulado)$/.test(id);
 }
 
 function compactarConclusoesDomingo(
