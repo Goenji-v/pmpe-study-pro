@@ -46,7 +46,10 @@ import {
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
 import { obterDiaAtualPlano } from "../../utils/planoCalendario";
-import { criarPlanoOperacional } from "../../utils/planoOperacional";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 
 import type { RegistroQuestao, Revisao, SessaoEstudo, Simulado } from "../../types/index";
 
@@ -71,14 +74,23 @@ export default function Dashboard() {
     setAtualizacaoPlano,
   ] = useState(0);
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas
+      ),
+    [materias, missoesConcluidas]
+  );
+
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        missoesConcluidas,
+        concluidasPlano,
         configuracoes
       ),
-    [materias, missoesConcluidas, configuracoes]
+    [materias, concluidasPlano, configuracoes]
   );
 
   useEffect(() => {
@@ -154,13 +166,13 @@ export default function Dashboard() {
   const dadosPlano = useMemo(() => {
     const semanaAtual =
       getSemanaOperacional(
-        missoesConcluidas,
+        concluidasPlano,
         planoCalendario,
         configuracoes.semanaAtualPlano,
         configuracoes.dataInicioPlano
       );
     const diaAtual = obterDiaAtualPlano();
-    const concluidasSet = new Set(missoesConcluidas);
+    const concluidasSet = new Set(concluidasPlano);
     const semanaDoCalendario = planoCalendario.find(
       (semana) => semana.numero === semanaAtual
     );
@@ -181,20 +193,20 @@ export default function Dashboard() {
 
     return {
       progresso:
-        getProgressoPlano(missoesConcluidas, planoCalendario),
+        getProgressoPlano(concluidasPlano, planoCalendario),
 
       concluidas:
-        getTotalConcluidas(missoesConcluidas, planoCalendario),
+        getTotalConcluidas(concluidasPlano, planoCalendario),
 
       total:
         getTotalMissoes(planoCalendario),
 
       pendentes:
-        getTotalPendentes(missoesConcluidas, planoCalendario),
+        getTotalPendentes(concluidasPlano, planoCalendario),
 
       proxima:
         getProximaMissao(
-          missoesConcluidas,
+          concluidasPlano,
           planoCalendario,
           semanaAtual
         ),
@@ -207,13 +219,13 @@ export default function Dashboard() {
       progressoSemana:
         getProgressoSemana(
           semanaAtual,
-          missoesConcluidas,
+          concluidasPlano,
           planoCalendario
         ),
     };
     // atualizacaoPlano é um token explícito disparado por eventos externos do Dashboard.
     /* oxlint-disable react-hooks/exhaustive-deps */
-  }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]);
+  }, [atualizacaoPlano, concluidasPlano, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   const hoje = obterDataLocal();
