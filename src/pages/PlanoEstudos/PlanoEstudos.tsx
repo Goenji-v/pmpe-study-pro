@@ -31,6 +31,7 @@ import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacao
 import { guardarRascunhoSimuladoPdf } from "../../services/simuladoPdfDraft";
 import {
   getMissaoDoDiaOuProxima,
+  getPrimeiraPendenciaUtil,
   getProgressoPlano,
   getProgressoSemana,
   getSemanaOperacional,
@@ -204,6 +205,11 @@ export default function PlanoEstudos() {
         planoCalendario
       ),
     [materias, concluidas, planoCalendario]
+  );
+
+  const primeiraPendenciaUtil = getPrimeiraPendenciaUtil(
+    concluidasPlano,
+    planoCalendario
   );
 
   const diaCalendarioHoje = obterDiaAtualPlano();
@@ -619,7 +625,7 @@ export default function PlanoEstudos() {
             const feitas =
               idsDaSemana.filter(
                 (id) =>
-                  concluidas.includes(
+                  concluidasPlano.includes(
                     id
                   )
               ).length;
@@ -742,7 +748,7 @@ export default function PlanoEstudos() {
               {
                 dia.missoes.filter(
                   (missao) =>
-                    concluidas.includes(
+                    concluidasPlano.includes(
                       missao.id
                     )
                 ).length
