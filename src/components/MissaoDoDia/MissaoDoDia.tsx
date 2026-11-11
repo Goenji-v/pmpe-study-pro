@@ -33,23 +33,24 @@ export default function MissaoDoDia({
     configuracoes,
   } = useApp();
 
-  const concluidasPlano = useMemo(
-    () =>
-      obterConclusoesPlanoOperacional(
-        materias,
-        missoesConcluidas
-      ),
-    [materias, missoesConcluidas]
-  );
-
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        concluidasPlano,
+        missoesConcluidas,
         configuracoes
       ),
-    [materias, concluidasPlano, configuracoes]
+    [materias, missoesConcluidas, configuracoes]
+  );
+
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas,
+        planoCalendario
+      ),
+    [materias, missoesConcluidas, planoCalendario]
   );
 
   const semanaAtual = useMemo(
