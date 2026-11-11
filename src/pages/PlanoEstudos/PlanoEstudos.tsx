@@ -277,12 +277,12 @@ export default function PlanoEstudos() {
   // Etapa 15: Plano e Dashboard usam exatamente o mesmo cálculo de progresso.
   const progressoGeral = useMemo(
     () => getProgressoPlano(concluidasPlano, planoCalendario),
-    [concluidas, planoCalendario]
+    [concluidasPlano, planoCalendario]
   );
 
   const progressoSemana = useMemo(
-    () => getProgressoSemana(semanaSelecionada, concluidas, planoCalendario),
-    [semanaSelecionada, concluidas, planoCalendario]
+    () => getProgressoSemana(semanaSelecionada, concluidasPlano, planoCalendario),
+    [semanaSelecionada, concluidasPlano, planoCalendario]
   );
 
   const diagnosticoSemanal = useMemo(
