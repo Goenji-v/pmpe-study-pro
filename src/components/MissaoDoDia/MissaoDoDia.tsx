@@ -14,7 +14,10 @@ import {
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
 import { NOMES_DIAS_PLANO, obterDiaAtualPlano } from "../../utils/planoCalendario";
-import { criarPlanoOperacional } from "../../utils/planoOperacional";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 
 type MissaoDoDiaProps = {
   atualizacao?: number;
@@ -30,24 +33,33 @@ export default function MissaoDoDia({
     configuracoes,
   } = useApp();
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas
+      ),
+    [materias, missoesConcluidas]
+  );
+
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        missoesConcluidas,
+        concluidasPlano,
         configuracoes
       ),
-    [materias, missoesConcluidas, configuracoes]
+    [materias, concluidasPlano, configuracoes]
   );
 
   const semanaAtual = useMemo(
     () => getSemanaOperacional(
-      missoesConcluidas,
+      concluidasPlano,
       planoCalendario,
       configuracoes.semanaAtualPlano,
       configuracoes.dataInicioPlano
     ),
-    [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]
+    [concluidasPlano, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]
   );
 
   // atualizacao é um token explícito para invalidar o cálculo após eventos externos.
@@ -60,7 +72,7 @@ export default function MissaoDoDia({
         semanaAtual,
         obterDiaAtualPlano()
       ),
-    [atualizacao, missoesConcluidas, planoCalendario, semanaAtual]
+    [atualizacao, concluidasPlano, planoCalendario, semanaAtual]
   );
   /* oxlint-enable react-hooks/exhaustive-deps */
 
