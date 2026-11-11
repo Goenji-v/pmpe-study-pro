@@ -32,7 +32,10 @@ import {
   getMissaoDoDiaOuProxima,
   getSemanaOperacional,
 } from "../../utils/planoUtils";
-import { criarPlanoOperacional } from "../../utils/planoOperacional";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 import { statusDaRevisao } from "../../utils/revisoes";
 
 import "./NotificationCenter.css";
@@ -59,25 +62,34 @@ export default function NotificationCenter() {
   );
   const [jobsGeracao, setJobsGeracao] = useState<JobGeracaoIAPublico[]>([]);
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas
+      ),
+    [materias, missoesConcluidas]
+  );
+
   const plano = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        missoesConcluidas,
+        concluidasPlano,
         configuracoes
       ),
-    [materias, missoesConcluidas, configuracoes]
+    [materias, concluidasPlano, configuracoes]
   );
 
   const missaoHoje = useMemo(() => {
     const semana = getSemanaOperacional(
-      missoesConcluidas,
+      concluidasPlano,
       plano,
       configuracoes.semanaAtualPlano,
       configuracoes.dataInicioPlano
     );
     return getMissaoDoDiaOuProxima(
-      missoesConcluidas,
+      concluidasPlano,
       plano,
       semana,
       obterDiaAtualPlano()
@@ -85,7 +97,7 @@ export default function NotificationCenter() {
   }, [
     configuracoes.semanaAtualPlano,
     configuracoes.dataInicioPlano,
-    missoesConcluidas,
+    concluidasPlano,
     plano,
   ]);
 
