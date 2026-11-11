@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import PWAInstallPrompt from "./components/PWAInstallPrompt/PWAInstallPrompt";
 
 const AuthenticatedApp = lazy(() => import("./AuthenticatedApp"));
+const RedefinirSenha = lazy(() => import("./pages/Auth/RedefinirSenha"));
 const TermosUso = lazy(() => import("./pages/Legal/TermosUso"));
 const PoliticaPrivacidade = lazy(() => import("./pages/Legal/PoliticaPrivacidade"));
 const Demo = lazy(() => import("./pages/Demo/Demo"));
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/termos" element={<TermosUso />} />
           <Route path="/privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/demo" element={<Demo />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           <Route path="/*" element={<AuthenticatedApp />} />
         </Routes>
       </Suspense>
