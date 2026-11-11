@@ -44,7 +44,10 @@ import {
   NOMES_DIAS_PLANO,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
-import { criarPlanoOperacional } from "../../utils/planoOperacional";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -178,22 +181,31 @@ export default function PlanoEstudos() {
     cronometroAtivo,
   } = useCronometro();
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        concluidas
+      ),
+    [materias, concluidas]
+  );
+
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        concluidas,
+        concluidasPlano,
         configuracoes
       ),
     [
       materias,
-      concluidas,
+      concluidasPlano,
       configuracoes,
     ]
   );
 
   const primeiraPendenciaUtil = getPrimeiraPendenciaUtil(
-    concluidas,
+    concluidasPlano,
     planoCalendario
   );
   const semanaInicial =
@@ -202,7 +214,7 @@ export default function PlanoEstudos() {
     planoCalendario[0]?.numero ??
     1;
   const pendenciasAnteriores = listarPendenciasAteSemana(
-    concluidas,
+    concluidasPlano,
     planoCalendario,
     semanaInicial
   );
@@ -264,7 +276,7 @@ export default function PlanoEstudos() {
 
   // Etapa 15: Plano e Dashboard usam exatamente o mesmo cálculo de progresso.
   const progressoGeral = useMemo(
-    () => getProgressoPlano(concluidas, planoCalendario),
+    () => getProgressoPlano(concluidasPlano, planoCalendario),
     [concluidas, planoCalendario]
   );
 
