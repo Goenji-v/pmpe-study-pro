@@ -17,7 +17,10 @@ import {
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
 import { getSemanaOperacional } from "../../utils/planoUtils";
-import { criarPlanoOperacional } from "../../utils/planoOperacional";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
 import {
   montarObservacaoRedacao,
@@ -74,20 +77,29 @@ export default function CentralRedacaoBridge() {
   const naCentral = location.pathname === "/central-estudos";
   const redacaoAtiva = sessaoAtiva.tipo === TIPO_REDACAO;
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas
+      ),
+    [materias, missoesConcluidas]
+  );
+
   const planoCalendario = useMemo(
     () =>
       criarPlanoOperacional(
         materias,
-        missoesConcluidas,
+        concluidasPlano,
         configuracoes
       ),
-    [materias, missoesConcluidas, configuracoes]
+    [materias, concluidasPlano, configuracoes]
   );
 
   const semanaAtual = useMemo(
     () =>
       getSemanaOperacional(
-        missoesConcluidas,
+        concluidasPlano,
         planoCalendario,
         configuracoes.semanaAtualPlano,
         configuracoes.dataInicioPlano
@@ -95,7 +107,7 @@ export default function CentralRedacaoBridge() {
     [
       configuracoes.semanaAtualPlano,
       configuracoes.dataInicioPlano,
-      missoesConcluidas,
+      concluidasPlano,
       planoCalendario,
     ]
   );
@@ -110,7 +122,7 @@ export default function CentralRedacaoBridge() {
         semanaAtual,
         diaAtual
       ),
-    [diaAtual, missoesConcluidas, planoCalendario, semanaAtual]
+    [diaAtual, concluidasPlano, planoCalendario, semanaAtual]
   );
 
   useEffect(() => {
