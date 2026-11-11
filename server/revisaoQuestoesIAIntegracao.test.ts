@@ -86,7 +86,7 @@ test("correção oferece próximos passos sem criar revisão duplicada", () => {
 
 
 test("revisão mostra a decisão adaptativa e as três datas de retorno", () => {
-  assert.match(fonteRevisoes, /preverProximaRevisaoPorDesempenho/);
+  assert.match(fonteRevisoes, /preverDetalhesProximaRevisaoPorDesempenho/);
   assert.match(fonteRevisoes, /Difícil/);
   assert.match(fonteRevisoes, /Médio/);
   assert.match(fonteRevisoes, /Fácil/);
