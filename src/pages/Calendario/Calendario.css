@@ -459,3 +459,40 @@
 .calendario-grupo .calendario-evento {border:0;border-top:1px solid #26374e;border-radius:0;}
 .calendario-grupo button {margin-top:10px;border:1px solid #365775;background:#183651;color:#e8f4ff;border-radius:8px;padding:10px;cursor:pointer;}
 .resumo-semanal-pagina {min-width:0;}
+
+.calendario-alternar-visao {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 4px;
+  border: 1px solid #334155;
+  border-radius: 11px;
+  background: #0f172a;
+}
+
+.calendario-alternar-visao button {
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #94a3b8;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.calendario-alternar-visao button.ativo {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+}
+
+@media (max-width: 600px) {
+  .calendario-alternar-visao {
+    width: 100%;
+  }
+
+  .calendario-alternar-visao button {
+    flex: 1;
+  }
+}
