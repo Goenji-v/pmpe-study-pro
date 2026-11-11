@@ -7,6 +7,7 @@ import {
   criarPrimeiraRevisao,
   criarProximaRevisao,
   INTERVALOS_REVISAO_DIAS,
+  preverDetalhesProximaRevisaoPorDesempenho,
   preverProximaRevisaoPorDesempenho,
   recuperarConclusoesRevisaoPorSessoesOrfas,
   resolverAvaliacaoRevisao,
@@ -392,3 +393,63 @@ test("não recupera sessão comum de questões sem marcador exato da revisão", 
   assert.equal(resultado.revisoes[0].concluida, false);
 });
 
+
+
+test("prévia explica data ideal diferente da data real quando a agenda está lotada", () => {
+  const hoje = new Date(2026, 10, 11, 12);
+  const base: Revisao = {
+    ...revisao,
+    etapa: 2,
+    dataPrevista: hoje.toISOString(),
+  };
+
+  const ocupadas: Revisao[] = Array.from({ length: 15 }, (_, indice) => ({
+    ...revisao,
+    id: `ocupada-${indice}`,
+    materiaId: `outra-${indice}`,
+    assuntoId: `outro-${indice}`,
+    materia: "Outra",
+    assunto: `Outro ${indice}`,
+    dataPrevista: new Date(2026, 10, 12 + indice, 12).toISOString(),
+  }));
+
+  const dificil = preverDetalhesProximaRevisaoPorDesempenho({
+    revisao: base,
+    desempenho: "dificil",
+    revisoesExistentes: [base, ...ocupadas],
+    limiteDiario: 1,
+    agora: hoje,
+  });
+  const media = preverDetalhesProximaRevisaoPorDesempenho({
+    revisao: base,
+    desempenho: "media",
+    revisoesExistentes: [base, ...ocupadas],
+    limiteDiario: 1,
+    agora: hoje,
+  });
+  const facil = preverDetalhesProximaRevisaoPorDesempenho({
+    revisao: base,
+    desempenho: "facil",
+    revisoesExistentes: [base, ...ocupadas],
+    limiteDiario: 1,
+    agora: hoje,
+  });
+
+  assert.ok(dificil && media && facil);
+
+  assert.equal(new Date(dificil.dataIdeal).getDate(), 12);
+  assert.equal(new Date(media.dataIdeal).getDate(), 14);
+  assert.equal(new Date(facil.dataIdeal).getDate(), 18);
+
+  assert.equal(new Date(dificil.dataAgendada).getDate(), 27);
+  assert.equal(new Date(media.dataAgendada).getDate(), 27);
+  assert.equal(new Date(facil.dataAgendada).getDate(), 27);
+
+  assert.equal(dificil.adiadaPorCapacidade, true);
+  assert.equal(media.adiadaPorCapacidade, true);
+  assert.equal(facil.adiadaPorCapacidade, true);
+
+  assert.equal(dificil.proxima.etapa, 3);
+  assert.equal(media.proxima.etapa, 3);
+  assert.equal(facil.proxima.etapa, 3);
+});
