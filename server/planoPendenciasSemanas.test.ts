@@ -285,7 +285,7 @@ test("quarta-feira pula o sábado antigo e busca a próxima quarta pendente", ()
 });
 
 test("conclusões antigas de domingo são compactadas por tipo sem duplicar aliases", () => {
-  const plano: SemanaPlano[] = Array.from({ length: 5 }, (_, indice) => ({
+  const plano: SemanaPlano[] = Array.from({ length: 20 }, (_, indice) => ({
     numero: indice + 1,
     nome: `Semana ${indice + 1}`,
     dias: [{
@@ -309,15 +309,17 @@ test("conclusões antigas de domingo são compactadas por tipo sem duplicar alia
     }],
   }));
 
+  const historico = [
+    "runtime-s1-d7-simulado",
+    "s1-d7-simulado",
+    "runtime-s20-d7-simulado",
+    "s1-d7-redacao",
+    "s4-d7-redacao",
+  ];
+
   const concluidas = obterConclusoesPlanoOperacional(
     [],
-    [
-      "runtime-s1-d7-simulado",
-      "s1-d7-simulado",
-      "s20-d7-simulado",
-      "s1-d7-redacao",
-      "s4-d7-redacao",
-    ],
+    historico,
     plano
   );
 
@@ -332,7 +334,11 @@ test("conclusões antigas de domingo são compactadas por tipo sem duplicar alia
   assert.ok(concluidas.includes("runtime-s2-d7-redacao"));
   assert.ok(!concluidas.includes("runtime-s3-d7-redacao"));
 
-  // Histórico bruto continua presente.
-  assert.ok(concluidas.includes("s20-d7-simulado"));
-  assert.ok(concluidas.includes("s4-d7-redacao"));
+  // O crédito antigo não permanece duplicado na posição original da régua.
+  assert.ok(!concluidas.includes("runtime-s20-d7-simulado"));
+  assert.ok(!concluidas.includes("runtime-s4-d7-redacao"));
+
+  // O histórico bruto de entrada não foi reescrito.
+  assert.ok(historico.includes("runtime-s20-d7-simulado"));
+  assert.ok(historico.includes("s4-d7-redacao"));
 });
