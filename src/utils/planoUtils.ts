@@ -224,6 +224,82 @@ export function getPrimeiraPendenciaUtil(
   return null;
 }
 
+export function getSemanaOperacional(
+  concluidasInformadas: string[],
+  plano: SemanaPlano[],
+  semanaMinimaInformada?: number,
+  dataInicioPlano?: string,
+  agora = new Date()
+): number {
+  const peloCalendario = semanaPorDataInicio(
+    dataInicioPlano,
+    agora
+  );
+
+  if (peloCalendario !== null) {
+    const minimo = Number.isFinite(semanaMinimaInformada)
+      ? Math.max(1, Math.floor(semanaMinimaInformada!))
+      : 1;
+
+    return Math.max(minimo, peloCalendario);
+  }
+
+  const primeiraPendencia = getPrimeiraPendenciaUtil(
+    concluidasInformadas,
+    plano
+  );
+
+  if (primeiraPendencia) {
+    return primeiraPendencia.semana;
+  }
+
+  return getSemanaAtual(
+    concluidasInformadas,
+    plano,
+    undefined,
+    undefined,
+    agora
+  );
+}
+
+export function getMissaoDoDiaOuProxima(
+  concluidasInformadas: string[],
+  plano: SemanaPlano[],
+  semanaAtual: number,
+  diaAtual: number
+): ProximaMissaoPlano | null {
+  const concluidas = new Set(concluidasInformadas);
+  const semana = plano.find(
+    (item) => item.numero === semanaAtual
+  );
+  const dia = semana?.dias.find(
+    (item) => item.numero === diaAtual
+  );
+
+  const pendenteHoje = dia?.missoes.find(
+    (missao) => !concluidas.has(missao.id)
+  );
+
+  if (pendenteHoje) {
+    return {
+      semana: semanaAtual,
+      dia: diaAtual,
+      missao: pendenteHoje,
+    };
+  }
+
+  // Domingo é uma rotina fixa. Se redação/simulado do domingo já foram
+  // concluídos, não antecipamos conteúdo de segunda para o domingo.
+  if (diaAtual === 7) {
+    return null;
+  }
+
+  return getPrimeiraPendenciaUtil(
+    concluidasInformadas,
+    plano
+  );
+}
+
 export function listarPendenciasAteSemana(
   concluidasInformadas: string[],
   plano: SemanaPlano[],

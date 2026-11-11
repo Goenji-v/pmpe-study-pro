@@ -34,8 +34,6 @@ import {
   getProgressoSemana,
   getPrimeiraPendenciaUtil,
   listarPendenciasAteSemana,
-  semanaPorDataInicio,
-  ampliarPlanoAteSemana,
 } from "../../utils/planoUtils";
 import {
   adaptarMissaoFlexivel,
@@ -43,13 +41,13 @@ import {
   type DadosReforcoAdaptado,
 } from "../../utils/adaptacaoPlano";
 import {
-  criarPlanoCalendario,
   NOMES_DIAS_PLANO,
-  normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
-import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { projetarPlanoCompactado } from "../../utils/projecaoCronogramaIndividual";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 
 type MissaoPlanoExibida = MissaoPlano & {
   adaptada?: boolean;
@@ -183,51 +181,31 @@ export default function PlanoEstudos() {
     cronometroAtivo,
   } = useCronometro();
 
-  const missoesPorDia = normalizarMissoesPorDia(
-    configuracoes.missoesPorDia ?? 1
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        concluidas
+      ),
+    [materias, concluidas]
   );
 
-  const planoCalendario = useMemo(() => {
-    const base = aplicarDiasAtividadesSemanais(
-      criarPlanoCalendario(
-        missoesPorDia,
-        configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
-      ), {
-        diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
-        diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
-      }
-    );
-    const semanaCalendario = semanaPorDataInicio(configuracoes.dataInicioPlano) ?? 1;
-    // Projeção visual automática: não grava IDs, conclusões ou domingos.
-    const organizado = concluidas.length > 0
-      ? projetarPlanoCompactado(base, concluidas)
-      : base;
-    const grade = concluidas.length > 0 ? organizado.map((semana) => ({
-      ...semana,
-      dias: semana.dias.map((dia) => ({
-        ...dia,
-        missoes: dia.numero === 7 ? [...dia.missoes] : dia.missoes.filter((missao) => !(
-          missao.tipo === "revisao" ||
-          /revis[aã]o|erros dos simulados/i.test(missao.materia + " " + missao.assunto)
-        )),
-      })),
-    })) : organizado;
-    return ampliarPlanoAteSemana(
-      grade,
-      semanaCalendario
-    );
-  }, [
-    missoesPorDia,
-    concluidas,
-    configuracoes.planoPadraoAtivo,
-    configuracoes.materiasPorDiaSemana,
-    configuracoes.diaRedacaoSemanal,
-    configuracoes.diaSimuladoSemanal,
-    configuracoes.dataInicioPlano,
-  ]);
+  const planoCalendario = useMemo(
+    () =>
+      criarPlanoOperacional(
+        materias,
+        concluidasPlano,
+        configuracoes
+      ),
+    [
+      materias,
+      concluidasPlano,
+      configuracoes,
+    ]
+  );
 
   const primeiraPendenciaUtil = getPrimeiraPendenciaUtil(
-    concluidas,
+    concluidasPlano,
     planoCalendario
   );
   const semanaInicial =
@@ -236,7 +214,7 @@ export default function PlanoEstudos() {
     planoCalendario[0]?.numero ??
     1;
   const pendenciasAnteriores = listarPendenciasAteSemana(
-    concluidas,
+    concluidasPlano,
     planoCalendario,
     semanaInicial
   );
@@ -298,13 +276,13 @@ export default function PlanoEstudos() {
 
   // Etapa 15: Plano e Dashboard usam exatamente o mesmo cálculo de progresso.
   const progressoGeral = useMemo(
-    () => getProgressoPlano(concluidas, planoCalendario),
-    [concluidas, planoCalendario]
+    () => getProgressoPlano(concluidasPlano, planoCalendario),
+    [concluidasPlano, planoCalendario]
   );
 
   const progressoSemana = useMemo(
-    () => getProgressoSemana(semanaSelecionada, concluidas, planoCalendario),
-    [semanaSelecionada, concluidas, planoCalendario]
+    () => getProgressoSemana(semanaSelecionada, concluidasPlano, planoCalendario),
+    [semanaSelecionada, concluidasPlano, planoCalendario]
   );
 
   const diagnosticoSemanal = useMemo(
@@ -544,7 +522,7 @@ export default function PlanoEstudos() {
           </h1>
 
           <p>
-            {planoCalendario.length} semanas no ritmo atual de {missoesPorDia} {missoesPorDia === 1 ? "missão" : "missões"} por dia. Domingo é exclusivo para redação e simulado.
+            {planoCalendario.length} semanas no ritmo atual de {configuracoes.missoesPorDia ?? 1} {(configuracoes.missoesPorDia ?? 1) === 1 ? "missão" : "missões"} por dia. Domingo é exclusivo para redação e simulado.
           </p>
         </div>
 

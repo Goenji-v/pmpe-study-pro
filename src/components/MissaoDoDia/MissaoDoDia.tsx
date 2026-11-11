@@ -9,11 +9,15 @@ import { useNavigate } from "react-router-dom";
 import "./MissaoDoDia.css";
 
 import {
-  getProximaMissao,
-  getSemanaAtual,
+  getMissaoDoDiaOuProxima,
+  getSemanaOperacional,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
-import { criarPlanoCalendario, normalizarMissoesPorDia, NOMES_DIAS_PLANO } from "../../utils/planoCalendario";
+import { NOMES_DIAS_PLANO, obterDiaAtualPlano } from "../../utils/planoCalendario";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 
 type MissaoDoDiaProps = {
   atualizacao?: number;
@@ -29,26 +33,46 @@ export default function MissaoDoDia({
     configuracoes,
   } = useApp();
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas
+      ),
+    [materias, missoesConcluidas]
+  );
+
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () =>
+      criarPlanoOperacional(
+        materias,
+        concluidasPlano,
+        configuracoes
+      ),
+    [materias, concluidasPlano, configuracoes]
   );
 
   const semanaAtual = useMemo(
-    () => getSemanaAtual(
-      missoesConcluidas,
+    () => getSemanaOperacional(
+      concluidasPlano,
       planoCalendario,
       configuracoes.semanaAtualPlano,
       configuracoes.dataInicioPlano
     ),
-    [missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]
+    [concluidasPlano, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]
   );
 
   // atualizacao é um token explícito para invalidar o cálculo após eventos externos.
   /* oxlint-disable react-hooks/exhaustive-deps */
   const proxima = useMemo(
-    () => getProximaMissao(missoesConcluidas, planoCalendario, semanaAtual),
-    [atualizacao, missoesConcluidas, planoCalendario, semanaAtual]
+    () =>
+      getMissaoDoDiaOuProxima(
+        missoesConcluidas,
+        planoCalendario,
+        semanaAtual,
+        obterDiaAtualPlano()
+      ),
+    [atualizacao, concluidasPlano, planoCalendario, semanaAtual]
   );
   /* oxlint-enable react-hooks/exhaustive-deps */
 

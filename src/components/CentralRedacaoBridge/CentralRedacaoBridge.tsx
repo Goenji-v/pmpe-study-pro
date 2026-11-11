@@ -14,12 +14,13 @@ import { useApp } from "../../context/AppContext";
 import { formatarTempo, useCronometro } from "../../context/CronometroContext";
 import { useToast } from "../../context/ToastContext";
 import {
-  criarPlanoCalendario,
-  normalizarMissoesPorDia,
   obterDiaAtualPlano,
 } from "../../utils/planoCalendario";
-import { aplicarDiasAtividadesSemanais } from "../../utils/atividadesSemanaisPlano";
-import { getSemanaAtual } from "../../utils/planoUtils";
+import { getSemanaOperacional } from "../../utils/planoUtils";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
 import {
   montarObservacaoRedacao,
@@ -46,6 +47,7 @@ export default function CentralRedacaoBridge() {
   const location = useLocation();
   const { showToast } = useToast();
   const {
+    materias,
     sessoes,
     setSessoes,
     missoesConcluidas,
@@ -75,31 +77,29 @@ export default function CentralRedacaoBridge() {
   const naCentral = location.pathname === "/central-estudos";
   const redacaoAtiva = sessaoAtiva.tipo === TIPO_REDACAO;
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas
+      ),
+    [materias, missoesConcluidas]
+  );
+
   const planoCalendario = useMemo(
     () =>
-      aplicarDiasAtividadesSemanais(
-        criarPlanoCalendario(
-          normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1),
-          configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana
-        ),
-        {
-          diaRedacaoSemanal: configuracoes.diaRedacaoSemanal ?? "dom",
-          diaSimuladoSemanal: configuracoes.diaSimuladoSemanal ?? "dom",
-        }
+      criarPlanoOperacional(
+        materias,
+        concluidasPlano,
+        configuracoes
       ),
-    [
-      configuracoes.missoesPorDia,
-      configuracoes.planoPadraoAtivo,
-      configuracoes.materiasPorDiaSemana,
-      configuracoes.diaRedacaoSemanal,
-      configuracoes.diaSimuladoSemanal,
-    ]
+    [materias, concluidasPlano, configuracoes]
   );
 
   const semanaAtual = useMemo(
     () =>
-      getSemanaAtual(
-        missoesConcluidas,
+      getSemanaOperacional(
+        concluidasPlano,
         planoCalendario,
         configuracoes.semanaAtualPlano,
         configuracoes.dataInicioPlano
@@ -107,7 +107,7 @@ export default function CentralRedacaoBridge() {
     [
       configuracoes.semanaAtualPlano,
       configuracoes.dataInicioPlano,
-      missoesConcluidas,
+      concluidasPlano,
       planoCalendario,
     ]
   );
@@ -118,11 +118,11 @@ export default function CentralRedacaoBridge() {
     () =>
       localizarMissaoRedacaoPendenteDoDia(
         planoCalendario,
-        missoesConcluidas,
+        concluidasPlano,
         semanaAtual,
         diaAtual
       ),
-    [diaAtual, missoesConcluidas, planoCalendario, semanaAtual]
+    [diaAtual, concluidasPlano, planoCalendario, semanaAtual]
   );
 
   useEffect(() => {

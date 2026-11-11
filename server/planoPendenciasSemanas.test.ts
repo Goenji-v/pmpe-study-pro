@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import type { SemanaPlano } from "../src/data/planoPMPE";
+import type { Materia } from "../src/types";
+import { obterConclusoesPlanoOperacional } from "../src/utils/planoOperacional";
 import {
   ampliarPlanoAteSemana,
+  getMissaoDoDiaOuProxima,
   getPrimeiraPendenciaUtil,
   getProximaMissao,
   getSemanaAtual,
+  getSemanaOperacional,
   listarPendenciasAteSemana,
   semanaPorDataInicio,
 } from "../src/utils/planoUtils";
@@ -50,8 +54,10 @@ test("pendências antigas aparecem antes das novas; semana avançada não diz pl
 });
 test("régua extra e revisões separadas não aparecem no plano",()=>{
   const pagina=readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx","utf8");
+  const operacional=readFileSync("src/utils/planoOperacional.ts","utf8");
   assert.doesNotMatch(pagina,/reajuste-visual-individual|Aplicar régua nesta conta|Fila separada de revisões/);
-  assert.match(pagina,/projetarPlanoCompactado\(base, concluidas\)/);
+  assert.match(pagina,/criarPlanoOperacional\(/);
+  assert.match(operacional,/projetarPlanoCompactado\(base, concluidas\)/);
 });
 
 
@@ -91,4 +97,149 @@ test("plano operacional ignora domingo atrasado e progresso espalhado em semana 
 
   const atrasadas = listarPendenciasAteSemana(concluidas, plano, primeira!.semana);
   assert.deepEqual(atrasadas.map((item) => item.missao.id), ["s1-dom"]);
+});
+
+
+test("44 conteúdos concluídos compactam o avanço para semana 8 dia 3", async () => {
+  const { projetarPlanoCompactado } = await import("../src/utils/projecaoCronogramaIndividual");
+
+  const plano: SemanaPlano[] = Array.from({ length: 24 }, (_, indiceSemana) => ({
+    numero: indiceSemana + 1,
+    nome: `Semana ${indiceSemana + 1}`,
+    dias: [
+      ...Array.from({ length: 6 }, (_, indiceDia) => ({
+        numero: indiceDia + 1,
+        missoes: [{
+          id: `conteudo-${indiceSemana * 6 + indiceDia + 1}`,
+          numero: 1,
+          materia: "PMPE",
+          assunto: `Conteúdo ${indiceSemana * 6 + indiceDia + 1}`,
+          tipo: "conteudo" as const,
+        }],
+      })),
+      {
+        numero: 7,
+        missoes: [
+          {
+            id: `domingo-${indiceSemana + 1}`,
+            numero: 1,
+            materia: "Redação",
+            assunto: "Redação semanal",
+            tipo: "redacao" as const,
+          },
+        ],
+      },
+    ],
+  }));
+
+  // Simula o pós-edital: as 44 conclusões estão espalhadas na grade bruta,
+  // inclusive em semanas distantes.
+  const concluidas = Array.from({ length: 44 }, (_, i) =>
+    `conteudo-${((i * 17) % 144) + 1}`
+  );
+  const idsUnicos = Array.from(new Set(concluidas));
+  while (idsUnicos.length < 44) {
+    const candidato = `conteudo-${idsUnicos.length + 1}`;
+    if (!idsUnicos.includes(candidato)) idsUnicos.push(candidato);
+  }
+
+  const compactado = projetarPlanoCompactado(plano, idsUnicos);
+  const primeira = getPrimeiraPendenciaUtil(idsUnicos, compactado);
+
+  assert.equal(idsUnicos.length, 44);
+  assert.equal(primeira?.semana, 8);
+  assert.equal(primeira?.dia, 3);
+  assert.equal(getSemanaOperacional(idsUnicos, compactado), 8);
+});
+
+test("terça sem pendência puxa a próxima missão útil em vez de ficar vazia", () => {
+  const plano: SemanaPlano[] = [{
+    numero: 8,
+    nome: "Semana 8",
+    dias: [
+      { numero: 1, missoes: [{ id: "seg", numero: 1, materia: "A", assunto: "Feita", tipo: "conteudo" }] },
+      { numero: 2, missoes: [{ id: "ter", numero: 1, materia: "B", assunto: "Feita", tipo: "conteudo" }] },
+      { numero: 3, missoes: [{ id: "qua", numero: 1, materia: "C", assunto: "Próxima", tipo: "conteudo" }] },
+      { numero: 7, missoes: [{ id: "dom", numero: 1, materia: "Redação", assunto: "Semanal", tipo: "redacao" }] },
+    ],
+  }];
+
+  const resultado = getMissaoDoDiaOuProxima(
+    ["seg", "ter"],
+    plano,
+    8,
+    2
+  );
+
+  assert.equal(resultado?.semana, 8);
+  assert.equal(resultado?.dia, 3);
+  assert.equal(resultado?.missao.id, "qua");
+});
+
+test("domingo não antecipa conteúdo de segunda-feira", () => {
+  const plano: SemanaPlano[] = [
+    {
+      numero: 8,
+      nome: "Semana 8",
+      dias: [
+        { numero: 7, missoes: [{ id: "domingo", numero: 1, materia: "Redação", assunto: "Semanal", tipo: "redacao" }] },
+      ],
+    },
+    {
+      numero: 9,
+      nome: "Semana 9",
+      dias: [
+        { numero: 1, missoes: [{ id: "segunda", numero: 1, materia: "RLM", assunto: "Próxima", tipo: "conteudo" }] },
+      ],
+    },
+  ];
+
+  assert.equal(
+    getMissaoDoDiaOuProxima(["domingo"], plano, 8, 7),
+    null
+  );
+});
+
+test("Plano, Dashboard e Missão do dia compartilham a mesma grade operacional", () => {
+  const plano = readFileSync("src/pages/PlanoEstudos/PlanoEstudos.tsx", "utf8");
+  const dashboard = readFileSync("src/pages/Dashboard/Dashboard.tsx", "utf8");
+  const missao = readFileSync("src/components/MissaoDoDia/MissaoDoDia.tsx", "utf8");
+  const notificacoes = readFileSync("src/components/NotificationCenter/NotificationCenter.tsx", "utf8");
+
+  for (const fonte of [plano, dashboard, missao, notificacoes]) {
+    assert.match(fonte, /criarPlanoOperacional\(/);
+  }
+});
+
+
+test("assunto concluído antes da troca do edital continua concluído na grade atual", () => {
+  const materias = [{
+    id: "portugues",
+    nome: "Português",
+    modulos: [{
+      id: "gramatica",
+      nome: "Gramática",
+      assuntos: [
+        {
+          id: "crase",
+          nome: "Crase",
+          concluido: true,
+        },
+        {
+          id: "concordancia",
+          nome: "Concordância",
+          concluido: false,
+        },
+      ],
+    }],
+  }] as unknown as Materia[];
+
+  const concluidas = obterConclusoesPlanoOperacional(
+    materias,
+    ["missao-legada-que-nao-existe-mais"]
+  );
+
+  assert.ok(concluidas.includes("missao-legada-que-nao-existe-mais"));
+  assert.ok(concluidas.includes("conteudo-portugues-crase"));
+  assert.ok(!concluidas.includes("conteudo-portugues-concordancia"));
 });

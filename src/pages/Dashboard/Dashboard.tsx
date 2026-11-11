@@ -38,13 +38,18 @@ import {
   getProgressoPlano,
   getProgressoSemana,
   getProximaMissao,
-  getSemanaAtual,
+  getSemanaOperacional,
+  getMissaoDoDiaOuProxima,
   getTotalConcluidas,
   getTotalMissoes,
   getTotalPendentes,
   type ProximaMissaoPlano,
 } from "../../utils/planoUtils";
-import { criarPlanoCalendario, normalizarMissoesPorDia, obterDiaAtualPlano } from "../../utils/planoCalendario";
+import { obterDiaAtualPlano } from "../../utils/planoCalendario";
+import {
+  criarPlanoOperacional,
+  obterConclusoesPlanoOperacional,
+} from "../../utils/planoOperacional";
 
 import type { RegistroQuestao, Revisao, SessaoEstudo, Simulado } from "../../types/index";
 
@@ -69,9 +74,23 @@ export default function Dashboard() {
     setAtualizacaoPlano,
   ] = useState(0);
 
+  const concluidasPlano = useMemo(
+    () =>
+      obterConclusoesPlanoOperacional(
+        materias,
+        missoesConcluidas
+      ),
+    [materias, missoesConcluidas]
+  );
+
   const planoCalendario = useMemo(
-    () => criarPlanoCalendario(normalizarMissoesPorDia(configuracoes.missoesPorDia ?? 1), configuracoes.planoPadraoAtivo !== false, configuracoes.materiasPorDiaSemana),
-    [configuracoes.missoesPorDia, configuracoes.planoPadraoAtivo, configuracoes.materiasPorDiaSemana]
+    () =>
+      criarPlanoOperacional(
+        materias,
+        concluidasPlano,
+        configuracoes
+      ),
+    [materias, concluidasPlano, configuracoes]
   );
 
   useEffect(() => {
@@ -146,30 +165,26 @@ export default function Dashboard() {
 
   const dadosPlano = useMemo(() => {
     const semanaAtual =
-      getSemanaAtual(
-        missoesConcluidas,
+      getSemanaOperacional(
+        concluidasPlano,
         planoCalendario,
         configuracoes.semanaAtualPlano,
         configuracoes.dataInicioPlano
       );
     const diaAtual = obterDiaAtualPlano();
-    const concluidasSet = new Set(missoesConcluidas);
+    const concluidasSet = new Set(concluidasPlano);
     const semanaDoCalendario = planoCalendario.find(
       (semana) => semana.numero === semanaAtual
     );
     const diaDoCalendario = semanaDoCalendario?.dias.find(
       (dia) => dia.numero === diaAtual
     );
-    const missaoPendenteHoje = diaDoCalendario?.missoes.find(
-      (missao) => !concluidasSet.has(missao.id)
+    const missaoHoje = getMissaoDoDiaOuProxima(
+      missoesConcluidas,
+      planoCalendario,
+      semanaAtual,
+      diaAtual
     );
-    const missaoHoje = missaoPendenteHoje
-      ? {
-          semana: semanaAtual,
-          dia: diaAtual,
-          missao: missaoPendenteHoje,
-        }
-      : null;
     const hojeConcluido = Boolean(
       diaDoCalendario &&
       diaDoCalendario.missoes.length > 0 &&
@@ -178,20 +193,20 @@ export default function Dashboard() {
 
     return {
       progresso:
-        getProgressoPlano(missoesConcluidas, planoCalendario),
+        getProgressoPlano(concluidasPlano, planoCalendario),
 
       concluidas:
-        getTotalConcluidas(missoesConcluidas, planoCalendario),
+        getTotalConcluidas(concluidasPlano, planoCalendario),
 
       total:
         getTotalMissoes(planoCalendario),
 
       pendentes:
-        getTotalPendentes(missoesConcluidas, planoCalendario),
+        getTotalPendentes(concluidasPlano, planoCalendario),
 
       proxima:
         getProximaMissao(
-          missoesConcluidas,
+          concluidasPlano,
           planoCalendario,
           semanaAtual
         ),
@@ -204,13 +219,13 @@ export default function Dashboard() {
       progressoSemana:
         getProgressoSemana(
           semanaAtual,
-          missoesConcluidas,
+          concluidasPlano,
           planoCalendario
         ),
     };
     // atualizacaoPlano é um token explícito disparado por eventos externos do Dashboard.
     /* oxlint-disable react-hooks/exhaustive-deps */
-  }, [atualizacaoPlano, missoesConcluidas, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]);
+  }, [atualizacaoPlano, concluidasPlano, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   const hoje = obterDataLocal();
