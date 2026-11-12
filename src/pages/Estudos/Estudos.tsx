@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import FlashcardsQuizPanel from "../../components/Flashcards/FlashcardsQuizPanel";
+import MateriaisDoAssunto from "../../components/MateriaisDoAssunto/MateriaisDoAssunto";
+import { salvarLinkMaterial } from "../../services/materiaisService";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
@@ -110,7 +112,7 @@ export default function Estudos() {
   const [assuntoDestino, setAssuntoDestino] = useState("");
   const [nomeNovoItem, setNomeNovoItem] = useState("");
   const [urlNovoItem, setUrlNovoItem] = useState("");
-  const [materialPdf, setMaterialPdf] = useState(true);
+  const [salvandoNovoItem, setSalvandoNovoItem] = useState(false);
   const [nomeMateria, setNomeMateria] = useState("");
   const [materiaNovoModulo, setMateriaNovoModulo] = useState("");
   const [nomeModulo, setNomeModulo] = useState("");
@@ -273,13 +275,9 @@ export default function Estudos() {
     );
   }
 
-  function adicionarMaterialOuAula() {
+  async function adicionarMaterialOuAula() {
     if (!materiaParaCadastro || !moduloParaCadastro || !assuntoParaCadastro) {
       showToast("Selecione matéria, módulo e assunto antes de adicionar.", "warning");
-      return;
-    }
-    if (moduloGerenciadoPorCurso(moduloParaCadastro)) {
-      showToast("Selecione um assunto da grade principal para guardar esse material. A visão importada é somente leitura.", "warning");
       return;
     }
     const nome = nomeNovoItem.trim();
@@ -288,31 +286,61 @@ export default function Estudos() {
       showToast("Informe um nome e uma URL começando por https:// ou http://.", "warning");
       return;
     }
-    if (tipoCadastro === "material") {
-      salvarAssunto(materiaParaCadastro.id, moduloParaCadastro.id, assuntoParaCadastro.id, {
-        materiais: [...(assuntoParaCadastro.materiais ?? []), {
-          id: crypto.randomUUID(),
-          tipo: materialPdf ? "pdf" : "link",
+
+    try {
+      setSalvandoNovoItem(true);
+      if (tipoCadastro === "material") {
+        // Um único armazenamento para Centro de Materiais, Conteúdos e Central.
+        await salvarLinkMaterial({
           nome, url,
-          criadoEm: new Date().toISOString(),
-        }],
-      });
-    } else {
-      salvarAssunto(materiaParaCadastro.id, moduloParaCadastro.id, assuntoParaCadastro.id, {
-        aulas: [...(assuntoParaCadastro.aulas ?? []), {
-          id: criarIdUnico(nome),
-          nome, url,
-          ordem: assuntoParaCadastro.aulas?.length ?? 0,
-          concluida: false,
-        }],
-      });
+          materia: materiaParaCadastro.nome,
+          materiaId: materiaParaCadastro.id,
+          modulo: moduloParaCadastro.nome,
+          moduloId: moduloParaCadastro.id,
+          assunto: assuntoParaCadastro.nome,
+          assuntoId: assuntoParaCadastro.id,
+          observacao: "",
+          categoriaLink: "personalizado",
+        });
+      } else {
+        if (moduloGerenciadoPorCurso(moduloParaCadastro)) {
+          showToast("Aulas dessa origem são gerenciadas em Meus Cursos; selecione a grade canônica ou edite a importação.", "warning");
+          return;
+        }
+        salvarAssunto(materiaParaCadastro.id, moduloParaCadastro.id, assuntoParaCadastro.id, {
+          aulas: [...(assuntoParaCadastro.aulas ?? []), {
+            id: criarIdUnico(nome),
+            nome, url,
+            ordem: assuntoParaCadastro.aulas?.length ?? 0,
+            concluida: false,
+          }],
+        });
+      }
+      setNomeNovoItem("");
+      setUrlNovoItem("");
+      setCadastroAberto(false);
+      setMateriaAberta(materiaParaCadastro.id);
+      setModulosFechados((atual) => ({
+        ...atual, [materiaParaCadastro.id + ":" + moduloParaCadastro.id]: false,
+      }));
+      setAssuntosExpandidos((atual) => ({ ...atual, [assuntoParaCadastro.id]: true }));
+      showToast(tipoCadastro === "material" ? "Material salvo e vinculado ao assunto." : "Aula adicionada ao assunto.", "success");
+    } catch (erro) {
+      showToast(erro instanceof Error ? erro.message : "Não foi possível adicionar este conteúdo.", "error");
+    } finally {
+      setSalvandoNovoItem(false);
     }
-    setNomeNovoItem("");
-    setUrlNovoItem("");
-    setCadastroAberto(false);
-    setMateriaAberta(materiaParaCadastro.id);
-    setModulosFechados((atual) => ({ ...atual, [materiaParaCadastro.id + ":" + moduloParaCadastro.id]: false }));
-    showToast(tipoCadastro === "material" ? "Material adicionado ao assunto." : "Aula adicionada ao assunto.", "success");
+  }
+
+  function abrirCentroDeMateriaisDoAssunto() {
+    if (materiaParaCadastro && moduloParaCadastro && assuntoParaCadastro) {
+      sessionStorage.setItem("pmpe:materiais:prefill", JSON.stringify({
+        materia: materiaParaCadastro.nome,
+        modulo: moduloParaCadastro.nome,
+        assunto: assuntoParaCadastro.nome,
+      }));
+    }
+    navigate("/materiais");
   }
 
   function adicionarMateria() {
@@ -714,9 +742,9 @@ export default function Estudos() {
                 <>
                   <label>4. Nome<input value={nomeNovoItem} onChange={(e) => setNomeNovoItem(e.target.value)} placeholder={tipoCadastro === "aula" ? "Nome da aula" : "Título do material"} /></label>
                   <label>5. Link<input value={urlNovoItem} onChange={(e) => setUrlNovoItem(e.target.value)} placeholder="https://..." /></label>
-                  {tipoCadastro === "material" && <label><input type="checkbox" checked={materialPdf} onChange={(e) => setMaterialPdf(e.target.checked)} /> Este link é de PDF</label>}
-                  <button type="button" className="conteudos-atalho-principal" onClick={adicionarMaterialOuAula}>Adicionar ao assunto</button>
-                  {tipoCadastro === "material" && <button type="button" className="secundario" onClick={() => navigate("/materiais")}>Enviar arquivo pelo Centro de Materiais</button>}
+                  {tipoCadastro === "material" && <p>Links de PDF são reconhecidos automaticamente. Para enviar um arquivo do computador, use o Centro de Materiais.</p>}
+                  <button type="button" className="conteudos-atalho-principal" disabled={salvandoNovoItem} onClick={() => { void adicionarMaterialOuAula(); }}>{salvandoNovoItem ? "Salvando..." : "Adicionar ao assunto"}</button>
+                  {tipoCadastro === "material" && <button type="button" className="secundario" onClick={abrirCentroDeMateriaisDoAssunto}>Enviar arquivo pelo Centro de Materiais</button>}
                 </>
               ) : (
                 <button type="button" className="conteudos-atalho-principal" onClick={() => {
@@ -1010,19 +1038,17 @@ export default function Estudos() {
                                   ))}
                                 </section>
                               )}
-                              {(assunto.materiais ?? []).length > 0 && (
-                                <section>
-                                  <h4>Materiais vinculados</h4>
-                                  {(assunto.materiais ?? []).map((material) => (
-                                    <div key={material.id} className="conteudos-etapa-linha">
-                                      <span>{material.tipo === "pdf" ? "📄" : "🔗"} {material.nome}</span>
-                                      <button type="button" onClick={() => material.tipo === "pdf" || ehLinkPdf(material.url)
-                                        ? abrirPdfInterno({ id: material.id, nome: material.nome, url: material.url })
-                                        : window.open(material.url, "_blank", "noopener,noreferrer")}>Abrir material</button>
-                                    </div>
-                                  ))}
-                                </section>
-                              )}
+                              <MateriaisDoAssunto
+                                materia={materia.nome}
+                                materiaId={materia.id}
+                                modulo={modulo.nome}
+                                moduloId={modulo.id}
+                                assunto={assunto.nome}
+                                assuntoId={assunto.id}
+                                assuntoIdsLegados={assunto.idsLegados}
+                                materiaisDoConteudo={assunto.materiais}
+                                pdfDoConteudo={assunto.pdf}
+                              />
                               {(assunto.tarefas ?? []).length > 0 && (
                                 <section>
                                   <h4>Tarefas de apoio <small>não contam no edital</small></h4>
