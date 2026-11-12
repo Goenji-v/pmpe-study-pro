@@ -26,7 +26,7 @@ import "./EstudosPainel.css";
 type Aba = "disciplinas" | "conteudos" | "cursos" | "materiais" | "revisoes";
 type Tipo = "pdf" | "aula" | "questoes" | "link";
 type Local = { materia: Materia; modulo: Modulo; assunto: Assunto };
-const norm = (s?: string) => (s ?? "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().trim();
+const norm = (s?: string) => (s ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
 const soma = (ns: number[]) => ns.reduce((x,y) => x+y,0);
 const dataLocal = (s: string) => new Date(s).toLocaleDateString("pt-BR");
 const ICONES = [BookOpen, Calculator, Scale, Gavel, Gavel, Shield, BookOpen, BookOpen];
@@ -175,7 +175,7 @@ export default function EstudosPainel() {
     if (!novoNome.trim()) {showToast("Informe o nome do conteúdo.", "warning");return;}
     if (somenteLeitura) {showToast("Modo de visualização: desative 'Teste sem salvar' para cadastrar.", "info");return;}
     if (tipo === "pdf" && !arquivo && !novoUrl.trim()) {showToast("Selecione um PDF ou informe o link.", "warning");return;}
-    if (tipo !== "pdf" && !/^https?:\\/\\//i.test(novoUrl.trim())) {
+    if (tipo !== "pdf" && !(novoUrl.trim().startsWith("https://") || novoUrl.trim().startsWith("http://"))) {
       showToast("Informe um link completo começando com https:// ou http://.", "warning");return;
     }
     try {
@@ -224,7 +224,7 @@ export default function EstudosPainel() {
     catch(e) {showToast(e instanceof Error ? e.message : "Falha ao abrir material.","error");}
   }
   function abrirMaterialInterno(nome: string, url: string, id: string) {
-    if (/^https?:\\/\\//i.test(url)) {
+    if (url.startsWith("https://") || url.startsWith("http://")) {
       if (ehLinkPdf(url)) abrirPdfInterno({id,nome,url});
       else window.open(url,"_blank","noopener,noreferrer");
     } else showToast("O material não possui link disponível.", "info");
