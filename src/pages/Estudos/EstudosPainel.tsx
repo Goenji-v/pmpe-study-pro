@@ -449,7 +449,7 @@ export default function EstudosPainel() {
         </div>
         <div className="sp-panel sp-side-panel">
           <div className="sp-side-head"><div><h3><ChartNoAxesColumnIncreasing size={24}/> Meu progresso</h3><p>Visão geral dos seus estudos no edital.</p></div></div>
-          <div className="sp-progress-content"><div className="sp-donut" style={{background:"conic-gradient(#1264f5 "+(percentual*3.6)+"deg, #dce5f5 0deg)"}}>
+          <div className="sp-progress-content"><div className="sp-donut" style={{background:"conic-gradient(var(--sp-blue, #1264f5) "+(percentual*3.6)+"deg, var(--sp-meter-track, #dce5f5) 0deg)"}}>
             <div><strong>{percentual}%</strong><small>do edital</small></div></div>
             <div className="sp-metrics">
               <div><BookOpen size={19}/><span>Conteúdos concluídos</span><strong>{totais.feitos} de {totais.total}</strong></div>
