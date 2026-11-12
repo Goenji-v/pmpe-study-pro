@@ -26,6 +26,8 @@ import {
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
+import { aulasDaFontePrincipal } from "../utils/progressoFontesCursos";
+import type { ConfiguracoesComCursos } from "../types/cursos";
 import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
@@ -102,6 +104,7 @@ import type {
   Assunto,
   ConfiguracoesApp,
   Materia,
+  Modulo,
   QuestaoBanco,
   RegistroQuestao,
   Revisao,
@@ -2517,7 +2520,9 @@ function EstadoDaConta({
         ? { ...aula, concluida, concluidaEm: concluida ? agora : undefined }
         : aula
     );
-    const assuntoCompleto = aulasAtualizadas.length > 0 && aulasAtualizadas.every((aula) => aula.concluida);
+    const cursoPreferido = (configuracoes as ConfiguracoesComCursos).fontePrincipalPorMateria?.[materiaId];
+    const aulasExigidas = aulasDaFontePrincipal(aulasAtualizadas, cursoPreferido);
+    const assuntoCompleto = aulasExigidas.length > 0 && aulasExigidas.every((aula) => aula.concluida);
 
     setMaterias((anteriores) =>
       anteriores.map((itemMateria) =>
