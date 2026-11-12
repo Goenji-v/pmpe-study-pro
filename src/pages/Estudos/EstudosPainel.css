@@ -176,3 +176,11 @@
   .sp-preference{flex-direction:column;align-items:stretch}.sp-preference select{width:100%}
   .sp-topic{flex-wrap:wrap}.sp-topic .sp-outline{width:100%}
 }
+
+.sp-topic-group {margin:9px 0;border:1px solid #d9e4f6;border-radius:11px;overflow:hidden;background:#fbfcff}
+.sp-topic-group-head {display:flex;align-items:center;gap:9px;text-align:left;width:100%;background:#eef4ff;border:0;color:#233a6b;padding:11px 13px}
+.sp-topic-group-head strong {flex:1;min-width:0;font-size:13px;color:#194bad}
+.sp-topic-group-head small {font-size:11px;color:#516788}
+.sp-topic-group-head[aria-expanded=true] svg:last-child {transform:rotate(180deg)}
+.sp-topic-group .sp-topic {margin:0 12px}
+@media(max-width:650px) {.sp-topic-group-head {flex-wrap:wrap}.sp-topic-group-head small {margin-left:auto}.sp-topic-group .sp-topic {margin:0 7px}}
