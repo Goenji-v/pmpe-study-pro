@@ -398,17 +398,18 @@ export async function salvarEstadoComControleDeRevisao(
     syncRevision: revisaoAtual,
   });
 
-  try {
-    await registrarBackupIncrementalNuvem(
-      userId,
-      salvo
-    );
-  } catch (erroBackup) {
+  // O CAS já confirmou o progresso na nuvem. O histórico de backups é
+  // secundário: uma consulta lenta/falha nunca pode manter a UI em "Salvando"
+  // nem deixar a fila local com uma revisão já confirmada pelo servidor.
+  void registrarBackupIncrementalNuvem(
+    userId,
+    salvo
+  ).catch((erroBackup) => {
     console.warn(
       "Estado sincronizado, mas o checkpoint incremental não pôde ser atualizado:",
       erroBackup
     );
-  }
+  });
 
   return salvo;
 }

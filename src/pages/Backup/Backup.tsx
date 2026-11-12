@@ -27,6 +27,7 @@ import {
   type BackupAutomaticoLocal,
 } from "../../services/seguranca/backupAutomaticoService";
 import {
+  carregarEstadoBackupHistoricoNuvem,
   listarBackupsHistoricoNuvem,
   resumirEstado,
   type BackupHistoricoNuvem,
@@ -105,7 +106,9 @@ export default function Backup() {
     return () => {
       ativo = false;
     };
-  }, [usuarioId, statusNuvem, ultimaSincronizacao]);
+  // Evita repetir uma consulta a cada transição salvando/sincronizado.
+  // A lista é recarregada ao abrir a página ou após restaurar um backup.
+  }, [usuarioId]);
 
   const gruposHistorico = useMemo(
     () => agruparHistoricoPorSemana(backupsHistorico),
@@ -280,7 +283,18 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(backup.estado);
+      if (!usuarioId) {
+        throw new Error("Usuário não autenticado para restaurar o backup.");
+      }
+      const bruto = await carregarEstadoBackupHistoricoNuvem(
+        usuarioId,
+        backup.id
+      );
+      const estadoValidado = validarEMigrarEstado(bruto);
+      if (!estadoValidado) {
+        throw new Error("Este backup não passou na validação de integridade.");
+      }
+      await restaurarEstadoCompleto(estadoValidado);
       showToast("Backup da linha do tempo restaurado com segurança.", "success");
 
       if (usuarioId) {
