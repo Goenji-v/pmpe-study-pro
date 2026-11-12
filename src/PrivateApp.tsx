@@ -57,7 +57,8 @@ const GerarSimuladoIA = lazy(() => import("./pages/GerarSimuladoIA/GerarSimulado
 const CentroMateriais = lazy(() => import("./pages/CentroMateriais/CentroMateriais"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
 const ResumoSemanal = lazy(() => import("./pages/Dashboard/ResumoSemanal"));
-const Estudos = lazy(() => import("./pages/Estudos/Estudos"));
+const Estudos = lazy(() => import("./pages/Estudos/EstudosPainel"));
+const EstudosLegado = lazy(() => import("./pages/Estudos/Estudos"));
 const Questoes = lazy(() => import("./pages/Questoes/Questoes"));
 const Historico = lazy(() => import("./pages/Historico/Historico"));
 const Estatisticas = lazy(() => import("./pages/Estatisticas/Estatisticas"));
@@ -176,6 +177,7 @@ function ConteudoPrivado() {
                         <Route path="/inteligencia" element={<InteligenciaHub />} />
 
                         <Route path="/estudos" element={<Estudos />} />
+                        <Route path="/estudos/legado" element={<EstudosLegado />} />
                         <Route path="/conteudos" element={<Estudos />} />
                         <Route path="/buscar" element={<Estudos />} />
                         <Route path="/pesquisa" element={<Estudos />} />
