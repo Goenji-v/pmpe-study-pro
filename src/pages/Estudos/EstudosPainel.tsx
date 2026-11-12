@@ -96,13 +96,24 @@ export default function EstudosPainel() {
     moduloId: item.modulo.id, assunto: item.assunto.nome, assuntoId: item.assunto.id,
     assuntoIdsLegados: item.assunto.idsLegados,
   }));
+  const materiaisDaEstrutura = useMemo(() =>
+    localizacoes.flatMap(local => [
+      ...(local.assunto.materiais ?? []).map(material => ({
+        ...material, materia:local.materia.nome, modulo:local.modulo.nome, assunto:local.assunto.nome,
+      })),
+      ...(local.assunto.pdf ? [{
+        id:local.assunto.id + ":pdf-original", nome:"PDF do assunto", tipo:"pdf" as const,
+        url:local.assunto.pdf, materia:local.materia.nome, modulo:local.modulo.nome, assunto:local.assunto.nome,
+      }] : []),
+    ]),
+  [localizacoes]);
   const totais = useMemo(() => {
     const assuntos = localizacoes.filter(x => !x.assunto.complementarAoEdital);
     return {total: assuntos.length, feitos: assuntos.filter(x => x.assunto.concluido).length,
       aulas: soma(localizacoes.map(x => x.assunto.aulas?.filter(a => a.concluida).length ?? 0)),
       questoes: soma(questoes.map(x => x.certas + x.erradas)),
-      materias: materiais.length + soma(localizacoes.map(x => x.assunto.materiais?.length ?? 0))};
-  }, [localizacoes, questoes, materiais]);
+      materias: materiais.length + materiaisDaEstrutura.length};
+  }, [localizacoes, questoes, materiais, materiaisDaEstrutura]);
   const percentual = totais.total ? Math.round(totais.feitos / totais.total * 100) : 0;
   const pendentes = useMemo(() => revisoes.filter(r => !r.concluida)
     .slice().sort((a,b) => new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()), [revisoes]);
@@ -244,7 +255,7 @@ export default function EstudosPainel() {
     const completos = itens.filter(a => a.concluido).length;
     const percentual = itens.length ? Math.round(completos / itens.length * 100) : 0;
     const aulas = soma(itens.map(a => a.aulas?.length ?? (a.aula ? 1 : 0)));
-    const materiaisEmbed = soma(itens.map(a => a.materiais?.length ?? 0));
+    const materiaisEmbed = soma(itens.map(a => (a.materiais?.length ?? 0) + (a.pdf ? 1 : 0)));
     const documentos = materiais.filter(x => materialPertenceAMateria(x, {materia:m.nome,materiaId:m.id})).length + materiaisEmbed;
     const questoesMateria = soma(questoes.filter(x => x.materiaId === m.id || (!x.materiaId && norm(x.materia)===norm(m.nome))).map(x => x.certas+x.erradas));
     return {total:itens.length,completos,percentual,aulas,documentos,questoes:questoesMateria};
@@ -402,7 +413,12 @@ export default function EstudosPainel() {
               <FileText size={20}/><div><strong>{mat.nome}</strong><small>{mat.materia} → {mat.modulo??"Geral"} → {mat.assunto}</small>
                 {materiaisSemVinculo.some(x=>x.id===mat.id)&&<small className="sp-warning-label">Vínculo pendente — material preservado</small>}</div>
               <button type="button" className="sp-outline" onClick={()=>{void abrirArquivo(mat);}}>Abrir</button></div>)}
-            <div className="sp-hint">PDFs vinculados diretamente às aulas também aparecem quando você abre o assunto correspondente.</div>
+            {materiaisDaEstrutura.filter(mat=>!consultar||norm(mat.nome+" "+mat.materia+" "+mat.assunto).includes(consultar)).map(mat=>
+              <div className="sp-resource" key={mat.id}><FileText size={20}/>
+                <div><strong>{mat.nome}</strong><small>{mat.materia} → {mat.modulo} → {mat.assunto} · material do conteúdo</small></div>
+                <button type="button" className="sp-outline" onClick={()=>abrirMaterialInterno(mat.nome,mat.url,mat.id)}>Abrir</button>
+              </div>)}
+            <div className="sp-hint">Também são mostrados os PDFs e links que já faziam parte das aulas antes desta reorganização.</div>
             <button type="button" className="sp-back" onClick={()=>navigate("/materiais")}>Abrir Centro de Materiais completo <ExternalLink size={15}/></button>
           </>}
           {aba==="revisoes"&&<><div className="sp-panel-head"><div><h2>Agenda de revisões</h2><p>{pendentes.length} pendência(s) da sua conta, sem mudar suas datas.</p></div><button type="button" className="sp-outline" onClick={()=>navigate("/revisoes")}>Gerenciar agenda</button></div>
