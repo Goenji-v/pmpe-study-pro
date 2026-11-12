@@ -184,3 +184,5 @@
 .sp-topic-group-head[aria-expanded=true] svg:last-child {transform:rotate(180deg)}
 .sp-topic-group .sp-topic {margin:0 12px}
 @media(max-width:650px) {.sp-topic-group-head {flex-wrap:wrap}.sp-topic-group-head small {margin-left:auto}.sp-topic-group .sp-topic {margin:0 7px}}
+
+.sp-warning-label {color:#a45617!important;font-weight:700}
