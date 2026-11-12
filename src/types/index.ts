@@ -391,6 +391,10 @@ export type ConfiguracoesApp = {
 
 export type Revisao = {
   id: string;
+  /** Revisão de um bloco didático inteiro (ex.: Classes de palavras). */
+  escopoGrupo?: boolean;
+  /** IDs dos assuntos que formam o bloco; mantém a rastreabilidade histórica. */
+  grupoAssuntosIds?: string[];
   sessaoId?: string;
   materiaId: string;
   moduloId?: string;
