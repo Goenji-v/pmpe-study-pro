@@ -25,6 +25,7 @@ import {
 
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
+import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
 import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
@@ -2422,50 +2423,49 @@ function EstadoDaConta({
     }
 
 
-    if (concluido && modo === "agora") {
+    const escopoRevisao = planejarEscopoRevisao({
+      materia, modulo: localizacao.modulo, assunto, concluido,
+    });
+    // Partes do mesmo bloco não agendam ciclos independentes.
+    if (concluido && modo === "agora" && escopoRevisao.completo) {
       setRevisoes((anteriores) => {
-        const jaExiste = anteriores.some(
-          (revisao) =>
-            !revisao.concluida &&
-            (
-              (revisao.materiaId === materia.id && revisao.assuntoId === assunto.id) ||
-              (
-                normalizarTexto(revisao.materia) === normalizarTexto(materia.nome) &&
-                normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome)
-              )
-            )
+        const jaExiste = anteriores.some((revisao) =>
+          !revisao.concluida &&
+          revisao.materiaId === materia.id &&
+          (
+            revisao.assuntoId === escopoRevisao.assuntoId ||
+            normalizarTexto(revisao.assunto) === normalizarTexto(escopoRevisao.assunto)
+          )
         );
-
         if (jaExiste) return anteriores;
-
+        const nova = criarPrimeiraRevisao({
+          materiaId: materia.id,
+          moduloId: localizacao.modulo.id,
+          assuntoId: escopoRevisao.assuntoId,
+          materia: materia.nome,
+          modulo: escopoRevisao.modulo,
+          assunto: escopoRevisao.assunto,
+          revisoesExistentes: anteriores,
+          limiteDiario: configuracoes.metaRevisoesDiaria,
+        });
         return [
-          criarPrimeiraRevisao({
-            materiaId: materia.id,
-            moduloId: localizacao?.modulo.id,
-            assuntoId: assunto.id,
-            materia: materia.nome,
-            modulo: localizacao?.modulo.nome,
-            assunto: assunto.nome,
-            revisoesExistentes: anteriores,
-            limiteDiario: configuracoes.metaRevisoesDiaria,
-          }),
+          escopoRevisao.escopoGrupo
+            ? { ...nova, escopoGrupo: true, grupoAssuntosIds: escopoRevisao.grupoAssuntosIds }
+            : nova,
           ...anteriores,
         ];
       });
-    } else {
+    } else if (!concluido || modo === "ja-estudado") {
+      // Reabrir parte do bloco cancela somente a revisão pendente do próprio bloco;
+      // tentativas e revisões concluídas nunca são removidas.
       setRevisoes((anteriores) =>
-        anteriores.filter(
-          (revisao) =>
-            !(
-              !revisao.concluida &&
-              (
-                (revisao.materiaId === materia.id && revisao.assuntoId === assunto.id) ||
-                (
-                  normalizarTexto(revisao.materia) === normalizarTexto(materia.nome) &&
-                  normalizarTexto(revisao.assunto) === normalizarTexto(assunto.nome)
-                )
-              )
-            )
+        anteriores.filter((revisao) =>
+          revisao.concluida ||
+          revisao.materiaId !== materia.id ||
+          (
+            revisao.assuntoId !== escopoRevisao.assuntoId &&
+            normalizarTexto(revisao.assunto) !== normalizarTexto(escopoRevisao.assunto)
+          )
         )
       );
     }
