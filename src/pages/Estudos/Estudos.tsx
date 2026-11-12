@@ -10,6 +10,7 @@ import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";
+import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
 import {
   materiaTemCursoImportado,
@@ -79,7 +80,8 @@ export default function Estudos() {
     }
 
     if (estado?.flashcards) {
-      setFocoFlashcards({
+      setRevisaoAberta(true);
+    setFocoFlashcards({
         ...estado.flashcards,
         token: Date.now(),
       });
@@ -99,6 +101,16 @@ export default function Estudos() {
       }, 0);
     }
   }, [location.pathname, location.state]);
+  const [materiaAberta, setMateriaAberta] = useState<string | null>(null);
+  const [cadastroAberto, setCadastroAberto] = useState(false);
+  const [revisaoAberta, setRevisaoAberta] = useState(false);
+  const [tipoCadastro, setTipoCadastro] = useState<"materia" | "modulo" | "assunto" | "aula" | "material" | "questoes">("material");
+  const [materiaDestino, setMateriaDestino] = useState("");
+  const [moduloDestino, setModuloDestino] = useState("");
+  const [assuntoDestino, setAssuntoDestino] = useState("");
+  const [nomeNovoItem, setNomeNovoItem] = useState("");
+  const [urlNovoItem, setUrlNovoItem] = useState("");
+  const [materialPdf, setMaterialPdf] = useState(true);
   const [nomeMateria, setNomeMateria] = useState("");
   const [materiaNovoModulo, setMateriaNovoModulo] = useState("");
   const [nomeModulo, setNomeModulo] = useState("");
@@ -124,6 +136,23 @@ export default function Estudos() {
     [materias]
   );
 
+  const materiaParaCadastro = materiasComModulos.find((materia) => materia.id === materiaDestino);
+  const moduloParaCadastro = materiaParaCadastro?.modulos?.find((modulo) => modulo.id === moduloDestino);
+  const assuntoParaCadastro = moduloParaCadastro?.assuntos.find((assunto) => assunto.id === assuntoDestino);
+  const configFontes = configuracoes as ConfiguracoesComCursos;
+  const preferenciaFonte = (materiaId: string) => configFontes.fontePrincipalPorMateria?.[materiaId];
+  const aulasPorFonte = (materia: Materia, aulas?: AulaAssunto[]) => {
+    const cursoPreferido = preferenciaFonte(materia.id);
+    return (aulas ?? []).slice().sort((a, b) => {
+      const preferenciaA = cursoPreferido && a.origemCurso?.cursoId === cursoPreferido ? 0 : 1;
+      const preferenciaB = cursoPreferido && b.origemCurso?.cursoId === cursoPreferido ? 0 : 1;
+      return preferenciaA - preferenciaB || a.ordem - b.ordem;
+    });
+  };
+  const revisoesSemVinculo = revisoes.filter((revisao) =>
+    !revisao.concluida && !revisao.escopoGrupo && !localizarReferenciaCanonica(materias, revisao)
+  );
+
   const materiasFiltradas = useMemo(() => {
     const termo = normalizarTexto(busca);
     if (!termo) return materiasComModulos;
@@ -139,6 +168,7 @@ export default function Estudos() {
                 normalizarTexto(materia.nome).includes(termo) ||
                 normalizarTexto(modulo.nome).includes(termo) ||
                 normalizarTexto(assunto.nome).includes(termo) ||
+                normalizarTexto(agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos).find((grupo) => grupo.assuntos.some((item) => item.id === assunto.id))?.titulo ?? "").includes(termo) ||
                 (assunto.aulas ?? []).some((aula) => normalizarTexto(aula.nome).includes(termo)) ||
                 (assunto.tarefas ?? []).some((tarefa) => normalizarTexto(tarefa.nome).includes(termo))
             ),
@@ -179,10 +209,8 @@ export default function Estudos() {
   }
 
   function abrirCentral(materia: Materia, modulo: Modulo, assunto: Assunto) {
-    const proximaAula = (assunto.aulas ?? [])
-      .slice()
-      .sort((a, b) => a.ordem - b.ordem)
-      .find((aula) => !aula.concluida) ?? assunto.aulas?.[0];
+    const aulas = aulasPorFonte(materia, assunto.aulas);
+    const proximaAula = aulas.find((aula) => !aula.concluida) ?? aulas[0];
     sessionStorage.setItem("pmpe:central-estudos:prefill", JSON.stringify({
       materia: materia.nome, materiaId: materia.id, modulo: modulo.nome, moduloId: modulo.id,
       assunto: assunto.nome, assuntoId: assunto.id, tipo: "aula",
@@ -243,6 +271,48 @@ export default function Estudos() {
         return sincronizarEspelhoLegado(atualizada);
       })
     );
+  }
+
+  function adicionarMaterialOuAula() {
+    if (!materiaParaCadastro || !moduloParaCadastro || !assuntoParaCadastro) {
+      showToast("Selecione matéria, módulo e assunto antes de adicionar.", "warning");
+      return;
+    }
+    if (moduloGerenciadoPorCurso(moduloParaCadastro)) {
+      showToast("Selecione um assunto da grade principal para guardar esse material. A visão importada é somente leitura.", "warning");
+      return;
+    }
+    const nome = nomeNovoItem.trim();
+    const url = urlNovoItem.trim();
+    if (!nome || !/^https?:\/\//i.test(url)) {
+      showToast("Informe um nome e uma URL começando por https:// ou http://.", "warning");
+      return;
+    }
+    if (tipoCadastro === "material") {
+      salvarAssunto(materiaParaCadastro.id, moduloParaCadastro.id, assuntoParaCadastro.id, {
+        materiais: [...(assuntoParaCadastro.materiais ?? []), {
+          id: crypto.randomUUID(),
+          tipo: materialPdf ? "pdf" : "link",
+          nome, url,
+          criadoEm: new Date().toISOString(),
+        }],
+      });
+    } else {
+      salvarAssunto(materiaParaCadastro.id, moduloParaCadastro.id, assuntoParaCadastro.id, {
+        aulas: [...(assuntoParaCadastro.aulas ?? []), {
+          id: criarIdUnico(nome),
+          nome, url,
+          ordem: assuntoParaCadastro.aulas?.length ?? 0,
+          concluida: false,
+        }],
+      });
+    }
+    setNomeNovoItem("");
+    setUrlNovoItem("");
+    setCadastroAberto(false);
+    setMateriaAberta(materiaParaCadastro.id);
+    setModulosFechados((atual) => ({ ...atual, [materiaParaCadastro.id + ":" + moduloParaCadastro.id]: false }));
+    showToast(tipoCadastro === "material" ? "Material adicionado ao assunto." : "Aula adicionada ao assunto.", "success");
   }
 
   function adicionarMateria() {
@@ -545,10 +615,34 @@ export default function Estudos() {
           placeholder="Pesquisar matéria, módulo ou assunto" />
       </header>
 
-      <FlashcardsQuizPanel foco={focoFlashcards} />
+      <div className="conteudos-barra-atalhos">
+        <button type="button" className="conteudos-atalho-principal" onClick={() => setCadastroAberto(true)}>＋ Adicionar conteúdo</button>
+        <button type="button" onClick={() => setRevisaoAberta((aberta) => !aberta)} aria-expanded={revisaoAberta}>🧠 {revisaoAberta ? "Ocultar flashcards" : "Flashcards e quiz"}</button>
+        <button type="button" onClick={() => navigate("/cursos")}>Meus cursos</button>
+      </div>
+      {revisaoAberta && <FlashcardsQuizPanel foco={focoFlashcards} />}
+      {revisoesSemVinculo.length > 0 && (
+        <aside className="conteudos-alerta-vinculos" role="status">
+          <strong>⚠ {revisoesSemVinculo.length} revisão(ões) sem conteúdo localizado</strong>
+          <p>As revisões permanecem salvas. Antes de abrir aulas, revise a associação dos assuntos: {revisoesSemVinculo.slice(0, 3).map((r) => r.assunto).join(", ")}.</p>
+          <button type="button" onClick={() => navigate("/revisoes")}>Ver revisões</button>
+        </aside>
+      )}
 
-      <div className="conteudos-cadastros conteudos-cadastros-3">
-        <article className="conteudos-painel-form">
+      {cadastroAberto && <div className="conteudos-modal-fundo" role="presentation">
+        <section className="conteudos-modal conteudos-modal-cadastro" role="dialog" aria-modal="true" aria-label="Adicionar conteúdo">
+          <header><div><small>Biblioteca de estudos</small><h2>Adicionar conteúdo</h2></div>
+            <button type="button" className="secundario" onClick={() => setCadastroAberto(false)} aria-label="Fechar cadastro">✕</button>
+          </header>
+          <label>O que deseja adicionar?
+            <select value={tipoCadastro} onChange={(e) => setTipoCadastro(e.target.value as typeof tipoCadastro)}>
+              <option value="material">PDF ou link</option><option value="aula">Videoaula</option>
+              <option value="questoes">Questões</option><option value="assunto">Assunto</option>
+              <option value="modulo">Módulo</option><option value="materia">Matéria</option>
+            </select>
+          </label>
+          <div className="conteudos-cadastros conteudos-cadastros-3">
+        <article className="conteudos-painel-form" style={{ display: tipoCadastro === "materia" ? undefined : "none" }}>
           <h2>Nova matéria</h2>
           <div className="conteudos-linha-form">
             <input value={nomeMateria} onChange={(e) => setNomeMateria(e.target.value)}
@@ -557,7 +651,7 @@ export default function Estudos() {
           </div>
         </article>
 
-        <article className="conteudos-painel-form">
+        <article className="conteudos-painel-form" style={{ display: tipoCadastro === "modulo" ? undefined : "none" }}>
           <h2>Novo módulo</h2>
           <div className="conteudos-grid-form conteudos-grid-form-modulo">
             <select value={materiaNovoModulo} onChange={(e) => setMateriaNovoModulo(e.target.value)}>
@@ -570,7 +664,7 @@ export default function Estudos() {
           </div>
         </article>
 
-        <article className="conteudos-painel-form">
+        <article className="conteudos-painel-form" style={{ display: tipoCadastro === "assunto" ? undefined : "none" }}>
           <h2>Novo assunto</h2>
           <div className="conteudos-grid-form conteudos-grid-form-assunto">
             <select value={materiaNovoAssunto} onChange={(e) => {
@@ -593,7 +687,49 @@ export default function Estudos() {
             <button type="button" onClick={adicionarAssunto}>Adicionar assunto</button>
           </div>
         </article>
-      </div>
+          </div>
+          {["material", "aula", "questoes"].includes(tipoCadastro) && (
+            <div className="conteudos-cadastro-destino">
+              <label>1. Matéria
+                <select value={materiaDestino} onChange={(e) => {
+                  setMateriaDestino(e.target.value); setModuloDestino(""); setAssuntoDestino("");
+                }}>
+                  <option value="">Selecione</option>
+                  {materiasComModulos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                </select>
+              </label>
+              <label>2. Módulo
+                <select value={moduloDestino} onChange={(e) => { setModuloDestino(e.target.value); setAssuntoDestino(""); }}>
+                  <option value="">Selecione</option>
+                  {(materiaParaCadastro?.modulos ?? []).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                </select>
+              </label>
+              <label>3. Assunto
+                <select value={assuntoDestino} onChange={(e) => setAssuntoDestino(e.target.value)}>
+                  <option value="">Selecione</option>
+                  {(moduloParaCadastro?.assuntos ?? []).map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                </select>
+              </label>
+              {tipoCadastro !== "questoes" ? (
+                <>
+                  <label>4. Nome<input value={nomeNovoItem} onChange={(e) => setNomeNovoItem(e.target.value)} placeholder={tipoCadastro === "aula" ? "Nome da aula" : "Título do material"} /></label>
+                  <label>5. Link<input value={urlNovoItem} onChange={(e) => setUrlNovoItem(e.target.value)} placeholder="https://..." /></label>
+                  {tipoCadastro === "material" && <label><input type="checkbox" checked={materialPdf} onChange={(e) => setMaterialPdf(e.target.checked)} /> Este link é de PDF</label>}
+                  <button type="button" className="conteudos-atalho-principal" onClick={adicionarMaterialOuAula}>Adicionar ao assunto</button>
+                  {tipoCadastro === "material" && <button type="button" className="secundario" onClick={() => navigate("/materiais")}>Enviar arquivo pelo Centro de Materiais</button>}
+                </>
+              ) : (
+                <button type="button" className="conteudos-atalho-principal" onClick={() => {
+                  if (!materiaParaCadastro || !moduloParaCadastro || !assuntoParaCadastro) {
+                    showToast("Selecione o assunto para gerar questões.", "warning"); return;
+                  }
+                  abrirIA(materiaParaCadastro, moduloParaCadastro, assuntoParaCadastro);
+                }}>Abrir questões IA para este assunto</button>
+              )}
+            </div>
+          )}
+        </section>
+      </div>}
 
       {materiasFiltradas.length === 0 && <div className="conteudos-vazio">Nenhum conteúdo encontrado.</div>}
 
@@ -603,15 +739,39 @@ export default function Estudos() {
           normalizarTexto(materia.nome)
         );
         const cursoImportado = materiaTemCursoImportado(materia);
+        const expandida = materiaAberta === materia.id || Boolean(busca.trim());
+        const fontesDisponiveis = Array.from(new Map(
+          (materia.modulos ?? []).flatMap((mod) => mod.assuntos.flatMap((assunto) => (assunto.aulas ?? [])
+            .filter((aula) => aula.origemCurso)
+            .map((aula) => [aula.origemCurso!.cursoId, aula.origemCurso!.cursoNome] as const)
+          ))
+        ).entries());
         const todos = (materia.modulos ?? []).flatMap((m) => m.assuntos);
         const concluidos = todos.filter((a) => a.concluido).length;
         const progresso = calcularProgressoAssuntos(todos).percentual;
         return (
           <article key={materia.id} className="conteudos-materia-card">
             <div className="conteudos-materia-topo">
-              <div><h2>{materia.nome}</h2><p>{concluidos} de {todos.length} assuntos concluídos · {progresso}% das aulas</p></div>
+              <button type="button" className="conteudos-materia-toggle" aria-expanded={expandida}
+                onClick={() => setMateriaAberta((atual) => atual === materia.id ? null : materia.id)}>
+                <h2>{materia.nome} <span aria-hidden="true">{expandida ? "▴" : "▾"}</span></h2>
+                <p>{concluidos} de {todos.length} assuntos concluídos · {progresso}% das aulas</p>
+              </button>
               <div className="conteudos-materia-acoes">
                 <strong>{progresso}%</strong>
+                {expandida && fontesDisponiveis.length > 1 && <label className="conteudos-fonte-preferida">
+                  Fonte principal
+                  <select aria-label={"Fonte principal de " + materia.nome} value={preferenciaFonte(materia.id) ?? ""}
+                    onChange={(e) => setConfiguracoes((atual) => ({
+                      ...atual, fontePrincipalPorMateria: {
+                        ...((atual as ConfiguracoesComCursos).fontePrincipalPorMateria ?? {}),
+                        [materia.id]: e.target.value,
+                      },
+                    }))}>
+                    <option value="">Ordem original</option>
+                    {fontesDisponiveis.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+                  </select>
+                </label>}
                 {cursoImportado && <span className="conteudos-trilha-fixa">Curso importado</span>}
                 {trilhaFixa && (
                   <button type="button" className="conteudos-importar" onClick={() => abrirImportacao(materia)}>Importar progresso</button>
@@ -623,7 +783,7 @@ export default function Estudos() {
             </div>
             <div className="conteudos-progresso"><div style={{ width: `${progresso}%` }} /></div>
 
-            <div className="conteudos-modulos">
+            {expandida && <div className="conteudos-modulos">
               {(materia.modulos ?? []).map((modulo) => {
                 const moduloCurso = moduloGerenciadoPorCurso(modulo);
                 const feitos = modulo.assuntos.filter((a) => a.concluido).length;
@@ -761,7 +921,7 @@ export default function Estudos() {
 
                             {(assunto.aulas?.[0]?.url || assunto.aula) && (
                               <button type="button" onClick={() => window.open(
-                                assunto.aulas?.find((aula) => !aula.concluida)?.url ?? assunto.aulas?.[0]?.url ?? assunto.aula,
+                                aulasPorFonte(materia, assunto.aulas).find((aula) => !aula.concluida)?.url ?? aulasPorFonte(materia, assunto.aulas)[0]?.url ?? assunto.aula,
                                 "_blank",
                                 "noopener,noreferrer"
                               )}>🎥 Próxima aula</button>
@@ -826,7 +986,7 @@ export default function Estudos() {
                               {(assunto.aulas ?? []).length > 0 && (
                                 <section>
                                   <h4>{historiaPernambuco ? "Subassuntos · aulas do curso" : "Videoaulas"}</h4>
-                                  {(assunto.aulas ?? []).slice().sort((a, b) => a.ordem - b.ordem).map((aula, indice) => (
+                                  {aulasPorFonte(materia, assunto.aulas).map((aula, indice) => (
                                     <div key={aula.id} className="conteudos-etapa-linha">
                                       <label className="conteudos-check-aula">
                                         <input
@@ -842,10 +1002,23 @@ export default function Estudos() {
                                         />
                                         <span className={aula.concluida ? "concluida" : ""}>
                                           {historiaPernambuco ? `Subassunto ${indice + 1} · ` : `${indice + 1}. `}
-                                          {aula.nome}
+                                          {aula.nome}{aula.origemCurso ? ` · ${aula.origemCurso.cursoNome}` : ""}
                                         </span>
                                       </label>
                                       {aula.url && <button type="button" onClick={() => window.open(aula.url, "_blank", "noopener,noreferrer")}>Abrir aula</button>}
+                                    </div>
+                                  ))}
+                                </section>
+                              )}
+                              {(assunto.materiais ?? []).length > 0 && (
+                                <section>
+                                  <h4>Materiais vinculados</h4>
+                                  {(assunto.materiais ?? []).map((material) => (
+                                    <div key={material.id} className="conteudos-etapa-linha">
+                                      <span>{material.tipo === "pdf" ? "📄" : "🔗"} {material.nome}</span>
+                                      <button type="button" onClick={() => material.tipo === "pdf" || ehLinkPdf(material.url)
+                                        ? abrirPdfInterno({ id: material.id, nome: material.nome, url: material.url })
+                                        : window.open(material.url, "_blank", "noopener,noreferrer")}>Abrir material</button>
                                     </div>
                                   ))}
                                 </section>
@@ -873,7 +1046,7 @@ export default function Estudos() {
                   </section>
                 );
               })}
-            </div>
+            </div>}
           </article>
         );
       })}
