@@ -16,6 +16,7 @@ import { localizarReferenciaCanonica } from "../../services/conteudos/sincroniza
 import { salvarArquivoMaterial, salvarLinkMaterial, listarMateriais, abrirMaterial, type MaterialEstudo } from "../../services/materiaisService";
 import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
 import { materialCorrespondeAoAssunto, materialPertenceAMateria } from "../../utils/correspondenciaMateriais";
+import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import type { ConfiguracoesComCursos } from "../../types/cursos";
 import type { Assunto, AulaAssunto, Materia, Modulo } from "../../types";
@@ -63,6 +64,7 @@ export default function EstudosPainel() {
   const [exibicao, setExibicao] = useState<"grade"|"lista">("grade");
   const [materiaId, setMateriaId] = useState<string|null>(null);
   const [moduloId, setModuloId] = useState<string|null>(null);
+  const [gruposAbertos, setGruposAbertos] = useState<Record<string, boolean>>({});
   const [assuntoId, setAssuntoId] = useState<string|null>(null);
   const [cadastro, setCadastro] = useState(false);
   const [tipo, setTipo] = useState<Tipo>("pdf");
@@ -336,17 +338,30 @@ export default function EstudosPainel() {
             </div> :
             selecionada ? <div className="sp-modules">{(selecionada.modulos ?? []).map(mod=>{
               const aberto=moduloId===mod.id||!!consultar;
+              const gruposTodos=agruparAssuntosParaExibicao(selecionada.nome,mod.id,mod.assuntos);
               const assuntosFiltrados=mod.assuntos.filter(a=>!consultar||norm(mod.nome).includes(consultar)||norm(a.nome).includes(consultar)||
-                (a.aulas??[]).some(x=>norm(x.nome).includes(consultar)));
+                (a.aulas??[]).some(x=>norm(x.nome).includes(consultar))||
+                gruposTodos.some(g=>norm(g.titulo).includes(consultar)&&g.assuntos.some(x=>x.id===a.id)));
+              const grupos=agruparAssuntosParaExibicao(selecionada.nome,mod.id,assuntosFiltrados);
               return <section key={mod.id} className="sp-module">
                 <button type="button" className="sp-module-head" onClick={()=>setModuloId(aberto?null:mod.id)}>
                   <div><strong><Folder size={18}/> {mod.nome}</strong><small>{mod.assuntos.filter(a=>a.concluido).length} de {mod.assuntos.length} assuntos concluídos</small></div>
                   <ChevronDown className={aberto?"aberto":""} size={19}/></button>
-                {aberto&&<div className="sp-module-body">{assuntosFiltrados.map(a=><div className="sp-topic" key={a.id}>
-                  <div><strong>{a.nome}</strong><small>{aulasConcluidas(a)} de {a.aulas?.length??0} aulas · {(a.materiais?.length??0)+materiaisDo({materia:selecionada,modulo:mod,assunto:a}).length} materiais</small></div>
-                  <span className={"sp-chip "+(a.concluido?"ok":"")}>{a.concluido?"Concluído":"Pendente"}</span>
-                  <button type="button" className="sp-outline" onClick={()=>selecionarAssunto({materia:selecionada,modulo:mod,assunto:a})}>Abrir <ChevronRight size={15}/></button>
-                </div>)}{assuntosFiltrados.length===0&&<p className="sp-empty">Sem assuntos nesta busca.</p>}</div>}
+                {aberto&&<div className="sp-module-body">{grupos.map(g=>{
+                  const grupoVisivel = g.tipo==="unico" || consultar || Boolean(gruposAbertos[g.chave]);
+                  return <div className={g.tipo==="unico"?"sp-topic-one":"sp-topic-group"} key={g.chave}>
+                    {g.tipo!=="unico"&&<button type="button" className="sp-topic-group-head" aria-expanded={grupoVisivel}
+                      onClick={()=>setGruposAbertos(v=>({...v,[g.chave]:!v[g.chave]}))}>
+                      <Layers3 size={18}/><strong>{g.titulo}</strong>
+                      <small>{g.assuntos.filter(a=>a.concluido).length}/{g.assuntos.length} partes · revisão do bloco</small>
+                      <ChevronDown size={17}/></button>}
+                    {grupoVisivel&&g.assuntos.map(a=><div className="sp-topic" key={a.id}>
+                      <div><strong>{a.nome}</strong><small>{aulasConcluidas(a)} de {a.aulas?.length??0} aulas · {(a.materiais?.length??0)+materiaisDo({materia:selecionada,modulo:mod,assunto:a}).length} materiais</small></div>
+                      <span className={"sp-chip "+(a.concluido?"ok":"")}>{a.concluido?"Concluído":"Pendente"}</span>
+                      <button type="button" className="sp-outline" onClick={()=>selecionarAssunto({materia:selecionada,modulo:mod,assunto:a})}>Abrir <ChevronRight size={15}/></button>
+                    </div>)}
+                  </div>;
+                })}{assuntosFiltrados.length===0&&<p className="sp-empty">Sem assuntos nesta busca.</p>}</div>}
               </section>;
             })}</div> :
             <div className="sp-index">{disciplinasFiltradas.map(m=><button type="button" className="sp-index-row" key={m.id} onClick={()=>selecionarMateria(m.id)}>
