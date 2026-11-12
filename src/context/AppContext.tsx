@@ -242,32 +242,48 @@ function reconciliarMateriasComPlano(
       return;
     }
 
-    // Português é uma trilha canônica: os módulos/aulas vêm do curso comprado.
-    // Preservamos progresso, notas e materiais apenas quando a aula atual
-    // corresponde a uma aula da nova trilha.
+    // Português usa a trilha canônica, mas NÃO descarta módulos, aulas,
+    // materiais ou assuntos de cursos diferentes já salvos na conta.
     if (normalizarTexto(materiaPlano.nome) === "portugues") {
       const assuntosSalvos = listarAssuntosDaMateria(materiaSalva);
+      const modulosSalvos = Array.isArray(materiaSalva.modulos) ? materiaSalva.modulos : [];
+      const mesmoModulo = (a: Modulo, b: Modulo) =>
+        a.id === b.id || normalizarTexto(a.nome) === normalizarTexto(b.nome);
 
-      const modulos = listarModulosDaMateria(materiaPlano).map((moduloPlano) => ({
-        ...moduloPlano,
-        assuntos: moduloPlano.assuntos.map((assuntoPlano) => {
-          const assuntoSalvo = assuntosSalvos.find(
-            (assunto) =>
-              assunto.id === assuntoPlano.id ||
-              normalizarTexto(assunto.nome) === normalizarTexto(assuntoPlano.nome)
+      const modulosCanonicos = listarModulosDaMateria(materiaPlano).map((moduloPlano) => {
+        const moduloSalvo = modulosSalvos.find((item) => mesmoModulo(item, moduloPlano));
+        const assuntosCanonicos = moduloPlano.assuntos.map((assuntoPlano) => {
+          const assuntoSalvo = assuntosSalvos.find((assunto) =>
+            assunto.id === assuntoPlano.id ||
+            normalizarTexto(assunto.nome) === normalizarTexto(assuntoPlano.nome)
           );
+          return reconciliarAssuntoPortugues(assuntoPlano, assuntoSalvo, assuntosSalvos);
+        });
+        // Assuntos personalizados criados dentro do módulo oficial também
+        // continuam acessíveis (desde que não sejam tarefas operacionais).
+        const extras = (moduloSalvo?.assuntos ?? []).filter((assunto) =>
+          !ehEntradaOperacionalDoPlano(materiaSalva.nome, assunto.nome) &&
+          !assuntosCanonicos.some((item) =>
+            item.id === assunto.id || normalizarTexto(item.nome) === normalizarTexto(assunto.nome)
+          )
+        );
+        return { ...moduloPlano, assuntos: [...assuntosCanonicos, ...extras] };
+      });
 
-          return reconciliarAssuntoPortugues(
-            assuntoPlano,
-            assuntoSalvo,
-            assuntosSalvos
-          );
-        }),
-      }));
-
+      // "Geral", módulos capturados de outros cursos e módulos pessoais nunca
+      // podem desaparecer só porque uma nova trilha de Português foi importada.
+      const modulosAdicionais = modulosSalvos
+        .filter((modulo) => !modulosCanonicos.some((alvo) => mesmoModulo(alvo, modulo)))
+        .map((modulo) => ({
+          ...modulo,
+          assuntos: modulo.assuntos.filter((assunto) =>
+            !ehEntradaOperacionalDoPlano(materiaSalva.nome, assunto.nome)
+          ),
+        }));
+      const modulos = [...modulosCanonicos, ...modulosAdicionais];
       const reconciliada = migrarMateriasParaModulos([
         {
-          ...materiaPlano,
+          ...materiaSalva,
           id: materiaPlano.id,
           nome: materiaPlano.nome,
           modulos,
@@ -275,9 +291,7 @@ function reconciliarMateriasComPlano(
         },
       ])[0];
 
-      if (reconciliada) {
-        resultado.push(reconciliada);
-      }
+      if (reconciliada) resultado.push(reconciliada);
       return;
     }
 
@@ -447,7 +461,7 @@ function reconciliarAssuntoPortugues(
   assuntoSalvo: Assunto | undefined,
   assuntosSalvos: Assunto[]
 ): Assunto {
-  const aulas = (assuntoPlano.aulas ?? []).map((aulaPlano) => {
+  const aulasCanonicas = (assuntoPlano.aulas ?? []).map((aulaPlano) => {
     const aulaSalva = assuntoSalvo?.aulas?.find(
       (aula) =>
         aula.id === aulaPlano.id ||
@@ -500,8 +514,17 @@ function reconciliarAssuntoPortugues(
     };
   });
 
+  // Alternativas importadas ficam ao lado da trilha oficial, mantendo IDs e progresso.
+  // Não passam a ser obrigatórias para concluir o conteúdo canônico do edital.
+  const aulasExtras = (assuntoSalvo?.aulas ?? []).filter((aula) =>
+    !aulasCanonicas.some((base) =>
+      base.id === aula.id || normalizarTexto(base.nome) === normalizarTexto(aula.nome)
+    )
+  );
+  const aulas = [...aulasCanonicas, ...aulasExtras];
+
   const todasAsAulasConcluidas =
-    aulas.length > 0 && aulas.every((aula) => aula.concluida);
+    aulasCanonicas.length > 0 && aulasCanonicas.every((aula) => aula.concluida);
 
   return {
     ...assuntoPlano,
