@@ -33,6 +33,17 @@ export default function Revisoes() {
   const location = useLocation();
   const revisaoAbertaRef = useRef<string | null>(null);
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
+  const [revisaoParaVincular, setRevisaoParaVincular] = useState<string | null>(null);
+  const [destinoRevisao, setDestinoRevisao] = useState("");
+  const destinosRevisao = useMemo(() => materias.flatMap((materia) =>
+    (materia.modulos ?? []).flatMap((modulo) => modulo.assuntos.map((assunto) => ({
+      materia, modulo, assunto,
+    }))
+  ), [materias]);
+  const revisoesSemVinculo = useMemo(() => revisoes.filter((revisao) =>
+    !revisao.concluida && !revisao.escopoGrupo &&
+    !revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)
+  ), [materias, revisoes]);
 
   const revisoesComModulo = useMemo(
     () =>
@@ -287,6 +298,28 @@ export default function Revisoes() {
     showToast("Revisão excluída.", "info");
   }
 
+  function corrigirVinculo(revisaoId: string) {
+    const destino = destinosRevisao[Number(destinoRevisao)];
+    if (!destino || !revisoes.some((revisao) => revisao.id === revisaoId && !revisao.concluida)) {
+      showToast("Selecione um assunto válido para corrigir o vínculo.", "warning");
+      return;
+    }
+    // Somente a referência da pendência é alterada. Histórico, etapa, data
+    // e resultados continuam exatamente como antes.
+    setRevisoes((anteriores) => anteriores.map((revisao) => revisao.id !== revisaoId
+      ? revisao
+      : {
+          ...revisao,
+          materiaId: destino.materia.id, materia: destino.materia.nome,
+          moduloId: destino.modulo.id, modulo: destino.modulo.nome,
+          assuntoId: destino.assunto.id, assunto: destino.assunto.nome,
+        }
+    ));
+    setRevisaoParaVincular(null);
+    setDestinoRevisao("");
+    showToast("Revisão vinculada ao assunto selecionado. Seu histórico foi preservado.", "success");
+  }
+
   function reorganizarAgenda() {
     const limite = configuracoes.metaRevisoesDiaria;
     if (limite <= 0) {
@@ -342,6 +375,36 @@ export default function Revisoes() {
         O Study Pro usa seu desempenho para indicar como revisar. Clique em Revisar para abrir a Central de Estudos já vinculada a esta pendência; escolha Teoria ou Questões e, ao finalizar a sessão, a revisão é concluída e a próxima é agendada automaticamente.
       </p>
 
+      {revisoesSemVinculo.length > 0 && (
+        <section className="revisoes-reparo-vinculos" aria-label="Revisões com vínculo pendente">
+          <h2>⚠ Revisões sem aula localizada ({revisoesSemVinculo.length})</h2>
+          <p>Essas revisões não foram apagadas. Elas podem ser de cursos antigos, como Fonologia e Sílaba. Associe ao assunto correto, sem perder datas ou tentativas. Não atribuímos outro conteúdo automaticamente.</p>
+          {revisoesSemVinculo.map((revisao) => (
+            <div key={revisao.id} className="revisoes-reparo-item">
+              <strong>{revisao.materia} → {revisao.assunto}</strong>
+              {revisaoParaVincular === revisao.id ? (
+                <div className="revisoes-reparo-campos">
+                  <label>Assunto correspondente
+                    <select value={destinoRevisao} onChange={(e) => setDestinoRevisao(e.target.value)}>
+                      <option value="">Selecione</option>
+                      {destinosRevisao.map((destino, indice) => (
+                        <option value={indice} key={destino.materia.id + ":" + destino.modulo.id + ":" + destino.assunto.id}>
+                          {destino.materia.nome} → {destino.modulo.nome} → {destino.assunto.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" disabled={!destinoRevisao} onClick={() => corrigirVinculo(revisao.id)}>Salvar vínculo</button>
+                  <button type="button" onClick={() => { setRevisaoParaVincular(null); setDestinoRevisao(""); }}>Cancelar</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setRevisaoParaVincular(revisao.id); setDestinoRevisao(""); }}>Associar ao assunto correto</button>
+              )}
+            </div>
+          ))}
+          <button type="button" onClick={() => navigate("/cursos")}>Ver cursos importados</button>
+        </section>
+      )}
       <div className="revisoes-toolbar">
         <span>
           Limite atual: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia
