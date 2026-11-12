@@ -5,8 +5,8 @@ import {
   BookOpen, Search, Bell, Plus, GraduationCap, Layers3, Folder, History,
   LayoutGrid, List, ChevronRight, ChevronDown, ArrowLeft, Video, FileText,
   MessageSquareMore, Calculator, Scale, Gavel, Shield, ChartNoAxesColumnIncreasing,
-  CalendarDays, CheckCircle2, Circle, X, Upload, Link2, PlayCircle, RotateCcw,
-  Pencil, ClipboardList, BookmarkCheck, ExternalLink, AlertTriangle, SlidersHorizontal,
+  CalendarDays, CheckCircle2, Circle, X, Upload, Link2, PlayCircle,
+  BookmarkCheck, ExternalLink, AlertTriangle, SlidersHorizontal,
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -16,11 +16,9 @@ import { localizarReferenciaCanonica } from "../../services/conteudos/sincroniza
 import { salvarArquivoMaterial, salvarLinkMaterial, listarMateriais, abrirMaterial, type MaterialEstudo } from "../../services/materiaisService";
 import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
 import { materialCorrespondeAoAssunto, materialPertenceAMateria } from "../../utils/correspondenciaMateriais";
-import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
-import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import type { ConfiguracoesComCursos } from "../../types/cursos";
-import type { Assunto, AulaAssunto, Materia, Modulo, Revisao } from "../../types";
+import type { Assunto, AulaAssunto, Materia, Modulo } from "../../types";
 import "./EstudosPainel.css";
 
 type Aba = "disciplinas" | "conteudos" | "cursos" | "materiais" | "revisoes";
@@ -52,7 +50,7 @@ function Livros() {
 
 export default function EstudosPainel() {
   const {
-    materias, setMaterias, questoes, revisoes, sessoes, configuracoes, setConfiguracoes,
+    materias, setMaterias, questoes, revisoes, configuracoes, setConfiguracoes,
     definirConclusaoAula, definirConclusaoAssunto, statusNuvem,
   } = useApp();
   const configCursos = configuracoes as ConfiguracoesComCursos;
@@ -87,7 +85,6 @@ export default function EstudosPainel() {
   ), [disciplinas]);
   const local = localizacoes.find(item => item.assunto.id === assuntoId && item.materia.id === materiaId);
   const materiaAtual = disciplinas.find(m => m.id === materiaId);
-  const moduloAtual = materiaAtual?.modulos?.find(m => m.id === moduloId);
   const materiaCadastro = disciplinas.find(m => m.id === destMateria);
   const moduloCadastro = materiaCadastro?.modulos?.find(m => m.id === destModulo);
   const assuntoCadastro = moduloCadastro?.assuntos.find(a => a.id === destAssunto);
@@ -108,10 +105,12 @@ export default function EstudosPainel() {
   const pendentes = useMemo(() => revisoes.filter(r => !r.concluida)
     .slice().sort((a,b) => new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()), [revisoes]);
   const cursoPreferido = (id: string) => configCursos.fontePrincipalPorMateria?.[id];
-  const ordenarAulas = (m: Materia, a: Assunto) => (a.aulas ?? []).slice().sort((x,y) =>
-    Number(y.origemCurso?.cursoId === cursoPreferido(m.id)) -
-    Number(x.origemCurso?.cursoId === cursoPreferido(m.id)) || x.ordem-y.ordem
-  );
+  const ordenarAulas = (m: Materia, a: Assunto) => (a.aulas ?? []).slice().sort((x,y) => {
+    const preferida = cursoPreferido(m.id);
+    const fonteA = Boolean(preferida && x.origemCurso?.cursoId === preferida) ? 0 : 1;
+    const fonteB = Boolean(preferida && y.origemCurso?.cursoId === preferida) ? 0 : 1;
+    return fonteA - fonteB || x.ordem-y.ordem;
+  });
   const consultar = norm(busca);
   const disciplinasFiltradas = disciplinas.filter(m =>
     !consultar || norm(m.nome).includes(consultar) ||
@@ -241,7 +240,6 @@ export default function EstudosPainel() {
   }
   function aulasConcluidas(a: Assunto) {return a.aulas?.filter(x => x.concluida).length ?? (a.concluido ? 1 : 0);}
   const selecionada = materiaAtual;
-  const conteudosAtuais = selecionada ? localizacoes.filter(x => x.materia.id === selecionada.id) : localizacoes;
   const revisoesDaAba = pendentes.filter(r => {
     const atraso = new Date(r.dataPrevista).getTime() < new Date().setHours(0,0,0,0);
     const hoje = new Date(r.dataPrevista).toDateString() === new Date().toDateString();
