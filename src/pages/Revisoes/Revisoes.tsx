@@ -37,7 +37,7 @@ export default function Revisoes() {
   const revisoesComModulo = useMemo(
     () =>
       revisoes.map((revisao) => {
-        if (revisao.modulo || revisao.moduloId) return revisao;
+        if (revisao.escopoGrupo || revisao.modulo || revisao.moduloId) return revisao;
 
         const materia = materias.find(
           (item) => item.id === revisao.materiaId || item.nome === revisao.materia
@@ -50,7 +50,7 @@ export default function Revisoes() {
 
         return modulo
           ? { ...revisao, modulo: modulo.nome, moduloId: modulo.id }
-          : { ...revisao, modulo: "Geral" };
+          : { ...revisao, modulo: "⚠ Vínculo pendente" };
       }),
     [materias, revisoes]
   );
@@ -91,6 +91,13 @@ export default function Revisoes() {
   );
 
   function obterDadosCanonicos(revisao: Revisao) {
+    if (revisao.escopoGrupo) {
+      return {
+        materia: revisao.materia, materiaId: revisao.materiaId,
+        modulo: revisao.modulo, moduloId: revisao.moduloId,
+        assunto: revisao.assunto, assuntoId: revisao.assuntoId,
+      };
+    }
     const referencia = localizarReferenciaCanonica(materias, {
       materia: revisao.materia,
       materiaId: revisao.materiaId,
@@ -145,6 +152,16 @@ export default function Revisoes() {
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   function abrirRevisao(revisao: Revisao) {
+    if (revisao.escopoGrupo) {
+      showToast("Revisão do bloco completo: as questões abrangem todas as partes estudadas.", "info");
+      abrirQuestoesIA(revisao);
+      return;
+    }
+    if (!revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)) {
+      showToast("A aula desta revisão não foi localizada. O histórico foi preservado; confira o conteúdo antes de estudar.", "warning");
+      navigate("/estudos", { state: { termoBusca: revisao.assunto } });
+      return;
+    }
     if (revisao.origemSimulado?.vinculo === "sem_conteudo") {
       showToast(
         "Esse assunto veio do simulado, mas ainda não possui aula vinculada ao edital. Vou abrir questões IA sem apontar uma aula incorreta.",
