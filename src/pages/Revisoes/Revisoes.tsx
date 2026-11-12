@@ -38,7 +38,7 @@ export default function Revisoes() {
   const destinosRevisao = useMemo(() => materias.flatMap((materia) =>
     (materia.modulos ?? []).flatMap((modulo) => modulo.assuntos.map((assunto) => ({
       materia, modulo, assunto,
-    }))
+    })))
   ), [materias]);
   const revisoesSemVinculo = useMemo(() => revisoes.filter((revisao) =>
     !revisao.concluida && !revisao.escopoGrupo &&
