@@ -106,6 +106,15 @@ export default function EstudosPainel() {
   const percentual = totais.total ? Math.round(totais.feitos / totais.total * 100) : 0;
   const pendentes = useMemo(() => revisoes.filter(r => !r.concluida)
     .slice().sort((a,b) => new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()), [revisoes]);
+  // Auditoria somente leitura: nada é automaticamente movido para assuntos com nomes parecidos.
+  const materiaisSemVinculo = useMemo(() => materiais.filter(mat =>
+    !localizacoes.some(item => materialCorrespondeAoAssunto(mat, {
+      materia: item.materia.nome, materiaId: item.materia.id,
+      modulo: item.modulo.nome, moduloId: item.modulo.id,
+      assunto: item.assunto.nome, assuntoId: item.assunto.id,
+      assuntoIdsLegados: item.assunto.idsLegados,
+    }))
+  ), [materiais, localizacoes]);
   const cursoPreferido = (id: string) => configCursos.fontePrincipalPorMateria?.[id];
   const ordenarAulas = (m: Materia, a: Assunto) => (a.aulas ?? []).slice().sort((x,y) => {
     const preferida = cursoPreferido(m.id);
@@ -385,9 +394,13 @@ export default function EstudosPainel() {
           </>}
           {aba==="materiais"&&<><div className="sp-panel-head"><div><h2>Materiais de estudo</h2><p>Arquivos, PDFs e links cadastrados, organizados por assunto.</p></div><button type="button" className="sp-outline" onClick={()=>abrirCadastro()}><Plus size={16}/> Novo material</button></div>
             {erroMateriais&&<p className="sp-warning">{erroMateriais}</p>}
+            {materiaisSemVinculo.length>0&&<p className="sp-warning"><AlertTriangle size={17}/>
+              {materiaisSemVinculo.length} material(is) permanecem com uma referência antiga ou sem assunto localizado. Estão preservados abaixo; confira seus destinos antes de reassociar.
+            </p>}
             {carregandoMateriais&&<p className="sp-hint">Consultando arquivos da sua conta…</p>}
             {materiais.filter(mat=>!consultar||norm(mat.nome+" "+mat.materia+" "+mat.assunto).includes(consultar)).map(mat=><div className="sp-resource" key={mat.id}>
-              <FileText size={20}/><div><strong>{mat.nome}</strong><small>{mat.materia} → {mat.modulo??"Geral"} → {mat.assunto}</small></div>
+              <FileText size={20}/><div><strong>{mat.nome}</strong><small>{mat.materia} → {mat.modulo??"Geral"} → {mat.assunto}</small>
+                {materiaisSemVinculo.some(x=>x.id===mat.id)&&<small className="sp-warning-label">Vínculo pendente — material preservado</small>}</div>
               <button type="button" className="sp-outline" onClick={()=>{void abrirArquivo(mat);}}>Abrir</button></div>)}
             <div className="sp-hint">PDFs vinculados diretamente às aulas também aparecem quando você abre o assunto correspondente.</div>
             <button type="button" className="sp-back" onClick={()=>navigate("/materiais")}>Abrir Centro de Materiais completo <ExternalLink size={15}/></button>
