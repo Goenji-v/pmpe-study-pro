@@ -348,7 +348,7 @@ export default function EstudosPainel() {
                   <div><strong><Folder size={18}/> {mod.nome}</strong><small>{mod.assuntos.filter(a=>a.concluido).length} de {mod.assuntos.length} assuntos concluídos</small></div>
                   <ChevronDown className={aberto?"aberto":""} size={19}/></button>
                 {aberto&&<div className="sp-module-body">{grupos.map(g=>{
-                  const grupoVisivel = g.tipo==="unico" || consultar || Boolean(gruposAbertos[g.chave]);
+                  const grupoVisivel = g.tipo==="unico" || Boolean(consultar) || Boolean(gruposAbertos[g.chave]);
                   return <div className={g.tipo==="unico"?"sp-topic-one":"sp-topic-group"} key={g.chave}>
                     {g.tipo!=="unico"&&<button type="button" className="sp-topic-group-head" aria-expanded={grupoVisivel}
                       onClick={()=>setGruposAbertos(v=>({...v,[g.chave]:!v[g.chave]}))}>
