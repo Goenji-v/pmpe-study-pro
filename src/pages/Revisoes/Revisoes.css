@@ -649,3 +649,16 @@
     gap: 4px;
   }
 }
+
+/* Reparo seguro de referências antigas de curso/revisão; não altera histórico. */
+.revisoes-reparo-vinculos { padding:16px; margin:16px 0; border-radius:13px; background:#251d16; border:1px solid #92400e; color:#fef3c7; }
+.revisoes-reparo-vinculos h2 { font-size:18px; margin:0 0 6px; }
+.revisoes-reparo-vinculos p { font-size:13px; line-height:1.5; color:#fde68a; margin:4px 0 14px; }
+.revisoes-reparo-vinculos button { cursor:pointer; border:1px solid #a16207; background:#78350f; color:#fff; border-radius:9px; padding:9px 12px; font-weight:700; }
+.revisoes-reparo-vinculos button:disabled { opacity:.45; cursor:not-allowed; }
+.revisoes-reparo-item { border-top:1px solid rgba(253,230,138,.24); padding:10px 0; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; }
+.revisoes-reparo-item strong { font-size:13px; }
+.revisoes-reparo-campos { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; width:100%; }
+.revisoes-reparo-campos label { flex:1; display:flex; flex-direction:column; gap:7px; font-size:12px; }
+.revisoes-reparo-campos select { width:100%; max-width:100%; border-radius:9px; border:1px solid #a16207; padding:10px; background:#171717; color:#fff; }
+@media (max-width:700px) { .revisoes-reparo-campos { flex-direction:column; align-items:stretch; } .revisoes-reparo-campos label { width:100%; } .revisoes-reparo-campos button { width:100%; } }
