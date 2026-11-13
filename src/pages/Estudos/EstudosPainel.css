@@ -335,3 +335,12 @@ html:not([data-study-base-theme="claro"]) .sp-estudos .sp-warning {
 }
 html:not([data-study-base-theme="claro"]) .sp-estudos .sp-warning button {color:#ffdfae}
 html:not([data-study-base-theme="claro"]) .sp-estudos .sp-warning-label {color:#ffd19d!important}
+
+/* Biblioteca focada em conteúdo; busca e notificações permanecem no cabeçalho global. */
+.sp-estudos .sp-layout-simple {display:block;}
+.sp-estudos .sp-heading-simple {padding:0 0 20px;border:0;background:transparent!important;box-shadow:none;justify-content:space-between;gap:16px;}
+.sp-estudos .sp-heading-simple .sp-identity {flex:1;}
+.sp-estudos .sp-heading-simple .sp-primary {flex-shrink:0;}
+.sp-estudos .sp-preview-safe {margin-top:20px;}
+.sp-estudos .sp-index-row {color:var(--sp-ink);}
+@media(max-width:650px){.sp-estudos .sp-heading-simple {align-items:stretch;}.sp-estudos .sp-heading-simple .sp-primary {width:100%;}.sp-estudos .sp-panel-head {flex-wrap:wrap;}}

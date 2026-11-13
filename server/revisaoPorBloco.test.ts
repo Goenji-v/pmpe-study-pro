@@ -35,7 +35,7 @@ test("somente a quarta parte fecha uma revisão de Classes de palavras", () => {
 });
 
 test("assuntos independentes permanecem com revisão própria", () => {
-  const { materia, modulo, assuntos } = preparar(4);
+  const { materia, modulo } = preparar(4);
   const crase = assunto("crase", "Uso do sinal grave indicativo de Crase");
   modulo.assuntos.push(crase);
   const escopo = planejarEscopoRevisao({ materia, modulo, assunto: crase, concluido: true });
