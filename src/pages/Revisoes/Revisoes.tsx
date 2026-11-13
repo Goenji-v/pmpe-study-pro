@@ -516,14 +516,7 @@ function GrupoRevisoes({
                 {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
                   <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
                 )}
-                <span>Etapa {revisao.etapa} • {formatarDataRevisao(revisao.dataPrevista)}</span>
-                <small>
-                  {diferenca < 0
-                    ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
-                    : diferenca === 0
-                      ? "Vence hoje"
-                      : `Daqui a ${diferenca} dia(s)`}
-                </small>
+                <span>Etapa {revisao.etapa} · Prevista para {formatarDataRevisao(revisao.dataPrevista)}</span>
 
                 <div className={`revisao-orientacao revisao-orientacao-${plano.modo}`}>
                   <div className="revisao-orientacao-topo">
@@ -537,20 +530,15 @@ function GrupoRevisoes({
                     )}
                   </div>
                   <p>{plano.descricao}</p>
-                  <div className="revisao-proximos-retornos">
-                    <PrevisaoRetorno
-                      rotulo="Difícil"
-                      previsao={previsaoDificil}
-                    />
-                    <PrevisaoRetorno
-                      rotulo="Médio"
-                      previsao={previsaoMedia}
-                    />
-                    <PrevisaoRetorno
-                      rotulo="Fácil"
-                      previsao={previsaoFacil}
-                    />
-                  </div>
+                  <details className="revisao-detalhes-previsao">
+                    <summary>Ver próximas datas conforme meu desempenho</summary>
+                    <p className="revisao-aviso-previsao">Estas datas são simulações. A próxima revisão só será definida ao concluir a atual.</p>
+                    <div className="revisao-proximos-retornos">
+                      <PrevisaoRetorno rotulo="Difícil" previsao={previsaoDificil} />
+                      <PrevisaoRetorno rotulo="Médio" previsao={previsaoMedia} />
+                      <PrevisaoRetorno rotulo="Fácil" previsao={previsaoFacil} />
+                    </div>
+                  </details>
                   {temFlashcards && (
                     <small className="revisao-flashcards-recomendacao">
                       🧠 Reforço disponível: {modoFlashcardsRecomendado}

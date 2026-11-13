@@ -649,3 +649,28 @@
     gap: 4px;
   }
 }
+
+/* Opções avançadas das revisões: visíveis apenas sob demanda. */
+.revisao-detalhes-previsao {
+  margin-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, .22);
+  padding-top: 10px;
+}
+.revisao-detalhes-previsao summary {
+  cursor: pointer;
+  font-size: .88rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+.revisao-detalhes-previsao summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.revisao-detalhes-previsao .revisao-proximos-retornos { margin-top: 10px; }
+.revisao-aviso-previsao {
+  font-size: .8rem;
+  line-height: 1.5;
+  color: #94a3b8;
+  margin-top: 8px;
+}
