@@ -1,4 +1,5 @@
-import { classeFundoPerfil } from "../../services/fundosPerfil";
+import IdentidadePreview from "./IdentidadePreview";
+
 import "./FundosPerfil.css";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -128,14 +129,6 @@ export default function Perfil() {
   const totalMinutos = metricasGerais.minutos;
   const revisoesConcluidas = metricasGerais.revisoesConcluidas;
   const desbloqueadas = conquistas.filter((item) => item.desbloqueada).length;
-  const nome = configuracoes.nomeUsuario.trim() || "Estudante";
-  const iniciais = nome
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join("") || "SP";
-
   function alternarInsignia(insigniaId: string) {
     const resultado = alternarInsigniaPerfil({
       atuais: idsEquipadas,
@@ -182,33 +175,8 @@ export default function Perfil() {
 
   return (
     <section className="perfil-page">
-      <header className={`perfil-hero ${classeFundoPerfil(economia.fundoPerfilEquipado)}`}>
-        <div className="perfil-avatar" aria-hidden="true">
-          {iniciais}
-        </div>
-        <div className="perfil-identidade">
-          <span className="perfil-kicker">PERFIL DO ESTUDANTE</span>
-          <h1>{nome}</h1>
-          <p>
-            Nível {gamificacao.nivel} · {tituloEquipado?.nome || gamificacao.tituloNivel}
-          </p>
-          <div className="perfil-meta">
-            <span>{gamificacao.xpTotal} XP acumulados</span>
-            <span>🪙 {economia.moedas} moedas</span>
-            <span>{desbloqueadas}/{conquistas.length} conquistas</span>
-          </div>
-        </div>
-        <div className="perfil-acoes">
-          <Link to="/loja">Personalizar meu perfil</Link>
-          <Link to="/configuracoes">Editar perfil</Link>
-          <Link to="/conquistas">Ver conquistas</Link>
-          {tituloEquipado && (
-            <button type="button" onClick={usarTituloPadrao}>
-              Usar título do nível
-            </button>
-          )}
-        </div>
-      </header>
+      <IdentidadePreview gamificacao={gamificacao} titulo={tituloEquipado?.nome || gamificacao.tituloNivel} moedas={economia.moedas} conquistas={desbloqueadas}/>
+      <div className="perfil-acoes"><Link to="/loja">Personalizar meu perfil</Link><Link to="/conquistas">Ver conquistas</Link>{tituloEquipado&&<button onClick={usarTituloPadrao}>Usar título do nível</button>}</div>
 
       <section className="perfil-secao perfil-insignias-destaque">
         <div className="perfil-secao-cabecalho">

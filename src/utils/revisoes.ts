@@ -125,6 +125,10 @@ export function criarProximaRevisao(
     materia: revisaoAtual.materia,
     modulo: revisaoAtual.modulo,
     assunto: revisaoAtual.assunto,
+    ...(revisaoAtual.escopoGrupo ? {
+      escopoGrupo: true,
+      grupoAssuntosIds: revisaoAtual.grupoAssuntosIds,
+    } : {}),
     etapa: proximaEtapa,
     dataCriacao: agora.toISOString(),
     dataPrevista: dataPrevista.toISOString(),

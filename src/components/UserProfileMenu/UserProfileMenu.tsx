@@ -1,3 +1,4 @@
+import { useIdentidadePreview } from "../../services/identidadePreview";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -29,6 +30,7 @@ export default function UserProfileMenu() {
     configuracoes,
   } = useApp();
   const { usuario, sair } = useAuth();
+  const { dados: identidade } = useIdentidadePreview(usuario?.id);
   const { administrador } = useAdminStatus();
   const navigate = useNavigate();
   const location = useLocation();
@@ -111,7 +113,7 @@ export default function UserProfileMenu() {
     [idsEquipadas, conquistas]
   );
 
-  const nome =
+  const nome = identidade.nome ||
     configuracoes.nomeUsuario.trim() ||
     String(usuario?.user_metadata?.nome || "").trim() ||
     usuario?.email?.split("@")[0] ||
@@ -171,7 +173,7 @@ export default function UserProfileMenu() {
         onClick={() => setAberto((valor) => !valor)}
       >
         <span className="user-profile-avatar" aria-hidden="true">
-          {inicial}
+          {identidade.foto ? <img className="id-header-photo" src={identidade.foto} alt=""/> : inicial}
         </span>
         <span className="user-profile-copy">
           <strong>{nome}</strong>
@@ -195,7 +197,7 @@ export default function UserProfileMenu() {
         <div className="user-profile-dropdown" role="menu">
           <div className="user-profile-dropdown-head">
             <span className="user-profile-avatar grande" aria-hidden="true">
-              {inicial}
+              {identidade.foto ? <img className="id-header-photo" src={identidade.foto} alt=""/> : inicial}
             </span>
             <div>
               <strong>{nome}</strong>

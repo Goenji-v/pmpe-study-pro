@@ -182,6 +182,8 @@ export function reconciliarRevisoesComConteudos(
   revisoes: Revisao[]
 ): Revisao[] {
   const reconciliadas = revisoes.map((revisao) => {
+    // Um bloco didático não deve ser reescrito como se fosse apenas uma de suas aulas.
+    if (revisao.escopoGrupo) return revisao;
     const referencia = localizarReferenciaCanonica(materias, revisao);
     if (!referencia) return revisao;
 

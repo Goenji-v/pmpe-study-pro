@@ -29,7 +29,7 @@ export function identificarParte(nome: string): { titulo: string; parte: number 
 function categoriaPortugues(nome: string): string | null {
   const normalizado = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/compreensao|interpretacao|tipologia|generos? textuais?/.test(normalizado)) return "Leitura e interpretação";
-  if (/^(artigo|substantivo|adjetivo|adverbio|numeral|pronome|preposicao|conjuncao|interjeicao|verbo)(\b|\s|,)/.test(normalizado)) return "Classes de palavras";
+  if (/^(artigo|substantivo|adjetivo|adverbio|numeral|pronome|preposicao|conjuncao|interjeicao|verbos?)(\b|\s|,)/.test(normalizado)) return "Classes de palavras";
   if (/coordenacao|subordinacao|regencia|concordancia|sintaxe|termos da oracao/.test(normalizado)) return "Sintaxe";
   if (/crase|acentuacao|ortografia|pontuacao/.test(normalizado)) return "Ortografia e pontuação";
   if (/semantica|coerencia|coesao|significacao/.test(normalizado)) return "Semântica e coesão";
