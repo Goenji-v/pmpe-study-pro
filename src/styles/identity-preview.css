@@ -10,3 +10,10 @@ html[data-study-base-theme='claro'][data-study-theme='padrao'] .cb-page button{c
 html[data-study-base-theme='claro'][data-study-theme='padrao'] .cb-page .cb-priority.alta{color:#913b10}html[data-study-base-theme='claro'][data-study-theme='padrao'] .cb-page .cb-priority.media{color:#775400}html[data-study-base-theme='claro'][data-study-theme='padrao'] .cb-page .cb-priority.baixa{color:#19613f}
 html[data-study-base-theme='claro'][data-study-theme='padrao'] .cb-row span:last-child{color:#175ba3}
 .header-acoes>.header-notification-button{flex-shrink:0}
+.sidebar-link-texto,.sidebar-grupo-identidade>span:last-child{font-family:'Saira Condensed','Arial Narrow',sans-serif;font-size:18px;font-weight:700}
+.perfil-page{color:var(--study-text)}
+.perfil-page>.perfil-acoes{flex-direction:row;flex-wrap:wrap;min-width:0}
+.perfil-page>.perfil-acoes>*{flex:1;min-width:160px}
+.perfil-estatisticas strong{font-family:'Saira Condensed','Arial Narrow',sans-serif;font-variant-numeric:tabular-nums}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] :is(.perfil-secao,.perfil-insignia-slot,.perfil-estatisticas article,.perfil-colecao-card){background:var(--study-surface);color:var(--study-text);border-color:var(--study-border)}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] .perfil-acoes button{background:var(--study-surface-soft)}
