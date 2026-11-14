@@ -145,3 +145,4 @@ ReactDOM.createRoot(
     </AppErrorBoundary>
   </React.StrictMode>
 );
+import "./styles/identity-preview.css";

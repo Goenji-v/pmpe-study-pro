@@ -21,4 +21,4 @@ jobs:
       - run: npx tsc -b
       - run: npx vite build
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test e2e/conteudos-blocos-preview.spec.ts --project=desktop-chrome
+      - run: npx playwright test e2e/conteudos-blocos-preview.spec.ts e2e/identidade-preview.spec.ts --project=desktop-chrome
