@@ -75,3 +75,22 @@ test("proxy público autoriza somente previews Vercel do projeto Study Pro", asy
   assert.doesNotMatch(codigo, /\*\.vercel\.app/);
 });
 
+
+
+test("arquivos de ambiente de todos os estágios não podem ser publicados no git", async () => {
+  const ignore = await readFile(".gitignore", "utf8");
+  assert.match(ignore, /^\\.env$/m);
+  assert.match(ignore, /^\\.env\\.\\*$/m);
+  assert.match(ignore, /^!\\.env\\.example$/m);
+});
+
+test("polling autenticado possui limite próprio e conserva o limite de geração IA", async () => {
+  const codigo = await readFile("server/secureEntry.ts", "utf8");
+  assert.match(codigo, /const janelaConsultasMs = 10 \\* 60 \\* 1000/);
+  assert.match(codigo, /const limiteConsultas = 600/);
+  assert.match(codigo, /if \\(consultaLeve\\)/);
+  assert.match(codigo, /consultasRecentes\\.length >= limiteConsultas/);
+  assert.match(codigo, /res\\.status\\(429\\)/);
+  assert.match(codigo, /const limite = importacao \\? limiteImportacao : limiteGeral/);
+  assert.match(codigo, /const usuarioResposta = await fetch\\(\\`\\$\\{supabaseUrl\\}\\/auth\\/v1\\/user\\`/);
+});
