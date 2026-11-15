@@ -1,50 +1,47 @@
 import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowRight, BookOpen, BrainCircuit, CalendarCheck2, CheckCircle2,
+  ChevronDown, Clock3, Compass, FileBarChart2, Info, RotateCcw,
+  ShieldCheck, Sparkles, Target, TrendingUp,
+} from "lucide-react";
 
 import "./CentralInteligencia.css";
 import { useApp } from "../../context/AppContext";
-import {
-  Alerta,
-  BarraProgresso,
-  DadoSemana,
-  LinhaDesempenho,
-  ResumoCard,
-} from "../../components/inteligencia/ComponentesInteligencia";
+import { BarraProgresso } from "../../components/inteligencia/ComponentesInteligencia";
 import { calcularCentralInteligencia } from "../../services/inteligencia/calcularCentralInteligencia";
-import type { MissaoDia } from "../../services/inteligencia/types";
-import {
-  formatarMinutos,
-  formatarTipoMissao,
-  gerarMensagemProntidao,
-  percentualMeta,
-} from "../../services/inteligencia/utils";
+import type { DesempenhoAssunto, MissaoDia } from "../../services/inteligencia/types";
+import { formatarMinutos, formatarTipoMissao, percentualMeta } from "../../services/inteligencia/utils";
+
+const CHAVE_FILTRO_MATERIAIS = "pmpe_filtro_materiais";
 
 export default function CentralInteligencia() {
   const navigate = useNavigate();
   const { questoes, sessoes, revisoes, simulados, configuracoes } = useApp();
+  const [mostrarCalculo, setMostrarCalculo] = useState(false);
 
   const dados = useMemo(
-    () =>
-      calcularCentralInteligencia({
-        questoes,
-        sessoes,
-        revisoes,
-        simulados,
-        metaMinutos: configuracoes.metaMinutosDiaria,
-        metaQuestoes: configuracoes.metaQuestoesDiaria,
-        metaRevisoes: configuracoes.metaRevisoesDiaria,
-      }),
-    [
+    () => calcularCentralInteligencia({
       questoes,
       sessoes,
       revisoes,
       simulados,
-      configuracoes.metaMinutosDiaria,
-      configuracoes.metaQuestoesDiaria,
+      metaMinutos: configuracoes.metaMinutosDiaria,
+      metaQuestoes: configuracoes.metaQuestoesDiaria,
+      metaRevisoes: configuracoes.metaRevisoesDiaria,
+    }),
+    [
+      questoes, sessoes, revisoes, simulados,
+      configuracoes.metaMinutosDiaria, configuracoes.metaQuestoesDiaria,
       configuracoes.metaRevisoesDiaria,
     ]
   );
+
+  const critico = dados.assuntosCriticos[0] ?? null;
+  const aocp = dados.bancas.find((banca) => banca.banca === "Instituto AOCP") ?? null;
+  const semNota = dados.materias.filter((materia) => materia.total === 0 && materia.minutos > 0);
+  const materiasAvaliadas = dados.materias.filter((materia) => materia.total > 0);
 
   function abrirMissao(missao: MissaoDia) {
     localStorage.setItem(
@@ -54,302 +51,253 @@ export default function CentralInteligencia() {
     navigate(missao.rota);
   }
 
-  function iniciarMissaoCompleta() {
-    localStorage.setItem(
-      "pmpe_missao_inteligente_dia",
-      JSON.stringify({
-        data: new Date().toISOString(),
-        missoes: dados.missoes,
-        tempoTotal: dados.tempoMissao,
-      })
-    );
-    const primeiraMissao = dados.missoes[0];
-    if (primeiraMissao) abrirMissao(primeiraMissao);
-    else navigate("/central-estudos");
+  function abrirMateriais(materia: string, assunto = "") {
+    localStorage.setItem(CHAVE_FILTRO_MATERIAIS, JSON.stringify({ materia, assunto }));
+    navigate("/materiais");
   }
 
   return (
-    <section className="inteligencia-container">
-      <header className="inteligencia-cabecalho">
-        <div>
-          <span className="inteligencia-etiqueta">ANÁLISE AUTOMÁTICA</span>
-          <h1>🧠 Central de Inteligência</h1>
-          <p>Diagnóstico completo baseado nos seus estudos, questões, revisões e simulados.</p>
+    <section className="inteligencia-container inteligencia-v2">
+      <header className="inteligencia-v2-hero">
+        <div className="inteligencia-v2-hero-copia">
+          <span className="inteligencia-v2-sobretitulo"><BrainCircuit size={15} /> INTELIGÊNCIA DE ESTUDOS</span>
+          <h1>Seu centro estratégico</h1>
+          <p>Menos números soltos. Veja o que estudar, o motivo da prioridade e como está sua evolução.</p>
+          <div className="inteligencia-v2-hero-acoes">
+            <button type="button" className="inteligencia-v2-botao-primario" onClick={() => navigate("/plano")}>
+              <CalendarCheck2 size={17} /> Ir para o Plano Tático <ArrowRight size={16} />
+            </button>
+            <button type="button" className="inteligencia-v2-botao-discreto" onClick={() => navigate("/inteligencia?aba=coach")}>
+              <Sparkles size={16} /> IA Coach
+            </button>
+          </div>
         </div>
-        <div className="inteligencia-indice">
+        <div className="inteligencia-v2-prontidao">
           <span>Índice de prontidão</span>
-          <strong>{dados.indiceProntidao}%</strong>
-          <small>{dados.classificacao}</small>
+          <strong>{dados.indiceProntidao}<small>/100</small></strong>
+          <p>{dados.classificacao}</p>
+          <BarraProgresso percentual={dados.indiceProntidao} />
+          <button type="button" className="inteligencia-v2-explicar" onClick={() => setMostrarCalculo((atual) => !atual)} aria-expanded={mostrarCalculo}>
+            <Info size={14} /> Como é calculado? <ChevronDown size={14} className={mostrarCalculo ? "girado" : ""} />
+          </button>
         </div>
       </header>
 
-      <section className="inteligencia-prontidao">
-        <div className="inteligencia-prontidao-topo">
-          <div>
-            <span>Preparação estimada</span>
-            <strong>{dados.indiceProntidao}%</strong>
-          </div>
-          <p>{gerarMensagemProntidao(dados.indiceProntidao)}</p>
-        </div>
-        <BarraProgresso percentual={dados.indiceProntidao} />
-      </section>
+      {mostrarCalculo && (
+        <section className="inteligencia-v2-explicacao">
+          <strong>O índice é um termômetro de estudo, não sua nota nem uma chance de aprovação.</strong>
+          <p>Combina aproveitamento das questões (35%), simulados (20%), cumprimento do tempo de estudo (20%), frequência (15%) e tamanho da amostra (10%). Revisões atrasadas reduzem o resultado. A fórmula é uma heurística do Study Pro e não utiliza nota de corte ou concorrência.</p>
+        </section>
+      )}
 
-      <div className="inteligencia-resumos">
-        <ResumoCard
-          titulo="Tempo hoje"
-          valor={formatarMinutos(dados.hoje.minutos)}
-          detalhe={`${percentualMeta(dados.hoje.minutos, configuracoes.metaMinutosDiaria)}% da meta diária`}
-        />
-        <ResumoCard
-          titulo="Questões hoje"
-          valor={String(dados.hoje.questoes)}
-          detalhe={`${dados.hoje.percentual}% de aproveitamento`}
-        />
-        <ResumoCard
-          titulo="Revisões hoje"
-          valor={String(dados.hoje.revisoesConcluidas)}
-          detalhe={`${dados.revisoesHoje.length} pendentes para hoje`}
-        />
-        <ResumoCard
-          titulo="Dias ativos"
-          valor={String(dados.semana.diasAtivos)}
-          detalhe="Nos últimos 7 dias"
-        />
+      <div className="inteligencia-v2-cabecalho-secao">
+        <div>
+          <span className="inteligencia-v2-sobretitulo">ONDE CONCENTRAR A ENERGIA</span>
+          <h2><Target size={22} /> Seu foco de hoje</h2>
+          <p>A missão oficial é definida pelo Plano Tático. A Inteligência sugere reforços, mas não cria ou conclui tarefas do plano.</p>
+        </div>
       </div>
 
-      <div className="inteligencia-grid-principal">
-        <section className="inteligencia-painel inteligencia-missao">
-          <div className="inteligencia-painel-topo">
-            <div>
-              <span className="inteligencia-etiqueta">RECOMENDAÇÕES COMPLEMENTARES</span>
-              <h2>🎯 Sugestões para hoje</h2>
-              <p>Sugestões baseadas nos seus registros. Elas não substituem nem reabrem tarefas obrigatórias do Plano de Estudos.</p>
-            </div>
-            <div className="inteligencia-tempo-missao">
-              <span>Tempo estimado</span>
-              <strong>{formatarMinutos(dados.tempoMissao)}</strong>
-            </div>
-          </div>
-
-          {dados.missoes.length === 0 ? (
-            <div className="inteligencia-vazio">
-              Registre sessões, questões ou revisões para receber sugestões complementares.
-            </div>
+      <div className="inteligencia-v2-foco-grid">
+        <article className="inteligencia-v2-foco-card foco-plano">
+          <div className="inteligencia-v2-foco-icone"><CalendarCheck2 size={21} /></div>
+          <span className="inteligencia-v2-foco-label">01 · MISSÃO PRINCIPAL</span>
+          <h3>Continue seu Plano Tático</h3>
+          <p>Consulte a missão do dia e siga o conteúdo planejado sem misturar pendências com novas atividades.</p>
+          <button type="button" onClick={() => navigate("/plano")}>Ver missão de hoje <ArrowRight size={16}/></button>
+        </article>
+        <article className="inteligencia-v2-foco-card foco-revisao">
+          <div className="inteligencia-v2-foco-icone"><RotateCcw size={21} /></div>
+          <span className="inteligencia-v2-foco-label">02 · REVISÕES</span>
+          <h3>{dados.revisoesAtrasadas.length > 0 ? String(dados.revisoesAtrasadas.length) + " revisões atrasadas" : dados.revisoesHoje.length > 0 ? String(dados.revisoesHoje.length) + " revisões para hoje" : "Revisões em dia"}</h3>
+          <p>{dados.revisoesAtrasadas.length > 0
+            ? "Priorize as vencidas, preservando a fila e as datas que você já possui."
+            : dados.revisoesHoje.length > 0 ? "Você tem revisões programadas para hoje." : "Nenhuma revisão vencida ou prevista para hoje."}</p>
+          <button type="button" onClick={() => navigate("/revisoes")}>Abrir revisões <ArrowRight size={16}/></button>
+        </article>
+        <article className="inteligencia-v2-foco-card foco-reforco">
+          <div className="inteligencia-v2-foco-icone"><BookOpen size={21} /></div>
+          <span className="inteligencia-v2-foco-label">03 · REFORÇO COMPLEMENTAR</span>
+          {critico ? (
+            <>
+              <h3>{critico.assunto}</h3>
+              <p>{critico.materia} · {critico.percentual}% em {critico.total} questões registradas. {critico.total < 10 ? "Amostra pequena: confirme com novas questões." : "Assunto que merece nova prática."}</p>
+              <button type="button" onClick={() => abrirMateriais(critico.materia, critico.assunto)}>Abrir material do assunto <ArrowRight size={16}/></button>
+            </>
           ) : (
-            <div className="inteligencia-lista-missoes">
-              {dados.missoes.map((missao, indice) => (
-                <article
-                  key={missao.id}
-                  className={`inteligencia-item-missao prioridade-${missao.prioridade}`}
-                >
-                  <div className="inteligencia-numero-missao">{indice + 1}</div>
-                  <div className="inteligencia-conteudo-missao">
-                    <div>
-                      <strong>{missao.titulo}</strong>
-                      <span>{formatarTipoMissao(missao.tipo)}</span>
-                    </div>
+            <>
+              <h3>Nenhum reforço identificado</h3>
+              <p>Registre questões por assunto para receber uma recomendação baseada nos erros.</p>
+              <button type="button" onClick={() => navigate("/materiais")}>Abrir materiais <ArrowRight size={16}/></button>
+            </>
+          )}
+        </article>
+      </div>
+
+      <section className="inteligencia-v2-ritmo" aria-label="Indicadores de estudo">
+        <div className="inteligencia-v2-ritmo-titulo"><TrendingUp size={18} /><strong>Seu ritmo</strong><span>Hoje e últimos 7 dias</span></div>
+        <div className="inteligencia-v2-indicadores">
+          <Indicador titulo="Tempo hoje" valor={formatarMinutos(dados.hoje.minutos)} detalhe={String(percentualMeta(dados.hoje.minutos, configuracoes.metaMinutosDiaria)) + "% da meta diária"} />
+          <Indicador titulo="Questões na semana" valor={String(dados.semana.questoes)} detalhe="Últimos 7 dias" />
+          <Indicador titulo="Acertos na semana" valor={dados.semana.questoes > 0 ? String(dados.semana.percentual) + "%" : "—"} detalhe={dados.semana.questoes > 0 ? String(dados.semana.questoes) + " questões registradas" : "Sem questões no período"} />
+          <Indicador titulo="Dias ativos" valor={String(dados.semana.diasAtivos) + "/7"} detalhe="Dias com atividade registrada" />
+        </div>
+      </section>
+
+      <div className="inteligencia-v2-divisao">
+        <section className="inteligencia-v2-painel">
+          <div className="inteligencia-v2-painel-topo">
+            <div>
+              <span className="inteligencia-v2-sobretitulo">OPCIONAL · NÃO ALTERA O PLANO</span>
+              <h2><Compass size={20} /> Próximas ações recomendadas</h2>
+              <p>Atalhos calculados a partir dos seus registros. Abra individualmente o que fizer sentido.</p>
+            </div>
+            {dados.missoes.length > 0 && <small>{formatarMinutos(dados.tempoMissao)} sugeridos</small>}
+          </div>
+          {dados.missoes.length ? (
+            <div className="inteligencia-v2-acoes-lista">
+              {dados.missoes.slice(0, 3).map((missao, indice) => (
+                <article className="inteligencia-v2-acao" key={missao.id}>
+                  <span className="inteligencia-v2-acao-numero">{indice + 1}</span>
+                  <div>
+                    <strong>{missao.titulo}</strong>
                     <p>{missao.descricao}</p>
-                    <small>
-                      {missao.minutos} min
-                      {missao.quantidadeQuestoes ? ` • ${missao.quantidadeQuestoes} questões` : ""}
-                    </small>
+                    <small>{formatarTipoMissao(missao.tipo)} · {missao.minutos} min{missao.quantidadeQuestoes ? " · " + missao.quantidadeQuestoes + " questões" : ""}</small>
                   </div>
-                  <button type="button" onClick={() => abrirMissao(missao)}>Abrir</button>
+                  <button type="button" onClick={() => abrirMissao(missao)} aria-label={"Abrir " + missao.titulo}>Abrir <ArrowRight size={15}/></button>
                 </article>
               ))}
             </div>
+          ) : (
+            <div className="inteligencia-v2-vazio">Sem sugestões extras por enquanto. Siga sua missão no Plano Tático.</div>
           )}
-
-          <button
-            type="button"
-            className="inteligencia-botao-principal"
-            onClick={iniciarMissaoCompleta}
-            disabled={dados.missoes.length === 0}
-          >
-            ▶ Executar sugestões
-          </button>
         </section>
 
-        <section className="inteligencia-painel">
-          <div className="inteligencia-painel-topo">
+        <section className="inteligencia-v2-painel inteligencia-v2-cenario">
+          <div className="inteligencia-v2-painel-topo">
             <div>
-              <h2>📅 Resumo semanal</h2>
-              <p>Atividade dos últimos sete dias.</p>
+              <span className="inteligencia-v2-sobretitulo">LEITURA DO MOMENTO</span>
+              <h2><ShieldCheck size={20} /> Diagnóstico rápido</h2>
+              <p>Baseado nos dados disponíveis, sem prever aprovação.</p>
             </div>
           </div>
-          <div className="inteligencia-dados-semana">
-            <DadoSemana titulo="Tempo" valor={formatarMinutos(dados.semana.minutos)} />
-            <DadoSemana titulo="Questões" valor={String(dados.semana.questoes)} />
-            <DadoSemana titulo="Aproveitamento" valor={`${dados.semana.percentual}%`} />
-            <DadoSemana titulo="Sessões" valor={String(dados.semana.sessoes)} />
+          <div className="inteligencia-v2-cenario-linhas">
+            <div><span>Revisões vencidas</span><strong>{dados.revisoesAtrasadas.length}</strong></div>
+            <div><span>Assuntos com baixo aproveitamento</span><strong>{dados.assuntosCriticos.length}{dados.assuntosCriticos.length === 5 ? "+" : ""}</strong></div>
+            <div><span>Aproveitamento AOCP</span><strong>{aocp && aocp.total > 0 ? String(aocp.percentual) + "%" : "Sem dados"}</strong></div>
           </div>
-          <div className="inteligencia-alertas">
-            <h3>⚠ Pontos de atenção</h3>
-            {dados.revisoesAtrasadas.length > 0 && (
-              <Alerta
-                titulo={`${dados.revisoesAtrasadas.length} revisões atrasadas`}
-                descricao="Conclua as revisões antes de avançar para novos conteúdos."
-                nivel="alto"
-              />
-            )}
-            {dados.piorMateria && (
-              <Alerta
-                titulo={`Baixo desempenho em ${dados.piorMateria.materia}`}
-                descricao={`Aproveitamento atual de ${dados.piorMateria.percentual}%.`}
-                nivel={dados.piorMateria.percentual < 60 ? "alto" : "medio"}
-              />
-            )}
-            {dados.materiaEsquecida && dados.materiaEsquecida.diasSemEstudar < 999 && (
-              <Alerta
-                titulo={`${dados.materiaEsquecida.materia} está esquecida`}
-                descricao={`Sem atividade há ${dados.materiaEsquecida.diasSemEstudar} dias.`}
-                nivel="medio"
-              />
-            )}
-            {dados.revisoesAtrasadas.length === 0 && !dados.piorMateria && !dados.materiaEsquecida && (
-              <div className="inteligencia-sem-alertas">Nenhum alerta crítico no momento.</div>
-            )}
-          </div>
+          <p className="inteligencia-v2-amostra">{aocp ? String(aocp.total) + " questões identificadas como Instituto AOCP no histórico." : "O filtro AOCP depende da identificação correta da banca nas questões."}</p>
+          <button type="button" className="inteligencia-v2-link-rodape" onClick={() => navigate("/inteligencia?aba=relatorio")}>
+            Ver desempenho completo <ArrowRight size={16}/>
+          </button>
         </section>
       </div>
 
-      <div className="inteligencia-grid-duplo">
-        <PainelDesempenho
-          titulo="📊 Desempenho por matéria"
-          descricao="Aproveitamento acumulado nas questões registradas."
-          vazio="Nenhuma questão registrada."
-          itens={dados.materias.slice(0, 8).map((materia) => ({
-            chave: materia.materia,
-            nome: materia.materia,
-            percentual: materia.percentual,
-            detalhe: `${materia.total} questões • ${formatarMinutos(materia.minutos)}`,
-          }))}
-        />
-        <PainelDesempenho
-          titulo="🏛 Desempenho por banca"
-          descricao="Comparação dos resultados por organizadora."
-          vazio="Nenhuma banca registrada."
-          itens={dados.bancas.map((banca) => ({
-            chave: banca.banca,
-            nome: banca.banca,
-            percentual: banca.percentual,
-            detalhe: `${banca.total} questões`,
-          }))}
-        />
-      </div>
-
-      <div className="inteligencia-grid-duplo">
-        <PainelAssuntos
-          titulo="⚠ Assuntos críticos"
-          descricao="Assuntos que exigem reforço imediato."
-          vazio="Ainda não há dados suficientes para identificar assuntos críticos."
-          itens={dados.assuntosCriticos}
-          classe="assunto-critico"
-        />
-        <PainelAssuntos
-          titulo="✅ Assuntos dominados"
-          descricao="Conteúdos com desempenho consistente."
-          vazio="Resolva mais questões para identificar conteúdos dominados."
-          itens={dados.assuntosDominados}
-          classe="assunto-dominado"
-        />
-      </div>
-
-      <section className="inteligencia-painel inteligencia-previsao">
+      <div className="inteligencia-v2-cabecalho-secao inteligencia-v2-cabecalho-menor">
         <div>
-          <span className="inteligencia-etiqueta">PROJEÇÃO HEURÍSTICA</span>
-          <h2>🔮 Se a prova fosse hoje</h2>
-          <p>
-            Índices calculados a partir dos registros atuais. Não são uma probabilidade estatística
-            de aprovação e não substituem nota de corte, concorrência ou regras do edital.
-          </p>
+          <span className="inteligencia-v2-sobretitulo">MAPA DE APRENDIZAGEM</span>
+          <h2><FileBarChart2 size={21} /> Assuntos para acompanhar</h2>
+          <p>Resultado observado e tamanho da amostra. Bons acertos não significam domínio definitivo.</p>
         </div>
-        <div className="inteligencia-previsao-dados">
-          <div>
-            <span>Nota projetada</span>
-            <strong>{dados.previsaoNota}/100</strong>
-          </div>
-          <div>
-            <span>Índice de projeção</span>
-            <strong>{dados.chanceAprovacao}/100</strong>
-          </div>
-          <div>
-            <span>Maior risco</span>
-            <strong>{dados.maiorRisco}</strong>
-          </div>
+      </div>
+
+      <div className="inteligencia-v2-divisao">
+        <PainelAssuntos
+          titulo="Precisam de reforço"
+          vazio="Nenhum assunto crítico identificado com as questões registradas."
+          itens={dados.assuntosCriticos}
+          tipo="critico"
+          aoAbrir={abrirMateriais}
+        />
+        <PainelAssuntos
+          titulo="Bons resultados observados"
+          vazio="Resolva mais questões para identificar assuntos em evolução."
+          itens={dados.assuntosDominados}
+          tipo="positivo"
+          aoAbrir={abrirMateriais}
+        />
+      </div>
+
+      <details className="inteligencia-v2-detalhes">
+        <summary>Explorar todos os indicadores por disciplina e banca <ChevronDown size={17} /></summary>
+        <div className="inteligencia-v2-detalhes-grid">
+          <section>
+            <h3>Desempenho por matéria</h3>
+            {materiasAvaliadas.length === 0 && <p>Sem questões registradas por matéria.</p>}
+            {materiasAvaliadas.map((materia) => (
+              <div className="inteligencia-v2-detalhe-linha" key={materia.materia}>
+                <div><strong>{materia.materia}</strong><small>{materia.total} questões · {formatarMinutos(materia.minutos)}</small></div>
+                <b>{materia.percentual}%</b>
+              </div>
+            ))}
+            {semNota.map((materia) => (
+              <div className="inteligencia-v2-detalhe-linha" key={materia.materia}>
+                <div><strong>{materia.materia}</strong><small>{formatarMinutos(materia.minutos)} estudados · Sem questões avaliadas</small></div>
+                <b>—</b>
+              </div>
+            ))}
+          </section>
+          <section>
+            <h3>Questões por banca</h3>
+            {dados.bancas.length === 0 && <p>Sem banca registrada nas questões.</p>}
+            {dados.bancas.map((banca) => (
+              <div className="inteligencia-v2-detalhe-linha" key={banca.banca}>
+                <div><strong>{banca.banca}</strong><small>{banca.total} questões</small></div>
+                <b>{banca.percentual}%</b>
+              </div>
+            ))}
+            <p className="inteligencia-v2-amostra">Registros mistos, de IA ou sem banca confirmada aparecem separados dos exames identificados.</p>
+          </section>
         </div>
-        <button
-          type="button"
-          className="inteligencia-botao-ia"
-          onClick={() => navigate("/inteligencia?aba=coach")}
-        >
-          🤖 Abrir análise completa da IA
+      </details>
+
+      <div className="inteligencia-v2-fecho">
+        <div><span className="inteligencia-v2-sobretitulo">PRÓXIMA ETAPA</span><strong>Quer transformar os dados em uma sequência personalizada?</strong><p>O IA Coach usa o histórico para propor ações e explicar suas prioridades.</p></div>
+        <button type="button" className="inteligencia-v2-botao-primario" onClick={() => navigate("/inteligencia?aba=coach")}>
+          <Sparkles size={17} /> Abrir IA Coach <ArrowRight size={16}/>
         </button>
-      </section>
+      </div>
     </section>
   );
 }
 
-function PainelDesempenho({
-  titulo,
-  descricao,
-  vazio,
-  itens,
-}: {
-  titulo: string;
-  descricao: string;
-  vazio: string;
-  itens: Array<{ chave: string; nome: string; percentual: number; detalhe: string }>;
-}) {
+function Indicador({ titulo, valor, detalhe }: { titulo: string; valor: string; detalhe: string }) {
   return (
-    <section className="inteligencia-painel">
-      <div className="inteligencia-painel-topo">
-        <div><h2>{titulo}</h2><p>{descricao}</p></div>
-      </div>
-      {itens.length === 0 ? (
-        <div className="inteligencia-vazio">{vazio}</div>
-      ) : (
-        <div className="inteligencia-lista-desempenho">
-          {itens.map((item) => (
-            <LinhaDesempenho
-              key={item.chave}
-              nome={item.nome}
-              percentual={item.percentual}
-              detalhe={item.detalhe}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+    <article className="inteligencia-v2-indicador">
+      <span>{titulo}</span>
+      <strong>{valor}</strong>
+      <small>{detalhe}</small>
+    </article>
   );
 }
 
 function PainelAssuntos({
-  titulo,
-  descricao,
-  vazio,
-  itens,
-  classe,
+  titulo, vazio, itens, tipo, aoAbrir,
 }: {
   titulo: string;
-  descricao: string;
   vazio: string;
-  itens: Array<{ chave: string; materia: string; assunto: string; percentual: number }>;
-  classe: string;
+  itens: DesempenhoAssunto[];
+  tipo: "critico" | "positivo";
+  aoAbrir: (materia: string, assunto: string) => void;
 }) {
   return (
-    <section className="inteligencia-painel">
-      <div className="inteligencia-painel-topo">
-        <div><h2>{titulo}</h2><p>{descricao}</p></div>
+    <section className="inteligencia-v2-painel">
+      <div className="inteligencia-v2-painel-topo">
+        <div><h3>{tipo === "critico" ? <RotateCcw size={18}/> : <CheckCircle2 size={18}/>} {titulo}</h3></div>
       </div>
-      {itens.length === 0 ? (
-        <div className="inteligencia-vazio">{vazio}</div>
-      ) : (
-        <div className="inteligencia-assuntos">
+      {itens.length === 0 ? <p className="inteligencia-v2-vazio">{vazio}</p> : (
+        <div className="inteligencia-v2-assuntos">
           {itens.map((assunto) => (
-            <article key={assunto.chave} className={`inteligencia-assunto-card ${classe}`}>
-              <div><span>{assunto.materia}</span><strong>{assunto.assunto}</strong></div>
-              <b>{assunto.percentual}%</b>
+            <article key={assunto.chave} className={"inteligencia-v2-assunto " + tipo}>
+              <div>
+                <small>{assunto.materia} · {assunto.total} questões</small>
+                <strong>{assunto.assunto}</strong>
+                <span>{assunto.total < (tipo === "positivo" ? 20 : 10) ? "Amostra ainda limitada" : tipo === "critico" ? "Recomendado revisar e praticar" : "Mantenha revisões periódicas"}</span>
+              </div>
+              <div className="inteligencia-v2-assunto-acao">
+                <b>{assunto.percentual}%</b>
+                <button type="button" onClick={() => aoAbrir(assunto.materia, assunto.assunto)} aria-label={"Abrir materiais de " + assunto.assunto}><BookOpen size={17}/></button>
+              </div>
             </article>
           ))}
         </div>
