@@ -147,7 +147,7 @@ test.describe("navegação mobile autenticada", () => {
 
     await navegarPeloMenu(
       page,
-      "Praticar",
+      "Prática",
       "Simulados",
       /\/simulados(?:$|\?)/
     );
