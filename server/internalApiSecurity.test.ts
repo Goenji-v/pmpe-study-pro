@@ -80,7 +80,7 @@ test("proxy público autoriza somente previews Vercel do projeto Study Pro", asy
 
 test("arquivos de ambiente de todos os estágios não podem ser publicados no git", async () => {
   const ignore = await readFile(".gitignore", "utf8");
-  const linhas = ignore.split(/\\r?\\n/);
+  const linhas = ignore.split(String.fromCharCode(10)).map((linha) => linha.trim());
   assert.ok(linhas.includes(".env"));
   assert.ok(linhas.includes(".env.*"));
   assert.ok(linhas.includes("!.env.example"));
