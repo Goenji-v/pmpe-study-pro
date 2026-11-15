@@ -43,6 +43,8 @@ for (const viewport of [{width:1440,height:900},{width:390,height:844}]) {
     });
     await page.goto('http://fixture.test/');
     await page.addStyleTag({content:css}); await page.addScriptTag({content:bundle});
+    // A nova central abre no Perfil. O leitor de PDFs fica em Preferências.
+    await page.getByRole('button', {name:/^Preferências/}).click();
     const checkbox=page.getByRole('checkbox',{name:'Salvar minhas marcações nos PDFs dos materiais'});
     await checkbox.check();
     const label=await page.locator('.configuracoes-checkbox').boundingBox();
