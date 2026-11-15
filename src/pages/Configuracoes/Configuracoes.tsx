@@ -1,6 +1,7 @@
 import AlterarSenha from "./AlterarSenha";
 import { gerarPlanoEdital, preservarIdsPlanoAnterior } from "../../utils/planoEdital";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarDays, ShieldCheck, SlidersHorizontal, Target, UserRound } from "lucide-react";
 import { mesclarConfiguracoesEditadas } from "../../utils/mesclarConfiguracoesEditadas";
 import { Link } from "react-router-dom";
 
@@ -21,6 +22,25 @@ type ConfiguracoesFormulario = ConfiguracoesComEdital & {
   temaBasico?: TemaBasico;
 };
 
+type SecaoConfiguracoes = "perfil" | "planejamento" | "metas" | "preferencias" | "seguranca";
+
+const SECOES_CONFIGURACOES = [
+  { id: "perfil", titulo: "Meu perfil", resumo: "Dados do estudante", descricao: "Atualize seus dados e confira as informações da conta.", icone: UserRound },
+  { id: "planejamento", titulo: "Planejamento", resumo: "Rotina e cronograma", descricao: "Organize dias de estudo, matérias, redação e simulado.", icone: CalendarDays },
+  { id: "metas", titulo: "Metas e revisões", resumo: "Objetivos diários", descricao: "Ajuste suas metas de questões, tempo e revisões.", icone: Target },
+  { id: "preferencias", titulo: "Preferências", resumo: "Aparência e PDFs", descricao: "Personalize o tema e o modo de leitura dos materiais.", icone: SlidersHorizontal },
+  { id: "seguranca", titulo: "Segurança e dados", resumo: "Senha, backup e privacidade", descricao: "Proteja sua conta, seus estudos e seus arquivos.", icone: ShieldCheck },
+] as const;
+
+function secaoConfiguracoesDaHash(hash: string): SecaoConfiguracoes {
+  const identificador = hash.replace(/^#config-/, "");
+  if (identificador === "planejamento" || identificador === "rotina" || identificador === "atividades") return "planejamento";
+  if (identificador === "metas") return "metas";
+  if (identificador === "preferencias" || identificador === "aparencia" || identificador === "leitura") return "preferencias";
+  if (identificador === "seguranca" || identificador === "senha" || identificador === "backup") return "seguranca";
+  return "perfil";
+}
+
 export default function Configuracoes() {
   const { configuracoes, setConfiguracoes, materias } = useApp();
   const { showToast } = useToast();
@@ -36,6 +56,24 @@ export default function Configuracoes() {
 
   const camposEditados = useRef<Partial<ConfiguracoesFormulario>>({});
   const diasRitmoEditados = useRef<Partial<Record<DiaSemanaId, number>> | null | undefined>(undefined);
+
+  const [secaoAtiva, setSecaoAtiva] = useState<SecaoConfiguracoes>(() =>
+    typeof window === "undefined" ? "perfil" : secaoConfiguracoesDaHash(window.location.hash)
+  );
+
+  useEffect(() => {
+    const sincronizarAbaComHash = () => setSecaoAtiva(secaoConfiguracoesDaHash(window.location.hash));
+    window.addEventListener("hashchange", sincronizarAbaComHash);
+    return () => window.removeEventListener("hashchange", sincronizarAbaComHash);
+  }, []);
+
+  function escolherSecao(secao: SecaoConfiguracoes) {
+    setSecaoAtiva(secao);
+    window.history.replaceState(
+      window.history.state, "",
+      `${window.location.pathname}${window.location.search}#config-${secao}`
+    );
+  }
 
   const [formulario, setFormulario] = useState<ConfiguracoesFormulario>({
     ...configInicial,
@@ -231,26 +269,52 @@ export default function Configuracoes() {
   const diasSelecionados = formulario.diasEstudo ?? [];
   const temaBasico = formulario.temaBasico ?? "azul";
 
+  const secaoAtual = SECOES_CONFIGURACOES.find((item) => item.id === secaoAtiva) ?? SECOES_CONFIGURACOES[0];
+
   return (
     <section className="configuracoes-container">
-      <h1 className="configuracoes-title">⚙ Configurações</h1>
-      <p className="configuracoes-subtitle">
-        Defina seu perfil, disponibilidade e metas. O Edital Inteligente usa essas regras para montar o plano.
-      </p>
+      <header className="configuracoes-topo">
+        <span className="configuracoes-etiqueta">CENTRAL DE PREFERÊNCIAS</span>
+        <h1 className="configuracoes-title">Configurações</h1>
+        <p className="configuracoes-subtitle">
+          Todas as opções da sua conta e dos seus estudos, organizadas por área.
+        </p>
+      </header>
 
-      <nav className="configuracoes-nav" aria-label="Seções das configurações">{[['identidade','Meu perfil'],['rotina','Rotina semanal'],['atividades','Redação e simulado'],['metas','Metas'],['aparencia','Aparência'],['senha','Alterar senha'],['backup','Backups'],['leitura','Leitura de PDFs']].map(([id,nome]) => <a key={id} href={`#config-${id}`}>{nome}</a>)}</nav>
-      <div className="configuracoes-grid">
-        <div className="configuracoes-card configuracoes-backup-card">
-          <h2 id="config-backup">Backups</h2>
-          <p>
-            Consulte os backups incrementais, os backups oficiais do dia e as cópias de segurança de conflito.
-          </p>
-          <Link className="configuracoes-backup-link" to="/backup">
-            Abrir Backup e segurança →
-          </Link>
-        </div>
+      <div className="configuracoes-layout">
+        <nav className="configuracoes-nav" aria-label="Áreas das configurações">
+          <span className="configuracoes-nav-legenda">SEÇÕES</span>
+          {SECOES_CONFIGURACOES.map((secao) => {
+            const Icone = secao.icone;
+            const selecionada = secaoAtiva === secao.id;
+            return (
+              <button
+                key={secao.id}
+                type="button"
+                className={selecionada ? "configuracoes-nav-item ativo" : "configuracoes-nav-item"}
+                aria-current={selecionada ? "page" : undefined}
+                onClick={() => escolherSecao(secao.id)}
+              >
+                <span className="configuracoes-nav-icone"><Icone size={19} /></span>
+                <span className="configuracoes-nav-texto">
+                  <strong>{secao.titulo}</strong>
+                  <small>{secao.resumo}</small>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
 
-        <AlterarSenha />
+        <div className="configuracoes-area">
+          <header className="configuracoes-area-cabecalho">
+            <span>CONFIGURAÇÕES / {secaoAtual.titulo.toUpperCase()}</span>
+            <h2 id={`config-${secaoAtiva}`}>{secaoAtual.titulo}</h2>
+            <p>{secaoAtual.descricao}</p>
+          </header>
+
+          <div className={`configuracoes-grid configuracoes-grid-${secaoAtiva}`}>
+            {secaoAtiva === "perfil" && (
+              <>
         <div className="configuracoes-card">
           <h2 id="config-identidade">Perfil</h2>
 
@@ -292,6 +356,54 @@ export default function Configuracoes() {
           </div>
         </div>
 
+        <div className="configuracoes-card">
+          <h2>Resumo do perfil</h2>
+          <div className="configuracoes-resumo-item">
+            <span>Usuário</span><strong>{formulario.nomeUsuario}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Concurso</span><strong>{formulario.concurso}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Dias de estudo</span><strong>{diasSelecionados.length}/7</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Matérias por dia</span><strong>{formulario.materiasPorDia ?? 1}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Redação semanal</span>
+            <strong>{DIAS_SEMANA.find((dia) => dia.id === (formulario.diaRedacaoSemanal ?? "dom"))?.nome ?? "Domingo"}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Simulado semanal</span>
+            <strong>{DIAS_SEMANA.find((dia) => dia.id === (formulario.diaSimuladoSemanal ?? "dom"))?.nome ?? "Domingo"}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Tema básico</span><strong>{nomeTemaBasico(temaBasico)}</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Tempo</span>
+            <strong>
+              {Math.floor(formulario.metaMinutosDiaria / 60)}h {formulario.metaMinutosDiaria % 60}min
+            </strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Questões</span><strong>{formulario.metaQuestoesDiaria}/dia</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Revisões</span><strong>{formulario.metaRevisoesDiaria}/dia</strong>
+          </div>
+          <div className="configuracoes-resumo-item">
+            <span>Edital</span>
+            <strong>{formulario.editalAtivo?.confirmadoEm ? "Configurado" : "Não configurado"}</strong>
+          </div>
+        </div>
+
+              </>
+            )}
+
+            {secaoAtiva === "planejamento" && (
+              <>
         <div className="configuracoes-card configuracoes-disponibilidade-card">
           <h2 id="config-rotina">Disponibilidade semanal</h2>
           <p className="configuracoes-ajuda">
@@ -408,6 +520,11 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
           </small>
         </div>
 
+              </>
+            )}
+
+            {secaoAtiva === "metas" && (
+              <>
         <div className="configuracoes-card">
           <h2 id="config-metas">Metas diárias</h2>
 
@@ -452,29 +569,11 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
           </div>
         </div>
 
-        <section className="configuracoes-card">
-          <h2 id="config-leitura">Leitura de PDFs</h2>
-          <div className="configuracoes-form-group">
-            <label htmlFor="abertura-pdf">Ao abrir um PDF de estudo</label>
-            <select
-              id="abertura-pdf"
-              value={formulario.aberturaPdf ?? "interno"}
-              onChange={(evento) => alterarAberturaPdf(evento.target.value === "navegador" ? "navegador" : "interno")}
-            >
-              <option value="interno">Dentro do Study Pro</option>
-              <option value="navegador">No navegador — nova aba</option>
-            </select>
-            <p className="configuracoes-ajuda">
-              A preferência é salva automaticamente nesta conta. Se o navegador bloquear a nova aba,
-              você poderá abri-la por um link. Os simulados mantêm seu leitor próprio.
-            </p>
-          </div>
-          <label className="configuracoes-checkbox">
-            <input type="checkbox" checked={formulario.salvarMarcacoesPdf === true} onChange={e => alterarPersistenciaPdf(e.target.checked)}/>
-            <span>Salvar minhas marcações nos PDFs dos materiais</span>
-          </label>
-          <p className="configuracoes-ajuda">Esta opção é salva automaticamente. Ativado: caneta e marca-texto ficam salvos neste aparelho para sua conta. Desativado: as marcações desta leitura são descartadas ao fechar. Os rascunhos de simulados mantêm seu funcionamento próprio.</p>
-        </section>
+              </>
+            )}
+
+            {secaoAtiva === "preferencias" && (
+              <>
         <div className="configuracoes-card">
           <h2 id="config-aparencia">Aparência</h2>
           <div className="configuracoes-form-group">
@@ -509,47 +608,43 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
           </div>
         </div>
 
-        <div className="configuracoes-card">
-          <h2>Resumo do perfil</h2>
-          <div className="configuracoes-resumo-item">
-            <span>Usuário</span><strong>{formulario.nomeUsuario}</strong>
+        <section className="configuracoes-card">
+          <h2 id="config-leitura">Leitura de PDFs</h2>
+          <div className="configuracoes-form-group">
+            <label htmlFor="abertura-pdf">Ao abrir um PDF de estudo</label>
+            <select
+              id="abertura-pdf"
+              value={formulario.aberturaPdf ?? "interno"}
+              onChange={(evento) => alterarAberturaPdf(evento.target.value === "navegador" ? "navegador" : "interno")}
+            >
+              <option value="interno">Dentro do Study Pro</option>
+              <option value="navegador">No navegador — nova aba</option>
+            </select>
+            <p className="configuracoes-ajuda">
+              A preferência é salva automaticamente nesta conta. Se o navegador bloquear a nova aba,
+              você poderá abri-la por um link. Os simulados mantêm seu leitor próprio.
+            </p>
           </div>
-          <div className="configuracoes-resumo-item">
-            <span>Concurso</span><strong>{formulario.concurso}</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Dias de estudo</span><strong>{diasSelecionados.length}/7</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Matérias por dia</span><strong>{formulario.materiasPorDia ?? 1}</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Redação semanal</span>
-            <strong>{DIAS_SEMANA.find((dia) => dia.id === (formulario.diaRedacaoSemanal ?? "dom"))?.nome ?? "Domingo"}</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Simulado semanal</span>
-            <strong>{DIAS_SEMANA.find((dia) => dia.id === (formulario.diaSimuladoSemanal ?? "dom"))?.nome ?? "Domingo"}</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Tema básico</span><strong>{nomeTemaBasico(temaBasico)}</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Tempo</span>
-            <strong>
-              {Math.floor(formulario.metaMinutosDiaria / 60)}h {formulario.metaMinutosDiaria % 60}min
-            </strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Questões</span><strong>{formulario.metaQuestoesDiaria}/dia</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Revisões</span><strong>{formulario.metaRevisoesDiaria}/dia</strong>
-          </div>
-          <div className="configuracoes-resumo-item">
-            <span>Edital</span>
-            <strong>{formulario.editalAtivo?.confirmadoEm ? "Configurado" : "Não configurado"}</strong>
-          </div>
+          <label className="configuracoes-checkbox">
+            <input type="checkbox" checked={formulario.salvarMarcacoesPdf === true} onChange={e => alterarPersistenciaPdf(e.target.checked)}/>
+            <span>Salvar minhas marcações nos PDFs dos materiais</span>
+          </label>
+          <p className="configuracoes-ajuda">Esta opção é salva automaticamente. Ativado: caneta e marca-texto ficam salvos neste aparelho para sua conta. Desativado: as marcações desta leitura são descartadas ao fechar. Os rascunhos de simulados mantêm seu funcionamento próprio.</p>
+        </section>
+              </>
+            )}
+
+            {secaoAtiva === "seguranca" && (
+              <>
+        <AlterarSenha />
+        <div className="configuracoes-card configuracoes-backup-card">
+          <h2 id="config-backup">Backups</h2>
+          <p>
+            Consulte os backups incrementais, os backups oficiais do dia e as cópias de segurança de conflito.
+          </p>
+          <Link className="configuracoes-backup-link" to="/backup">
+            Abrir Backup e segurança →
+          </Link>
         </div>
 
         <div className="configuracoes-card configuracoes-legal-card">
@@ -565,8 +660,14 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
             Informações comerciais e canal exclusivo de atendimento serão publicados antes da abertura de cobranças ao público.
           </small>
         </div>
-      </div>
+              </>
+            )}
+          </div>
 
+          <p className="configuracoes-salvamento-aviso">
+            As alterações de perfil, planejamento, metas e tema são aplicadas ao salvar.
+            As preferências de leitura de PDF são salvas automaticamente.
+          </p>
       <div className="configuracoes-acoes">
         <button className="configuracoes-salvar" onClick={salvarConfiguracoes}>
           Salvar configurações
@@ -574,6 +675,8 @@ Este é o padrão. Abaixo você pode escolher uma quantidade diferente para cada
         <button className="configuracoes-restaurar" onClick={restaurarPadrao}>
           Restaurar padrão
         </button>
+      </div>
+        </div>
       </div>
     </section>
   );
