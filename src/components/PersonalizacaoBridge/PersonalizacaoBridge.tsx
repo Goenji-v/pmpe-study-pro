@@ -1,3 +1,5 @@
+import { useAuth } from "../../context/AuthContext";
+import { useIdentidadePreview } from "../../services/identidadePreview";
 import { useEffect, useMemo } from "react";
 
 import "./PersonalizacaoBridge.css";
@@ -17,17 +19,19 @@ type ConfiguracoesComTemaBasico = {
 
 export default function PersonalizacaoBridge() {
   const { configuracoes } = useApp();
+  const { usuario } = useAuth();
+  const { dados } = useIdentidadePreview(usuario?.id);
   const economia = useMemo(() => obterEstadoEconomia(configuracoes), [configuracoes]);
   const tema = encontrarItemLoja(economia.temaEquipado, CATALOGO_LOJA);
   const moldura = encontrarItemLoja(economia.molduraEquipada, CATALOGO_LOJA);
   const corIcones = encontrarItemLoja(economia.iconeEquipado, CATALOGO_LOJA);
   const configTema = configuracoes as typeof configuracoes & ConfiguracoesComTemaBasico;
   const temaBasico: TemaBasico =
-    configTema.temaBasico ?? (configTema.tema === "claro" ? "claro" : "azul");
+    dados.tema ?? configTema.temaBasico ?? (configTema.tema === "claro" ? "claro" : "azul");
 
   useEffect(() => {
     const raiz = document.documentElement;
-    const valorTema = tema?.tipo === "tema" ? tema.valorVisual : "padrao";
+    const valorTema = dados.tema ? "padrao" : tema?.tipo === "tema" ? tema.valorVisual : "padrao";
     const valorMoldura = moldura?.tipo === "moldura" ? moldura.valorVisual : "padrao";
     const valorIcones =
       corIcones?.tipo === "icone" ? corIcones.valorVisual : "prata-tatica";
@@ -45,6 +49,7 @@ export default function PersonalizacaoBridge() {
     };
   }, [
     temaBasico,
+    dados.tema,
     tema?.tipo,
     tema?.valorVisual,
     moldura?.tipo,

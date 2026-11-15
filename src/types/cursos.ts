@@ -118,6 +118,8 @@ export type CursoImportado = {
 export type ConfiguracoesCursosExtras = {
   cursos?: CursoImportado[];
   cursosAtivosIds?: string[];
+  /** Fonte preferida por disciplina: muda a ordem de exibição, nunca remove cursos. */
+  fontePrincipalPorMateria?: Record<string, string>;
 };
 
 export type ConfiguracoesComCursos = ConfiguracoesApp & ConfiguracoesCursosExtras;
