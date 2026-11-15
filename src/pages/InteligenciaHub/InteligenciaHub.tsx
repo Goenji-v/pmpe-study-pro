@@ -24,17 +24,17 @@ const ABAS: Array<{
   {
     id: "visao-geral",
     titulo: "Visão geral",
-    descricao: "Desempenho e prioridades",
+    descricao: "Prioridades e ações",
   },
   {
     id: "relatorio",
-    titulo: "Relatório",
-    descricao: "Diagnóstico detalhado",
+    titulo: "Meu desempenho",
+    descricao: "Evolução e relatório",
   },
   {
     id: "coach",
     titulo: "IA Coach",
-    descricao: "Próxima ação recomendada",
+    descricao: "Orientação personalizada",
   },
 ];
 
