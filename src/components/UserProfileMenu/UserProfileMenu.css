@@ -38,6 +38,26 @@
   color: #fff;
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.18);
 }
+/* A imagem personalizada deve ficar sempre limitada ao avatar, independentemente
+   das dimensões originais (inclusive logos ou imagens muito grandes). */
+.user-profile-avatar {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.user-profile-avatar > img.id-header-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: cover;
+  object-position: center;
+  border-radius: inherit;
+  flex: none;
+}
 .user-profile-avatar.grande {
   width: 42px;
   height: 42px;
@@ -113,6 +133,10 @@
   background: rgba(15, 23, 42, 0.985);
   box-shadow: 0 20px 55px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(16px);
+  max-height: min(610px, calc(100dvh - 120px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   z-index: 1200;
 }
 .user-profile-dropdown-head {
