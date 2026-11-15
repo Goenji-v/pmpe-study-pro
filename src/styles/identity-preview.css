@@ -17,3 +17,11 @@ html[data-study-base-theme='claro'][data-study-theme='padrao'] .cb-row span:last
 .perfil-estatisticas strong{font-family:'Saira Condensed','Arial Narrow',sans-serif;font-variant-numeric:tabular-nums}
 html[data-study-base-theme='claro'][data-study-theme='padrao'] :is(.perfil-secao,.perfil-insignia-slot,.perfil-estatisticas article,.perfil-colecao-card){background:var(--study-surface);color:var(--study-text);border-color:var(--study-border)}
 html[data-study-base-theme='claro'][data-study-theme='padrao'] .perfil-acoes button{background:var(--study-surface-soft)}
+/* The legacy polish layer uses fixed dark colors; keep navigation readable in light mode. */
+html[data-study-base-theme='claro'][data-study-theme='padrao'] :is(.sidebar-link,.sidebar-link-texto,.sidebar-grupo-botao,.sidebar-grupo-identidade,.sidebar-grupo-identidade>span:last-child){color:#26354b!important;opacity:1}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] :is(.sidebar-link-ativo,.sidebar-link:hover,.sidebar-grupo-botao:hover){background:#e1eaf5!important;color:#163d72!important;border-color:#b6c9df!important}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] :is(.sidebar-link-icone,.sidebar-grupo-icone){background:#e2eaf4!important;color:#314d70!important;border-color:#c6d3e3!important}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] :is(.header-search,.header-notification-button,.user-profile-trigger,.cloud-status,.user-profile-dropdown,.cloud-status-painel){background:#fff!important;color:#26354b!important;border-color:#c5d2e2!important;box-shadow:none}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] :is(.header-search span,.header-search svg,.header-notification-button svg,.user-profile-copy strong,.user-profile-copy small,.cloud-status strong,.cloud-status-chevron,.user-profile-chevron){color:#334862!important}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] .header-concurso{color:#234d80!important;background:#e4edf7!important;border-color:#c4d3e5!important}
+html[data-study-base-theme='claro'][data-study-theme='padrao'] .user-profile-links a{color:#26354b!important}
