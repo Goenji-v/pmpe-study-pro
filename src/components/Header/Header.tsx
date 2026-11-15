@@ -1,5 +1,7 @@
+import { useAuth } from "../../context/AuthContext";
+import { useIdentidadePreview } from "../../services/identidadePreview";
 import "./Header.css";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Sun, Moon } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -11,10 +13,13 @@ import UserProfileMenu from "../UserProfileMenu/UserProfileMenu";
 
 export default function Header() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const { dados, salvar } = useIdentidadePreview(usuario?.id);
   const location = useLocation();
   const {
     configuracoes,
   } = useApp();
+  const claro = (dados.tema ?? (configuracoes as typeof configuracoes & {temaBasico?:string}).temaBasico ?? configuracoes.tema) === "claro";
   const resumoProva = location.pathname === "/" ? calcularResumoProva(configuracoes.dataProva) : null;
 
   function abrirNotificacoes() {
@@ -69,6 +74,7 @@ export default function Header() {
 
       <div className="header-acoes">
         <CloudStatus />
+        <button type="button" className="header-notification-button" aria-label={claro?'Ativar tema escuro':'Ativar tema claro'} title={claro?'Tema escuro':'Tema claro'} onClick={()=>{try{salvar({tema:claro?'escuro':'claro'});}catch{window.alert('Não foi possível guardar o tema neste navegador.');}}}>{claro?<Moon size={19}/>:<Sun size={19}/>}</button>
         <button
           type="button"
           className="header-notification-button"
