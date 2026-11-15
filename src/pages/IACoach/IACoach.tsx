@@ -207,7 +207,7 @@ export default function IACoach() {
     ) ?? null;
   }
 
-  const assuntoCritico = dados.assuntosCriticos[0] ?? null;
+  const assuntoCritico = dados.assuntosCriticos.find((assunto) => assunto.total >= 10) ?? dados.assuntosCriticos[0] ?? null;
   const materiaRisco = dados.piorMateria ?? dados.materiaEsquecida ?? null;
 
   return (
@@ -484,7 +484,7 @@ export default function IACoach() {
             titulo={materiaRisco?.materia ?? "Sem risco definido"}
             detalhe={
               materiaRisco
-                ? `${materiaRisco.percentual}% • ${formatarDiasSemEstudar(materiaRisco.diasSemEstudar)}`
+                ? `${materiaRisco.total > 0 ? materiaRisco.percentual + "% de acertos" : "Sem questões avaliadas"} • ${formatarDiasSemEstudar(materiaRisco.diasSemEstudar)}`
                 : "Ainda não há dados suficientes."
             }
             tom="negativo"
@@ -555,11 +555,11 @@ export default function IACoach() {
                   <div className="coach-materia-topo">
                     <div>
                       <strong>{item.materia}</strong>
-                      <span>{item.total} questões • {formatarMinutos(item.minutos)} • {formatarDiasSemEstudar(item.diasSemEstudar)}</span>
+                      <span>{item.total > 0 ? item.total + " questões" : "Sem questões avaliadas"} • {formatarMinutos(item.minutos)} • {formatarDiasSemEstudar(item.diasSemEstudar)}</span>
                     </div>
-                    <strong className={item.percentual >= 70 ? "coach-positivo" : item.percentual < 50 ? "coach-negativo" : "coach-medio"}>{item.percentual}%</strong>
+                    <strong className={item.total === 0 ? "coach-medio" : item.percentual >= 70 ? "coach-positivo" : item.percentual < 50 ? "coach-negativo" : "coach-medio"}>{item.total > 0 ? item.percentual + "%" : "—"}</strong>
                   </div>
-                  <div className="coach-barra"><div style={{ width: `${item.percentual}%` }} /></div>
+                  <div className="coach-barra"><div style={{ width: `${item.total > 0 ? item.percentual : 0}%` }} /></div>
                   <button type="button" onClick={() => abrirMateriais(item.materia)}>Abrir materiais</button>
                 </article>
               ))}
