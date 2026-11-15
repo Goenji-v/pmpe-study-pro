@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { useNavigate } from "react-router-dom";
+import { ArrowUpRight, BookOpenText, BrainCircuit, CalendarDays, FileQuestion } from "lucide-react";
 
 import "./Dashboard.css";
 
@@ -627,6 +628,35 @@ function iniciarProximaAulaPortugues() {
             </div>
           </div>
         </article>
+      </section>
+
+      <section className="dashboard-jornada-atalhos" aria-label="Acessos rápidos do Study Pro">
+        <div className="dashboard-jornada-titulo">
+          <span>ACESSO RÁPIDO</span>
+          <p>Continue sua jornada sem perder o foco da missão de hoje.</p>
+        </div>
+        <div className="dashboard-jornada-grid">
+          <button type="button" onClick={() => navigate("/central-estudos")}>
+            <BookOpenText size={20} aria-hidden="true" />
+            <span><strong>Meus Estudos</strong><small>Aulas e cronômetro</small></span>
+            <ArrowUpRight size={16} aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => navigate("/questoes")}>
+            <FileQuestion size={20} aria-hidden="true" />
+            <span><strong>Praticar</strong><small>Questões e treinos</small></span>
+            <ArrowUpRight size={16} aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => navigate("/plano")}>
+            <CalendarDays size={20} aria-hidden="true" />
+            <span><strong>Planejamento</strong><small>Plano Tático</small></span>
+            <ArrowUpRight size={16} aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => navigate("/inteligencia")}>
+            <BrainCircuit size={20} aria-hidden="true" />
+            <span><strong>Meu Progresso</strong><small>Inteligência e IA</small></span>
+            <ArrowUpRight size={16} aria-hidden="true" />
+          </button>
+        </div>
       </section>
 
       <section className="dashboard-pro-stats dashboard-pro-stats-art">
