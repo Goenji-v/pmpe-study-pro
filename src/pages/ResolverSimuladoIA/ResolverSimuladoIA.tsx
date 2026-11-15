@@ -1264,7 +1264,7 @@ export default function ResolverSimuladoIA() {
           <div className="resolver-ia-questao-topo">
             <span>
               Questão{" "}
-              {questaoAtual + 1}
+              {questaoAtual + 1}{" "}
               de {questoes.length}
             </span>
 
