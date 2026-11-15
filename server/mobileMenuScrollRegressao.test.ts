@@ -16,7 +16,7 @@ test("menu mobile tem região rolável própria, mantendo body travado e rodapé
   assert.match(css, /\.sidebar\.sidebar-mobile-aberta \.sidebar-rodape-acoes\s*\{[^}]*flex: 0 0 auto/);
   assert.match(css, /\.sidebar\.sidebar-mobile-aberta \.sidebar-logo\s*\{[^}]*flex: 0 0 auto/);
   assert.match(sidebar, /aria-controls="sidebar-principal"/);
-  assert.match(sidebar, /titulo="Praticar"/);
+  assert.match(sidebar, /titulo="Prática"/);
   assert.match(sidebar, /texto="Simulados"/);
 });
 
