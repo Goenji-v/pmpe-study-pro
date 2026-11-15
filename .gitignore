@@ -26,4 +26,8 @@ test-results/
 *.njsproj
 *.sln
 *.sw?
+# Never commit real environment files, including preview/production variants.
 .env
+.env.*
+!.env.example
+!.env.*.example
