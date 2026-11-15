@@ -1,6 +1,7 @@
-import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
+import { armazenamentoLocalDaConta as localStorage, armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowRight, BookOpen, ClipboardCheck, Info, RotateCcw, Sparkles, Target } from "lucide-react";
 
 import "./IACoach.css";
 import { useApp } from "../../context/AppContext";
@@ -12,6 +13,8 @@ import {
 } from "../../services/iaCoachService";
 import { calcularCentralInteligencia } from "../../services/inteligencia/calcularCentralInteligencia";
 import { calcularInsightsCoach } from "../../services/inteligencia/calcularInsightsCoach";
+import type { DesempenhoAssunto } from "../../services/inteligencia/types";
+import { chaveDaMateria } from "../../utils/desempenhoMaterias";
 import { resumirSimulado } from "../../utils/metricasConsolidadas";
 
 const CHAVE_FILTRO_MATERIAIS = "pmpe_filtro_materiais";
@@ -154,12 +157,38 @@ export default function IACoach() {
     navigate("/materiais");
   }
 
+  function configurarTreino(materia: string, assunto = "", quantidadeSugerida = 10) {
+    const opcoesDisponiveis = [5, 10, 15, 20, 30, 40, 50, 60];
+    const quantidade = opcoesDisponiveis.reduce(
+      (escolhida, atual) =>
+        Math.abs(atual - quantidadeSugerida) < Math.abs(escolhida - quantidadeSugerida)
+          ? atual
+          : escolhida,
+      10
+    );
+    sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
+    sessionStorage.setItem("pmpe:gerar-ia:prefill", JSON.stringify({
+      materia,
+      assunto: assunto || undefined,
+      quantidade,
+      banca: "AOCP",
+    }));
+    navigate("/gerar-simulado-ia");
+  }
+
   function executarAcaoIA(acao: AcaoCoachIA) {
     if (acao.tipo === "revisao") {
       navigate("/revisoes");
       return;
     }
+    if (acao.tipo === "questoes" && acao.materia) {
+      configurarTreino(acao.materia, acao.assunto, acao.quantidadeQuestoes || 10);
+      return;
+    }
     if (acao.tipo === "questoes" || acao.tipo === "simulado") {
+      // Um simulado geral não deve herdar o assunto de um treino anterior.
+      sessionStorage.removeItem("pmpe:gerar-ia:prefill");
+      sessionStorage.setItem("pmpe:gerar-ia:modo", acao.tipo === "simulado" ? "simulado" : "questoes");
       navigate("/gerar-simulado-ia");
       return;
     }
@@ -168,6 +197,14 @@ export default function IACoach() {
       return;
     }
     navigate("/materiais");
+  }
+
+  function localizarEvidencia(materia?: string, assunto?: string): DesempenhoAssunto | null {
+    if (!materia || !assunto) return null;
+    return dados.assuntosCriticos.find((item) =>
+      chaveDaMateria(item.materia) === chaveDaMateria(materia) &&
+      normalizarNome(item.assunto) === normalizarNome(assunto)
+    ) ?? null;
   }
 
   const assuntoCritico = dados.assuntosCriticos[0] ?? null;
@@ -201,6 +238,47 @@ export default function IACoach() {
           <strong>{formatarConfianca(insights.confianca)}</strong>
           <small>{insights.confiancaDescricao}</small>
         </div>
+      </section>
+
+      <section className="coach-painel coach-rota-personalizada" aria-label="Orientação de estudos prioritária">
+        <div className="coach-painel-topo coach-rota-topo">
+          <div>
+            <span className="coach-etiqueta"><Target size={15} /> PRÓXIMO PASSO SUGERIDO</span>
+            <h2>Seu plano de reforço</h2>
+            <p>Use os resultados registrados para revisar o conteúdo e depois testar se houve melhora. Sem alterar as missões do Plano Tático.</p>
+          </div>
+          <button type="button" className="coach-botao-secundario" onClick={() => navigate("/plano")}>
+            <ClipboardCheck size={16}/> Plano Tático
+          </button>
+        </div>
+        {assuntoCritico ? (
+          <div className="coach-rota-grid">
+            <div className="coach-rota-diagnostico">
+              <span className="coach-rota-kicker">ASSUNTO PARA REFORÇAR</span>
+              <h3>{assuntoCritico.assunto}</h3>
+              <p>{assuntoCritico.materia}</p>
+              <div className="coach-rota-evidencias">
+                <div><strong>{assuntoCritico.percentual}%</strong><small>Aproveitamento</small></div>
+                <div><strong>{assuntoCritico.erradas}</strong><small>Erros registrados</small></div>
+                <div><strong>{assuntoCritico.total}</strong><small>Questões analisadas</small></div>
+              </div>
+              <p className="coach-rota-aviso"><Info size={15}/> {assuntoCritico.total < 10
+                ? "A amostra ainda é pequena. Use o reforço como hipótese e confirme com mais questões."
+                : "O assunto foi priorizado pelo baixo aproveitamento observado no histórico."}</p>
+            </div>
+            <div className="coach-rota-etapas">
+              <div><span>01</span><div><strong>Revisar a teoria</strong><p>Abra os PDFs e as aulas relacionados ao assunto.</p></div><button type="button" onClick={() => abrirMateriais(assuntoCritico.materia, assuntoCritico.assunto)}>Materiais <ArrowRight size={15}/></button></div>
+              <div><span>02</span><div><strong>Fazer treino AOCP</strong><p>Gerador preparado com matéria, assunto e 10 questões. Você confirma antes de gerar.</p></div><button type="button" onClick={() => configurarTreino(assuntoCritico.materia, assuntoCritico.assunto, 10)}>Configurar <ArrowRight size={15}/></button></div>
+              <div><span>03</span><div><strong>Reavaliar seu resultado</strong><p>Registre o treino concluído e atualize o diagnóstico para conferir a evolução.</p></div><button type="button" onClick={() => void gerarAnaliseIA()} disabled={gerandoIA}>{gerandoIA ? "Analisando..." : "Atualizar IA"} <RotateCcw size={15}/></button></div>
+            </div>
+          </div>
+        ) : (
+          <div className="coach-rota-sem-dados">
+            <BookOpen size={21}/>
+            <div><strong>Sem assunto crítico confirmado no histórico.</strong><p>Continue o Plano Tático e registre questões por assunto para receber um reforço específico.</p></div>
+            <button type="button" className="coach-botao-secundario" onClick={() => navigate("/questoes")}>Abrir questões <ArrowRight size={16}/></button>
+          </div>
+        )}
       </section>
 
       <section className="coach-painel coach-painel-evolucao">
@@ -332,6 +410,21 @@ export default function IACoach() {
                       <span>{formatarTipoAcao(acao.tipo)}</span>
                     </div>
                     <p>{acao.motivo}</p>
+                    {(() => {
+                      const evidencia = localizarEvidencia(acao.materia, acao.assunto);
+                      const materia = dados.materias.find((item) => acao.materia && chaveDaMateria(item.materia) === chaveDaMateria(acao.materia));
+                      return (
+                        <div className="coach-acao-evidencia">
+                          <strong><Info size={14}/> Base da recomendação</strong>
+                          <span>{evidencia
+                            ? `${evidencia.certas} acertos e ${evidencia.erradas} erros em ${evidencia.total} questões deste assunto (${evidencia.percentual}%).`
+                            : materia?.total
+                              ? `Na disciplina: ${materia.certas} acertos e ${materia.erradas} erros em ${materia.total} questões. Não há amostra específica deste assunto entre os críticos.`
+                              : "Sugestão produzida pela IA. Não foi encontrada uma amostra específica de questões para confirmá-la."}</span>
+                          {evidencia && evidencia.total < 10 && <small>Amostra reduzida: confirme a tendência com mais questões.</small>}
+                        </div>
+                      );
+                    })()}
                     <div className="coach-ia-acao-rodape">
                       <small>
                         {acao.duracaoMinutos} min
@@ -339,9 +432,21 @@ export default function IACoach() {
                         {acao.materia ? ` • ${acao.materia}` : ""}
                         {acao.assunto ? ` — ${acao.assunto}` : ""}
                       </small>
-                      <button type="button" onClick={() => executarAcaoIA(acao)}>
-                        Executar agora
-                      </button>
+                      <div className="coach-ia-acao-botoes">
+                        {acao.materia && (
+                          <button type="button" className="coach-acao-materiais" onClick={() => abrirMateriais(acao.materia!, acao.assunto ?? "")}>
+                            <BookOpen size={15}/> Material
+                          </button>
+                        )}
+                        {(acao.tipo === "questoes" || acao.tipo === "misto" || acao.tipo === "teoria") && acao.materia && (
+                          <button type="button" className="coach-acao-treino" onClick={() => configurarTreino(acao.materia!, acao.assunto ?? "", acao.quantidadeQuestoes || 10)}>
+                            <Sparkles size={15}/> Treino AOCP
+                          </button>
+                        )}
+                        <button type="button" onClick={() => executarAcaoIA(acao)}>
+                          {acao.tipo === "revisao" ? "Abrir revisões" : acao.tipo === "simulado" ? "Abrir simulados" : acao.tipo === "questoes" ? "Abrir treino" : "Executar ação"} <ArrowRight size={15}/>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -413,7 +518,7 @@ export default function IACoach() {
       <div className="coach-grid">
         <section className="coach-painel">
           <div className="coach-painel-topo">
-            <div><h2>🎯 Próximas prioridades</h2><p>Sequência calculada pela inteligência central, antes mesmo da interpretação da IA.</p></div>
+            <div><h2>🎯 Sugestões automáticas</h2><p>Alternativas baseadas nos registros. São independentes das ações geradas pela IA e não substituem o Plano Tático.</p></div>
           </div>
           <div className="coach-recomendacoes">
             {dados.missoes.length === 0 ? (
@@ -477,9 +582,12 @@ export default function IACoach() {
           <div className="coach-assuntos">
             {dados.assuntosCriticos.map((item) => (
               <article key={item.chave}>
-                <div><strong>{item.assunto}</strong><span>{item.materia}</span></div>
-                <div><strong>{item.percentual}%</strong><span>{item.erradas} erros</span></div>
-                <button type="button" onClick={() => abrirMateriais(item.materia, item.assunto)}>Materiais</button>
+                <div><strong>{item.assunto}</strong><span>{item.materia} · {item.total} questões</span></div>
+                <div><strong>{item.percentual}%</strong><span>{item.erradas} erros{item.total < 10 ? " · amostra pequena" : ""}</span></div>
+                <div className="coach-assunto-botoes">
+                  <button type="button" onClick={() => abrirMateriais(item.materia, item.assunto)}>Materiais</button>
+                  <button type="button" className="coach-botao-secundario" onClick={() => configurarTreino(item.materia, item.assunto)}>Treino AOCP</button>
+                </div>
               </article>
             ))}
           </div>
@@ -615,6 +723,10 @@ function classeVariacao(valor: number | null): "positivo" | "negativo" | "neutro
 function classeNumero(valor: number): "positivo" | "negativo" | "neutro" {
   if (valor === 0) return "neutro";
   return valor > 0 ? "positivo" : "negativo";
+}
+
+function normalizarNome(valor: string) {
+  return valor.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").trim().toLowerCase().replace(/\\s+/g, " ");
 }
 
 function formatarDataAnalise(valor: string) {
