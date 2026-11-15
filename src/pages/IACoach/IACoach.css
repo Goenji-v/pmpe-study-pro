@@ -715,3 +715,121 @@ html[data-study-base-theme="claro"] .coach-ia-final { color: #5b21b6; }
     flex-direction: column;
   }
 }
+
+
+/* Coach estratégico v2: decisões verificáveis e acesso ao reforço direcionado. */
+.coach-rota-personalizada {
+  margin: 0 0 20px;
+  border-color: var(--coach-border);
+  background:
+    radial-gradient(ellipse at 95% 0%, rgba(69, 114, 219, .12), transparent 50%),
+    var(--coach-panel);
+}
+.coach-rota-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.coach-rota-topo .coach-etiqueta { display: inline-flex; align-items: center; gap: 7px; }
+.coach-rota-topo h2 { margin: 6px 0; font-size: 23px; }
+.coach-rota-topo p { max-width: 720px; }
+.coach-rota-topo button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; }
+.coach-rota-grid { display: grid; grid-template-columns: minmax(240px,.85fr) minmax(0,1.15fr); gap: 14px; }
+.coach-rota-diagnostico,
+.coach-rota-etapas {
+  padding: 17px;
+  border: 1px solid var(--coach-border);
+  border-radius: 14px;
+  background: var(--coach-panel-strong);
+}
+.coach-rota-kicker {
+  display: block;
+  color: var(--coach-blue);
+  font-size: 10px;
+  letter-spacing: .09em;
+  font-weight: 850;
+}
+.coach-rota-diagnostico h3 { margin: 10px 0 5px; font-size: 21px; color: var(--coach-text); line-height: 1.35; }
+.coach-rota-diagnostico > p { color: var(--coach-muted); font-size: 12px; line-height: 1.5; margin: 0 0 16px; }
+.coach-rota-evidencias { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+.coach-rota-evidencias div {
+  min-width: 0; padding: 12px 9px;
+  border: 1px solid var(--coach-border);
+  background: var(--coach-panel-soft);
+  border-radius: 10px;
+}
+.coach-rota-evidencias strong { display: block; color: var(--coach-text); font-variant-numeric: tabular-nums; font-size: 23px; }
+.coach-rota-evidencias small { display: block; color: var(--coach-muted); font-size: 10px; margin-top: 4px; line-height: 1.4; }
+.coach-rota-diagnostico .coach-rota-aviso {
+  display: flex; align-items: flex-start; gap: 7px; margin: 13px 0 0; font-size: 11px;
+  color: var(--coach-muted); line-height: 1.5;
+}
+.coach-rota-aviso svg { flex: 0 0 15px; margin-top: 1px; }
+.coach-rota-etapas { display: grid; gap: 0; padding: 7px 16px; }
+.coach-rota-etapas > div {
+  display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 11px;
+  padding: 12px 0; border-bottom: 1px solid var(--coach-border);
+}
+.coach-rota-etapas > div:last-child { border-bottom: 0; }
+.coach-rota-etapas > div > span {
+  display: grid; place-items: center; height: 27px; width: 27px;
+  border-radius: 8px; color: var(--coach-blue); background: var(--coach-panel-soft);
+  font-size: 11px; font-weight: 850;
+}
+.coach-rota-etapas strong { display: block; color: var(--coach-text); font-size: 13px; line-height: 1.35; }
+.coach-rota-etapas p { margin: 4px 0 0; color: var(--coach-muted); font-size: 11px; line-height: 1.5; }
+.coach-rota-etapas button,
+.coach-rota-sem-dados button,
+.coach-ia-acao-botoes button {
+  min-height: 37px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px 11px; border: 1px solid var(--coach-border); border-radius: 9px;
+  background: var(--coach-panel-soft); color: var(--coach-text);
+  font-size: 11px; font-weight: 800; cursor: pointer;
+}
+.coach-rota-etapas button:hover:not(:disabled),
+.coach-rota-sem-dados button:hover,
+.coach-ia-acao-botoes button:hover:not(:disabled) {
+  border-color: var(--coach-blue);
+}
+.coach-rota-sem-dados { display: flex; align-items: center; gap: 14px; padding: 17px; border: 1px dashed var(--coach-border); border-radius: 12px; background: var(--coach-panel-strong); }
+.coach-rota-sem-dados > svg { color: var(--coach-blue); flex-shrink: 0; }
+.coach-rota-sem-dados > div { min-width: 0; flex: 1; }
+.coach-rota-sem-dados strong { font-size: 13px; }
+.coach-rota-sem-dados p { color: var(--coach-muted); margin: 6px 0 0; font-size: 12px; }
+.coach-acao-evidencia {
+  display: grid; gap: 5px; margin-top: 12px; padding: 11px 12px;
+  border: 1px solid var(--coach-border); border-radius: 9px;
+  background: var(--coach-panel-soft); color: var(--coach-muted);
+}
+.coach-acao-evidencia > strong { display: inline-flex; gap: 6px; align-items: center; color: var(--coach-text); font-size: 11px; }
+.coach-acao-evidencia > span { font-size: 11px; line-height: 1.55; }
+.coach-acao-evidencia > small { color: var(--coach-amber); font-size: 10px; }
+.coach-ia-acao-botoes { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; }
+.coach-ia-acao-botoes button { background: var(--coach-panel-soft); color: var(--coach-text); }
+.coach-ia-acao-botoes button:last-child { background: #126c68; border-color: #126c68; color: #fff; }
+.coach-ia-acao-botoes .coach-acao-treino { color: var(--coach-blue); }
+.coach-assunto-botoes { display: grid; grid-template-columns: 1fr; align-items: start; gap: 5px; }
+.coach-assunto-botoes button { white-space: nowrap; margin: 0; }
+.coach-assunto-botoes .coach-botao-secundario {
+  background: var(--coach-panel-soft); color: var(--coach-text); border-color: var(--coach-border);
+}
+@media (max-width: 1050px) {
+  .coach-rota-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 820px) {
+  .coach-rota-topo { flex-direction: column; align-items: stretch; }
+  .coach-rota-topo button { width: 100%; }
+}
+@media (max-width: 650px) {
+  .coach-rota-personalizada { padding: 16px; }
+  .coach-rota-diagnostico, .coach-rota-etapas { padding: 13px; }
+  .coach-rota-etapas > div { grid-template-columns: 27px minmax(0,1fr); }
+  .coach-rota-etapas > div > button { grid-column: 1 / -1; width: 100%; }
+  .coach-rota-sem-dados { flex-wrap: wrap; }
+  .coach-rota-sem-dados > button { width: 100%; }
+  .coach-ia-acao-botoes { width: 100%; flex-direction: column; align-items: stretch; }
+  .coach-ia-acao-botoes button { width: 100%; }
+  .coach-assuntos article { grid-template-columns: 1fr auto; }
+  .coach-assunto-botoes { grid-column: 1/-1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
