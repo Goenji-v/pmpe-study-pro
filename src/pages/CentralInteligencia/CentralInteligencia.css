@@ -251,3 +251,6 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .inteligencia-v2-
   background: linear-gradient(125deg, #fff, #eef5ff);
 }
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .inteligencia-v2-acao-numero { color: #1c4d9a; }
+
+.inteligencia-v2-assunto-missao { display: block; margin-bottom: 7px; color: var(--iv2-text); font-size: 13px; line-height: 1.45; }
+.inteligencia-v2-origem-missao { display: block; margin: 0 0 9px; color: var(--iv2-accent); font-weight: 750; font-size: 11px; line-height: 1.5; }
