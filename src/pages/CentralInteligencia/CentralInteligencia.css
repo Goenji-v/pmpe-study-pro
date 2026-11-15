@@ -254,3 +254,10 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .inteligencia-v2-
 
 .inteligencia-v2-assunto-missao { display: block; margin-bottom: 7px; color: var(--iv2-text); font-size: 13px; line-height: 1.45; }
 .inteligencia-v2-origem-missao { display: block; margin: 0 0 9px; color: var(--iv2-accent); font-weight: 750; font-size: 11px; line-height: 1.5; }
+
+.inteligencia-v2-filtros { display: inline-flex; flex-wrap: wrap; gap: 5px; padding: 5px; margin-top: 13px; border: 1px solid var(--iv2-line); border-radius: 12px; background: var(--iv2-soft); }
+.inteligencia-v2-filtros button { min-height: 37px; padding: 8px 13px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--iv2-muted); font-size: 12px; font-weight: 750; }
+.inteligencia-v2-filtros button:hover { color: var(--iv2-text); }
+.inteligencia-v2-filtros button.ativo { background: var(--iv2-panel); color: var(--iv2-text); border-color: var(--iv2-line); box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.inteligencia-v2-filtro-descricao { margin-top: 9px !important; }
+@media (max-width: 420px) { .inteligencia-v2-filtros { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; } .inteligencia-v2-filtros button { padding: 8px 5px; font-size: 11px; } }
