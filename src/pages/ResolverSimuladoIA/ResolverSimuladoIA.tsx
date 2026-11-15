@@ -15,6 +15,8 @@ import ExplicacaoQuestao from "../../components/ExplicacaoQuestao/ExplicacaoQues
 import AnaliseSimuladoStudyPro from "../../components/AnaliseSimuladoStudyPro/AnaliseSimuladoStudyPro";
 import MarcacaoQuestaoSimulado from "../../components/AnaliseSimuladoStudyPro/MarcacaoQuestaoSimulado";
 
+import MapaQuestoes from "../../components/MapaQuestoes/MapaQuestoes";
+import type { CSSProperties } from "react";
 import "./ResolverSimuladoIA.css";
 import "./ResolverSimuladoIADescartar.css";
 
@@ -107,6 +109,8 @@ type RascunhoQuestoesIA = {
 
 export default function ResolverSimuladoIA() {
   const navigate = useNavigate();
+  const [mapaAberto,setMapaAberto] = useState(true);
+  const [tamanhoFonte,setTamanhoFonte] = useState(20);
   const { sessaoAtiva, cronometroAtivo } = useCronometro();
   const {
     materias,
@@ -1249,113 +1253,12 @@ export default function ResolverSimuladoIA() {
           />
         )}
 
-      <div className="resolver-ia-layout">
-        <aside className="resolver-ia-navegacao">
-          <h2>
-            Questões
-          </h2>
-
-          <div className="resolver-ia-numeros">
-            {questoes.map(
-              (
-                item,
-                indice
-              ) => {
-                const respondida =
-                  Boolean(
-                    respostas[item.id]
-                  );
-
-                const correta =
-                  finalizado &&
-                  respostas[item.id] ===
-                    item.respostaCorreta;
-
-                const emBranco =
-                  finalizado &&
-                  !respostas[item.id];
-
-                const errada =
-                  finalizado &&
-                  Boolean(
-                    respostas[item.id]
-                  ) &&
-                  respostas[item.id] !==
-                    item.respostaCorreta;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={[
-                      questaoAtual ===
-                      indice
-                        ? "ativa"
-                        : "",
-
-                      respondida &&
-                      !finalizado
-                        ? "respondida"
-                        : "",
-
-                      correta
-                        ? "correta"
-                        : "",
-
-                      errada
-                        ? "errada"
-                        : "",
-
-                      emBranco
-                        ? "em-branco"
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onClick={() =>
-                      irParaQuestao(
-                        indice
-                      )
-                    }
-                  >
-                    {indice + 1}
-                  </button>
-                );
-              }
-            )}
-          </div>
-
-          <div className="resolver-ia-legenda">
-            <span>
-              <i className="legenda-atual" />
-              Atual
-            </span>
-
-            <span>
-              <i className="legenda-respondida" />
-              Respondida
-            </span>
-
-            {finalizado && (
-              <>
-                <span>
-                  <i className="legenda-correta" />
-                  Correta
-                </span>
-
-                <span>
-                  <i className="legenda-errada" />
-                  Errada
-                </span>
-
-                <span>
-                  <i className="legenda-branco" />
-                  Em branco
-                </span>
-              </>
-            )}
-          </div>
-        </aside>
+      <div className="sp-questao-ferramentas" role="toolbar" aria-label="Ferramentas de leitura">
+        <button type="button" aria-expanded={mapaAberto} onClick={()=>setMapaAberto(v=>!v)}>{mapaAberto?'Ocultar mapa':'Mostrar mapa'}</button>
+        <div><span>Tamanho do texto</span><button type="button" aria-label="Diminuir fonte" disabled={tamanhoFonte<=16} onClick={()=>setTamanhoFonte(v=>Math.max(16,v-2))}>A−</button><output aria-label="Tamanho da fonte">{tamanhoFonte}px</output><button type="button" aria-label="Aumentar fonte" disabled={tamanhoFonte>=30} onClick={()=>setTamanhoFonte(v=>Math.min(30,v+2))}>A+</button></div>
+      </div>
+      <div className={`resolver-ia-layout ${mapaAberto?'':'sp-sem-mapa'}`} style={{'--sp-questao-fonte':`${tamanhoFonte}px`} as CSSProperties}>
+        {mapaAberto&&<MapaQuestoes questoes={questoes} respostas={respostas} finalizado={finalizado} atual={questaoAtual} onNavigate={irParaQuestao}/>}
 
         <main className="resolver-ia-questao-card">
           <div className="resolver-ia-questao-topo">
