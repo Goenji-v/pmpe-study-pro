@@ -1,5 +1,5 @@
 import { armazenamentoLocalDaConta as localStorage } from "../../services/armazenamentoConta";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight, BookOpen, BrainCircuit, CalendarCheck2, CheckCircle2,
@@ -10,6 +10,9 @@ import {
 import "./CentralInteligencia.css";
 import { useApp } from "../../context/AppContext";
 import { BarraProgresso } from "../../components/inteligencia/ComponentesInteligencia";
+import { criarPlanoOperacional, obterConclusoesPlanoOperacional } from "../../utils/planoOperacional";
+import { getMissaoDoDiaOuProxima, getSemanaOperacional } from "../../utils/planoUtils";
+import { obterDiaAtualPlano, NOMES_DIAS_PLANO } from "../../utils/planoCalendario";
 import { calcularCentralInteligencia } from "../../services/inteligencia/calcularCentralInteligencia";
 import type { DesempenhoAssunto, MissaoDia } from "../../services/inteligencia/types";
 import { formatarMinutos, formatarTipoMissao, percentualMeta } from "../../services/inteligencia/utils";
@@ -18,7 +21,34 @@ const CHAVE_FILTRO_MATERIAIS = "pmpe_filtro_materiais";
 
 export default function CentralInteligencia() {
   const navigate = useNavigate();
-  const { questoes, sessoes, revisoes, simulados, configuracoes } = useApp();
+  const { questoes, sessoes, revisoes, simulados, materias, missoesConcluidas, configuracoes } = useApp();
+  const [versaoPlano, setVersaoPlano] = useState(0);
+
+  useEffect(() => {
+    const atualizar = () => setVersaoPlano((valor) => valor + 1);
+    const eventos = ["pmpe-plano-atualizado", "pmpe-dashboard-atualizado", "focus"];
+    eventos.forEach((nome) => window.addEventListener(nome, atualizar));
+    return () => eventos.forEach((nome) => window.removeEventListener(nome, atualizar));
+  }, []);
+
+  const planoCalendario = useMemo(
+    () => criarPlanoOperacional(materias, missoesConcluidas, configuracoes),
+    [materias, missoesConcluidas, configuracoes]
+  );
+  const conclusoesPlano = useMemo(
+    () => obterConclusoesPlanoOperacional(materias, missoesConcluidas, planoCalendario),
+    [materias, missoesConcluidas, planoCalendario]
+  );
+  const missaoPrincipal = useMemo(() => {
+    const semana = getSemanaOperacional(
+      conclusoesPlano, planoCalendario, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano
+    );
+    const dia = obterDiaAtualPlano();
+    const proxima = getMissaoDoDiaOuProxima(missoesConcluidas, planoCalendario, semana, dia);
+    return { proxima, semana, dia };
+    /* Recalcular quando o Plano Tático avisar que a missão mudou. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planoCalendario, conclusoesPlano, missoesConcluidas, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano, versaoPlano]);
   const [mostrarCalculo, setMostrarCalculo] = useState(false);
 
   const dados = useMemo(
@@ -102,9 +132,26 @@ export default function CentralInteligencia() {
         <article className="inteligencia-v2-foco-card foco-plano">
           <div className="inteligencia-v2-foco-icone"><CalendarCheck2 size={21} /></div>
           <span className="inteligencia-v2-foco-label">01 · MISSÃO PRINCIPAL</span>
-          <h3>Continue seu Plano Tático</h3>
-          <p>Consulte a missão do dia e siga o conteúdo planejado sem misturar pendências com novas atividades.</p>
-          <button type="button" onClick={() => navigate("/plano")}>Ver missão de hoje <ArrowRight size={16}/></button>
+          {missaoPrincipal.proxima ? (
+            <>
+              <h3>{missaoPrincipal.proxima.missao.materia}</h3>
+              <p>
+                <strong className="inteligencia-v2-assunto-missao">{missaoPrincipal.proxima.missao.assunto}</strong>
+                <span className="inteligencia-v2-origem-missao">
+                  Semana {missaoPrincipal.proxima.semana} · {NOMES_DIAS_PLANO[missaoPrincipal.proxima.dia] ?? "Dia " + missaoPrincipal.proxima.dia}
+                  {missaoPrincipal.proxima.dia !== missaoPrincipal.dia ? " · Pendência útil do plano" : ""}
+                </span>
+                {missaoPrincipal.dia === 7 ? "O domingo mantém as atividades de redação e simulado dentro do Plano Tático." : "Esta é a próxima missão calculada pela mesma regra do Plano Tático."}
+              </p>
+              <button type="button" onClick={() => navigate("/plano", { state: { semana: missaoPrincipal.proxima?.semana, dia: missaoPrincipal.proxima?.dia } })}>Ver missão no plano <ArrowRight size={16}/></button>
+            </>
+          ) : (
+            <>
+              <h3>{planoCalendario.length ? "Nenhuma missão pendente" : "Configure seu Plano Tático"}</h3>
+              <p>{planoCalendario.length ? "Não há uma missão de conteúdo a iniciar neste momento. Confira o plano e as pendências." : "Defina sua grade de estudos para receber a missão oficial nesta área."}</p>
+              <button type="button" onClick={() => navigate("/plano")}>Abrir Plano Tático <ArrowRight size={16}/></button>
+            </>
+          )}
         </article>
         <article className="inteligencia-v2-foco-card foco-revisao">
           <div className="inteligencia-v2-foco-icone"><RotateCcw size={21} /></div>
