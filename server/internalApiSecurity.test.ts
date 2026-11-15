@@ -77,20 +77,23 @@ test("proxy público autoriza somente previews Vercel do projeto Study Pro", asy
 
 
 
+
 test("arquivos de ambiente de todos os estágios não podem ser publicados no git", async () => {
   const ignore = await readFile(".gitignore", "utf8");
-  assert.match(ignore, /^\\.env$/m);
-  assert.match(ignore, /^\\.env\\.\\*$/m);
-  assert.match(ignore, /^!\\.env\\.example$/m);
+  const linhas = ignore.split(/\\r?\\n/);
+  assert.ok(linhas.includes(".env"));
+  assert.ok(linhas.includes(".env.*"));
+  assert.ok(linhas.includes("!.env.example"));
 });
 
 test("polling autenticado possui limite próprio e conserva o limite de geração IA", async () => {
   const codigo = await readFile("server/secureEntry.ts", "utf8");
-  assert.match(codigo, /const janelaConsultasMs = 10 \\* 60 \\* 1000/);
-  assert.match(codigo, /const limiteConsultas = 600/);
-  assert.match(codigo, /if \\(consultaLeve\\)/);
-  assert.match(codigo, /consultasRecentes\\.length >= limiteConsultas/);
-  assert.match(codigo, /res\\.status\\(429\\)/);
-  assert.match(codigo, /const limite = importacao \\? limiteImportacao : limiteGeral/);
-  assert.match(codigo, /const usuarioResposta = await fetch\\(\\`\\$\\{supabaseUrl\\}\\/auth\\/v1\\/user\\`/);
+  assert.ok(codigo.includes("const janelaConsultasMs = 10 * 60 * 1000"));
+  assert.ok(codigo.includes("const limiteConsultas = 600"));
+  assert.ok(codigo.includes("if (consultaLeve)"));
+  assert.ok(codigo.includes("consultasRecentes.length >= limiteConsultas"));
+  assert.ok(codigo.includes("res.status(429)"));
+  assert.ok(codigo.includes("const limite = importacao ? limiteImportacao : limiteGeral"));
+  assert.ok(codigo.includes("const usuarioResposta = await fetch"));
+  assert.ok(codigo.includes("/auth/v1/user"));
 });
