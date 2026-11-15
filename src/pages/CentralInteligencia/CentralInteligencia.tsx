@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight, BookOpen, BrainCircuit, CalendarCheck2, CheckCircle2,
-  ChevronDown, Clock3, Compass, FileBarChart2, Info, RotateCcw,
+  ChevronDown, Compass, FileBarChart2, Info, RotateCcw,
   ShieldCheck, Sparkles, Target, TrendingUp,
 } from "lucide-react";
 
