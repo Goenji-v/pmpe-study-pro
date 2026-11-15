@@ -71,6 +71,10 @@ const janelaGeralMs = 10 * 60 * 1000;
 const limiteGeral = 60;
 const janelaImportacaoMs = 60 * 60 * 1000;
 const limiteImportacao = 8;
+// Status polling is cheap, but cannot be unlimited: protect against bot floods.
+// Keep a separate quota so legitimate polling never consumes generation credits.
+const janelaConsultasMs = 10 * 60 * 1000;
+const limiteConsultas = 600;
 const acessos = new Map<string, number[]>();
 
 const app = express();
@@ -634,6 +638,24 @@ async function autenticarEControlarUso(
       );
 
     if (consultaLeve) {
+      const chaveConsulta = `${userId}:consulta`;
+      const agoraConsulta = Date.now();
+      const consultasRecentes = (acessos.get(chaveConsulta) ?? []).filter(
+        (instante) => agoraConsulta - instante < janelaConsultasMs
+      );
+
+      if (consultasRecentes.length >= limiteConsultas) {
+        const restanteMs = janelaConsultasMs - (agoraConsulta - consultasRecentes[0]);
+        res.setHeader("Retry-After", String(Math.max(1, Math.ceil(restanteMs / 1000))));
+        res.status(429).json({
+          sucesso: false,
+          erro: "Muitas consultas de status. Aguarde antes de verificar novamente.",
+        });
+        return;
+      }
+
+      consultasRecentes.push(agoraConsulta);
+      acessos.set(chaveConsulta, consultasRecentes);
       res.locals.userId = userId;
       next();
       return;
