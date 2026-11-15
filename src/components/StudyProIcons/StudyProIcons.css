@@ -160,3 +160,142 @@ html[data-study-icon-theme="dourado-elite"] {
     transform: scale(1.03);
   }
 }
+
+
+/*
+ * Prévia: ícones cromados Study Pro (referência: calendário preto/vermelho/prata).
+ * Somente apresentação dos ícones da navegação, mantendo links, textos,
+ * permissões, escolha de ícones na Loja e identidade visual das outras páginas.
+ * Acabamento recriado em CSS/SVG vetorial, sem screenshots ou marca d'água.
+ */
+.sidebar .sidebar-link-icone,
+.sidebar .sidebar-grupo-icone {
+  position: relative;
+  isolation: isolate;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 31px !important;
+  width: 31px !important;
+  min-width: 31px !important;
+  height: 31px !important;
+  min-height: 31px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid #d72c36 !important;
+  border-radius: 9px !important;
+  color: #eef2f8 !important;
+  background:
+    linear-gradient(138deg, rgba(255, 73, 80, .85) 0%, rgba(168, 7, 20, .63) 14%, transparent 14.7%),
+    linear-gradient(315deg, rgba(204, 11, 28, .72), transparent 15%),
+    radial-gradient(ellipse at 50% 55%, rgba(146, 8, 18, .23), transparent 67%),
+    linear-gradient(140deg, #211015 0%, #0b0b0d 51%, #1a0e12 100%) !important;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 194, 196, .55),
+    inset 0 -1px 3px rgba(129, 0, 13, .6),
+    0 0 0 1px rgba(62, 2, 9, .3),
+    0 3px 8px rgba(0, 0, 0, .22),
+    0 0 9px rgba(232, 25, 40, .18) !important;
+  filter: none !important;
+  transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.sidebar .sidebar-link-icone::before,
+.sidebar .sidebar-grupo-icone::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 8px;
+  border-top: 1px solid rgba(255, 255, 255, .35);
+  border-left: 1px solid rgba(244, 82, 89, .18);
+  pointer-events: none;
+}
+
+.sidebar .sidebar-link-icone .study-pro-icon,
+.sidebar .sidebar-grupo-icone .study-pro-icon {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 19px;
+  width: 19px !important;
+  height: 19px !important;
+  stroke: var(--study-metallic-stroke) !important;
+  stroke-width: 2.05;
+  color: #f4f6fa !important;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .92))
+          drop-shadow(0 0 2px rgba(255, 232, 235, .36)) !important;
+}
+
+.sidebar .sidebar-link:hover .sidebar-link-icone,
+.sidebar .sidebar-grupo-botao:hover .sidebar-grupo-icone,
+.sidebar .sidebar-link-ativo .sidebar-link-icone,
+.sidebar .sidebar-grupo-aberto .sidebar-grupo-icone,
+.sidebar .sidebar-grupo-ativo .sidebar-grupo-icone {
+  border-color: #ff6066 !important;
+  color: #fff !important;
+  background:
+    linear-gradient(138deg, rgba(255, 108, 109, .92) 0%, rgba(195, 9, 24, .65) 15%, transparent 15.7%),
+    linear-gradient(315deg, rgba(236, 13, 28, .83), transparent 16%),
+    radial-gradient(ellipse at 50% 55%, rgba(193, 13, 31, .36), transparent 72%),
+    linear-gradient(145deg, #291116, #08090b 52%, #230e14) !important;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 227, 229, .64),
+    0 0 0 1px rgba(89, 3, 14, .35),
+    0 3px 10px rgba(0, 0, 0, .28),
+    0 0 12px rgba(237, 29, 43, .28) !important;
+}
+
+.sidebar .sidebar-link-ativo .study-pro-icon,
+.sidebar .sidebar-grupo-aberto .study-pro-icon,
+.sidebar .sidebar-grupo-ativo .study-pro-icon {
+  filter: drop-shadow(0 1px 1px #000)
+          drop-shadow(0 0 4px rgba(255, 235, 237, .45)) !important;
+}
+
+/* Diferenciar subitens sem caixas gigantes ou mudanças na altura do menu. */
+.sidebar .sidebar-submenu .sidebar-link-icone {
+  flex-basis: 29px !important;
+  width: 29px !important;
+  min-width: 29px !important;
+  height: 29px !important;
+  min-height: 29px !important;
+  border-radius: 8px !important;
+}
+.sidebar .sidebar-submenu .study-pro-icon {
+  width: 17px !important;
+  height: 17px !important;
+  flex-basis: 17px;
+}
+
+/* Preservar a identidade metálica também no tema claro, com contraste legível. */
+html[data-study-base-theme="claro"] .sidebar .sidebar-link-icone,
+html[data-study-base-theme="claro"] .sidebar .sidebar-grupo-icone {
+  color: #eef2f8 !important;
+  border-color: #d72c36 !important;
+  background:
+    linear-gradient(138deg, rgba(255, 73, 80, .85) 0%, rgba(168, 7, 20, .63) 14%, transparent 14.7%),
+    linear-gradient(315deg, rgba(204, 11, 28, .72), transparent 15%),
+    radial-gradient(ellipse at 50% 55%, rgba(146, 8, 18, .23), transparent 67%),
+    linear-gradient(140deg, #211015, #0b0b0d 51%, #1a0e12) !important;
+}
+html[data-study-base-theme="claro"] .sidebar .sidebar-link-icone .study-pro-icon,
+html[data-study-base-theme="claro"] .sidebar .sidebar-grupo-icone .study-pro-icon {
+  stroke: var(--study-metallic-stroke) !important;
+  color: #eef2f8 !important;
+}
+html[data-study-base-theme="claro"] .sidebar .sidebar-link:hover .sidebar-link-icone,
+html[data-study-base-theme="claro"] .sidebar .sidebar-grupo-botao:hover .sidebar-grupo-icone,
+html[data-study-base-theme="claro"] .sidebar .sidebar-link-ativo .sidebar-link-icone,
+html[data-study-base-theme="claro"] .sidebar .sidebar-grupo-aberto .sidebar-grupo-icone,
+html[data-study-base-theme="claro"] .sidebar .sidebar-grupo-ativo .sidebar-grupo-icone {
+  border-color: #ff6066 !important;
+  background:
+    linear-gradient(138deg, rgba(255, 108, 109, .92), rgba(195, 9, 24, .65) 15%, transparent 15.7%),
+    linear-gradient(315deg, rgba(236, 13, 28, .83), transparent 16%),
+    radial-gradient(ellipse at 50% 55%, rgba(193, 13, 31, .36), transparent 72%),
+    linear-gradient(145deg, #291116, #08090b 52%, #230e14) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar .sidebar-link-icone,
+  .sidebar .sidebar-grupo-icone,
+  .sidebar .study-pro-icon { transition: none !important; transform: none !important; }
+}
