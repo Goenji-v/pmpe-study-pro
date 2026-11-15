@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type CSSProperties, type ReactNode } from "react";
 
 export type StudyProIconProps = {
   size?: number;
@@ -12,6 +12,10 @@ function IconBase({
   className,
   children,
 }: StudyProIconProps & { children: ReactNode }) {
+  // Gradiente metálico por instância: evita colisões quando muitos ícones
+  // SVG aparecem juntos no menu, na Loja e nas telas internas.
+  const idMetal = useId().replace(/:/g, "");
+
   return (
     <svg
       aria-hidden="true"
@@ -26,7 +30,17 @@ function IconBase({
       strokeLinecap="round"
       strokeLinejoin="round"
       focusable="false"
+      style={{ "--study-metallic-stroke": `url(#${idMetal})` } as CSSProperties}
     >
+      <defs>
+        <linearGradient id={idMetal} x1="4" y1="2" x2="20" y2="23" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset=".28" stopColor="#f9fafe" />
+          <stop offset=".54" stopColor="#9aa6b5" />
+          <stop offset=".76" stopColor="#eff3f8" />
+          <stop offset="1" stopColor="#687583" />
+        </linearGradient>
+      </defs>
       {children}
     </svg>
   );
