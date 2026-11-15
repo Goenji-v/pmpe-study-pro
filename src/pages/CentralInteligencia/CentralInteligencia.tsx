@@ -13,6 +13,7 @@ import { BarraProgresso } from "../../components/inteligencia/ComponentesIntelig
 import { criarPlanoOperacional, obterConclusoesPlanoOperacional } from "../../utils/planoOperacional";
 import { getMissaoDoDiaOuProxima, getSemanaOperacional } from "../../utils/planoUtils";
 import { obterDiaAtualPlano, NOMES_DIAS_PLANO } from "../../utils/planoCalendario";
+import { normalizarBancaConcurso } from "../../utils/bancasConcurso";
 import { calcularCentralInteligencia } from "../../services/inteligencia/calcularCentralInteligencia";
 import type { DesempenhoAssunto, MissaoDia } from "../../services/inteligencia/types";
 import { formatarMinutos, formatarTipoMissao, percentualMeta } from "../../services/inteligencia/utils";
@@ -50,6 +51,7 @@ export default function CentralInteligencia() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planoCalendario, conclusoesPlano, missoesConcluidas, configuracoes.semanaAtualPlano, configuracoes.dataInicioPlano, versaoPlano]);
   const [mostrarCalculo, setMostrarCalculo] = useState(false);
+  const [filtroBanca, setFiltroBanca] = useState<"todas" | "aocp">("todas");
 
   const dados = useMemo(
     () => calcularCentralInteligencia({
@@ -68,7 +70,18 @@ export default function CentralInteligencia() {
     ]
   );
 
-  const critico = dados.assuntosCriticos[0] ?? null;
+  const analiseAOCP = useMemo(
+    () => calcularCentralInteligencia({
+      questoes: questoes.filter((registro) => normalizarBancaConcurso(registro.banca) === "Instituto AOCP"),
+      sessoes: [], revisoes: [], simulados: [],
+      metaMinutos: configuracoes.metaMinutosDiaria,
+      metaQuestoes: configuracoes.metaQuestoesDiaria,
+      metaRevisoes: configuracoes.metaRevisoesDiaria,
+    }),
+    [questoes, configuracoes.metaMinutosDiaria, configuracoes.metaQuestoesDiaria, configuracoes.metaRevisoesDiaria]
+  );
+  const analisePorBanca = filtroBanca === "aocp" ? analiseAOCP : dados;
+  const critico = dados.assuntosCriticos.find((assunto) => assunto.total >= 10) ?? dados.assuntosCriticos[0] ?? null;
   const aocp = dados.bancas.find((banca) => banca.banca === "Instituto AOCP") ?? null;
   const semNota = dados.materias.filter((materia) => materia.total === 0 && materia.minutos > 0);
   const materiasAvaliadas = dados.materias.filter((materia) => materia.total > 0);
@@ -246,20 +259,27 @@ export default function CentralInteligencia() {
           <h2><FileBarChart2 size={21} /> Assuntos para acompanhar</h2>
           <p>Resultado observado e tamanho da amostra. Bons acertos não significam domínio definitivo.</p>
         </div>
+        <div className="inteligencia-v2-filtros" role="group" aria-label="Filtrar desempenho dos assuntos pela banca">
+          <button type="button" aria-pressed={filtroBanca === "todas"} className={filtroBanca === "todas" ? "ativo" : ""} onClick={() => setFiltroBanca("todas")}>Todas as questões</button>
+          <button type="button" aria-pressed={filtroBanca === "aocp"} className={filtroBanca === "aocp" ? "ativo" : ""} onClick={() => setFiltroBanca("aocp")}>Só Instituto AOCP</button>
+        </div>
+        {filtroBanca === "aocp" && (
+          <p className="inteligencia-v2-filtro-descricao">Analisando somente questões identificadas como Instituto AOCP. Outros registros permanecem salvos normalmente.</p>
+        )}
       </div>
 
       <div className="inteligencia-v2-divisao">
         <PainelAssuntos
           titulo="Precisam de reforço"
           vazio="Nenhum assunto crítico identificado com as questões registradas."
-          itens={dados.assuntosCriticos}
+          itens={analisePorBanca.assuntosCriticos}
           tipo="critico"
           aoAbrir={abrirMateriais}
         />
         <PainelAssuntos
           titulo="Bons resultados observados"
           vazio="Resolva mais questões para identificar assuntos em evolução."
-          itens={dados.assuntosDominados}
+          itens={analisePorBanca.assuntosDominados}
           tipo="positivo"
           aoAbrir={abrirMateriais}
         />
