@@ -67,13 +67,17 @@ export function envelopePertenceAoDsn(
   }
 }
 
-function excedeuRateLimit(req: Request) {
-  const encaminhado = req.header("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = encaminhado || req.ip || "desconhecido";
+export function excedeuRateLimit(req: Request) {
+  // Express resolves the address using the configured trusted proxy hop.
+  const ip = req.ip || req.socket?.remoteAddress || "desconhecido";
   const agora = Date.now();
+  for (const [chave, acesso] of acessosPorIp) {
+    if (agora - acesso.inicio >= JANELA_RATE_LIMIT_MS) acessosPorIp.delete(chave);
+  }
   const atual = acessosPorIp.get(ip);
 
   if (!atual || agora - atual.inicio >= JANELA_RATE_LIMIT_MS) {
+    if (acessosPorIp.size >= 10000) return true;
     acessosPorIp.set(ip, { inicio: agora, quantidade: 1 });
     return false;
   }
