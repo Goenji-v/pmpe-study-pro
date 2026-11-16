@@ -1,3 +1,4 @@
+import { calcularDesempenhoPorMateria, chaveDaMateria } from "../../utils/desempenhoMaterias";
 import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
@@ -70,15 +71,9 @@ export default function CentralQuestoes() {
     [questoes]
   );
 
-  const materias = useMemo(
-    () =>
-      agruparDesempenho(
-        questoes,
-        (registro) =>
-          registro.materia
-      ),
-    [questoes]
-  );
+  const materias = useMemo(() => calcularDesempenhoPorMateria(questoes).map(item => ({
+    ...item, nome: item.materia,
+  })).sort((a, b) => a.percentual - b.percentual), [questoes]);
 
   const bancas = useMemo(
     () =>
@@ -97,9 +92,9 @@ export default function CentralQuestoes() {
       agruparDesempenho(
         questoes,
         (registro) =>
-          `${registro.materia} — ${registro.assunto}`
+          `${materias.find(m => chaveDaMateria(m.nome) === chaveDaMateria(registro.materia))?.nome ?? registro.materia} — ${registro.assunto}`
       ),
-    [questoes]
+    [questoes, materias]
   );
 
   const assuntosFracos =
