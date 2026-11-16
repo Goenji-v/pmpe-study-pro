@@ -467,7 +467,7 @@ function MiniGraficoVolume({
     <div className="volume-mini-card">
       <div className="volume-mini-cabecalho">
         <strong>{titulo}</strong>
-        <small>{evolucao.length} mês{evolucao.length === 1 ? "" : "es"}</small>
+        <small>{evolucao.length} {evolucao.length === 1 ? "mês" : "meses"}</small>
       </div>
       <div className="volume-mini-area">
         <ResponsiveContainer width="100%" height="100%">
