@@ -636,7 +636,7 @@ export default function CronogramaIA() {
             </span>
           </div>
           <span className="tatico-prioridade-badge">
-            Prioridade: {prioridadeAtiva || "coletando dados"}
+            Próxima matéria: {tarefaAtual?.materia || prioridadeAtiva || "coletando dados"}
           </span>
         </div>
 
@@ -1010,7 +1010,7 @@ export default function CronogramaIA() {
         <div className="tatico-painel-cabecalho">
           <div>
             <span className="tatico-secao-label">POR QUÊ</span>
-            <h2>Por que essa missão?</h2>
+            <h2>Diagnóstico atual e plano salvo</h2>
             <p>Diagnóstico dos últimos {diagnosticoSemanal.janelaDias} dias.</p>
           </div>
           <button
@@ -1025,7 +1025,7 @@ export default function CronogramaIA() {
 
         <div className="tatico-diagnostico-resumo">
           <div>
-            <span>Prioridade atual</span>
+            <span>Recomendação atual</span>
             <strong>{prioridadeAtiva || "Coletando dados"}</strong>
           </div>
           <div>
@@ -1055,13 +1055,15 @@ export default function CronogramaIA() {
         </div>
 
         <div className="tatico-explicacao-prioridade">
-          <span>Decisão do plano</span>
+          <span>{cronogramaAtual ? `Plano gerado em ${formatarData(cronogramaAtual.geradoEm)}` : "Recomendação para o próximo plano"}</span>
           <strong>
-            {prioridadeAtiva
-              ? `Por isso seu plano está priorizando ${prioridadeAtiva}.`
+            {cronogramaAtual
+              ? cronogramaAtual.objetivoPrincipal
+              : prioridadeAtiva ? `O diagnóstico atual recomenda priorizar ${prioridadeAtiva}.`
               : "Registre questões, sessões ou revisões para a IA calcular uma prioridade confiável."}
           </strong>
-          {diagnosticoSemanal.motivos[0] && <p>{diagnosticoSemanal.motivos[0]}</p>}
+          {diagnosticoSemanal.motivos[0] && <p>Diagnóstico atual: {diagnosticoSemanal.motivos[0]}</p>}
+          {cronogramaAtual && <p>O diagnóstico pode mudar após novos estudos. O plano salvo mantém suas tarefas até você gerar e aprovar outra proposta.</p>}
         </div>
 
         {diagnosticoAberto && (

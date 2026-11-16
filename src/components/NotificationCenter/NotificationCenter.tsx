@@ -459,7 +459,7 @@ export default function NotificationCenter() {
               <button className="notificacao-item revisao-atrasada" type="button" onClick={() => { setAberto(false); navigate("/revisoes"); }}>
                 <strong>⚠️ Atenção, revisão atrasada</strong>
                 <span>
-                  Você tem {revisoesAtrasadas.length} revisão{revisoesAtrasadas.length === 1 ? "" : "ões"} atrasada{revisoesAtrasadas.length === 1 ? "" : "s"}.
+                  Você tem {revisoesAtrasadas.length} {revisoesAtrasadas.length === 1 ? "revisão" : "revisões"} atrasada{revisoesAtrasadas.length === 1 ? "" : "s"}.
                 </span>
                 <small>{revisoesAtrasadas[0].materia} — {revisoesAtrasadas[0].assunto}</small>
               </button>
@@ -469,7 +469,7 @@ export default function NotificationCenter() {
               <button className="notificacao-item revisao-hoje" type="button" onClick={() => { setAberto(false); navigate("/revisoes"); }}>
                 <strong>Revisões para hoje</strong>
                 <span>
-                  {revisoesHoje.length} revisão{revisoesHoje.length === 1 ? "" : "ões"} programada{revisoesHoje.length === 1 ? "" : "s"} para hoje.
+                  {revisoesHoje.length} {revisoesHoje.length === 1 ? "revisão" : "revisões"} programada{revisoesHoje.length === 1 ? "" : "s"} para hoje.
                 </span>
                 <small>{revisoesHoje[0].materia} — {revisoesHoje[0].assunto}</small>
               </button>

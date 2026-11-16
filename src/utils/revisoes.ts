@@ -117,6 +117,12 @@ export function criarProximaRevisao(
     limiteDiario,
   });
 
+  // A meta diária é flexível para conteúdos difíceis: não adiar por semanas.
+  const prazoDificil = adicionarDias(agora, 3);
+  prazoDificil.setHours(12, 0, 0, 0);
+  const dataFinal = revisaoAtual.desempenho === "dificil" && dataPrevista > prazoDificil
+    ? prazoDificil : dataPrevista;
+
   return {
     id,
     materiaId: revisaoAtual.materiaId,
@@ -127,7 +133,7 @@ export function criarProximaRevisao(
     assunto: revisaoAtual.assunto,
     etapa: proximaEtapa,
     dataCriacao: agora.toISOString(),
-    dataPrevista: dataPrevista.toISOString(),
+    dataPrevista: dataFinal.toISOString(),
     concluida: false,
     ...(typeof revisaoAtual.certas === "number" ? { certas: revisaoAtual.certas } : {}),
     ...(typeof revisaoAtual.erradas === "number" ? { erradas: revisaoAtual.erradas } : {}),
@@ -568,4 +574,22 @@ export function statusDaRevisao(dataPrevista: string) {
 
 export function formatarDataRevisao(data: string) {
   return new Date(data).toLocaleDateString("pt-BR");
+}
+
+/** Novo ciclo opcional; a conclusão do ciclo anterior nunca é reaberta. */
+export function precisaReforcoFinal(revisao: Revisao, todas: Revisao[]): boolean {
+  const total = (revisao.certas ?? 0) + (revisao.erradas ?? 0);
+  const baixo = revisao.desempenho === "dificil" || (total >= 5 && (revisao.certas ?? 0) / total < 0.7);
+  return revisao.concluida && revisao.etapa === 5 && baixo && !todas.some(r =>
+    r.id !== revisao.id && r.materiaId === revisao.materiaId && r.assuntoId === revisao.assuntoId &&
+    (!r.moduloId || !revisao.moduloId || r.moduloId === revisao.moduloId) &&
+    (!r.concluida || new Date(r.dataCriacao) > new Date(revisao.dataConclusao ?? revisao.dataCriacao))
+  );
+}
+export function adicionarReforcoFinal(todas: Revisao[], id: string, agora = new Date(), novoId = crypto.randomUUID()): Revisao[] {
+  const original = todas.find(r => r.id === id);
+  if (!original || !precisaReforcoFinal(original, todas)) return todas;
+  const { materiaId, moduloId, assuntoId, materia, modulo, assunto } = original;
+  return [{ id: novoId, materiaId, moduloId, assuntoId, materia, modulo, assunto,
+    etapa: 1, concluida: false, dataCriacao: agora.toISOString(), dataPrevista: adicionarDias(agora, 1).toISOString() }, ...todas];
 }

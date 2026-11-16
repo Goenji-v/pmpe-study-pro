@@ -528,7 +528,7 @@ function iniciarProximaAulaPortugues() {
               <h2>{dadosPlano.missaoHoje.missao.materia} — {dadosPlano.missaoHoje.missao.assunto}</h2>
               <span className="dashboard-pro-badge">{configuracoes.concurso || "PMPE"}</span>
               <div className="dashboard-pro-progress-row"><div className="dashboard-pro-progress"><div style={{width:`${dadosPlano.progressoSemana}%`}} /></div><strong>{dadosPlano.progressoSemana}%</strong></div>
-              <div className="dashboard-pro-mission-meta"><span>▣ {dadosPlano.missaoHoje.missao.tipo || "Aula"}</span><b>•</b><span>◉ {questoesHoje} questões hoje</span><b>•</b><span>↻ {revisoesConcluidasHoje} revisão{revisoesConcluidasHoje === 1 ? "" : "ões"}</span></div>
+              <div className="dashboard-pro-mission-meta"><span>▣ {dadosPlano.missaoHoje.missao.tipo || "Aula"}</span><b>•</b><span>◉ {questoesHoje} questões hoje</span><b>•</b><span>↻ {revisoesConcluidasHoje} {revisoesConcluidasHoje === 1 ? "revisão" : "revisões"}</span></div>
               <div className="dashboard-pro-actions">
                 <button type="button" className="primary" onClick={iniciarProximaMissao}>
                   ▶ {dadosPlano.missaoHoje.dia === 7 || dadosPlano.missaoHoje.missao.tipo === "redacao" || dadosPlano.missaoHoje.missao.tipo === "simulado"
@@ -1243,7 +1243,7 @@ function obterStatusRevisaoDashboard(dataPrevista: string) {
 }
 
 function montarRecomendacaoCoach(d:{ revisoesAtrasadas:number; piorMateria?:string; piorPercentual?:number; questoesHoje:number; minutosHoje:number; metaQuestoes:number; metaMinutos:number; }) {
-  if(d.revisoesAtrasadas>0) return { titulo:`${d.revisoesAtrasadas} revisão${d.revisoesAtrasadas>1?"ões":""} atrasada${d.revisoesAtrasadas>1?"s":""}`, texto:"Priorize o conteúdo vencido antes de avançar para matéria nova.", rota:"/revisoes" };
+  if(d.revisoesAtrasadas>0) return { titulo:`${d.revisoesAtrasadas} ${d.revisoesAtrasadas>1?"revisões":"revisão"} atrasada${d.revisoesAtrasadas>1?"s":""}`, texto:"Priorize o conteúdo vencido antes de avançar para matéria nova.", rota:"/revisoes" };
   if(d.piorMateria && (d.piorPercentual ?? 100)<70) return { titulo:`Reforce ${d.piorMateria}`, texto:`Seu aproveitamento nessa matéria está em ${d.piorPercentual}%. Um bloco de questões direcionadas tem maior retorno agora.`, rota:"/questoes" };
   if(d.minutosHoje<d.metaMinutos) return { titulo:"Complete sua meta de tempo", texto:`Faltam ${Math.max(0,d.metaMinutos-d.minutosHoje)} minutos para fechar a meta diária.`, rota:"/central-estudos" };
   if(d.questoesHoje<d.metaQuestoes) return { titulo:"Feche a meta de questões", texto:`Faltam ${Math.max(0,d.metaQuestoes-d.questoesHoje)} questões para a meta de hoje.`, rota:"/questoes" };

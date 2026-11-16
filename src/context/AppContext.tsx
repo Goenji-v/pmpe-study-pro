@@ -1,3 +1,4 @@
+import { inferirInicioAutomaticoPlano } from "../utils/inicioAutomaticoPlano";
 /* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
 /* oxlint-disable react/only-export-components */
 import {
@@ -1100,6 +1101,12 @@ function EstadoDaConta({
       }).revisoes
     );
   }, [usuarioId, statusNuvem, revisoes, sessoes, configuracoes.metaRevisoesDiaria, setRevisoes]);
+
+  useEffect(() => {
+    if (!usuarioId || statusNuvem !== "sincronizado" || !nuvemInicializadaRef.current || hidratandoRef.current || conflitoRef.current || configuracoes.dataInicioPlano) return;
+    const inicio = inferirInicioAutomaticoPlano(configuracoes, materias, missoesConcluidas);
+    setConfiguracoes((atuais) => atuais.dataInicioPlano ? atuais : { ...atuais, dataInicioPlano: inicio });
+  }, [usuarioId, statusNuvem, configuracoes, materias, missoesConcluidas, setConfiguracoes]);
 
   const importacaoInicialResultadosIARef =
     useRef<string | null>(null);

@@ -441,7 +441,8 @@ test("prévia explica data ideal diferente da data real quando a agenda está lo
   assert.equal(new Date(media.dataIdeal).getDate(), 14);
   assert.equal(new Date(facil.dataIdeal).getDate(), 18);
 
-  assert.equal(new Date(dificil.dataAgendada).getDate(), 27);
+  // Difícil tem prazo de até 3 dias, mesmo com a meta preenchida.
+  assert.equal(new Date(dificil.dataAgendada).getDate(), 14);
   assert.equal(new Date(media.dataAgendada).getDate(), 27);
   assert.equal(new Date(facil.dataAgendada).getDate(), 27);
 

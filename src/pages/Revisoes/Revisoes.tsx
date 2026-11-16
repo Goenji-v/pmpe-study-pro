@@ -9,6 +9,8 @@ import { useToast } from "../../context/ToastContext";
 import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import {
   calcularDiasDiferenca,
+  precisaReforcoFinal,
+  adicionarReforcoFinal,
   concluirRevisaoNaLista,
   formatarDataRevisao,
   preverDetalhesProximaRevisaoPorDesempenho,
@@ -246,7 +248,7 @@ export default function Revisoes() {
     }));
 
     showToast(
-      (desempenho !== "facil" || revisao.etapa < 5)
+      (revisao.etapa < 5)
         ? "Revisão concluída. Próxima revisão agendada conforme seu desempenho."
         : "Ciclo de revisões finalizado.",
       "success"
@@ -327,7 +329,7 @@ export default function Revisoes() {
 
       <div className="revisoes-toolbar">
         <span>
-          Limite atual: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia
+          Meta diária: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia
         </span>
         <button type="button" onClick={reorganizarAgenda} title="Redistribui atrasos e excesso diário sem antecipar revisões futuras nem alterar conclusões.">Reorganizar agenda</button>
       </div>
@@ -358,6 +360,16 @@ export default function Revisoes() {
         </>
       )}
 
+      {revisoes.some(r => precisaReforcoFinal(r, revisoes)) && <section className="revisoes-grupo">
+        <h2>Reforço após o último ciclo</h2>
+        <p>Estes ciclos foram concluídos com dificuldade ou menos de 70% de acertos. Você pode agendar um novo ciclo para amanhã, mantendo o histórico. Ele terá prioridade mesmo se a meta diária estiver preenchida.</p>
+        <div className="revisoes-lista">{revisoes.filter(r => precisaReforcoFinal(r, revisoes)).map(r => <article key={r.id} className="revisao-card">
+          <strong>{r.materia} — {r.assunto}</strong>
+          <button type="button" onClick={() => { const id = crypto.randomUUID(); const agora = new Date(); setRevisoes(atuais => adicionarReforcoFinal(atuais, r.id, agora, id)); showToast("Novo ciclo de reforço agendado para amanhã. Histórico preservado.", "success"); }}>Agendar reforço</button>
+        </article>)}</div>
+      </section>}
+
+      <p>Conteúdos avaliados como difíceis retornam em até 3 dias, mesmo quando a meta diária está preenchida. As demais revisões mantêm suas datas.</p>
       {revisoesConcluidas.length > 0 && (
         <div className="revisoes-grupo">
           <h2>✅ Histórico de revisões</h2>
@@ -730,7 +742,7 @@ function PrevisaoRetorno({
   if (!previsao) {
     return (
       <span>
-        <b>{rotulo}</b> → encerra o ciclo
+        <b>{rotulo}</b> → encerra o ciclo{rotulo === "Difícil" ? "; reforço opcional disponível após concluir" : ""}
       </span>
     );
   }

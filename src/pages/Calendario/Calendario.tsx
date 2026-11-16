@@ -597,7 +597,7 @@ export default function Calendario() {
 
               <div className="calendario-eventos">
                 {agruparEventosCalendario(detalheDia.eventos).map(grupo => <details className="calendario-grupo" key={grupo.materia}>
-                  <summary><strong>{grupo.materia}</strong><span>{formatarMinutos(grupo.minutos)} de estudo · {grupo.questoes} questões</span><small>{grupo.revisoesConcluidas > 0 ? `${grupo.revisoesConcluidas} revisões concluídas` : ''}{grupo.revisoesPendentes > 0 ? ` · ${grupo.revisoesPendentes} revisões pendentes` : ''}</small></summary>
+                  <summary><strong>{grupo.materia}</strong><span>{formatarMinutos(grupo.minutos)} de estudo · {grupo.questoes} questões</span><small>{grupo.revisoesConcluidas > 0 ? `${grupo.revisoesConcluidas} ${grupo.revisoesConcluidas === 1 ? "revisão concluída" : "revisões concluídas"}` : ''}{grupo.revisoesPendentes > 0 ? ` · ${grupo.revisoesPendentes} ${grupo.revisoesPendentes === 1 ? "revisão pendente" : "revisões pendentes"}` : ''}</small></summary>
                   {grupo.eventos.map(evento => <article key={evento.id} className={`calendario-evento calendario-evento-${evento.tipo}`}>
                     <div className="calendario-evento-icone">{iconeEvento(evento.tipo)}</div>
                     <div><p>{evento.detalhe}</p><span>{evento.minutos > 0 ? formatarMinutos(evento.minutos) : evento.tipo==='revisao' ? formatarStatus(evento.status) : ''}</span>

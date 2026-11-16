@@ -59,6 +59,8 @@ export default function Estudos() {
   const location = useLocation();
   const buscaRef = useRef<HTMLInputElement>(null);
 
+  const [flashcardsAbertos, setFlashcardsAbertos] = useState(false);
+  const [cadastroAberto, setCadastroAberto] = useState(false);
   const [busca, setBusca] = useState("");
   const [perfilAssunto, setPerfilAssunto] = useState<{materia: Materia; modulo: Modulo; assunto: Assunto} | null>(null);
 
@@ -79,6 +81,7 @@ export default function Estudos() {
     }
 
     if (estado?.flashcards) {
+      setFlashcardsAbertos(true);
       setFocoFlashcards({
         ...estado.flashcards,
         token: Date.now(),
@@ -218,6 +221,8 @@ export default function Estudos() {
       return;
     }
 
+    setBusca("");
+    setFlashcardsAbertos(true);
     setFocoFlashcards({
       materia: materia.nome,
       topico: assunto.nome,
@@ -545,9 +550,13 @@ export default function Estudos() {
           placeholder="Pesquisar matéria, módulo ou assunto" />
       </header>
 
-      <FlashcardsQuizPanel foco={focoFlashcards} />
+      {!busca.trim() && <div className="conteudos-linha-form">
+        <button type="button" onClick={() => setCadastroAberto(v => !v)} aria-expanded={cadastroAberto}>{cadastroAberto ? "Fechar cadastro" : "+ Adicionar conteúdo"}</button>
+        <button type="button" onClick={() => setFlashcardsAbertos(v => !v)} aria-expanded={flashcardsAbertos}>{flashcardsAbertos ? "Fechar flashcards" : "🃏 Abrir flashcards"}</button>
+      </div>}
+      {flashcardsAbertos && !busca.trim() && <FlashcardsQuizPanel foco={focoFlashcards} />}
 
-      <div className="conteudos-cadastros conteudos-cadastros-3">
+      {cadastroAberto && !busca.trim() && <div className="conteudos-cadastros conteudos-cadastros-3">
         <article className="conteudos-painel-form">
           <h2>Nova matéria</h2>
           <div className="conteudos-linha-form">
@@ -593,7 +602,7 @@ export default function Estudos() {
             <button type="button" onClick={adicionarAssunto}>Adicionar assunto</button>
           </div>
         </article>
-      </div>
+      </div>}
 
       {materiasFiltradas.length === 0 && <div className="conteudos-vazio">Nenhum conteúdo encontrado.</div>}
 
@@ -603,7 +612,7 @@ export default function Estudos() {
           normalizarTexto(materia.nome)
         );
         const cursoImportado = materiaTemCursoImportado(materia);
-        const todos = (materia.modulos ?? []).flatMap((m) => m.assuntos);
+        const todos = (materiasComModulos.find(m => m.id === materia.id)?.modulos ?? materia.modulos ?? []).flatMap((m) => m.assuntos);
         const concluidos = todos.filter((a) => a.concluido).length;
         const progresso = calcularProgressoAssuntos(todos).percentual;
         return (
@@ -747,8 +756,8 @@ export default function Estudos() {
                                   <span>⏱ {m.minutos} min</span>
                                   <span>❓ {m.totalQuestoes} questões</span>
                                   {m.totalQuestoes > 0 && <span>◎ {m.aproveitamento}%</span>}
-                                  {m.revisoesPendentes > 0 && <span>↻ {m.revisoesPendentes} revisão{m.revisoesPendentes === 1 ? "" : "ões"} pendente{m.revisoesPendentes === 1 ? "" : "s"}</span>}
-                                   {m.revisoesConcluidas > 0 && <span>✓ {m.revisoesConcluidas} revisão{m.revisoesConcluidas === 1 ? "" : "ões"} concluída{m.revisoesConcluidas === 1 ? "" : "s"}</span>}
+                                  {m.revisoesPendentes > 0 && <span>↻ {m.revisoesPendentes} {m.revisoesPendentes === 1 ? "revisão" : "revisões"} pendente{m.revisoesPendentes === 1 ? "" : "s"}</span>}
+                                   {m.revisoesConcluidas > 0 && <span>✓ {m.revisoesConcluidas} {m.revisoesConcluidas === 1 ? "revisão" : "revisões"} concluída{m.revisoesConcluidas === 1 ? "" : "s"}</span>}
                                 </div>
                               );
                             })()}
