@@ -52,12 +52,23 @@ function validarUrlPublica(valor: string) {
   let url: URL;
   try { url = new URL(valor); } catch { throw new Error("Informe um endereço HTTPS válido."); }
   if (url.protocol !== "https:") throw new Error("Por segurança, a importação automática aceita somente endereços HTTPS.");
+  const permitidos = (Deno.env.get("COURSE_IMPORT_ALLOWED_HOSTS") || "")
+    .split(",").map((host) => host.trim().toLowerCase()).filter(Boolean);
+  if (url.username || url.password || (url.port && url.port !== "443")) {
+    throw new Error("Use um endereço HTTPS sem credenciais e na porta padrão.");
+  }
+  // Exact, operator-controlled origins only. No wildcards or user-managed hosts.
+  if (!permitidos.includes(url.hostname.toLowerCase())) {
+    throw new Error("Este domínio não está autorizado para importação automática. Use a importação por arquivo ou o capturador.");
+  }
   if (hostBloqueado(url.hostname)) throw new Error("Esse endereço não pode ser acessado pelo importador.");
   return url;
 }
 
 function hostBloqueado(host: string) {
   const h = host.toLowerCase().replace(/^\[|\]$/g, "");
+  if (h.includes(":")) return true; // Reject all IPv6 literals, including mapped IPv4.
+  if (/^[0-9.]+$/.test(h)) return true; // Only trusted DNS names are supported.
   if (h === "localhost" || h.endsWith(".localhost") || h === "0.0.0.0" || h === "::1") return true;
   if (/^127\./.test(h) || /^10\./.test(h) || /^169\.254\./.test(h) || /^192\.168\./.test(h)) return true;
   const partes = h.split(".").map(Number);
@@ -85,10 +96,12 @@ async function buscarHtmlSeguro(inicial: URL) {
           Accept: "text/html,application/xhtml+xml",
         },
       });
-    } finally {
+    } catch (erro) {
       clearTimeout(timeout);
+      throw erro;
     }
 
+    try {
     if ([301, 302, 303, 307, 308].includes(retorno.status)) {
       const local = retorno.headers.get("location");
       if (!local) throw new Error("A página redirecionou sem informar o destino.");
@@ -103,8 +116,27 @@ async function buscarHtmlSeguro(inicial: URL) {
     }
     const tamanho = Number(retorno.headers.get("content-length") || 0);
     if (tamanho > 2_500_000) throw new Error("A página é grande demais para a importação automática. Use o script de captura.");
-    const texto = await retorno.text();
-    return { html: texto.slice(0, 2_500_000), urlFinal: atual };
+    const leitor = retorno.body?.getReader();
+    if (!leitor) throw new Error("A página não retornou conteúdo.");
+    const decoder = new TextDecoder();
+    let bytes = 0;
+    let texto = "";
+    while (true) {
+      const { done, value } = await leitor.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > 2_500_000) {
+        await leitor.cancel();
+        throw new Error("A página é grande demais para a importação automática. Use o script de captura.");
+      }
+      texto += decoder.decode(value, { stream: true });
+    }
+    texto += decoder.decode();
+    return { html: texto, urlFinal: atual };
+    } finally {
+      clearTimeout(timeout);
+      controlador.abort();
+    }
   }
   throw new Error("A página redirecionou muitas vezes.");
 }
