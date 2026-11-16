@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { criarPlanoAtivo } from '../utils/planoAtivo';
+import { criarPlanoOperacional } from '../utils/planoOperacional';
 export function usePlanoAtivo() {
-  const {configuracoes, materias} = useApp();
-  return useMemo(() => criarPlanoAtivo(configuracoes, materias), [configuracoes, materias]);
+  const {configuracoes, materias, missoesConcluidas} = useApp();
+  return useMemo(() => criarPlanoOperacional(materias, missoesConcluidas, configuracoes), [configuracoes, materias, missoesConcluidas]);
 }
