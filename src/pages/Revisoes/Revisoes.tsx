@@ -20,6 +20,11 @@ import type { Revisao, SessaoEstudo } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
+import {
+  agruparRevisoesParaEstudo,
+  concluirBlocoDeRevisoes,
+  type BlocoRevisoesVisivel,
+} from "../../utils/blocosRevisoes";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 
 type DesempenhoRevisao = "facil" | "media" | "dificil";
@@ -281,6 +286,59 @@ export default function Revisoes() {
     );
   }
 
+  function abrirQuestoesBloco(bloco: BlocoRevisoesVisivel) {
+    const primeira = bloco.revisoes[0];
+    if (!primeira) return;
+    // O treino conjunto não aponta para um único revisaoId, pois isso
+    // concluiria só parte do bloco. A avaliação fica explícita na agenda.
+    sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
+    sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
+    sessionStorage.setItem(
+      "pmpe:gerar-ia:prefill",
+      JSON.stringify({
+        materia: primeira.materia,
+        assunto: bloco.titulo,
+        quantidade: 10,
+        banca: "AOCP",
+      })
+    );
+    showToast(
+      "Treino conjunto preparado. Ao retornar, conclua o bloco somente se revisar todos os tópicos.",
+      "info"
+    );
+    navigate("/gerar-simulado-ia");
+  }
+
+  function concluirRevisoesRelacionadas(
+    bloco: BlocoRevisoesVisivel,
+    desempenho: DesempenhoRevisao
+  ) {
+    const quantidade = bloco.revisoes.length;
+    if (!window.confirm(
+      "Você estudou TODOS os " + quantidade +
+      " tópicos deste bloco? Cada revisão será concluída na etapa original, " +
+      "e as próximas datas serão calculadas separadamente. A avaliação manual não inventa nota de questões."
+    )) return;
+
+    const agora = new Date();
+    const revisoesIds = bloco.revisoes.map((item) => item.id);
+    const proximosIds = Object.fromEntries(
+      revisoesIds.map((id) => [id, crypto.randomUUID()])
+    );
+    setRevisoes((anteriores) => concluirBlocoDeRevisoes({
+      revisoes: anteriores,
+      revisoesIds,
+      desempenho,
+      limiteDiario: configuracoes.metaRevisoesDiaria,
+      agora,
+      proximosIds,
+    }));
+    showToast(
+      quantidade + " revisões concluídas em um bloco de estudo, com os históricos preservados.",
+      "success"
+    );
+  }
+
   function reagendar(revisao: Revisao, dias: number) {
     setRevisoes((anteriores) =>
       anteriores.map((item) => (item.id === revisao.id ? reagendarRevisao(item, dias) : item))
@@ -360,6 +418,8 @@ export default function Revisoes() {
     abrirQuestoesIA,
     abrirFlashcards: abrirFlashcardsDaRevisao,
     concluirRevisao,
+    abrirQuestoesBloco,
+    concluirRevisoesRelacionadas,
     reagendarRevisao: reagendar,
     excluirRevisao,
     revisoesBase: revisoesComModulo,
@@ -372,7 +432,7 @@ export default function Revisoes() {
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
       <p className="revisoes-subtitle">
-        O Study Pro usa seu desempenho para indicar como revisar. Clique em Revisar para abrir a Central de Estudos já vinculada a esta pendência; escolha Teoria ou Questões e, ao finalizar a sessão, a revisão é concluída e a próxima é agendada automaticamente.
+        O Study Pro reúne revisões de conteúdos relacionados quando vencem no mesmo dia. Uma sessão pode cobrir o bloco; as etapas e datas originais de cada assunto são preservadas. Nos tópicos individuais, você continua podendo revisar pela Central de Estudos e concluir automaticamente ao finalizar a sessão.
       </p>
 
       {revisoesSemVinculo.length > 0 && (
@@ -412,6 +472,10 @@ export default function Revisoes() {
         <button type="button" onClick={reorganizarAgenda} title="Redistribui atrasos e excesso diário sem antecipar revisões futuras nem alterar conclusões.">Reorganizar agenda</button>
       </div>
 
+      <p className="revisoes-blocos-explicacao">
+        Conteúdos relacionados aparecem juntos para evitar estudo repetido. Os contadores abaixo
+        mostram os <strong>registros originais</strong>; concluir um bloco exige sua confirmação.
+      </p>
       <div className="revisoes-resumo">
         <ResumoCard titulo="Atrasadas" valor={atrasadas.length} classe="resumo-atrasado" />
         <ResumoCard titulo="Hoje" valor={paraHoje.length} classe="resumo-hoje" />
@@ -490,6 +554,9 @@ type GrupoRevisoesProps = {
   abrirQuestoesIA: (revisao: Revisao) => void;
   abrirFlashcards: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
+  abrirQuestoesBloco: (bloco: BlocoRevisoesVisivel) => void;
+  concluirRevisoesRelacionadas: (bloco: BlocoRevisoesVisivel, desempenho: DesempenhoRevisao) => void;
+  naoAgrupar?: boolean;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
   excluirRevisao: (revisao: Revisao) => void;
   revisoesBase: Revisao[];
@@ -505,6 +572,9 @@ function GrupoRevisoes({
   abrirQuestoesIA,
   abrirFlashcards,
   concluirRevisao,
+  abrirQuestoesBloco,
+  concluirRevisoesRelacionadas,
+  naoAgrupar = false,
   reagendarRevisao,
   excluirRevisao,
   revisoesBase,
@@ -515,6 +585,14 @@ function GrupoRevisoes({
   const [avaliandoId, setAvaliandoId] = useState<string | null>(null);
   const [opcoesId, setOpcoesId] = useState<string | null>(null);
   const [historicoId, setHistoricoId] = useState<string | null>(null);
+  const [blocoDetalhes, setBlocoDetalhes] = useState<string | null>(null);
+  const [blocoAvaliacao, setBlocoAvaliacao] = useState<string | null>(null);
+  const blocosVisiveis = useMemo(
+    () => naoAgrupar
+      ? revisoes.map((revisao) => ({ chave: "individual:" + revisao.id, titulo: revisao.assunto, revisoes: [revisao] }))
+      : agruparRevisoesParaEstudo(revisoes),
+    [revisoes, naoAgrupar]
+  );
 
   function alternarAvaliacao(id: string) {
     setAvaliandoId((atual) => (atual === id ? null : id));
@@ -537,7 +615,84 @@ function GrupoRevisoes({
     <div className="revisoes-grupo">
       <h2>{titulo}</h2>
       <div className="revisoes-lista">
-        {revisoes.map((revisao) => {
+        {blocosVisiveis.map((bloco) => {
+          if (bloco.revisoes.length > 1) {
+            const detalhesVisiveis = blocoDetalhes === bloco.chave;
+            const avaliacaoVisivel = blocoAvaliacao === bloco.chave;
+            return (
+              <article key={bloco.chave} className="revisao-card revisao-bloco-card">
+                <div className="revisao-bloco-cabecalho">
+                  <span className="revisao-bloco-etiqueta">REVISÃO CONJUNTA · {bloco.revisoes.length} TÓPICOS</span>
+                  <strong>{bloco.titulo}</strong>
+                  <p>Uma sessão para conteúdos relacionados. Cada revisão conserva seu próprio ciclo.</p>
+                </div>
+                <div className="revisao-bloco-itens">
+                  {bloco.revisoes.map((item) => (
+                    <div key={item.id} className="revisao-bloco-item">
+                      <div>
+                        <strong>{item.assunto}</strong>
+                        <small>{item.materia} · Etapa {item.etapa} · {formatarDataRevisao(item.dataPrevista)}</small>
+                      </div>
+                      <span>{calcularDiasDiferenca(item.dataPrevista) < 0 ? "Atrasada" : "Pendente"}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="revisao-bloco-acoes">
+                  <button type="button" className="revisao-questoes-ia" onClick={() => abrirQuestoesBloco(bloco)}>
+                    ✨ Questões IA do bloco
+                  </button>
+                  <button type="button" className="revisao-concluir-toggle" aria-expanded={avaliacaoVisivel}
+                    onClick={() => { setBlocoAvaliacao(avaliacaoVisivel ? null : bloco.chave); setBlocoDetalhes(null); }}>
+                    ✓ Concluir bloco
+                  </button>
+                  <button type="button" className="revisao-opcoes-toggle" aria-expanded={detalhesVisiveis}
+                    onClick={() => { setBlocoDetalhes(detalhesVisiveis ? null : bloco.chave); setBlocoAvaliacao(null); }}>
+                    {detalhesVisiveis ? "Ocultar ações individuais" : "Ver ações individuais"}
+                  </button>
+                </div>
+                {avaliacaoVisivel && (
+                  <div className="revisao-bloco-avaliacao">
+                    <strong>Você revisou todos os tópicos? Como foi o estudo do bloco?</strong>
+                    <small>As etapas continuam separadas; esta avaliação não substitui o resultado de um treino.</small>
+                    <div>
+                      {(["dificil", "media", "facil"] as const).map((desempenho) => (
+                        <button type="button" key={desempenho} className={"avaliacao-" + desempenho}
+                          onClick={() => {
+                            concluirRevisoesRelacionadas(bloco, desempenho);
+                            setBlocoAvaliacao(null);
+                          }}>
+                          {formatarDesempenho(desempenho)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {detalhesVisiveis && (
+                  <div className="revisao-bloco-detalhes">
+                    <GrupoRevisoes
+                      titulo="Ações individuais e histórico de cada tópico"
+                      revisoes={bloco.revisoes}
+                      abrirRevisao={abrirRevisao}
+                      abrirQuestoesIA={abrirQuestoesIA}
+                      abrirFlashcards={abrirFlashcards}
+                      concluirRevisao={concluirRevisao}
+                      abrirQuestoesBloco={abrirQuestoesBloco}
+                      concluirRevisoesRelacionadas={concluirRevisoesRelacionadas}
+                      reagendarRevisao={reagendarRevisao}
+                      excluirRevisao={excluirRevisao}
+                      revisoesBase={revisoesBase}
+                      limiteDiario={limiteDiario}
+                      nomesSimulados={nomesSimulados}
+                      sessoes={sessoes}
+                      naoAgrupar
+                    />
+                  </div>
+                )}
+              </article>
+            );
+          }
+
+          const revisao = bloco.revisoes[0];
           const diferenca = calcularDiasDiferenca(revisao.dataPrevista);
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
