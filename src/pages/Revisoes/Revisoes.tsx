@@ -3,6 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import "./Revisoes.css";
+import PainelRevisoesIntegradas, {
+  type EstadoChecklistsIntegrados,
+} from "../../components/revisoes/PainelRevisoesIntegradas";
+import {
+  identificarGrupoIntegrado,
+  topicosPresentesNoBloco,
+} from "../../utils/catalogoRevisoesIntegradas";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -30,6 +37,24 @@ import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../
 type DesempenhoRevisao = "facil" | "media" | "dificil";
 
 const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
+const DATA_SESSAO = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Recife" });
+const CHAVE_CHECKLISTS = "pmpe:revisoes-integradas:checklists:v1:" + DATA_SESSAO;
+
+function lerChecklists(): EstadoChecklistsIntegrados {
+  try {
+    const salvo = sessionStorage.getItem(CHAVE_CHECKLISTS);
+    if (!salvo) return {};
+    const dados: unknown = JSON.parse(salvo);
+    if (!dados || typeof dados !== "object" || Array.isArray(dados)) return {};
+    return Object.fromEntries(
+      Object.entries(dados).filter(([chave, ids]) =>
+        chave.length <= 250 && Array.isArray(ids) && ids.every((id) => typeof id === "string" && id.length < 100)
+      )
+    ) as EstadoChecklistsIntegrados;
+  } catch {
+    return {};
+  }
+}
 
 export default function Revisoes() {
   const { materias, revisoes, setRevisoes, configuracoes, sessoes } = useApp();
@@ -40,6 +65,21 @@ export default function Revisoes() {
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
   const [revisaoParaVincular, setRevisaoParaVincular] = useState<string | null>(null);
   const [destinoRevisao, setDestinoRevisao] = useState("");
+  const [checklists, setChecklists] = useState<EstadoChecklistsIntegrados>(lerChecklists);
+
+  useEffect(() => {
+    try { sessionStorage.setItem(CHAVE_CHECKLISTS, JSON.stringify(checklists)); }
+    catch { /* Checklist auxiliar não bloqueia os dados principais. */ }
+  }, [checklists]);
+
+  function alternarChecklist(chave: string, topicoId: string, marcado: boolean) {
+    setChecklists((anteriores) => {
+      const atual = new Set(anteriores[chave] ?? []);
+      if (marcado) atual.add(topicoId);
+      else atual.delete(topicoId);
+      return { ...anteriores, [chave]: Array.from(atual) };
+    });
+  }
   const destinosRevisao = useMemo(() => materias.flatMap((materia) =>
     (materia.modulos ?? []).flatMap((modulo) => modulo.assuntos.map((assunto) => ({
       materia, modulo, assunto,
@@ -286,27 +326,46 @@ export default function Revisoes() {
     );
   }
 
-  function abrirQuestoesBloco(bloco: BlocoRevisoesVisivel) {
-    const primeira = bloco.revisoes[0];
-    if (!primeira) return;
-    // O treino conjunto não aponta para um único revisaoId, pois isso
-    // concluiria só parte do bloco. A avaliação fica explícita na agenda.
+  function abrirTreinoIntegrado(materia: string, topicos: string[], quantidade: number) {
+    const titulos = Array.from(new Set(topicos.map((nome) => nome.trim()).filter(Boolean)));
+    if (!materia || titulos.length === 0) {
+      showToast("Selecione pelo menos um subassunto para o treino.", "warning");
+      return;
+    }
+    // Exercícios de treino não concluem a revisão. O assunto composto
+    // é encaminhado como orientação de geração, não como um novo ID de curso.
     sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
     sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
     sessionStorage.setItem(
       "pmpe:gerar-ia:prefill",
       JSON.stringify({
-        materia: primeira.materia,
-        assunto: bloco.titulo,
-        quantidade: 10,
+        materia,
+        assunto: titulos.length === 1 ? titulos[0] : "Revisão integrada: " + titulos.join("; "),
+        quantidade: quantidade === 15 ? 15 : 10,
         banca: "AOCP",
       })
     );
     showToast(
-      "Treino conjunto preparado. Ao retornar, conclua o bloco somente se revisar todos os tópicos.",
+      "Treino preparado no estilo AOCP. Confira os tópicos e a quantidade antes de gerar.",
       "info"
     );
     navigate("/gerar-simulado-ia");
+  }
+
+  function abrirQuestoesBloco(bloco: BlocoRevisoesVisivel) {
+    const primeira = bloco.revisoes[0];
+    if (!primeira) return;
+    const topicos = topicosPresentesNoBloco(bloco.revisoes);
+    const chaveChecklist = "agenda:" + bloco.chave;
+    const marcados = checklists[chaveChecklist] ?? [];
+    const naoMarcados = topicos.filter((topico) => !marcados.includes(topico.id));
+    abrirTreinoIntegrado(
+      primeira.materia,
+      topicos.length > 0
+        ? (naoMarcados.length ? naoMarcados : topicos).map((topico) => topico.titulo)
+        : [bloco.titulo],
+      10
+    );
   }
 
   function concluirRevisoesRelacionadas(
@@ -314,6 +373,14 @@ export default function Revisoes() {
     desempenho: DesempenhoRevisao
   ) {
     const quantidade = bloco.revisoes.length;
+    const integrados = topicosPresentesNoBloco(bloco.revisoes);
+    if (integrados.length > 0) {
+      const conferidos = checklists["agenda:" + bloco.chave] ?? [];
+      if (!integrados.every((topico) => conferidos.includes(topico.id))) {
+        showToast("Confira todos os subassuntos deste bloco antes de concluí-lo.", "warning");
+        return;
+      }
+    }
     if (!window.confirm(
       "Você estudou TODOS os " + quantidade +
       " tópicos deste bloco? Cada revisão será concluída na etapa original, " +
@@ -419,6 +486,9 @@ export default function Revisoes() {
     abrirFlashcards: abrirFlashcardsDaRevisao,
     concluirRevisao,
     abrirQuestoesBloco,
+    abrirTreinoIntegrado,
+    checklists,
+    alternarChecklist,
     concluirRevisoesRelacionadas,
     reagendarRevisao: reagendar,
     excluirRevisao,
@@ -476,6 +546,12 @@ export default function Revisoes() {
         Conteúdos relacionados aparecem juntos para evitar estudo repetido. Os contadores abaixo
         mostram os <strong>registros originais</strong>; concluir um bloco exige sua confirmação.
       </p>
+      <PainelRevisoesIntegradas
+        revisoes={revisoesComModulo}
+        marcados={checklists}
+        onAlternar={alternarChecklist}
+        onTreinar={abrirTreinoIntegrado}
+      />
       <div className="revisoes-resumo">
         <ResumoCard titulo="Atrasadas" valor={atrasadas.length} classe="resumo-atrasado" />
         <ResumoCard titulo="Hoje" valor={paraHoje.length} classe="resumo-hoje" />
@@ -555,6 +631,9 @@ type GrupoRevisoesProps = {
   abrirFlashcards: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
   abrirQuestoesBloco: (bloco: BlocoRevisoesVisivel) => void;
+  abrirTreinoIntegrado: (materia: string, topicos: string[], quantidade: number) => void;
+  checklists: EstadoChecklistsIntegrados;
+  alternarChecklist: (chave: string, topico: string, marcado: boolean) => void;
   concluirRevisoesRelacionadas: (bloco: BlocoRevisoesVisivel, desempenho: DesempenhoRevisao) => void;
   naoAgrupar?: boolean;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
@@ -573,6 +652,9 @@ function GrupoRevisoes({
   abrirFlashcards,
   concluirRevisao,
   abrirQuestoesBloco,
+  abrirTreinoIntegrado,
+  checklists,
+  alternarChecklist,
   concluirRevisoesRelacionadas,
   naoAgrupar = false,
   reagendarRevisao,
@@ -619,10 +701,16 @@ function GrupoRevisoes({
           if (bloco.revisoes.length > 1) {
             const detalhesVisiveis = blocoDetalhes === bloco.chave;
             const avaliacaoVisivel = blocoAvaliacao === bloco.chave;
+            const grupoIntegrado = identificarGrupoIntegrado(bloco.revisoes[0]);
+            const subassuntos = topicosPresentesNoBloco(bloco.revisoes);
+            const chaveChecklist = "agenda:" + bloco.chave;
+            const conferidos = checklists[chaveChecklist] ?? [];
+            const todosConferidos = subassuntos.length === 0 ||
+              subassuntos.every((topico) => conferidos.includes(topico.id));
             return (
               <article key={bloco.chave} className="revisao-card revisao-bloco-card">
                 <div className="revisao-bloco-cabecalho">
-                  <span className="revisao-bloco-etiqueta">REVISÃO CONJUNTA · {bloco.revisoes.length} TÓPICOS</span>
+                  <span className="revisao-bloco-etiqueta">{grupoIntegrado ? "REVISÃO INTEGRADA" : "REVISÃO CONJUNTA"} · {bloco.revisoes.length} REGISTROS</span>
                   <strong>{bloco.titulo}</strong>
                   <p>Uma sessão para conteúdos relacionados. Cada revisão conserva seu próprio ciclo.</p>
                 </div>
@@ -637,12 +725,28 @@ function GrupoRevisoes({
                     </div>
                   ))}
                 </div>
+                {subassuntos.length > 0 && (
+                  <fieldset className="revisao-bloco-checklist">
+                    <legend>Checklist de subassuntos deste bloco ({subassuntos.filter((item) => conferidos.includes(item.id)).length}/{subassuntos.length})</legend>
+                    <p>Marque o que realmente revisou. Cada registro mantém sua etapa e próxima data.</p>
+                    <div>
+                      {subassuntos.map((topico) => (
+                        <label key={topico.id}>
+                          <input type="checkbox" checked={conferidos.includes(topico.id)}
+                            onChange={(evento) => alternarChecklist(chaveChecklist, topico.id, evento.target.checked)} />
+                          <span>{topico.titulo}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
                 <div className="revisao-bloco-acoes">
                   <button type="button" className="revisao-questoes-ia" onClick={() => abrirQuestoesBloco(bloco)}>
                     ✨ Questões IA do bloco
                   </button>
                   <button type="button" className="revisao-concluir-toggle" aria-expanded={avaliacaoVisivel}
                     onClick={() => { setBlocoAvaliacao(avaliacaoVisivel ? null : bloco.chave); setBlocoDetalhes(null); }}>
+                    disabled={!todosConferidos} title={!todosConferidos ? "Confira os subassuntos antes de concluir" : "Confirme a conclusão de cada registro"}
                     ✓ Concluir bloco
                   </button>
                   <button type="button" className="revisao-opcoes-toggle" aria-expanded={detalhesVisiveis}
@@ -677,6 +781,9 @@ function GrupoRevisoes({
                       abrirFlashcards={abrirFlashcards}
                       concluirRevisao={concluirRevisao}
                       abrirQuestoesBloco={abrirQuestoesBloco}
+                      abrirTreinoIntegrado={abrirTreinoIntegrado}
+                      checklists={checklists}
+                      alternarChecklist={alternarChecklist}
                       concluirRevisoesRelacionadas={concluirRevisoesRelacionadas}
                       reagendarRevisao={reagendarRevisao}
                       excluirRevisao={excluirRevisao}
