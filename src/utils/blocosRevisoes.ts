@@ -1,5 +1,6 @@
 import type { Revisao } from "../types";
 import { chaveDaMateria } from "./desempenhoMaterias";
+import { identificarGrupoIntegrado } from "./catalogoRevisoesIntegradas";
 import { concluirRevisaoNaLista } from "./revisoes";
 
 export type BlocoRevisoesVisivel = {
@@ -92,22 +93,16 @@ function normalizar(valor: string): string {
  * Crase e regência também não são automaticamente equivalentes.
  */
 function classificarFamiliaRevisao(revisao: Revisao): { codigo: string; titulo: string } | null {
+  // Pilotos: correspondências por disciplina + subassunto, nunca só por palavra.
+  const integrada = identificarGrupoIntegrado(revisao);
+  if (integrada) return { codigo: integrada.id, titulo: integrada.titulo };
+
   const materia = chaveDaMateria(revisao.materia);
   const nome = normalizar(revisao.assunto);
-
-  if (materia === "rlm") {
-    if (/\bconectiv|\btabelas? (da )?(verdade|logica)/.test(nome)) {
-      return { codigo: "conectivos-tabelas", titulo: "Conectivos lógicos, tabelas-verdade e negação" };
-    }
-    return null;
-  }
 
   if (materia === "portugues") {
     if (/\bacentuac|\bacento grafico|\boxiton|\bparoxiton|\bproparoxiton/.test(nome)) {
       return { codigo: "acentuacao", titulo: "Acentuação gráfica" };
-    }
-    if (/\bdigraf|\bencontro(s)? (consonantal|consonantais|vocalic|vocalicos)|\bmonossilab|\bsilab|\bfonem|\bditong|\btritong|\bhiato/.test(nome)) {
-      return { codigo: "fonologia-silaba", titulo: "Fonologia: dígrafos, encontros e sílabas" };
     }
     if (/\bcrase/.test(nome)) return { codigo: "crase", titulo: "Crase" };
     if (/\bpontuac|\bvirgula|\bponto e virgula/.test(nome)) {
@@ -117,12 +112,9 @@ function classificarFamiliaRevisao(revisao: Revisao): { codigo: string; titulo: 
   }
 
   if (materia === "informatica") {
-    // Partes internas de um mesmo programa, nunca Windows + Excel.
     if (/\bwindows\b/.test(nome)) return { codigo: "windows", titulo: "Windows" };
     if (/\bexcel\b/.test(nome)) return { codigo: "excel", titulo: "Excel" };
     if (/\bword\b/.test(nome)) return { codigo: "word", titulo: "Word" };
-    return null;
   }
-
   return null;
 }
