@@ -837,3 +837,55 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-bloco-it
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-bloco-detalhes > .revisoes-grupo {
   background: #f1f6fe;
 }
+
+
+/* Checklist da sessão, somente para blocos de revisões de famílias piloto. */
+.revisao-bloco-checklist {
+  min-width: 0;
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px solid #36516e;
+  border-radius: 12px;
+  background: #101c2d;
+}
+.revisao-bloco-checklist legend {
+  padding: 0 7px;
+  color: #f1f6ff;
+  font-size: 12px;
+  font-weight: 850;
+}
+.revisao-bloco-checklist > p {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #abbfd4;
+}
+.revisao-bloco-checklist > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.revisao-bloco-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid #30435e;
+  border-radius: 9px;
+  color: #e9f2ff;
+  background: #17283f;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.revisao-bloco-checklist input[type="checkbox"] { flex-shrink: 0; height: 18px; width: 18px; accent-color: #c73848; cursor: pointer; }
+.revisao-bloco-checklist input[type="checkbox"]:focus-visible { outline: 2px solid #ffa0aa; outline-offset: 2px; }
+.revisao-bloco-acoes button:disabled {
+  opacity: .47;
+  cursor: not-allowed;
+  filter: grayscale(.25);
+}
+.revisao-bloco-acoes button:disabled:hover { filter: grayscale(.25); }
+@media(max-width:680px) {
+  .revisao-bloco-checklist > div { grid-template-columns: 1fr; }
+}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-bloco-checklist { background: #f1f6fc; border-color: #aabbcb; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-bloco-checklist legend { color: #1b2d47; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-bloco-checklist > p { color: #556b86; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-bloco-checklist label { color: #243b57; background: #fff; border-color: #cbd9e8; }
