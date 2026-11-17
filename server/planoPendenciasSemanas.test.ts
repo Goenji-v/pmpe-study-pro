@@ -149,7 +149,8 @@ test("44 conteúdos concluídos compactam o avanço para semana 8 dia 3", async 
   assert.equal(idsUnicos.length, 44);
   assert.equal(primeira?.semana, 8);
   assert.equal(primeira?.dia, 3);
-  assert.equal(getSemanaOperacional(idsUnicos, compactado), 8);
+  // Referência fixa: o resultado não pode variar conforme o dia em que a CI roda.
+  assert.equal(getSemanaOperacional(idsUnicos, compactado, undefined, undefined, new Date(2026, 10, 15, 12)), 8);
 });
 
 test("terça sem pendência puxa a próxima missão útil em vez de ficar vazia", () => {
