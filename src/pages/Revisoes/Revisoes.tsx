@@ -745,8 +745,9 @@ function GrupoRevisoes({
                     ✨ Questões IA do bloco
                   </button>
                   <button type="button" className="revisao-concluir-toggle" aria-expanded={avaliacaoVisivel}
-                    onClick={() => { setBlocoAvaliacao(avaliacaoVisivel ? null : bloco.chave); setBlocoDetalhes(null); }}>
-                    disabled={!todosConferidos} title={!todosConferidos ? "Confira os subassuntos antes de concluir" : "Confirme a conclusão de cada registro"}
+                    onClick={() => { setBlocoAvaliacao(avaliacaoVisivel ? null : bloco.chave); setBlocoDetalhes(null); }}
+                    disabled={!todosConferidos}
+                    title={!todosConferidos ? "Confira os subassuntos antes de concluir" : "Confirme a conclusão de cada registro"}>
                     ✓ Concluir bloco
                   </button>
                   <button type="button" className="revisao-opcoes-toggle" aria-expanded={detalhesVisiveis}
