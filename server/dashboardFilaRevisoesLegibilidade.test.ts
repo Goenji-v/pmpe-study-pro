@@ -6,7 +6,7 @@ const dashboard = readFileSync("src/pages/Dashboard/Dashboard.tsx", "utf8");
 const css = readFileSync("src/pages/Dashboard/Dashboard.css", "utf8");
 
 test("fila de revisão usa linha integral para nome e separa origem e status", () => {
-  assert.match(dashboard, /className="dashboard-pro-review-title">\{revisao\.assunto\}<\/b>/);
+  assert.match(dashboard, /className="dashboard-pro-review-title">\{tituloAssuntoPrincipal\(revisao\)\}<\/b>/);
   assert.match(dashboard, /className="dashboard-pro-review-origin"/);
   assert.match(dashboard, /dashboard-pro-review-status \$\{status\.classe\}/);
   assert.match(css, /grid-template-areas:\s*"icon spacer status"\s*"title title title"\s*"origin origin arrow"/);
