@@ -119,6 +119,24 @@ export function compararImportacaoConteudos(
       subassuntosIds: atual.idsSubassuntos,
       confianca: atual.confianca,
     };
+    const familiaEmOutraDisciplina = FAMILIAS_CATALOGO.find((familia) =>
+      familia.disciplinaId !== (atual.disciplinaId ?? normMat) &&
+      [familia.nome, ...familia.nomesAlternativos,
+        ...familia.subassuntos.flatMap((sub) => [sub.nome, ...sub.nomesAlternativos])]
+        .some((nome) => normalizarNomeCatalogo(nome) === normNome)
+    );
+    // Prioridade à classificação correta. Mesmo se a conta já tiver o
+    // mesmo título incorretamente em Direitos Humanos, Estatuto nunca
+    // deve ser considerado uma correspondência "exata" de DH.
+    if (familiaEmOutraDisciplina) {
+      return {
+        ...base, situacao:"disciplina-divergente" as const,
+        confianca:"revisar" as const, referencia:referenciar(literal),
+        explicacao:"O catálogo identifica esse título em " +
+          (familiaEmOutraDisciplina.disciplinaId === "estatuto-pmpe" ? "Estatuto PMPE" : "outra disciplina") +
+          ". Confira a matéria antes de conservar ou criar vínculos."
+      };
+    }
     const duplicadaNoArquivo = anteriores.find((anterior) => {
       const outra = identificarConteudoCatalogo(anterior.materia, anterior.assunto);
       const disciplinaIgual = atual.disciplinaId
