@@ -12,6 +12,7 @@ import "./Dashboard.css";
 import { useApp } from "../../context/AppContext";
 import { useCronometro } from "../../context/CronometroContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { pendentesUnicasPorAssunto, tituloAssuntoPrincipal } from "../../utils/revisoesAssuntoPrincipal";
 import { calcularSequenciaAtividades } from "../../utils/sequenciaAtividades";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 import {
@@ -324,7 +325,7 @@ export default function Dashboard() {
     ).length;
 
   const revisoesAtrasadas =
-    revisoes.filter(
+    pendentesUnicasPorAssunto(revisoes).filter(
       (revisao) =>
         !revisao.concluida &&
         inicioDoDia(
@@ -656,7 +657,7 @@ function iniciarProximaAulaPortugues() {
               <button type="button" key={revisao.id} onClick={() => navigate("/revisoes")}>
                 <span className="dashboard-pro-review-calendar" aria-hidden="true">▣</span>
                 <small className={`dashboard-pro-review-status ${status.classe}`}>{status.texto}</small>
-                <b className="dashboard-pro-review-title">{revisao.assunto}</b>
+                <b className="dashboard-pro-review-title">{tituloAssuntoPrincipal(revisao)}</b>
                 {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
                   <small className="dashboard-pro-review-origin">
                     {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}
@@ -1220,7 +1221,7 @@ function montarRevisoesDashboard(revisoes: Revisao[]) {
   const hoje = inicioDoDia(new Date());
   const amanha = inicioDoDia(adicionarDias(hoje, 1));
 
-  return revisoes
+  return pendentesUnicasPorAssunto(revisoes)
     .filter((revisao) => {
       if (revisao.concluida) return false;
       const data = inicioDoDia(new Date(revisao.dataPrevista));
