@@ -117,7 +117,7 @@ export const FAMILIAS_CATALOGO: readonly FamiliaCatalogo[] = [
   {id:"legislacao.maria",nome:"Lei Maria da Penha",disciplinaId:"legislacao",nomesAlternativos:["Lei 11.340/2006"],
    subassuntos:[{id:"leg.maria",nome:"Lei Maria da Penha",nomesAlternativos:[]}]},
   {id:"estatuto-pmpe.legislacao",nome:"Estatuto dos Policiais Militares de Pernambuco",disciplinaId:"estatuto-pmpe",
-   nomesAlternativos:["Estatuto dos Militares do Estado de Pernambuco","Estatuto dos Policiais Militares do Estado de Pernambuco (Lei 6.783/74)"],
+   nomesAlternativos:["Estatuto dos Militares do Estado de Pernambuco","Estatuto dos Policiais Militares do Estado de Pernambuco (Lei 6.783/74)","Estatuto dos Policiais Militares de Pernambuco (Lei 6.783/74)"],
    subassuntos:[
     {id:"est.preliminares",nome:"Disposições preliminares",nomesAlternativos:["Em Produção - Disposições preliminares"]},
     {id:"est.hierarquia",nome:"Hierarquia e disciplina",nomesAlternativos:["Em Produção - Hierarquia e disciplina"]},
