@@ -131,7 +131,7 @@ export const FAMILIAS_CATALOGO: readonly FamiliaCatalogo[] = [
    subassuntos:[{id:"hist.acucar",nome:"Economia Açucareira",nomesAlternativos:[]}]},
   {id:"historia-pe.holandeses",nome:"Presença Holandesa e Insurreição Pernambucana",disciplinaId:"historia-pe",nomesAlternativos:[],
    subassuntos:[
-    {id:"hist.presenca",nome:"Presença Holandesa e governo de Nassau",nomesAlternativos:["A presença Holandesa, O governo Nassau e a Insurreição Pernambucana"]},
+    {id:"hist.presenca",nome:"Presença Holandesa e governo de Nassau",nomesAlternativos:["Presença Holandesa","Governo de Maurício de Nassau"]},
     {id:"hist.insurreicao",nome:"Insurreição Pernambucana",nomesAlternativos:[]},
    ]},
   {id:"redacao.dissertacao",nome:"Texto dissertativo-argumentativo",disciplinaId:"redacao",nomesAlternativos:[],
@@ -183,6 +183,14 @@ export function identificarConteudoCatalogo(disciplina: string, nome: string): I
     if ([familia.nome,...familia.nomesAlternativos].some((x)=>normalizarNomeCatalogo(x)===alvo)) {
       return {tipo:"familia",disciplinaId,familiaId:familia.id,idsSubassuntos:[],nomeFamilia:familia.nome,confianca:"revisar"};
     }
+  }
+  // Uma aula de História que inclui Nassau E Insurreição não equivale
+  // somente à Presença Holandesa. Preservar as duas unidades distintas.
+  if (disciplinaId==="historia-pe" &&
+      /presenca holandesa/.test(alvo) && /insurreicao pernambucana/.test(alvo)) {
+    return {tipo:"composto",disciplinaId,familiaId:"historia-pe.holandeses",
+      idsSubassuntos:["hist.presenca","hist.insurreicao"],
+      nomeFamilia:"Presença Holandesa e Insurreição Pernambucana",confianca:"revisar"};
   }
   // Títulos compostos reais identificados na conta. Exigem confirmação manual.
   if (disciplinaId==="rlm" && /conectiv/.test(alvo) && /tabelas? (da )?verdade/.test(alvo) && /negac/.test(alvo)) {
