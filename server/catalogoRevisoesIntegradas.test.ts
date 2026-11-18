@@ -8,7 +8,7 @@ import {
   topicosPresentesNoBloco,
   revisoesDaFamilia,
 } from "../src/utils/catalogoRevisoesIntegradas.ts";
-import { agruparRevisoesParaEstudo } from "../src/utils/blocosRevisoes.ts";
+import { pendentesUnicasPorAssunto } from "../src/utils/revisoesAssuntoPrincipal.ts";
 
 function entrada(
   id: string, materia: string, assunto: string,
@@ -41,7 +41,7 @@ test("RLM: equivalências, tautologia e tabelas-verdade pertencem ao mesmo assun
   assert.deepEqual(idsTopicosReconhecidos(entradas[0]), ["conectivos", "tabelas", "negacoes"]);
   assert.deepEqual(idsTopicosReconhecidos(entradas[1]), ["equivalencias"]);
   assert.deepEqual(idsTopicosReconhecidos(entradas[2]), ["tautologias"]);
-  assert.equal(agruparRevisoesParaEstudo(entradas).length, 1);
+  assert.equal(pendentesUnicasPorAssunto(entradas).length, 1);
   assert.deepEqual(topicosPresentesNoBloco(entradas).map(t => t.id), [
     "conectivos", "tabelas", "negacoes", "equivalencias", "tautologias",
   ]);
@@ -56,7 +56,7 @@ test("Português: fonemas, dígrafos, encontros vocálicos e sílabas são agrup
     entrada("3", "Português", "Encontros vocálicos"),
     entrada("4", "Português", "Sílaba"),
   ];
-  assert.equal(agruparRevisoesParaEstudo(entradas).length, 1);
+  assert.equal(pendentesUnicasPorAssunto(entradas).length, 1);
   assert.deepEqual(idsTopicosReconhecidos(entradas[1]), ["digrafos", "encontros-consonantais"]);
   assert.deepEqual(topicosPresentesNoBloco(entradas).map(x => x.id), [
     "fonemas", "digrafos", "encontros-consonantais", "encontros-vocalicos", "silabas",
@@ -76,7 +76,7 @@ test("Informática: proteção e segurança 1–4, 5–9 e PDF compartilham o ma
     ["aulas-1-4"], ["aulas-5-9"], ["material-pdf"],
   ]);
   assert.equal(revisoesDaFamilia(entradas, "seguranca-informacao").length, 3);
-  assert.equal(agruparRevisoesParaEstudo(entradas).length, 3);
+  assert.equal(pendentesUnicasPorAssunto(entradas).length, 1);
   assert.deepEqual(entradas.map(x => x.dataPrevista), [
     "2026-11-17T15:00:00.000Z", "2026-12-01T15:00:00.000Z", "2026-12-02T15:00:00.000Z",
   ]);
