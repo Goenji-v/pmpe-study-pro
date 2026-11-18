@@ -152,3 +152,18 @@ test("UI da prévia bloqueia aplicação sem conferência e com conflito de sinc
   assert.match(cursos,/aplicarEstadoEstruturalSeguro/);
   assert.match(cursos,/criarBackupAutomaticoLocal/);
 });
+
+
+test("nomes reais da conta são reconhecidos sem remover prefixos da identidade salva",()=>{
+  assert.equal(identificarDisciplinaCatalogo("Estatuto PMPE (Pós Edital)")?.id,"estatuto-pmpe");
+  assert.equal(identificarConteudoCatalogo("Estatuto PMPE (Pós Edital)","Em Produção - Hierarquia e disciplina").idsSubassuntos[0],"est.hierarquia");
+  assert.equal(identificarConteudoCatalogo("Direitos Humanos",
+    "1. Teoria geral dos Direitos Humanos: conceito; terminologia; estrutura normativa; fundamento; classificação; especificidades").idsSubassuntos[0],"dh.teoria");
+  assert.equal(identificarConteudoCatalogo("Direitos Humanos",
+    "3. Incorporação dos tratados internacionais de Direitos Humanos ao ordenamento jurídico brasileiro: Constituição Federal, art. 5º, §§ 2º e 3º; hierarquia normativa dos tratados de Direitos Humanos.").idsSubassuntos[0],"dh.incorporacao");
+  assert.equal(identificarConteudoCatalogo("Informática",
+    "Windows - Parte III: Nomes, símbolos proibidos, painel de controle, novidades do Windows 10").idsSubassuntos[0],"inf.windows-3");
+  const wrong=identificarConteudoCatalogo("Direitos Humanos","Estatuto dos Militares do Estado de Pernambuco");
+  assert.equal(wrong.tipo,"nao_identificado");
+  assert.equal(identificarConteudoCatalogo("História de Pernambuco","Guerra dos Mascates").familiaId,"historia-pe.mascates");
+});
