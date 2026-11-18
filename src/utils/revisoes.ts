@@ -531,8 +531,14 @@ export function redistribuirRevisoesPendentes(
   if (!Number.isFinite(limiteDiario) || limiteDiario <= 0) return revisoes;
 
   const concluidas = revisoes.filter((revisao) => revisao.concluida);
-  const pendentes = revisoes
-    .filter((revisao) => !revisao.concluida)
+  const ativas = pendentesUnicasPorAssunto(revisoes);
+  const idsAtivos = new Set(ativas.map((revisao) => revisao.id));
+  // Não deslocar ciclos antigos vinculados nem outras pendências ocultas.
+  // Preservar seus IDs, datas e etapas como vieram da nuvem.
+  const preservadas = revisoes.filter(
+    (revisao) => !revisao.concluida && !idsAtivos.has(revisao.id)
+  );
+  const pendentes = [...ativas]
     .sort(
       (a, b) =>
         new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime() ||
@@ -573,7 +579,7 @@ export function redistribuirRevisoesPendentes(
     };
   });
 
-  return [...reorganizadas, ...concluidas];
+  return [...reorganizadas, ...preservadas, ...concluidas];
 }
 
 export function inicioDoDia(data: Date) {
