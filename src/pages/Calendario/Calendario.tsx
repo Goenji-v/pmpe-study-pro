@@ -13,6 +13,7 @@ import {
   useApp,
 } from "../../context/AppContext";
 import { calcularMetricasConsolidadas } from "../../utils/metricasConsolidadas";
+import { pendentesUnicasPorAssunto, tituloAssuntoPrincipal } from "../../utils/revisoesAssuntoPrincipal";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 
 type EventoCalendario = {
@@ -731,7 +732,7 @@ function montarEventos({
     }
   );
 
-  revisoes.forEach(
+  [...revisoes.filter((item) => item.concluida), ...pendentesUnicasPorAssunto(revisoes)].forEach(
     (revisao) => {
       const concluida =
         Boolean(
@@ -768,7 +769,7 @@ function montarEventos({
           revisao.materia ||
           "Revisão",
         detalhe:
-          `${revisao.assunto || "Sem assunto"} • Etapa ${revisao.etapa}` +
+          `${revisao.concluida ? revisao.assunto : tituloAssuntoPrincipal(revisao)} • Etapa ${revisao.etapa}` +
           (rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)
             ? ` • ${rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}`
             : ""),
