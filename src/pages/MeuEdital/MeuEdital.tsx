@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import "./MeuEdital.css";
 import PainelConciliacaoCatalogo from "../../components/conciliacao/PainelConciliacaoCatalogo";
+import CatalogoCentralVisao from "../../components/conciliacao/CatalogoCentralVisao";
 import {
   candidatosDoEdital,
   compararImportacaoConteudos,
@@ -778,6 +779,8 @@ export default function MeuEdital() {
           </button>
         )}
       </header>
+
+      <CatalogoCentralVisao />
 
       <div className="edital-fluxo">
         <span className="ativo">1. Edital</span>
