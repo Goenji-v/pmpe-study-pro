@@ -1,4 +1,5 @@
 import {
+  useMemo,
   useState,
   type ChangeEvent,
   type ClipboardEvent,
@@ -7,6 +8,14 @@ import { useNavigate } from "react-router-dom";
 
 import "./Cursos.css";
 import "./ClassificacaoCursos.css";
+import PainelConciliacaoCatalogo from "../../components/conciliacao/PainelConciliacaoCatalogo";
+import {
+  candidatosDoCurso,
+  compararImportacaoConteudos,
+} from "../../utils/conciliacaoImportacaoCatalogo";
+import { montarEstadoNuvem } from "../../services/sincronizacaoService";
+import { criarBackupAutomaticoLocal } from "../../services/seguranca/backupAutomaticoService";
+import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { analisarMidiasDoCurso } from "../../services/cursoMidiaService";
@@ -27,7 +36,13 @@ import {
 
 export default function Cursos() {
   const navigate = useNavigate();
-  const { configuracoes, setConfiguracoes, materias, setMaterias } = useApp();
+  const { usuario } = useAuth();
+  const {
+    configuracoes, setConfiguracoes, materias, setMaterias,
+    statusNuvem, alteracoesPendentes,
+    questoes, sessoes, revisoes, simulados, bancoQuestoes,
+    simuladosGerados, missoesConcluidas,
+  } = useApp();
   const config = configuracoes as ConfiguracoesComCursos;
   const configEdital = configuracoes as ConfiguracoesComEdital;
   const analiseEdital =
@@ -43,10 +58,23 @@ export default function Cursos() {
   const [textoColado, setTextoColado] = useState("");
   const [nomeManual, setNomeManual] = useState("");
   const [preview, setPreview] = useState<CursoImportado | null>(null);
+  const [conferenciaAceita, setConferenciaAceita] = useState<string | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [aba, setAba] = useState<"arquivo" | "capturador">("arquivo");
+  const conciliacaoCurso = useMemo(
+    () => preview ? compararImportacaoConteudos(materias, candidatosDoCurso(preview)) : null,
+    [preview, materias]
+  );
+  const precisaConferencia = Boolean(conciliacaoCurso && (
+    conciliacaoCurso.alias + conciliacaoCurso.relacionados + conciliacaoCurso.risco > 0
+  ));
+  const conferenciaValida = !precisaConferencia ||
+    conferenciaAceita === conciliacaoCurso?.chaveConferencia;
+  const sincronizacaoInsegura = statusNuvem === "conflito" ||
+    statusNuvem === "offline" || statusNuvem === "erro" ||
+    alteracoesPendentes > 0;
 
   const resumo = {
     cursos: cursos.length,
@@ -294,6 +322,32 @@ export default function Cursos() {
 
   function confirmarImportacao(comecarAgora = false) {
     if (!preview || preview.materias.length === 0) return;
+    if (sincronizacaoInsegura) {
+      setMensagem("Importação bloqueada: há alteração pendente, conflito, erro ou modo offline. Sincronize antes de importar.");
+      return;
+    }
+    if (!conferenciaValida) {
+      setMensagem("Confira as correspondências do Catálogo Central antes de confirmar o curso.");
+      return;
+    }
+
+    // O importador de cursos atualiza configurações + matérias.
+    // Resguardar o estado completo ANTES de ambas as alterações.
+    try {
+      criarBackupAutomaticoLocal(
+        usuario?.id ?? "sem-usuario",
+        montarEstadoNuvem({
+          materias, questoes, sessoes, revisoes, simulados, bancoQuestoes,
+          simuladosGerados, configuracoes, missoesConcluidas,
+        }),
+        "antes_reconciliacao_estrutural"
+      );
+    } catch (erro) {
+      setMensagem(erro instanceof Error
+        ? "Importação cancelada: " + erro.message
+        : "Importação cancelada: não foi possível criar o backup de segurança.");
+      return;
+    }
 
     const cursosComProgresso =
       sincronizarProgressoCursos(cursos, materias);
@@ -627,6 +681,16 @@ export default function Cursos() {
             </div>
           )}
 
+          {conciliacaoCurso && (
+            <PainelConciliacaoCatalogo
+              titulo="Conferência das aulas do curso com o que você já estudou"
+              relatorio={conciliacaoCurso}
+              confirmado={conferenciaAceita === conciliacaoCurso.chaveConferencia}
+              onConfirmar={(confirmado) => setConferenciaAceita(confirmado ? conciliacaoCurso.chaveConferencia : null)}
+              sincronizacaoInsegura={sincronizacaoInsegura}
+            />
+          )}
+
           <div className="cursos-preview-lista">
             {!editandoId && encontrarCursoExistente(cursos, preview) && <p className="cursos-mensagem">Este curso já está salvo. A importação acrescentará somente entradas novas, sem duplicar aulas nem apagar o progresso e os conteúdos anteriores.</p>}
             <p>Somente grupos marcados como “Matéria” entram em Conteúdos. Ajuste a classificação abaixo se necessário.</p>
@@ -669,8 +733,12 @@ export default function Cursos() {
 
           <div className="cursos-preview-acoes">
             <button type="button" className="secundario" onClick={() => setPreview(null)}>Cancelar</button>
-            <button type="button" className="secundario" onClick={() => confirmarImportacao(false)}>Só importar</button>
-            <button type="button" className="principal" onClick={() => confirmarImportacao(true)}>Importar e começar</button>
+            <button type="button" className="secundario"
+              disabled={!conferenciaValida || sincronizacaoInsegura}
+              onClick={() => confirmarImportacao(false)}>Só importar</button>
+            <button type="button" className="principal"
+              disabled={!conferenciaValida || sincronizacaoInsegura}
+              onClick={() => confirmarImportacao(true)}>Importar e começar</button>
           </div>
         </section>
       )}
