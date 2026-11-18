@@ -3,13 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import "./Revisoes.css";
-import PainelRevisoesIntegradas, {
-  type EstadoChecklistsIntegrados,
-} from "../../components/revisoes/PainelRevisoesIntegradas";
-import {
-  identificarGrupoIntegrado,
-  topicosPresentesNoBloco,
-} from "../../utils/catalogoRevisoesIntegradas";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -28,33 +21,15 @@ import { localizarReferenciaCanonica } from "../../services/conteudos/sincroniza
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
 import {
-  agruparRevisoesParaEstudo,
-  concluirBlocoDeRevisoes,
-  type BlocoRevisoesVisivel,
-} from "../../utils/blocosRevisoes";
+  pendentesUnicasPorAssunto,
+  revisoesDoMesmoAssunto,
+  tituloAssuntoPrincipal,
+} from "../../utils/revisoesAssuntoPrincipal";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 
 type DesempenhoRevisao = "facil" | "media" | "dificil";
 
 const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
-const DATA_SESSAO = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Recife" });
-const CHAVE_CHECKLISTS = "pmpe:revisoes-integradas:checklists:v1:" + DATA_SESSAO;
-
-function lerChecklists(): EstadoChecklistsIntegrados {
-  try {
-    const salvo = sessionStorage.getItem(CHAVE_CHECKLISTS);
-    if (!salvo) return {};
-    const dados: unknown = JSON.parse(salvo);
-    if (!dados || typeof dados !== "object" || Array.isArray(dados)) return {};
-    return Object.fromEntries(
-      Object.entries(dados).filter(([chave, ids]) =>
-        chave.length <= 250 && Array.isArray(ids) && ids.every((id) => typeof id === "string" && id.length < 100)
-      )
-    ) as EstadoChecklistsIntegrados;
-  } catch {
-    return {};
-  }
-}
 
 export default function Revisoes() {
   const { materias, revisoes, setRevisoes, configuracoes, sessoes } = useApp();
@@ -65,28 +40,13 @@ export default function Revisoes() {
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
   const [revisaoParaVincular, setRevisaoParaVincular] = useState<string | null>(null);
   const [destinoRevisao, setDestinoRevisao] = useState("");
-  const [checklists, setChecklists] = useState<EstadoChecklistsIntegrados>(lerChecklists);
-
-  useEffect(() => {
-    try { sessionStorage.setItem(CHAVE_CHECKLISTS, JSON.stringify(checklists)); }
-    catch { /* Checklist auxiliar não bloqueia os dados principais. */ }
-  }, [checklists]);
-
-  function alternarChecklist(chave: string, topicoId: string, marcado: boolean) {
-    setChecklists((anteriores) => {
-      const atual = new Set(anteriores[chave] ?? []);
-      if (marcado) atual.add(topicoId);
-      else atual.delete(topicoId);
-      return { ...anteriores, [chave]: Array.from(atual) };
-    });
-  }
   const destinosRevisao = useMemo(() => materias.flatMap((materia) =>
     (materia.modulos ?? []).flatMap((modulo) => modulo.assuntos.map((assunto) => ({
       materia, modulo, assunto,
     })))
   ), [materias]);
   const revisoesSemVinculo = useMemo(() => revisoes.filter((revisao) =>
-    !revisao.concluida && !revisao.escopoGrupo &&
+    !revisao.concluida && !revisao.integradaEmId && !revisao.escopoGrupo &&
     !revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)
   ), [materias, revisoes]);
 
@@ -112,12 +72,11 @@ export default function Revisoes() {
   );
 
   const revisoesPendentes = useMemo(
-    () =>
-      revisoesComModulo
-        .filter((revisao) => !revisao.concluida)
-        .sort(
-          (a, b) => new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()
-        ),
+    () => pendentesUnicasPorAssunto(revisoesComModulo),
+    [revisoesComModulo]
+  );
+  const revisoesIntegradas = useMemo(
+    () => revisoesComModulo.filter((revisao) => Boolean(revisao.integradaEmId)),
     [revisoesComModulo]
   );
 
@@ -260,7 +219,7 @@ export default function Revisoes() {
       JSON.stringify({
         materia: dados.materia,
         modulo: dados.modulo,
-        assunto: dados.assunto,
+        assunto: tituloAssuntoPrincipal(revisao),
         quantidade,
       })
     );
@@ -311,6 +270,13 @@ export default function Revisoes() {
   }
 
   function concluirRevisao(revisao: Revisao, desempenho: DesempenhoRevisao) {
+    const relacionadas = revisoesDoMesmoAssunto(revisoes, revisao);
+    const etapaEfetiva = relacionadas.reduce((menor, atual) => Math.min(menor, atual.etapa), revisao.etapa);
+    if (relacionadas.length > 1 && !window.confirm(
+      "Concluir a revisão única de " + tituloAssuntoPrincipal(revisao) +
+      "? Os " + relacionadas.length + " registros pendentes serão vinculados ao mesmo ciclo " +
+      "sem apagar datas, etapas ou registros anteriores. Será agendado apenas um próximo retorno."
+    )) return;
     const agora = new Date();
     const proximaId = crypto.randomUUID();
     setRevisoes((anteriores) => concluirRevisaoNaLista({
@@ -319,89 +285,9 @@ export default function Revisoes() {
     }));
 
     showToast(
-      (desempenho !== "facil" || revisao.etapa < 5)
+      (desempenho !== "facil" || etapaEfetiva < 5)
         ? "Revisão concluída. Próxima revisão agendada conforme seu desempenho."
         : "Ciclo de revisões finalizado.",
-      "success"
-    );
-  }
-
-  function abrirTreinoIntegrado(materia: string, topicos: string[], quantidade: number) {
-    const titulos = Array.from(new Set(topicos.map((nome) => nome.trim()).filter(Boolean)));
-    if (!materia || titulos.length === 0) {
-      showToast("Selecione pelo menos um subassunto para o treino.", "warning");
-      return;
-    }
-    // Exercícios de treino não concluem a revisão. O assunto composto
-    // é encaminhado como orientação de geração, não como um novo ID de curso.
-    sessionStorage.removeItem(CHAVE_ORIGEM_REVISAO_QUESTOES);
-    sessionStorage.setItem("pmpe:gerar-ia:modo", "questoes");
-    sessionStorage.setItem(
-      "pmpe:gerar-ia:prefill",
-      JSON.stringify({
-        materia,
-        assunto: titulos.length === 1 ? titulos[0] : "Revisão integrada: " + titulos.join("; "),
-        quantidade: quantidade === 15 ? 15 : 10,
-        banca: "AOCP",
-      })
-    );
-    showToast(
-      "Treino preparado no estilo AOCP. Confira os tópicos e a quantidade antes de gerar.",
-      "info"
-    );
-    navigate("/gerar-simulado-ia");
-  }
-
-  function abrirQuestoesBloco(bloco: BlocoRevisoesVisivel) {
-    const primeira = bloco.revisoes[0];
-    if (!primeira) return;
-    const topicos = topicosPresentesNoBloco(bloco.revisoes);
-    const chaveChecklist = "agenda:" + bloco.chave;
-    const marcados = checklists[chaveChecklist] ?? [];
-    const naoMarcados = topicos.filter((topico) => !marcados.includes(topico.id));
-    abrirTreinoIntegrado(
-      primeira.materia,
-      topicos.length > 0
-        ? (naoMarcados.length ? naoMarcados : topicos).map((topico) => topico.titulo)
-        : [bloco.titulo],
-      10
-    );
-  }
-
-  function concluirRevisoesRelacionadas(
-    bloco: BlocoRevisoesVisivel,
-    desempenho: DesempenhoRevisao
-  ) {
-    const quantidade = bloco.revisoes.length;
-    const integrados = topicosPresentesNoBloco(bloco.revisoes);
-    if (integrados.length > 0) {
-      const conferidos = checklists["agenda:" + bloco.chave] ?? [];
-      if (!integrados.every((topico) => conferidos.includes(topico.id))) {
-        showToast("Confira todos os subassuntos deste bloco antes de concluí-lo.", "warning");
-        return;
-      }
-    }
-    if (!window.confirm(
-      "Você estudou TODOS os " + quantidade +
-      " tópicos deste bloco? Cada revisão será concluída na etapa original, " +
-      "e as próximas datas serão calculadas separadamente. A avaliação manual não inventa nota de questões."
-    )) return;
-
-    const agora = new Date();
-    const revisoesIds = bloco.revisoes.map((item) => item.id);
-    const proximosIds = Object.fromEntries(
-      revisoesIds.map((id) => [id, crypto.randomUUID()])
-    );
-    setRevisoes((anteriores) => concluirBlocoDeRevisoes({
-      revisoes: anteriores,
-      revisoesIds,
-      desempenho,
-      limiteDiario: configuracoes.metaRevisoesDiaria,
-      agora,
-      proximosIds,
-    }));
-    showToast(
-      quantidade + " revisões concluídas em um bloco de estudo, com os históricos preservados.",
       "success"
     );
   }
@@ -485,11 +371,6 @@ export default function Revisoes() {
     abrirQuestoesIA,
     abrirFlashcards: abrirFlashcardsDaRevisao,
     concluirRevisao,
-    abrirQuestoesBloco,
-    abrirTreinoIntegrado,
-    checklists,
-    alternarChecklist,
-    concluirRevisoesRelacionadas,
     reagendarRevisao: reagendar,
     excluirRevisao,
     revisoesBase: revisoesComModulo,
@@ -502,7 +383,7 @@ export default function Revisoes() {
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
       <p className="revisoes-subtitle">
-        O Study Pro reúne revisões de conteúdos relacionados quando vencem no mesmo dia. Uma sessão pode cobrir o bloco; as etapas e datas originais de cada assunto são preservadas. Nos tópicos individuais, você continua podendo revisar pela Central de Estudos e concluir automaticamente ao finalizar a sessão.
+        Uma única revisão por assunto principal, mesmo quando as aulas têm nomes diferentes. Os registros anteriores são preservados e o próximo retorno segue um ciclo único.
       </p>
 
       {revisoesSemVinculo.length > 0 && (
@@ -543,15 +424,8 @@ export default function Revisoes() {
       </div>
 
       <p className="revisoes-blocos-explicacao">
-        Conteúdos relacionados aparecem juntos para evitar estudo repetido. Os contadores abaixo
-        mostram os <strong>registros originais</strong>; concluir um bloco exige sua confirmação.
+        A agenda agora conta <strong>um único compromisso por assunto principal</strong>. As aulas continuam no plano; não existe checklist ou agenda paralela.
       </p>
-      <PainelRevisoesIntegradas
-        revisoes={revisoesComModulo}
-        marcados={checklists}
-        onAlternar={alternarChecklist}
-        onTreinar={abrirTreinoIntegrado}
-      />
       <div className="revisoes-resumo">
         <ResumoCard titulo="Atrasadas" valor={atrasadas.length} classe="resumo-atrasado" />
         <ResumoCard titulo="Hoje" valor={paraHoje.length} classe="resumo-hoje" />
@@ -578,6 +452,20 @@ export default function Revisoes() {
         </>
       )}
 
+      {revisoesIntegradas.length > 0 && (
+        <details className="revisoes-historico-integracao">
+          <summary>Registros anteriores vinculados ({revisoesIntegradas.length}) — histórico preservado</summary>
+          <p>Essas pendências foram reunidas ao ciclo do assunto principal após a conclusão confirmada. As datas, etapas e IDs originais permanecem guardados.</p>
+          <div className="revisoes-historico-integracao-lista">
+            {revisoesIntegradas.slice(0, 30).map((item) => (
+              <div key={item.id}>
+                <strong>{item.materia} · {item.assunto}</strong>
+                <span>Etapa {item.etapa} · data original {formatarDataRevisao(item.dataPrevista)}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       {revisoesConcluidas.length > 0 && (
         <div className="revisoes-grupo">
           <h2>✅ Histórico de revisões</h2>
@@ -587,7 +475,12 @@ export default function Revisoes() {
                 <div>
                   <strong>{revisao.materia}</strong>
                   {revisao.modulo && <small className="revisao-caminho">{revisao.modulo}</small>}
-                  <p>{revisao.assunto}</p>
+                  <p>{assuntoPrincipal}</p>
+                {relacionadas.length > 1 && (
+                  <small className="revisao-assunto-principal-nota">
+                    {relacionadas.length} registros do mesmo assunto · uma revisão e um próximo retorno
+                  </small>
+                )}
                   {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
                     <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
                   )}
@@ -630,12 +523,6 @@ type GrupoRevisoesProps = {
   abrirQuestoesIA: (revisao: Revisao) => void;
   abrirFlashcards: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
-  abrirQuestoesBloco: (bloco: BlocoRevisoesVisivel) => void;
-  abrirTreinoIntegrado: (materia: string, topicos: string[], quantidade: number) => void;
-  checklists: EstadoChecklistsIntegrados;
-  alternarChecklist: (chave: string, topico: string, marcado: boolean) => void;
-  concluirRevisoesRelacionadas: (bloco: BlocoRevisoesVisivel, desempenho: DesempenhoRevisao) => void;
-  naoAgrupar?: boolean;
   reagendarRevisao: (revisao: Revisao, dias: number) => void;
   excluirRevisao: (revisao: Revisao) => void;
   revisoesBase: Revisao[];
@@ -651,12 +538,6 @@ function GrupoRevisoes({
   abrirQuestoesIA,
   abrirFlashcards,
   concluirRevisao,
-  abrirQuestoesBloco,
-  abrirTreinoIntegrado,
-  checklists,
-  alternarChecklist,
-  concluirRevisoesRelacionadas,
-  naoAgrupar = false,
   reagendarRevisao,
   excluirRevisao,
   revisoesBase,
@@ -667,14 +548,7 @@ function GrupoRevisoes({
   const [avaliandoId, setAvaliandoId] = useState<string | null>(null);
   const [opcoesId, setOpcoesId] = useState<string | null>(null);
   const [historicoId, setHistoricoId] = useState<string | null>(null);
-  const [blocoDetalhes, setBlocoDetalhes] = useState<string | null>(null);
-  const [blocoAvaliacao, setBlocoAvaliacao] = useState<string | null>(null);
-  const blocosVisiveis = useMemo(
-    () => naoAgrupar
-      ? revisoes.map((revisao) => ({ chave: "individual:" + revisao.id, titulo: revisao.assunto, revisoes: [revisao] }))
-      : agruparRevisoesParaEstudo(revisoes),
-    [revisoes, naoAgrupar]
-  );
+
 
   function alternarAvaliacao(id: string) {
     setAvaliandoId((atual) => (atual === id ? null : id));
@@ -697,114 +571,21 @@ function GrupoRevisoes({
     <div className="revisoes-grupo">
       <h2>{titulo}</h2>
       <div className="revisoes-lista">
-        {blocosVisiveis.map((bloco) => {
-          if (bloco.revisoes.length > 1) {
-            const detalhesVisiveis = blocoDetalhes === bloco.chave;
-            const avaliacaoVisivel = blocoAvaliacao === bloco.chave;
-            const grupoIntegrado = identificarGrupoIntegrado(bloco.revisoes[0]);
-            const subassuntos = topicosPresentesNoBloco(bloco.revisoes);
-            const chaveChecklist = "agenda:" + bloco.chave;
-            const conferidos = checklists[chaveChecklist] ?? [];
-            const todosConferidos = subassuntos.length === 0 ||
-              subassuntos.every((topico) => conferidos.includes(topico.id));
-            return (
-              <article key={bloco.chave} className="revisao-card revisao-bloco-card">
-                <div className="revisao-bloco-cabecalho">
-                  <span className="revisao-bloco-etiqueta">{grupoIntegrado ? "REVISÃO INTEGRADA" : "REVISÃO CONJUNTA"} · {bloco.revisoes.length} REGISTROS</span>
-                  <strong>{bloco.titulo}</strong>
-                  <p>Uma sessão para conteúdos relacionados. Cada revisão conserva seu próprio ciclo.</p>
-                </div>
-                <div className="revisao-bloco-itens">
-                  {bloco.revisoes.map((item) => (
-                    <div key={item.id} className="revisao-bloco-item">
-                      <div>
-                        <strong>{item.assunto}</strong>
-                        <small>{item.materia} · Etapa {item.etapa} · {formatarDataRevisao(item.dataPrevista)}</small>
-                      </div>
-                      <span>{calcularDiasDiferenca(item.dataPrevista) < 0 ? "Atrasada" : "Pendente"}</span>
-                    </div>
-                  ))}
-                </div>
-                {subassuntos.length > 0 && (
-                  <fieldset className="revisao-bloco-checklist">
-                    <legend>Checklist de subassuntos deste bloco ({subassuntos.filter((item) => conferidos.includes(item.id)).length}/{subassuntos.length})</legend>
-                    <p>Marque o que realmente revisou. Cada registro mantém sua etapa e próxima data.</p>
-                    <div>
-                      {subassuntos.map((topico) => (
-                        <label key={topico.id}>
-                          <input type="checkbox" checked={conferidos.includes(topico.id)}
-                            onChange={(evento) => alternarChecklist(chaveChecklist, topico.id, evento.target.checked)} />
-                          <span>{topico.titulo}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                )}
-                <div className="revisao-bloco-acoes">
-                  <button type="button" className="revisao-questoes-ia" onClick={() => abrirQuestoesBloco(bloco)}>
-                    ✨ Questões IA do bloco
-                  </button>
-                  <button type="button" className="revisao-concluir-toggle" aria-expanded={avaliacaoVisivel}
-                    onClick={() => { setBlocoAvaliacao(avaliacaoVisivel ? null : bloco.chave); setBlocoDetalhes(null); }}
-                    disabled={!todosConferidos}
-                    title={!todosConferidos ? "Confira os subassuntos antes de concluir" : "Confirme a conclusão de cada registro"}>
-                    ✓ Concluir bloco
-                  </button>
-                  <button type="button" className="revisao-opcoes-toggle" aria-expanded={detalhesVisiveis}
-                    onClick={() => { setBlocoDetalhes(detalhesVisiveis ? null : bloco.chave); setBlocoAvaliacao(null); }}>
-                    {detalhesVisiveis ? "Ocultar ações individuais" : "Ver ações individuais"}
-                  </button>
-                </div>
-                {avaliacaoVisivel && (
-                  <div className="revisao-bloco-avaliacao">
-                    <strong>Você revisou todos os tópicos? Como foi o estudo do bloco?</strong>
-                    <small>As etapas continuam separadas; esta avaliação não substitui o resultado de um treino.</small>
-                    <div>
-                      {(["dificil", "media", "facil"] as const).map((desempenho) => (
-                        <button type="button" key={desempenho} className={"avaliacao-" + desempenho}
-                          onClick={() => {
-                            concluirRevisoesRelacionadas(bloco, desempenho);
-                            setBlocoAvaliacao(null);
-                          }}>
-                          {formatarDesempenho(desempenho)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {detalhesVisiveis && (
-                  <div className="revisao-bloco-detalhes">
-                    <GrupoRevisoes
-                      titulo="Ações individuais e histórico de cada tópico"
-                      revisoes={bloco.revisoes}
-                      abrirRevisao={abrirRevisao}
-                      abrirQuestoesIA={abrirQuestoesIA}
-                      abrirFlashcards={abrirFlashcards}
-                      concluirRevisao={concluirRevisao}
-                      abrirQuestoesBloco={abrirQuestoesBloco}
-                      abrirTreinoIntegrado={abrirTreinoIntegrado}
-                      checklists={checklists}
-                      alternarChecklist={alternarChecklist}
-                      concluirRevisoesRelacionadas={concluirRevisoesRelacionadas}
-                      reagendarRevisao={reagendarRevisao}
-                      excluirRevisao={excluirRevisao}
-                      revisoesBase={revisoesBase}
-                      limiteDiario={limiteDiario}
-                      nomesSimulados={nomesSimulados}
-                      sessoes={sessoes}
-                      naoAgrupar
-                    />
-                  </div>
-                )}
-              </article>
-            );
-          }
-
-          const revisao = bloco.revisoes[0];
+        {revisoes.map((revisao) => {
           const diferenca = calcularDiasDiferenca(revisao.dataPrevista);
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
           const plano = planejarRevisaoPendente(revisao);
+          const relacionadas = revisoesDoMesmoAssunto(revisoesBase, revisao);
+          const assuntoPrincipal = tituloAssuntoPrincipal(revisao);
+          const etapaEfetiva = relacionadas.reduce((menor, item) => Math.min(menor, item.etapa), revisao.etapa);
+          const idsRelacionados = new Set(relacionadas.map((item) => item.id));
+          const revisoesParaPrevisao = relacionadas.length > 1
+            ? revisoesBase.filter((item) => !idsRelacionados.has(item.id) || item.id === revisao.id)
+            : revisoesBase;
+          const revisaoParaPrevisao = etapaEfetiva !== revisao.etapa
+            ? { ...revisao, etapa: etapaEfetiva as Revisao["etapa"] }
+            : revisao;
           const temFlashcards = Boolean(
             buscarPacoteQuestoesFlashcards(
               revisao.materia,
@@ -825,21 +606,21 @@ function GrupoRevisoes({
                   ? "Amanhã"
                   : `Daqui a ${diferenca} dias`;
           const previsaoDificil = preverDetalhesProximaRevisaoPorDesempenho({
-            revisao,
+            revisao: revisaoParaPrevisao,
             desempenho: "dificil",
-            revisoesExistentes: revisoesBase,
+            revisoesExistentes: revisoesParaPrevisao,
             limiteDiario,
           });
           const previsaoMedia = preverDetalhesProximaRevisaoPorDesempenho({
-            revisao,
+            revisao: revisaoParaPrevisao,
             desempenho: "media",
-            revisoesExistentes: revisoesBase,
+            revisoesExistentes: revisoesParaPrevisao,
             limiteDiario,
           });
           const previsaoFacil = preverDetalhesProximaRevisaoPorDesempenho({
-            revisao,
+            revisao: revisaoParaPrevisao,
             desempenho: "facil",
-            revisoesExistentes: revisoesBase,
+            revisoesExistentes: revisoesParaPrevisao,
             limiteDiario,
           });
 
@@ -859,7 +640,7 @@ function GrupoRevisoes({
                 {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
                   <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
                 )}
-                <span>Etapa {revisao.etapa} • {formatarDataRevisao(revisao.dataPrevista)}</span>
+                <span>Etapa {etapaEfetiva} • {formatarDataRevisao(revisao.dataPrevista)}{relacionadas.length > 1 ? " · ciclo unificado" : ""}</span>
                 <small>
                   {diferenca < 0
                     ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
@@ -907,11 +688,13 @@ function GrupoRevisoes({
                   <button
                     type="button"
                     className="revisao-iniciar"
-                    onClick={() => abrirRevisao(revisao)}
+                    onClick={() => relacionadas.length > 1 ? abrirQuestoesIA(revisao) : abrirRevisao(revisao)}
                   >
-                    {plano.modo === "teoria_questoes"
-                      ? "📖 Rever teoria"
-                      : "🧩 Fazer questões"}
+                    {relacionadas.length > 1
+                      ? "🧩 Revisar assunto"
+                      : plano.modo === "teoria_questoes"
+                        ? "📖 Rever teoria"
+                        : "🧩 Fazer questões"}
                   </button>
                   <button
                     type="button"
