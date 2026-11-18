@@ -71,7 +71,7 @@ export default function PainelConciliacaoCatalogo({
 
       {sincronizacaoInsegura && (
         <p className="conciliacao-catalogo-bloqueio" role="alert">
-          Há conflito, erro de sincronização ou acesso offline. Resolva isso antes de aplicar qualquer importação: ela pode sobrescrever progresso mais recente.
+          Sua conta ainda não está sincronizada (carregando, salvando, offline ou em conflito). Aguarde a sincronização ou resolva o aviso antes de importar.
         </p>
       )}
       {conferir > 0 && (
