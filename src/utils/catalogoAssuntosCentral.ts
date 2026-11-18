@@ -32,7 +32,7 @@ export const DISCIPLINAS_CATALOGO: readonly DisciplinaCatalogo[] = [
   { id:"constitucional",nome:"Direito Constitucional",nomesAlternativos:["Constitucional"] },
   { id:"humanos",nome:"Direitos Humanos",nomesAlternativos:["Noções de direitos humanos"] },
   { id:"legislacao",nome:"Legislação Extravagante",nomesAlternativos:["Legislação","Legislação especial","Leis especiais"] },
-  { id:"estatuto-pmpe",nome:"Estatuto PMPE",nomesAlternativos:["Estatuto dos Militares de Pernambuco","Estatuto dos Policiais Militares de Pernambuco"] },
+  { id:"estatuto-pmpe",nome:"Estatuto PMPE",nomesAlternativos:["Estatuto PMPE (Pós Edital)","Estatuto dos Militares de Pernambuco","Estatuto dos Policiais Militares de Pernambuco"] },
   { id:"historia-pe",nome:"História de Pernambuco",nomesAlternativos:["História PE","História"] },
   { id:"redacao",nome:"Redação",nomesAlternativos:["Produção textual","Redação dissertativa"] },
 ] as const;
@@ -85,7 +85,7 @@ export const FAMILIAS_CATALOGO: readonly FamiliaCatalogo[] = [
    nomesAlternativos:["Sistema operacional Windows"],subassuntos:[
     {id:"inf.windows-1",nome:"Windows — parte I",nomesAlternativos:["Windows - Parte I: Conceito e componentes do sistema","Windows Parte I"]},
     {id:"inf.windows-2",nome:"Windows — parte II",nomesAlternativos:["Windows - Parte II: Sistema de arquivos, multiboot e versões","Windows Parte II"]},
-    {id:"inf.windows-3",nome:"Windows — parte III",nomesAlternativos:["Windows - Parte III: Nomes, símbolos proibidos, painel de controle e novidades do Windows 10","Windows Parte III"]},
+    {id:"inf.windows-3",nome:"Windows — parte III",nomesAlternativos:["Windows - Parte III: Nomes, símbolos proibidos, painel de controle e novidades do Windows 10","Windows - Parte III: Nomes, símbolos proibidos, painel de controle, novidades do Windows 10","Windows Parte III"]},
    ]},
   {id:"informatica.excel",nome:"Microsoft Excel",disciplinaId:"informatica",nomesAlternativos:["Excel"],
    subassuntos:[{id:"inf.excel",nome:"Microsoft Excel",nomesAlternativos:["Excel"]}]},
@@ -103,11 +103,19 @@ export const FAMILIAS_CATALOGO: readonly FamiliaCatalogo[] = [
   {id:"constitucional.politicos",nome:"Direitos políticos",disciplinaId:"constitucional",nomesAlternativos:[],
    subassuntos:[{id:"dc.politicos",nome:"Direitos políticos e partidos políticos",nomesAlternativos:["Direitos Políticos e partidos políticos"]}]},
   {id:"humanos.teoria",nome:"Teoria geral dos Direitos Humanos",disciplinaId:"humanos",nomesAlternativos:[],
-   subassuntos:[{id:"dh.teoria",nome:"Teoria geral dos Direitos Humanos",nomesAlternativos:["Teoria geral dos Direitos Humanos: conceito, terminologia, estrutura normativa, fundamento, classificação e especificidades"]}]},
+   subassuntos:[{id:"dh.teoria",nome:"Teoria geral dos Direitos Humanos",nomesAlternativos:["Teoria geral dos Direitos Humanos: conceito, terminologia, estrutura normativa, fundamento, classificação e especificidades","Teoria geral dos Direitos Humanos: conceito; terminologia; estrutura normativa; fundamento; classificação; especificidades"]}]},
   {id:"humanos.historia",nome:"Evolução histórica dos Direitos Humanos",disciplinaId:"humanos",nomesAlternativos:[],
    subassuntos:[{id:"dh.evolucao",nome:"Evolução histórica e gerações de direitos humanos",nomesAlternativos:["Gerações de direitos humanos"]}]},
   {id:"humanos.dudh",nome:"Declaração Universal dos Direitos Humanos",disciplinaId:"humanos",nomesAlternativos:["DUDH"],
    subassuntos:[{id:"dh.dudh",nome:"Declaração Universal dos Direitos Humanos (DUDH)",nomesAlternativos:["Declaração Universal dos Direitos Humanos"]}]},
+  {id:"humanos.tratados",nome:"Tratados internacionais de Direitos Humanos",disciplinaId:"humanos",nomesAlternativos:[],
+   subassuntos:[{id:"dh.incorporacao",nome:"Incorporação dos tratados internacionais de Direitos Humanos",nomesAlternativos:["Incorporação dos tratados internacionais de Direitos Humanos ao ordenamento jurídico brasileiro: Constituição Federal, art. 5º, §§ 2º e 3º; hierarquia normativa dos tratados de Direitos Humanos."]}]},
+  {id:"informatica.redes",nome:"Redes e Internet",disciplinaId:"informatica",nomesAlternativos:[],
+   subassuntos:[{id:"inf.redes",nome:"Internet, Intranet, Extranet e VPN",nomesAlternativos:["Internet, Intranet, Extranet e VPN"]}]},
+  {id:"informatica.fundamentos",nome:"Fundamentos da Computação",disciplinaId:"informatica",nomesAlternativos:[],
+   subassuntos:[{id:"inf.fundamentos",nome:"Fundamentos da computação",nomesAlternativos:["Fundamentos da computação - I","Fundamentos da computação - 1"]}]},
+  {id:"portugues.morfologia",nome:"Morfologia",disciplinaId:"portugues",nomesAlternativos:[],
+   subassuntos:[{id:"pt.morfologia",nome:"Fundamentos da morfologia",nomesAlternativos:["Fundamentos da morfologia"]}]},
   {id:"legislacao.drogas",nome:"Lei de Drogas",disciplinaId:"legislacao",nomesAlternativos:["Lei 11.343/2006"],
    subassuntos:[{id:"leg.drogas",nome:"Lei de Drogas",nomesAlternativos:["Lei de Drogas (Lei 11.343/26)","Lei de Drogas (Lei 11.343/2006)"]}]},
   {id:"legislacao.tortura",nome:"Lei de Tortura",disciplinaId:"legislacao",nomesAlternativos:["Lei 9.455/1997"],
@@ -143,7 +151,8 @@ export const FAMILIAS_CATALOGO: readonly FamiliaCatalogo[] = [
 export function normalizarNomeCatalogo(valor: string): string {
   return String(valor || "").normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+    .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
+    .replace(/^\d{1,2}\s+(?=[a-z])/, "");
 }
 
 export function identificarDisciplinaCatalogo(nome: string): DisciplinaCatalogo | null {
