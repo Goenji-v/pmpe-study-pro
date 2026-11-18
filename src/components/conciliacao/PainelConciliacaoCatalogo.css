@@ -93,3 +93,40 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-cata
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-item p,
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-numeros small,
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-rodape {color:#526983;}
+
+
+/* Visualizador dobrável do catálogo piloto — integrado à página Meu Edital. */
+.catalogo-central-visao { margin:15px 0 19px; border:1px solid #3e516c; border-radius:14px; overflow:hidden; background:#121d30; color:#ecf2fd; }
+.catalogo-central-visao > summary { display:grid; gap:5px; padding:14px 17px; cursor:pointer; list-style-position:inside; }
+.catalogo-central-visao > summary span { font-size:10px; font-weight:850; letter-spacing:.07em; color:#f6a2a5; }
+.catalogo-central-visao > summary strong { font-size:15px; line-height:1.4; color:#f4f7ff; }
+.catalogo-central-visao > summary small { color:#a7bdd5; font-size:11px; }
+.catalogo-central-introducao { margin:0 16px 15px; background:#1e2739; border:1px solid #44516a; border-radius:10px; padding:12px; }
+.catalogo-central-introducao strong { font-size:13px; }
+.catalogo-central-introducao p { font-size:12px; color:#becbdd; line-height:1.55; margin:6px 0; }
+.catalogo-central-disciplinas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; margin:0 16px 16px; max-height:580px; overflow-y:auto; }
+.catalogo-central-disciplinas > section { min-width:0; border:1px solid #374a65; border-radius:11px; padding:14px; background:#17253b; }
+.catalogo-central-disciplinas h3 { margin:0 0 6px; font-size:16px; color:#f3f6fa; }
+.catalogo-central-disciplinas > section > p { font-size:11px; color:#a4b9d2; margin:0 0 12px; }
+.catalogo-central-familia { padding:11px; margin:8px 0; border:1px solid #344960; background:#101d31; border-radius:9px; }
+.catalogo-central-familia > strong { display:block; color:#f0f4fd; font-size:13px; margin-bottom:4px; }
+.catalogo-central-familia code { font-size:10px; color:#f7a0a6; }
+.catalogo-central-familia > small { display:block; margin-top:5px; color:#b4c5d9; font-size:10px; }
+.catalogo-central-familia ul { padding-left:17px; margin:8px 0 0; }
+.catalogo-central-familia li { font-size:11px; margin:9px 0; line-height:1.45; color:#dbe6f3; }
+.catalogo-central-familia li span { color:#94aecd; font-family:monospace; font-size:10px; }
+.catalogo-central-familia li small { display:block; font-size:10px; color:#9dafc7; line-height:1.5; margin-top:3px; }
+.catalogo-central-familia li em { color:#f0ca8f; }
+.catalogo-central-rodape { margin:0 16px 15px; padding:12px 13px; font-size:11px; border-radius:9px; color:#cbd5e2; background:#1c293e; line-height:1.55; }
+.catalogo-central-visao summary:focus-visible { outline:2px solid #ff939a; outline-offset:-2px; }
+@media(max-width:760px){.catalogo-central-disciplinas { grid-template-columns:1fr; }}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-visao { background:#fff; color:#263954; border-color:#c4d2e4; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-visao summary strong,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-disciplinas h3,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-familia > strong { color:#20324b; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-disciplinas > section,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-familia,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-introducao { background:#f1f6fd; border-color:#cfdaeb; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-disciplinas li,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-introducao p,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-rodape { color:#526782; }
