@@ -503,7 +503,7 @@ export default function MeuEdital() {
 
   async function aplicarPlano() {
     if (sincronizacaoInsegura) {
-      showToast("Não é seguro importar durante conflito, erro ou modo offline. Resolva a sincronização primeiro.", "warning");
+      showToast("Importação indisponível enquanto a conta não estiver totalmente sincronizada. Aguarde ou resolva o conflito antes de continuar.", "warning");
       return;
     }
     if (!conferenciaValida) {
