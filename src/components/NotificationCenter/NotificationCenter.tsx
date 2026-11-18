@@ -37,6 +37,7 @@ import {
   obterConclusoesPlanoOperacional,
 } from "../../utils/planoOperacional";
 import { statusDaRevisao } from "../../utils/revisoes";
+import { pendentesUnicasPorAssunto } from "../../utils/revisoesAssuntoPrincipal";
 
 import "./NotificationCenter.css";
 
@@ -103,7 +104,7 @@ export default function NotificationCenter() {
   ]);
 
   const revisoesPendentes = useMemo(
-    () => revisoes.filter((revisao) => !revisao.concluida),
+    () => pendentesUnicasPorAssunto(revisoes),
     [revisoes]
   );
 
