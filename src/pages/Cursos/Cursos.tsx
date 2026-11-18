@@ -39,7 +39,7 @@ export default function Cursos() {
   const { usuario } = useAuth();
   const {
     configuracoes, setConfiguracoes, materias, setMaterias,
-    statusNuvem, alteracoesPendentes,
+    statusNuvem, alteracoesPendentes, aplicarEstadoEstruturalSeguro,
     questoes, sessoes, revisoes, simulados, bancoQuestoes,
     simuladosGerados, missoesConcluidas,
   } = useApp();
@@ -59,6 +59,7 @@ export default function Cursos() {
   const [nomeManual, setNomeManual] = useState("");
   const [preview, setPreview] = useState<CursoImportado | null>(null);
   const [conferenciaAceita, setConferenciaAceita] = useState<string | null>(null);
+  const [importandoCurso, setImportandoCurso] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [mensagem, setMensagem] = useState("");
@@ -320,8 +321,8 @@ export default function Cursos() {
     abrirCursoNaCentral(curso);
   }
 
-  function confirmarImportacao(comecarAgora = false) {
-    if (!preview || preview.materias.length === 0) return;
+  async function confirmarImportacao(comecarAgora = false) {
+    if (!preview || preview.materias.length === 0 || importandoCurso) return;
     if (sincronizacaoInsegura) {
       setMensagem("Importação bloqueada: há alteração pendente, conflito, erro ou modo offline. Sincronize antes de importar.");
       return;
@@ -349,50 +350,55 @@ export default function Cursos() {
       return;
     }
 
-    const cursosComProgresso =
-      sincronizarProgressoCursos(cursos, materias);
-    const cursoNovo = {
-      ...(editandoId
-        ? preview
-        : mesclarCursoRecebido(cursosComProgresso, preview)),
-      atualizadoEm: new Date().toISOString(),
-    };
-    const novosCursos = [
-      ...cursosComProgresso.filter(
-        (item) => item.id !== cursoNovo.id
-      ),
-      cursoNovo,
-    ];
-    const novosAtivos =
-      Array.from(new Set([...ativosIds, cursoNovo.id]));
+    setImportandoCurso(true);
+    try {
+      const cursosComProgresso = sincronizarProgressoCursos(cursos, materias);
+      const cursoNovo = {
+        ...(editandoId ? preview : mesclarCursoRecebido(cursosComProgresso, preview)),
+        atualizadoEm: new Date().toISOString(),
+      };
+      const novosCursos = [
+        ...cursosComProgresso.filter((item) => item.id !== cursoNovo.id),
+        cursoNovo,
+      ];
+      const novosAtivos = Array.from(new Set([...ativosIds, cursoNovo.id]));
+      const novasConfiguracoes = {
+        ...configuracoes, cursos: novosCursos, cursosAtivosIds: novosAtivos,
+      } as ConfiguracoesComCursos;
+      const novasMaterias = aplicarCursosAtivosNasMaterias(
+        materias, novosCursos, novosAtivos, analiseEdital
+      );
 
-    setConfiguracoes((atuais) => ({
-      ...atuais,
-      cursos: novosCursos,
-      cursosAtivosIds: novosAtivos,
-    }) as ConfiguracoesComCursos);
+      // Um único estado com verificação CAS: impede que a importação
+      // de curso sobrescreva revisões mais novas presentes na nuvem.
+      await aplicarEstadoEstruturalSeguro(
+        montarEstadoNuvem({
+          materias: novasMaterias,
+          questoes, sessoes, revisoes, simulados, bancoQuestoes,
+          simuladosGerados, configuracoes: novasConfiguracoes, missoesConcluidas,
+        }),
+        "antes_reconciliacao_estrutural"
+      );
 
-    setMaterias((atuais) =>
-      aplicarCursosAtivosNasMaterias(
-        atuais,
-        novosCursos,
-        novosAtivos,
-        analiseEdital
-      )
-    );
+      setPreview(null);
+      setEditandoId(null);
+      setArquivo(null);
+      setMidiasCurso([]);
+      setTextoColado("");
+      setNomeManual("");
+      setConferenciaAceita(null);
+      setMensagem("Curso " + cursoNovo.nome +
+        " importado com backup e verificação da nuvem. O histórico foi preservado.");
 
-    setPreview(null);
-    setEditandoId(null);
-    setArquivo(null);
-    setMidiasCurso([]);
-    setTextoColado("");
-    setNomeManual("");
-    setMensagem(
-      `Curso ${cursoNovo.nome} pronto. A trilha está ativa em Conteúdos e disponível no Plano Tático para os assuntos correspondentes ao edital.`
-    );
-
-    if (comecarAgora) {
-      abrirCursoNaCentral(cursoNovo);
+      if (comecarAgora) abrirCursoNaCentral(cursoNovo);
+    } catch (erro) {
+      setMensagem(
+        erro instanceof Error
+          ? "Importação não aplicada: " + erro.message
+          : "Importação não aplicada. Verifique a sincronização antes de tentar novamente."
+      );
+    } finally {
+      setImportandoCurso(false);
     }
   }
 
@@ -734,10 +740,10 @@ export default function Cursos() {
           <div className="cursos-preview-acoes">
             <button type="button" className="secundario" onClick={() => setPreview(null)}>Cancelar</button>
             <button type="button" className="secundario"
-              disabled={!conferenciaValida || sincronizacaoInsegura}
+              disabled={!conferenciaValida || sincronizacaoInsegura || importandoCurso}
               onClick={() => confirmarImportacao(false)}>Só importar</button>
             <button type="button" className="principal"
-              disabled={!conferenciaValida || sincronizacaoInsegura}
+              disabled={!conferenciaValida || sincronizacaoInsegura || importandoCurso}
               onClick={() => confirmarImportacao(true)}>Importar e começar</button>
           </div>
         </section>
