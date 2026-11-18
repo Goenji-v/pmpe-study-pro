@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./MeuEdital.css";
+import PainelConciliacaoCatalogo from "../../components/conciliacao/PainelConciliacaoCatalogo";
+import {
+  candidatosDoEdital,
+  compararImportacaoConteudos,
+} from "../../utils/conciliacaoImportacaoCatalogo";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -96,6 +101,7 @@ export default function MeuEdital() {
     bancoQuestoes,
     simuladosGerados,
     missoesConcluidas,
+    statusNuvem,
     aplicarEstadoEstruturalSeguro,
   } = useApp();
   const { usuario } = useAuth();
@@ -114,6 +120,7 @@ export default function MeuEdital() {
   );
   const [migracaoPrevia, setMigracaoPrevia] =
     useState<PlanoMigracaoEdital | null>(null);
+  const [conferenciaAceita, setConferenciaAceita] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null);
@@ -184,6 +191,17 @@ export default function MeuEdital() {
       ) ?? 0,
     [analise]
   );
+  const conciliacaoEdital = useMemo(
+    () => analise ? compararImportacaoConteudos(materias, candidatosDoEdital(analise)) : null,
+    [materias, analise]
+  );
+  const conferenciaNecessaria = Boolean(conciliacaoEdital && (
+    conciliacaoEdital.risco + conciliacaoEdital.alias + conciliacaoEdital.relacionados > 0
+  ));
+  const sincronizacaoInsegura = statusNuvem === "conflito" ||
+    statusNuvem === "offline" || statusNuvem === "erro";
+  const conferenciaValida = !conferenciaNecessaria ||
+    conferenciaAceita === conciliacaoEdital?.chaveConferencia;
 
   const diasAtivos: DiaSemanaId[] = config.diasEstudo?.length
     ? config.diasEstudo
@@ -484,6 +502,14 @@ export default function MeuEdital() {
   }
 
   async function aplicarPlano() {
+    if (sincronizacaoInsegura) {
+      showToast("Não é seguro importar durante conflito, erro ou modo offline. Resolva a sincronização primeiro.", "warning");
+      return;
+    }
+    if (!conferenciaValida) {
+      showToast("Confira as possíveis correspondências do catálogo antes de aplicar o novo edital.", "warning");
+      return;
+    }
     if (!analise || !planoPrevio) {
       showToast(
         "Gere a prévia antes de aplicar o cronograma.",
@@ -1209,6 +1235,16 @@ export default function MeuEdital() {
         </article>
       )}
 
+      {planoPrevio && conciliacaoEdital && (
+        <PainelConciliacaoCatalogo
+          titulo="Comparação com suas matérias e revisões existentes"
+          relatorio={conciliacaoEdital}
+          confirmado={conferenciaAceita === conciliacaoEdital.chaveConferencia}
+          onConfirmar={(confirmado) => setConferenciaAceita(confirmado ? conciliacaoEdital.chaveConferencia : null)}
+          sincronizacaoInsegura={sincronizacaoInsegura}
+        />
+      )}
+
       {planoPrevio && (
         <article className="edital-card edital-previa">
           <div className="edital-card-cabecalho">
@@ -1259,7 +1295,8 @@ export default function MeuEdital() {
           <button
             type="button"
             className="edital-botao-principal"
-            disabled={aplicando}
+            disabled={aplicando || sincronizacaoInsegura || !conferenciaValida}
+            title={sincronizacaoInsegura ? "Resolva a sincronização antes de importar" : !conferenciaValida ? "Confira as correspondências do catálogo" : undefined}
             onClick={() => void aplicarPlano()}
           >
             {aplicando
