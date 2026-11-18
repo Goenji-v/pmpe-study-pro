@@ -323,7 +323,7 @@ export default function Cursos() {
   async function confirmarImportacao(comecarAgora = false) {
     if (!preview || preview.materias.length === 0 || importandoCurso) return;
     if (sincronizacaoInsegura) {
-      setMensagem("Importação bloqueada: há alteração pendente, conflito, erro ou modo offline. Sincronize antes de importar.");
+      setMensagem("Importação bloqueada: aguarde a conta ficar totalmente sincronizada e resolva qualquer conflito antes de continuar.");
       return;
     }
     if (!conferenciaValida) {
