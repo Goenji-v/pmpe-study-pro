@@ -312,6 +312,8 @@ export default function Dashboard() {
   const questoesHoje = metricasHoje.questoes;
   const minutosHoje = metricasHoje.minutos;
 
+  const revisoesAtivasDashboard = useMemo(() => pendentesUnicasPorAssunto(revisoes), [revisoes]);
+
   const revisoesConcluidasHoje =
     revisoes.filter(
       (revisao) =>
@@ -651,7 +653,7 @@ function iniciarProximaAulaPortugues() {
 
         <article className="dashboard-pro-panel dashboard-pro-reviews">
           <div className="dashboard-pro-panel-title"><div><span className="dashboard-pro-kicker">REVISÕES</span><h2>Fila de revisão</h2></div><button type="button" onClick={() => navigate("/revisoes")}>Ver todas →</button></div>
-          <div className="dashboard-pro-review-counts"><div><strong className="red">{revisoesAtrasadas.length}</strong><span>atrasadas</span></div><div><strong className="orange">{revisoes.filter(r => !r.concluida && obterDataLocal(new Date(r.dataPrevista)) === hoje).length}</strong><span>para hoje</span></div><div><strong>{revisoes.filter(r => !r.concluida && obterDataLocal(new Date(r.dataPrevista)) === obterDataLocal(adicionarDias(new Date(), 1))).length}</strong><span>amanhã</span></div></div>
+          <div className="dashboard-pro-review-counts"><div><strong className="red">{revisoesAtrasadas.length}</strong><span>atrasadas</span></div><div><strong className="orange">{revisoesAtivasDashboard.filter(r => obterDataLocal(new Date(r.dataPrevista)) === hoje).length}</strong><span>para hoje</span></div><div><strong>{revisoesAtivasDashboard.filter(r => obterDataLocal(new Date(r.dataPrevista)) === obterDataLocal(adicionarDias(new Date(), 1))).length}</strong><span>amanhã</span></div></div>
           <div className="dashboard-pro-review-list">
             {revisoesDashboard.length > 0 ? revisoesDashboard.map(({ revisao, status }) => (
               <button type="button" key={revisao.id} onClick={() => navigate("/revisoes")}>
