@@ -199,8 +199,7 @@ export default function MeuEdital() {
   const conferenciaNecessaria = Boolean(conciliacaoEdital && (
     conciliacaoEdital.risco + conciliacaoEdital.alias + conciliacaoEdital.relacionados > 0
   ));
-  const sincronizacaoInsegura = statusNuvem === "conflito" ||
-    statusNuvem === "offline" || statusNuvem === "erro";
+  const sincronizacaoInsegura = statusNuvem !== "sincronizado";
   const conferenciaValida = !conferenciaNecessaria ||
     conferenciaAceita === conciliacaoEdital?.chaveConferencia;
 
