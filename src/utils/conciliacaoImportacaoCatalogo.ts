@@ -28,10 +28,11 @@ export type SituacaoConciliacao =
   | "titulo-composto"
   | "disciplina-divergente"
   | "nome-semelhante"
+  | "repetido-no-arquivo"
   | "novo";
 export type ItemConciliacao = CandidatoImportacao & {
   situacao: SituacaoConciliacao;
-  referencia?: { materiaId: string; assuntoId: string; materia: string; assunto: string };
+  referencia?: { materiaId: string; assuntoId: string; materia: string; assunto: string; doArquivo?: boolean };
   familiaId?: string;
   familia?: string;
   subassuntosIds: string[];
@@ -97,6 +98,7 @@ export function compararImportacaoConteudos(
       identificado: identificarConteudoCatalogo(materia.nome, assunto.nome),
     }));
   });
+  const anteriores: CandidatoImportacao[] = [];
   const itens: ItemConciliacao[] = candidatos.map((candidato) => {
     const atual = identificarConteudoCatalogo(candidato.materia,candidato.assunto);
     const normNome = normalizarNomeCatalogo(candidato.assunto);
@@ -117,6 +119,28 @@ export function compararImportacaoConteudos(
       subassuntosIds: atual.idsSubassuntos,
       confianca: atual.confianca,
     };
+    const duplicadaNoArquivo = anteriores.find((anterior) => {
+      const outra = identificarConteudoCatalogo(anterior.materia, anterior.assunto);
+      const disciplinaIgual = atual.disciplinaId
+        ? outra.disciplinaId === atual.disciplinaId
+        : normalizarNomeCatalogo(anterior.materia) === normMat;
+      if (!disciplinaIgual) return false;
+      if (normalizarNomeCatalogo(anterior.assunto) === normNome) return true;
+      return atual.tipo === "subassunto" && outra.tipo === "subassunto" &&
+        atual.idsSubassuntos[0] === outra.idsSubassuntos[0] &&
+        atual.familiaId === outra.familiaId;
+    });
+    // Guardar os nomes anteriores do próprio arquivo para detectar
+    // duplicações mesmo quando a conta começa sem edital e sem curso.
+    anteriores.push(candidato);
+    if (duplicadaNoArquivo) {
+      return {
+        ...base, situacao:"repetido-no-arquivo" as const,confianca:"revisar" as const,
+        referencia:{materiaId:"importacao",assuntoId:duplicadaNoArquivo.idOrigem,
+          materia:duplicadaNoArquivo.materia,assunto:duplicadaNoArquivo.assunto,doArquivo:true},
+        explicacao:"O próprio arquivo importado repete um subassunto (ou um nome equivalente). Confirmar se são aulas distintas antes de criar novo registro."
+      };
+    }
 
     if (literal) return {
       ...base, situacao:"exato" as const, confianca:"alta" as const,
@@ -190,7 +214,7 @@ export function compararImportacaoConteudos(
     identicos:contar("exato"),
     alias:contar("alias"),
     relacionados:contar("mesma-familia"),
-    risco:contar("titulo-composto")+contar("disciplina-divergente")+contar("nome-semelhante"),
+    risco:contar("titulo-composto")+contar("disciplina-divergente")+contar("nome-semelhante")+contar("repetido-no-arquivo"),
     novos:contar("novo"),
     itens,
     chaveConferencia,
