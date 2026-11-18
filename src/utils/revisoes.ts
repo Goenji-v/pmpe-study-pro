@@ -5,6 +5,11 @@ import type {
   TipoSessao,
 } from "../types";
 import { revisaoOriginadaDeSimulado } from "./revisoesRegulares";
+import {
+  chaveAssuntoPrincipal,
+  integrarPendenciasNaConclusao,
+  pendentesUnicasPorAssunto,
+} from "./revisoesAssuntoPrincipal";
 
 export const INTERVALOS_REVISAO_DIAS: Record<EtapaRevisao, number> = {
   1: 1,
@@ -41,8 +46,8 @@ export function encontrarDataDisponivelParaRevisao(params: {
 
   for (let i = 0; i < 365; i += 1) {
     const chave = chaveData(candidato);
-    const quantidade = revisoes.filter(
-      (revisao) => !revisaoOriginadaDeSimulado(revisao) && !revisao.concluida && chaveData(revisao.dataPrevista) === chave
+    const quantidade = pendentesUnicasPorAssunto(revisoes).filter(
+      (revisao) => chaveData(revisao.dataPrevista) === chave
     ).length;
 
     if (quantidade < limiteDiario) return candidato;
@@ -98,13 +103,18 @@ export function criarProximaRevisao(
   if (revisaoAtual.etapa >= 5) return null;
   const proximaEtapa = (revisaoAtual.etapa + 1) as EtapaRevisao;
 
+  const chavePrincipal = chaveAssuntoPrincipal(revisaoAtual);
   const jaExiste = revisoesExistentes.some(
     (item) =>
       !item.concluida &&
+      !item.integradaEmId &&
       item.id !== revisaoAtual.id &&
-      item.materiaId === revisaoAtual.materiaId &&
-      item.assuntoId === revisaoAtual.assuntoId &&
-      (!item.moduloId || !revisaoAtual.moduloId || item.moduloId === revisaoAtual.moduloId)
+      !revisaoOriginadaDeSimulado(item) &&
+      (chavePrincipal
+        ? chaveAssuntoPrincipal(item) === chavePrincipal
+        : item.materiaId === revisaoAtual.materiaId &&
+          item.assuntoId === revisaoAtual.assuntoId &&
+          (!item.moduloId || !revisaoAtual.moduloId || item.moduloId === revisaoAtual.moduloId))
   );
   if (jaExiste) return null;
 
@@ -273,7 +283,8 @@ export function concluirRevisaoNaLista(params: {
     sessaoIdRecuperacao,
   } = params;
   const atual = revisoes.find((item) => item.id === revisaoId);
-  if (!atual || atual.concluida || (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
+  if (!atual || atual.concluida || atual.integradaEmId ||
+      (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
   const concluida: Revisao = {
     ...atual,
     concluida: true,
@@ -301,8 +312,23 @@ export function concluirRevisaoNaLista(params: {
           }),
   };
   const atualizadas = revisoes.map((item) => item.id === revisaoId ? concluida : item);
-  const proxima = criarProximaRevisao(concluida, atualizadas, limiteDiario, agora, proximaId);
-  return proxima ? [proxima, ...atualizadas] : atualizadas;
+  // Um registro confirmado encerra UMA revisão do assunto principal.
+  // Os outros registros pendentes são vinculados, nunca falsamente concluídos.
+  // O ciclo seguinte usa a MENOR etapa pendente anterior para não antecipar
+  // indevidamente a conclusão do conjunto (ex.: etapas 5 + 3 -> etapa 4).
+  const integradas = integrarPendenciasNaConclusao({
+    revisoes: atualizadas,
+    revisaoPrincipal: concluida,
+    agora,
+  });
+  const proxima = criarProximaRevisao(
+    { ...concluida, etapa: integradas.etapaMaisConservadora },
+    integradas.revisoes,
+    limiteDiario,
+    agora,
+    proximaId
+  );
+  return proxima ? [proxima, ...integradas.revisoes] : integradas.revisoes;
 }
 
 const JANELA_RECUPERACAO_REVISAO_MS = 72 * 60 * 60 * 1000;
@@ -428,7 +454,7 @@ export function recuperarConclusoesRevisaoPorSessoesOrfas(params: {
   let revisoesAtualizadas = params.revisoes;
 
   for (const revisao of params.revisoes.filter(
-    (item) => !item.concluida
+    (item) => !item.concluida && !item.integradaEmId
   )) {
     const sessao = sessoesDisponiveis.find(
       (item) =>
