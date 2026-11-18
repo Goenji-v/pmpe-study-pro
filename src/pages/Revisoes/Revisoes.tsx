@@ -45,8 +45,8 @@ export default function Revisoes() {
       materia, modulo, assunto,
     })))
   ), [materias]);
-  const revisoesSemVinculo = useMemo(() => revisoes.filter((revisao) =>
-    !revisao.concluida && !revisao.integradaEmId && !revisao.escopoGrupo &&
+  const revisoesSemVinculo = useMemo(() => pendentesUnicasPorAssunto(revisoes).filter((revisao) =>
+    !revisao.escopoGrupo &&
     !revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)
   ), [materias, revisoes]);
 
