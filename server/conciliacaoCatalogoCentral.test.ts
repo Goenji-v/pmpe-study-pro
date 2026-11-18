@@ -167,3 +167,15 @@ test("nomes reais da conta são reconhecidos sem remover prefixos da identidade 
   assert.equal(wrong.tipo,"nao_identificado");
   assert.equal(identificarConteudoCatalogo("História de Pernambuco","Guerra dos Mascates").familiaId,"historia-pe.mascates");
 });
+
+
+test("título de Estatuto idêntico em Direitos Humanos ainda é classificado como conflito, não como vínculo exato",()=>{
+  const titulo="Estatuto dos Militares do Estado de Pernambuco";
+  const antigo=[materia("dh","Direitos Humanos",[titulo])];
+  const resultado=compararImportacaoConteudos(antigo,[
+    {origem:"edital",materia:"Direitos Humanos",assunto:titulo,idOrigem:"dh-estatuto"}
+  ]);
+  assert.equal(resultado.itens[0].situacao,"disciplina-divergente");
+  assert.equal(resultado.risco,1);
+  assert.equal(antigo[0].assuntos[0].nome,titulo);
+});
