@@ -1,0 +1,95 @@
+/* Etapa de conferência do catálogo — prévia, sem mudanças em dados. */
+.conciliacao-catalogo {
+  margin: 17px 0;
+  padding: 18px;
+  border-radius: 15px;
+  border: 1px solid #44546c;
+  background: #101b2d;
+  color: #e8eff9;
+}
+.conciliacao-catalogo * { box-sizing: border-box; }
+.conciliacao-catalogo-topo > span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 10px;
+  font-weight: 850;
+  color: #ff9c9f;
+  letter-spacing: .085em;
+}
+.conciliacao-catalogo-topo h3 { color: #fff; margin: 0 0 7px; font-size: 20px; }
+.conciliacao-catalogo-topo p,
+.conciliacao-catalogo-alerta p,
+.conciliacao-catalogo-rodape {
+  margin: 0;
+  color: #afc1d8;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.conciliacao-catalogo-numeros {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0,1fr));
+  gap: 8px;
+  margin: 17px 0 12px;
+}
+.conciliacao-catalogo-numeros > div {
+  border: 1px solid #32465f;
+  border-radius: 10px;
+  padding: 11px 9px;
+  background: #17263e;
+}
+.conciliacao-catalogo-numeros strong { color: #f5f7fc; display: block; font-size: 23px; font-variant-numeric: tabular-nums; }
+.conciliacao-catalogo-numeros small { display:block; margin-top:5px; color:#a5b8d2; line-height:1.3; font-size:10px; }
+.conciliacao-catalogo-alerta {
+  padding: 12px 13px;
+  border: 1px solid #4a4c62;
+  border-radius: 10px;
+  background: #211e2b;
+}
+.conciliacao-catalogo-alerta strong { color: #f7eff0; font-size: 12px; }
+.conciliacao-catalogo-alerta p { margin-top: 6px; }
+.conciliacao-catalogo-detalhes { margin: 13px 0; border-radius:10px; border:1px solid #3b4e66; background:#142238; padding:10px 12px; }
+.conciliacao-catalogo-detalhes summary { color: #e8f1ff; font-size: 12px; font-weight: 750; cursor:pointer; }
+.conciliacao-catalogo-lista { display: grid; gap: 8px; margin-top: 12px; max-height: 460px; overflow-y:auto; }
+.conciliacao-catalogo-item { border-radius: 9px; border:1px solid #354961; background:#0e1b2e; padding:11px 12px; }
+.conciliacao-catalogo-item > strong { display: block; color:#f4f6fc; font-size:12px; margin:6px 0; }
+.conciliacao-catalogo-item small { display:block; color:#b6c5d9; font-size:11px; }
+.conciliacao-catalogo-item p { font-size:11px; line-height:1.5; color:#99adc9; margin:6px 0 0; }
+.conciliacao-catalogo-status { display:inline-block; border-radius:7px; border:1px solid #4b5d77; padding:5px 7px; color:#c9daef; font-size:10px; font-weight:750; }
+.conciliacao-catalogo-status.status-titulo-composto,
+.conciliacao-catalogo-status.status-disciplina-divergente,
+.conciliacao-catalogo-status.status-nome-semelhante { color:#ffd6a6; border-color:#a57745; background:rgba(168,101,25,.13); }
+.conciliacao-catalogo-status.status-alias { color:#bcd5ff; border-color:#5777a5; }
+.conciliacao-catalogo-status.status-mesma-familia { color:#cee1f6; }
+.conciliacao-catalogo-confirmacao {
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  margin:13px 0;
+  border-radius:10px;
+  padding:13px;
+  border:1px solid #935b36;
+  background:rgba(151,87,34,.16);
+  color:#f5dfca;
+  font-size:12px;
+  line-height:1.55;
+  cursor:pointer;
+}
+.conciliacao-catalogo-confirmacao input { width:18px; height:18px; flex-shrink:0; margin-top:1px; accent-color:#c53a42; cursor:pointer; }
+.conciliacao-catalogo-bloqueio { border:1px solid #b43b46; border-radius:9px; color:#ffc5c8; padding:12px; background:#4b1a25; font-size:12px; }
+.conciliacao-catalogo-sem-risco { color:#badacb; font-size:12px; margin:14px 0; }
+.conciliacao-catalogo-rodape { border-top:1px solid #31465f; padding-top:10px; margin-top:11px; }
+@media(max-width:980px){.conciliacao-catalogo-numeros{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:500px){.conciliacao-catalogo{padding:13px}.conciliacao-catalogo-numeros{grid-template-columns:repeat(2,minmax(0,1fr));}}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo {background:#fff;color:#1d2f45;border-color:#c7d5e6;}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-topo h3,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-numeros strong {color:#223650;}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-numeros > div,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-item,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-detalhes {background:#f1f6fd;border-color:#cad8e8;}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-item strong,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-detalhes summary {color:#263c56;}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-topo p,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-item small,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-item p,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-numeros small,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-rodape {color:#526983;}
