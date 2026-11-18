@@ -1,5 +1,6 @@
 import type { Revisao } from "../types";
 import { inicioDoDia } from "./revisoes";
+import { pendentesUnicasPorAssunto } from "./revisoesAssuntoPrincipal";
 
 export type GrupoRevisoesCentral = {
   id: "atrasadas" | "hoje" | "amanha";
@@ -13,11 +14,11 @@ export type GrupoRevisoesCentral = {
  * revisões, sessões, tempo ou métricas. A tela /revisoes é a lista completa.
  */
 export function resumoRevisoesDaCentral(revisoes: Revisao[], agora = new Date()) {
-  const totalPendentes = revisoes.filter((item) => !item.concluida).length;
+  const pendentes = pendentesUnicasPorAssunto(revisoes);
+  const totalPendentes = pendentes.length;
   const hoje = inicioDoDia(agora).getTime();
 
-  const elegiveis = revisoes
-    .filter((item) => !item.concluida)
+  const elegiveis = pendentes
     .map((item) => {
       const instante = new Date(item.dataPrevista);
       if (!Number.isFinite(instante.getTime())) return null;
