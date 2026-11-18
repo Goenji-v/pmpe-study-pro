@@ -73,8 +73,7 @@ export default function Cursos() {
   ));
   const conferenciaValida = !precisaConferencia ||
     conferenciaAceita === conciliacaoCurso?.chaveConferencia;
-  const sincronizacaoInsegura = statusNuvem === "conflito" ||
-    statusNuvem === "offline" || statusNuvem === "erro" ||
+  const sincronizacaoInsegura = statusNuvem !== "sincronizado" ||
     alteracoesPendentes > 0;
 
   const resumo = {
