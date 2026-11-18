@@ -25,6 +25,7 @@ import {
 
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
+import { chaveAssuntoPrincipal } from "../utils/revisoesAssuntoPrincipal";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
 import { aulasDaFontePrincipal } from "../utils/progressoFontesCursos";
 import type { ConfiguracoesComCursos } from "../types/cursos";
@@ -2455,13 +2456,20 @@ function EstadoDaConta({
     // Partes do mesmo bloco não agendam ciclos independentes.
     if (concluido && modo === "agora" && escopoRevisao.completo) {
       setRevisoes((anteriores) => {
+        const chavePrincipal = chaveAssuntoPrincipal({
+          materia: materia.nome,
+          assunto: escopoRevisao.assunto,
+          escopoGrupo: escopoRevisao.escopoGrupo,
+        });
         const jaExiste = anteriores.some((revisao) =>
-          !revisao.concluida &&
-          revisao.materiaId === materia.id &&
-          (
-            revisao.assuntoId === escopoRevisao.assuntoId ||
-            normalizarTexto(revisao.assunto) === normalizarTexto(escopoRevisao.assunto)
-          )
+          !revisao.concluida && !revisao.integradaEmId &&
+          (chavePrincipal
+            ? chaveAssuntoPrincipal(revisao) === chavePrincipal
+            : revisao.materiaId === materia.id &&
+              (
+                revisao.assuntoId === escopoRevisao.assuntoId ||
+                normalizarTexto(revisao.assunto) === normalizarTexto(escopoRevisao.assunto)
+              ))
         );
         if (jaExiste) return anteriores;
         const nova = criarPrimeiraRevisao({
