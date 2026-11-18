@@ -1,4 +1,5 @@
 import { chaveDaMateria } from "../../utils/desempenhoMaterias";
+import { pendentesUnicasPorAssunto } from "../../utils/revisoesAssuntoPrincipal";
 import type {
   RegistroQuestao,
   Revisao,
@@ -60,7 +61,8 @@ export function calcularCentralInteligencia({
     simulados,
   });
 
-  const revisoesAtrasadas = revisoes
+  const revisoesAtivas = pendentesUnicasPorAssunto(revisoes);
+  const revisoesAtrasadas = revisoesAtivas
     .filter(
       (revisao) =>
         !revisao.concluida &&
@@ -71,7 +73,7 @@ export function calcularCentralInteligencia({
         dataSegura(a.dataPrevista).getTime() - dataSegura(b.dataPrevista).getTime()
     );
 
-  const revisoesHoje = revisoes.filter((revisao) => {
+  const revisoesHoje = revisoesAtivas.filter((revisao) => {
     if (revisao.concluida) return false;
     const data = dataSegura(revisao.dataPrevista);
     return data >= inicioHoje && data <= fimHoje;
