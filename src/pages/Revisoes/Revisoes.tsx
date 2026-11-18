@@ -271,7 +271,7 @@ export default function Revisoes() {
 
   function concluirRevisao(revisao: Revisao, desempenho: DesempenhoRevisao) {
     const relacionadas = revisoesDoMesmoAssunto(revisoes, revisao);
-    const etapaEfetiva = relacionadas.reduce((menor, atual) => Math.min(menor, atual.etapa), revisao.etapa);
+    const etapaEfetiva = Math.min(revisao.etapa, ...relacionadas.map((item) => item.etapa));
     if (relacionadas.length > 1 && !window.confirm(
       "Concluir a revisão única de " + tituloAssuntoPrincipal(revisao) +
       "? Os " + relacionadas.length + " registros pendentes serão vinculados ao mesmo ciclo " +
@@ -475,12 +475,7 @@ export default function Revisoes() {
                 <div>
                   <strong>{revisao.materia}</strong>
                   {revisao.modulo && <small className="revisao-caminho">{revisao.modulo}</small>}
-                  <p>{assuntoPrincipal}</p>
-                {relacionadas.length > 1 && (
-                  <small className="revisao-assunto-principal-nota">
-                    {relacionadas.length} registros do mesmo assunto · uma revisão e um próximo retorno
-                  </small>
-                )}
+                  <p>{revisao.assunto}</p>
                   {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
                     <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
                   )}
@@ -578,7 +573,7 @@ function GrupoRevisoes({
           const plano = planejarRevisaoPendente(revisao);
           const relacionadas = revisoesDoMesmoAssunto(revisoesBase, revisao);
           const assuntoPrincipal = tituloAssuntoPrincipal(revisao);
-          const etapaEfetiva = relacionadas.reduce((menor, item) => Math.min(menor, item.etapa), revisao.etapa);
+          const etapaEfetiva = Math.min(revisao.etapa, ...relacionadas.map((item) => item.etapa));
           const idsRelacionados = new Set(relacionadas.map((item) => item.id));
           const revisoesParaPrevisao = relacionadas.length > 1
             ? revisoesBase.filter((item) => !idsRelacionados.has(item.id) || item.id === revisao.id)
@@ -636,7 +631,12 @@ function GrupoRevisoes({
               <div className="revisao-conteudo">
                 <strong>{revisao.materia}</strong>
                 {revisao.modulo && <small className="revisao-caminho">{revisao.modulo}</small>}
-                <p>{revisao.assunto}</p>
+                <p>{assuntoPrincipal}</p>
+                {relacionadas.length > 1 && (
+                  <small className="revisao-assunto-principal-nota">
+                    {relacionadas.length} registros do mesmo assunto · uma revisão e um próximo retorno
+                  </small>
+                )}
                 {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
                   <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
                 )}
