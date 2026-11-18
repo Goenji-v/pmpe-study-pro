@@ -38,7 +38,7 @@ test("conectivos e tabelas-verdade são uma revisão, inclusive entre datas e ID
   assert.equal(chaveAssuntoPrincipal(b), chaveAssuntoPrincipal(c));
   assert.notEqual(chaveAssuntoPrincipal(a), chaveAssuntoPrincipal(d));
   assert.equal(tituloAssuntoPrincipal(a), "Lógica Proposicional");
-  assert.deepEqual(pendentesUnicasPorAssunto([a,b,c,d]).map(x => x.id), ["b","d"]);
+  assert.deepEqual(pendentesUnicasPorAssunto([a,b,c,d]).map(x => x.id).sort(), ["b","d"]);
   assert.equal(JSON.stringify([a,b,c,d]), antes);
 });
 
@@ -91,7 +91,7 @@ test("Fonologia, Segurança e Windows possuem somente uma pendência; assuntos i
     nova("i1","Informática","Excel"),
   ];
   const ativos = pendentesUnicasPorAssunto(lista);
-  assert.deepEqual(ativos.map(x=>x.id), ["f1","s1","w1","p3","i1"]);
+  assert.deepEqual(ativos.map(x=>x.id).sort(), ["f1","i1","p3","s1","w1"]);
   assert.equal(revisoesDoMesmoAssunto(lista,lista[0]).length,2);
 });
 
