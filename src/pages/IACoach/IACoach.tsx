@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen, ClipboardCheck, Info, RotateCcw, Sparkles, Target
 
 import "./IACoach.css";
 import { useApp } from "../../context/AppContext";
+import { pendentesUnicasPorAssunto } from "../../utils/revisoesAssuntoPrincipal";
 import {
   carregarUltimoDiagnosticoComMeta,
   gerarDiagnosticoCoach,
@@ -109,7 +110,7 @@ export default function IACoach() {
         minutosSemana: dados.semana.minutos,
         diasAtivosSemana: dados.semana.diasAtivos,
         revisoesAtrasadas: dados.revisoesAtrasadas.length,
-        revisoesPendentes: revisoes.filter((item) => !item.concluida).length,
+        revisoesPendentes: pendentesUnicasPorAssunto(revisoes).length,
         totalQuestoes: dados.total.questoes,
         simuladosRealizados: dados.total.simulados,
         aproveitamentoSimulados,
