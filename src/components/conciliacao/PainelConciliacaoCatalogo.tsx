@@ -8,6 +8,7 @@ const rotulos: Record<SituacaoConciliacao, string> = {
   "titulo-composto": "Abrange vários subassuntos",
   "disciplina-divergente": "Possível disciplina incorreta",
   "nome-semelhante": "Similaridade inconclusiva",
+  "repetido-no-arquivo": "Repetição dentro do arquivo",
   novo: "Conteúdo novo / não identificado",
 };
 
@@ -57,7 +58,7 @@ export default function PainelConciliacaoCatalogo({
                 <span className={"conciliacao-catalogo-status status-" + item.situacao}>{rotulos[item.situacao]}</span>
                 <strong>{item.materia} · {item.assunto}</strong>
                 <small>{item.familia ? "Família sugerida: " + item.familia + " · " : ""}
-                  {item.referencia ? "Na conta: " + item.referencia.assunto : "Sem conteúdo correspondente identificado"}</small>
+                  {item.referencia ? (item.referencia.doArquivo ? "No próprio arquivo: " : "Na conta: ") + item.referencia.assunto : "Sem conteúdo correspondente identificado"}</small>
                 <p>{item.explicacao}</p>
               </div>
             ))}
