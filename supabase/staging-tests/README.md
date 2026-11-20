@@ -78,3 +78,14 @@ Registrar separadamente os testes no PostgreSQL staging (em transação revertid
 - Após os testes, o banco continuou com **0 linhas** em `configuracoes` e `backups`, sem usuários fictícios; Security Advisors: 0 alertas.
 - **Atenção:** isto é um PROTÓTIPO de SQL, **não está integrado ao botão de restauração da interface** e não pode ser considerado solução já publicada. Importação de arquivo JSON local também não é atendida por este protótipo.
 - Antes de integrar, auditar SECURITY DEFINER por terceiro, verificar integridade e migração da versão do backup, executar testes HTTP com JWT real, concorrência, restauração UI e descarte/reversão em caso de erro. Não aplicar em produção sem autorização expressa.
+
+## Teste de GoTrue com JWT real concluído — 20/11/2026
+- O usuário habilitou manualmente **Anonymous Sign-Ins** apenas no Supabase staging (projeto `isjzyyoqvftrltkctanw`).
+- Flag temporária `STAGING_ANONYMOUS_TEST_ENABLED=true` ativada exclusivamente na branch preview; novo deployment Git `dbcc84b`, ID `dpl_FonTbi4s7ZAkm5EDJrVXmjZi5iAx`, chegou a `READY`.
+- **603 testes PASS, 1 SKIP (fluxo por email), 0 FAIL**. `STAGING_ANONYMOUS_HTTP_PASS` confirmou tokens JWT de GoTrue emitidos para duas identidades distintas, duas requisições HTTP simultâneas de escrita do mesmo token com apenas uma vencedora, histórico anterior preservado, isolamento RLS entre identidades, UPDATE direto negado, revisão antiga/adulterada e regressão histórica rejeitadas.
+- O teste usa **duas requisições HTTP com o mesmo token de usuário**, não duas sessões autenticadas independentes em navegadores ou dispositivos.
+- Dois usuários anônimos de teste foram identificados estritamente pela marca `study_pro_qa_tag=study-pro-pr562-20261120-anon-http` e removidos do staging por IDs exatos. Verificação após a exclusão: **0 usuários da marca, 0 linhas em `configuracoes` e 0 backups**.
+- A flag Vercel `STAGING_ANONYMOUS_TEST_ENABLED` foi retornada a `false` e verificada.
+- **PENDÊNCIA DE SEGURANÇA NO PROJETO:** após habilitar o login anônimo, o Supabase Security Advisor passou a apontar **69 alertas WARN do tipo `auth_allow_anonymous_sign_ins`**, decorrentes de políticas RLS que incluem a role `authenticated`, a mesma usada por identidades anônimas. Não confundir com acesso aos dados de outras contas: o teste de isolamento passou, mas as 69 advertências requerem desativar o provedor de login anônimo ou uma revisão geral das políticas antes de habilitá-lo de forma permanente.
+- **Ação manual necessária:** desativar novamente **Allow anonymous sign-ins** em Supabase staging → Authentication → Providers/Settings → Save changes. Esta configuração de Auth não é alterável pelas ferramentas MCP disponíveis. Não habilitar no oficial.
+- Continuam pendentes: autenticação e sincronização em dois navegadores reais, uso da UI para backup/restauração, revisão de SECURITY DEFINER e separação do backend de IA.
