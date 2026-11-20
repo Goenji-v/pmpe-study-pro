@@ -1,6 +1,7 @@
 import type { RelatorioConciliacao, SituacaoConciliacao } from "../../utils/conciliacaoImportacaoCatalogo";
 import { FAMILIAS_CATALOGO } from "../../utils/catalogoAssuntosCentral";
 import "./PainelConciliacaoCatalogo.css";
+import type { ImpactoImportacaoEstrutural } from "../../utils/simulacaoImpactoEstrutural";
 
 const rotulos: Record<SituacaoConciliacao, string> = {
   exato: "Nome já existente",
@@ -19,11 +20,14 @@ type Props = {
   confirmado: boolean;
   onConfirmar: (confirmado: boolean) => void;
   sincronizacaoInsegura?: boolean;
+  impactoEstrutural?: ImpactoImportacaoEstrutural | null;
+  erroImpacto?: string | null;
 };
 
 /** Painel de leitura: não salva IDs, não reclassifica aulas, não mescla revisões. */
 export default function PainelConciliacaoCatalogo({
   titulo, relatorio, confirmado, onConfirmar, sincronizacaoInsegura = false,
+  impactoEstrutural, erroImpacto,
 }: Props) {
   const conferir = relatorio.risco + relatorio.alias + relatorio.relacionados;
   const destaques = relatorio.itens.filter((item) =>
@@ -44,6 +48,46 @@ export default function PainelConciliacaoCatalogo({
         <div><strong>{relatorio.risco}</strong><small>riscos para conferir</small></div>
         <div><strong>{relatorio.novos}</strong><small>novos/não identificados</small></div>
       </div>
+
+      {(impactoEstrutural || erroImpacto) && (
+        <div className="conciliacao-catalogo-impacto" aria-label="Simulação do importador real">
+          <strong>Simulação da estrutura real — sem salvar</strong>
+          {impactoEstrutural ? (
+            <>
+              <p>Caminho testado: {impactoEstrutural.modalidade === "primeiro-edital"
+                ? "primeiro edital" : "troca de edital"}. O resultado vem das mesmas funções de importação usadas pelo Study Pro.</p>
+              <div className="conciliacao-catalogo-impacto-numeros">
+                <span>Matérias: {impactoEstrutural.materiasAntes} → {impactoEstrutural.materiasDepois}</span>
+                <span>Assuntos: {impactoEstrutural.assuntosAntes} → {impactoEstrutural.assuntosDepois}</span>
+                <span>Aulas: {impactoEstrutural.aulasAntes} → {impactoEstrutural.aulasDepois}</span>
+                <span>Concluídos: {impactoEstrutural.concluidosAntes} → {impactoEstrutural.concluidosDepois}</span>
+              </div>
+              <p>
+                <b>{impactoEstrutural.riscosBloqueantes
+                  ? "Bloqueado: " + impactoEstrutural.riscosBloqueantes + " risco(s) aos dados."
+                  : "Nenhuma perda estrutural identificada pelo simulador."}</b>
+                {" "}Reimportação do mesmo edital: {impactoEstrutural.idempotente ? "estável" : "instável"}.
+                {" "}{impactoEstrutural.duplicacoesParaRevisar} possível(is) duplicação(ões) pedagógica(s) para conferência.
+              </p>
+              {impactoEstrutural.avisos.length > 0 && (
+                <details>
+                  <summary>Ver {impactoEstrutural.avisos.length} achado(s) da simulação</summary>
+                  <ul>{impactoEstrutural.avisos.slice(0,35).map((aviso,indice) => (
+                    <li key={indice}>
+                      <strong>{aviso.bloqueante ? "BLOQUEANTE" : "CONFERIR"} · {aviso.assunto}</strong>
+                      <span>{aviso.detalhe}</span>
+                    </li>
+                  ))}</ul>
+                  {impactoEstrutural.avisos.length > 35 && <p>Exibindo os primeiros 35 alertas.</p>}
+                </details>
+              )}
+            </>
+          ) : (
+            <p role="alert">Não foi possível calcular o impacto estrutural: {erroImpacto}.
+              A aplicação fica bloqueada até resolver esse erro.</p>
+          )}
+        </div>
+      )}
 
       <div className="conciliacao-catalogo-alerta">
         <strong>O que a comparação faz — e o que não faz</strong>
