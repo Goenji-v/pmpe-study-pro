@@ -39,3 +39,26 @@ test("usar este aparelho também confirma a revisão com CAS", async () => {
     /await salvarEstadoNaNuvem\(\s*usuario\.id,\s*localParaSalvar/
   );
 });
+
+test("migração de schema usa CAS e nunca faz upsert direto", async () => {
+  const codigo = await readFile("src/services/sincronizacaoService.ts", "utf8");
+  const inicio = codigo.indexOf("export async function carregarEstadoDaNuvem");
+  const fim = codigo.indexOf("export async function salvarEstadoNaNuvem", inicio);
+  const trecho = codigo.slice(inicio, fim);
+
+  assert.match(trecho, /salvarEstadoComControleDeRevisao\(/);
+  assert.match(trecho, /obterRevisaoSincronizacao\(estadoMigrado\)/);
+  assert.doesNotMatch(trecho, /await salvarEstadoNaNuvem\(/);
+});
+
+test("falha estrutural preserva backup sem rollback de estado potencialmente antigo", async () => {
+  const codigo = await readFile("src/services/sincronizacaoService.ts", "utf8");
+  const inicio = codigo.indexOf("export async function salvarEstadoEstruturalComSeguranca");
+  const fim = codigo.indexOf("export class ConflitoSincronizacaoError", inicio);
+  const trecho = codigo.slice(inicio, fim);
+
+  assert.match(trecho, /criarBackupAutomaticoLocal/);
+  assert.match(trecho, /salvarEstadoComControleDeRevisao\(/);
+  assert.doesNotMatch(trecho, /salvarEstadoNaNuvem\(/);
+  assert.match(trecho, /A nuvem não foi revertida automaticamente/);
+});
