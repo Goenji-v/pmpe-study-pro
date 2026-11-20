@@ -71,3 +71,12 @@ Data: 2026-11-20. Escopo: **somente leitura** no Supabase hospedado; nenhuma que
 - SQL do gate privado salvo em `supabase/staging-tests/cas_private_gateway_prototype.sql`, propositalmente fora de `supabase/migrations`, pois o protótipo **não está pronto para ser aplicado automaticamente à produção**.
 - Limites: teste executado em harness mínimo sem todo esquema do Study Pro, e com sessão simulada via `set local role authenticated` e `request.jwt.claim.sub` em SQL; ainda faltam testes E2E com tokens reais via PostgREST, concorrência entre conexões independentes e compatibilidade com demais consumidores da tabela.
 - Nenhuma mudança no banco oficial ou no site oficial.
+
+## Concorrência real entre conexões PostgreSQL no staging — 2026-11-20
+- Foram executadas **duas chamadas simultâneas independentes** ao serviço SQL do Supabase staging, usando duas transações e o papel `authenticated`, com o claim `request.jwt.claim.sub` de uma identidade fictícia. O ensaio ocorreu somente no staging.
+- **Corrida de criação, revisão base 0:** duas tentativas CAS concorrentes para o mesmo usuário. Dispositivo A: `ok=true, revisao_atual=1`; dispositivo B: `ok=false, revisao_atual=1`. Estado persistido continha apenas a sessão fictícia A.
+- **Corrida de atualização, revisão base 1:** estado inicial com sessão `baseline` e `syncRevision=1`, seguido de duas gravações independentes com `p_expected_revision=1`. Dispositivo A: `ok=true, revisao_atual=2`; dispositivo B: `ok=false, revisao_atual=2`. Estado final continha `baseline` + `update_A` e não perdeu o registro anterior.
+- Os registros fictícios usados nos dois ensaios foram excluídos após conferir os estados resultantes.
+- **Limitação:** as conexões SQL usaram uma identidade fictícia via `SET LOCAL ROLE authenticated` + claim JWT simulado. Isso não é autenticação real pelo gateway PostgREST com dois usuários logados, mas valida a exclusão mútua e a revisão atômica diretamente no PostgreSQL.
+- A consulta de metadados das variáveis do Vercel mostrou `VITE_SUPABASE_URL` configurada conjuntamente para `production` e `preview`, sem `gitBranch` específico. O valor é sensível e não foi inspecionado/decriptado; portanto, **não está confirmado que a prévia usa staging**. Não apontar a prévia inteira ao staging mínimo, que só tem as tabelas `configuracoes` e `backups`.
+- O staging necessita esquema completo, autenticação real e E2E do aplicativo antes de ser tratado como uma prévia funcional isolada.
