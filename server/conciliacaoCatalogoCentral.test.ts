@@ -179,3 +179,80 @@ test("título de Estatuto idêntico em Direitos Humanos ainda é classificado co
   assert.equal(resultado.risco,1);
   assert.equal(antigo[0].assuntos[0].nome,titulo);
 });
+
+
+test("RLM: títulos reais e extensos do edital são decompostos em subassuntos e famílias corretas",()=>{
+  const titulos = [
+    "Estruturas lógicas: proposições, conectivos, quantificadores e falácias",
+    "Lógica de argumentação: analogias, inferências, deduções, equivalência, implicação e argumentos válidos",
+    "Diagramas lógicos",
+    "Princípios e técnicas de contagem, princípio multiplicativo, permutações, arranjos, combinações e probabilidade",
+  ];
+  const [estruturas, argumentos, diagramas, contagem] = titulos.map(titulo =>
+    identificarConteudoCatalogo("Raciocínio Lógico", titulo)
+  );
+  assert.equal(estruturas.tipo,"composto");
+  assert.deepEqual(estruturas.idsSubassuntos,[
+    "rlm.prop","rlm.conectivos","rlm.quantificadores","rlm.falacias"
+  ]);
+  assert.deepEqual(estruturas.familiasIds,[
+    "rlm.logica-proposicional","rlm.predicados","rlm.argumentativa"
+  ]);
+  assert.equal(estruturas.familiaId,null);
+  assert.equal(argumentos.tipo,"composto");
+  assert.deepEqual(argumentos.idsSubassuntos,[
+    "rlm.equivalencia","rlm.implicacao","rlm.analogias","rlm.deducoes","rlm.argumentos"
+  ]);
+  assert.equal(argumentos.familiasIds?.length,2);
+  assert.equal(diagramas.tipo,"subassunto");
+  assert.deepEqual(diagramas.idsSubassuntos,["rlm.diagrama"]);
+  assert.equal(contagem.tipo,"composto");
+  assert.deepEqual(contagem.idsSubassuntos,[
+    "rlm.contagem","rlm.permutacao","rlm.arranjo","rlm.combinacao","rlm.probabilidade"
+  ]);
+  assert.deepEqual(contagem.familiasIds,["rlm.combinatoria","rlm.probabilidade"]);
+  assert.equal(identificarDisciplinaCatalogo("Matemática"),null);
+  assert.notEqual(identificarConteudoCatalogo("RLM","Equivalência lógica").idsSubassuntos[0],
+    identificarConteudoCatalogo("RLM","Implicação lógica").idsSubassuntos[0]);
+});
+
+test("simulação curso antigo + edital composto preserva IDs, progresso e PDFs sem promover relação a equivalência",()=>{
+  const cursoAntigo=[
+    materia("curso-rlm","RLM",["Conectivos lógicos","Equivalências lógicas","Lógica argumentativa","Combinação simples"]),
+    materia("curso-hist","História de Pernambuco",["Guerra dos Mascates"]),
+  ];
+  const editalNovo = [
+    {origem:"edital" as const,materia:"Raciocínio Lógico",assunto:
+      "Estruturas lógicas: proposições, conectivos, quantificadores e falácias",idOrigem:"ed-1"},
+    {origem:"edital" as const,materia:"Raciocínio Lógico",assunto:
+      "Lógica de argumentação: analogias, inferências, deduções, equivalência, implicação e argumentos válidos",idOrigem:"ed-2"},
+    {origem:"edital" as const,materia:"Raciocínio Lógico",assunto:
+      "Diagramas lógicos",idOrigem:"ed-3"},
+    {origem:"edital" as const,materia:"Raciocínio Lógico",assunto:
+      "Princípios e técnicas de contagem, princípio multiplicativo, permutações, arranjos, combinações e probabilidade",idOrigem:"ed-4"},
+  ];
+  const snapshotCurso=JSON.stringify(cursoAntigo);
+  const snapshotEdital=JSON.stringify(editalNovo);
+  const parecer=compararImportacaoConteudos(cursoAntigo,editalNovo);
+  assert.equal(parecer.total,4);
+  assert.deepEqual(parecer.itens.map(item=>item.situacao),[
+    "titulo-composto","titulo-composto","novo","titulo-composto"
+  ]);
+  assert.equal(parecer.risco,3);
+  assert.equal(parecer.novos,1);
+  assert.ok(parecer.itens[0].referencia?.assunto.includes("Conectivos"));
+  assert.ok(parecer.itens[1].referencia);
+  assert.ok(parecer.itens[3].referencia?.assunto.includes("Combinação"));
+  assert.ok(parecer.itens.slice(0,4).every(item=>item.confianca!=="alta"));
+  assert.equal(JSON.stringify(cursoAntigo),snapshotCurso);
+  assert.equal(JSON.stringify(editalNovo),snapshotEdital);
+  assert.equal(cursoAntigo[0].assuntos[0].concluido,true);
+  assert.equal(cursoAntigo[0].assuntos[0].pdf,"material-nao-remover.pdf");
+  assert.deepEqual(compararImportacaoConteudos(cursoAntigo,editalNovo),parecer);
+});
+
+test("título com conteúdos de disciplinas diferentes não atravessa fronteiras",()=>{
+  assert.equal(identificarConteudoCatalogo("Português",
+    "Estruturas lógicas: proposições, conectivos, quantificadores e falácias").tipo,"nao_identificado");
+  assert.equal(identificarConteudoCatalogo("História","Diagramas lógicos").tipo,"nao_identificado");
+});
