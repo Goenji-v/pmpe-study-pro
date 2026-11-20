@@ -96,3 +96,11 @@ test("prévia isolada recusa URL do Supabase fora do staging", async () => {
   assert.match(codigo, /Prévia de testes bloqueada/);
   assert.ok(codigo.indexOf("Prévia de testes bloqueada") < codigo.indexOf("createClient("));
 });
+
+test("prévia isolada não utiliza a API externa de produção", async () => {
+  const codigo = await readFile("src/config/api.ts", "utf8");
+  assert.match(codigo, /VITE_STUDY_PRO_STAGING_GUARD === "true"/);
+  assert.match(codigo, /urlConfigurada !== "https:\/\/study-pro-staging-api\.invalid"/);
+  assert.match(codigo, /API externa não isolada da produção/);
+  assert.ok(codigo.indexOf("API externa não isolada da produção") < codigo.indexOf("const fallbackProducao"));
+});
