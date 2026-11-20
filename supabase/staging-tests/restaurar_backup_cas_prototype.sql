@@ -50,14 +50,14 @@ begin
   select b.dados -> 'estado' into v_snapshot
   from public.backups b where b.id = p_backup_id and b.user_id = v_uid;
   if v_snapshot is null
-     or jsonb_typeof(v_snapshot) <> 'object'
-     or jsonb_typeof(v_snapshot -> 'sessoes') <> 'array'
-     or jsonb_typeof(v_snapshot -> 'revisoes') <> 'array'
-     or jsonb_typeof(v_snapshot -> 'questoes') <> 'array'
-     or jsonb_typeof(v_snapshot -> 'simulados') <> 'array'
-     or jsonb_typeof(v_snapshot -> 'missoesConcluidas') <> 'array'
-     or jsonb_typeof(v_snapshot -> 'materias') <> 'array'
-     or jsonb_typeof(v_snapshot -> 'configuracoes') <> 'object'
+     or jsonb_typeof(v_snapshot) IS DISTINCT FROM 'object'
+     or jsonb_typeof(v_snapshot -> 'sessoes') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'revisoes') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'questoes') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'simulados') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'missoesConcluidas') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'materias') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'configuracoes') IS DISTINCT FROM 'object'
   then
     raise exception 'Backup indisponível ou incompleto' using errcode = '22023';
   end if;
