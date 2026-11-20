@@ -21,7 +21,7 @@ function client() {
 function fixture(name: "A" | "B") {
   const email = process.env[`STAGING_AUTH_HTTP_TEST_EMAIL_${name}`];
   const password = process.env[`STAGING_AUTH_HTTP_TEST_PASSWORD_${name}`];
-  assert.ok(email && /^study-pro-pr562-[a-z0-9-]+@example\.invalid$/.test(email));
+  assert.ok(email && /^study-pro-pr562-[a-z0-9-]+@example\.com$/.test(email));
   assert.ok(password && password.length >= 22, "Missing strong test password");
   return { email, password };
 }
