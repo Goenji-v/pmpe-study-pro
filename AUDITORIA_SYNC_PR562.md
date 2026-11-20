@@ -33,3 +33,20 @@ Data: 2026-11-20. Escopo: **somente leitura** no Supabase hospedado; nenhuma que
 ## Critério de liberação
 - PR #562 permanece em **draft**.
 - Nenhum deploy/merge oficial até os testes de integração de staging e revisão do risco residual de privilégios diretos.
+
+
+## Execução de testes reais no staging — 2026-11-20
+- Projeto: `pmpe-study-pro-staging` (`isjzyyoqvftrltkctanw`), verificado como `ACTIVE_HEALTHY`.
+- Banco estava sem tabelas do Study Pro e sem migrações registradas. Foi aplicada a migração **somente no staging** `staging_sync_harness_isolated`, criando duas tabelas mínimas (`configuracoes`, `backups`), a função interna de antirregressão e a função CAS adaptada diretamente da migração do repositório.
+- Os esquemas das tabelas de teste reproduzem as colunas essenciais e as regras RLS do oficial; **a base não representa a instalação completa do Study Pro** e não recebeu foreign keys para `auth.users` (IDs fictícios são usados exclusivamente nos testes SQL).
+- Testes transacionais realizados sob papel `authenticated`, com identidades fictícias e `ROLLBACK`:
+  1. Primeira gravação com revisão base 0: aceita.
+  2. Segunda tentativa com revisão 0 após a primeira: rejeitada; conteúdo preservado.
+  3. Atualização com revisão correta 1: aceita.
+  4. Regressão de histórico com revisão correta 2: rejeitada.
+  5. RLS: segundo usuário não consegue selecionar dados do primeiro; consegue criar o próprio estado.
+- Foram testes **sequenciais de versão obsoleta**, não duas conexões verdadeiramente simultâneas. Cenário de concorrência real e resposta de rede perdida ainda requerem prova adicional.
+- Após os testes: `select count(*)` confirmou **0 linhas em configuracoes e 0 linhas em backups**.
+- Supabase Security Advisors no staging: **0 avisos** na configuração desse harness.
+- Não houve alteração no projeto `pmpe-study-pro` oficial.
+- Ainda existem os riscos conhecidos da auditoria: escrita direta por `authenticated` em `configuracoes` e campo `syncRevision` do CAS não validado estritamente no SQL. Exigem uma etapa separada de hardening, primeiro no staging.
