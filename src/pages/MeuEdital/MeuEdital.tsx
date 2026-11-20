@@ -213,6 +213,7 @@ export default function MeuEdital() {
           editalAnterior: config.editalAtivo?.analise,
           cursos: configCursos.cursos ?? [],
           cursosAtivosIds: configCursos.cursosAtivosIds ?? [],
+          revisoes, sessoes, questoes,
         }),
         erro: null as string | null,
       };
@@ -223,7 +224,8 @@ export default function MeuEdital() {
       };
     }
   }, [analise, planoPrevio, materias, config.editalAtivo?.analise,
-      configCursos.cursos, configCursos.cursosAtivosIds]);
+      configCursos.cursos, configCursos.cursosAtivosIds,
+      revisoes, sessoes, questoes]);
   const impactoSeguro = Boolean(
     simulacaoEstrutural?.impacto?.seguroEstruturalmente &&
     simulacaoEstrutural.impacto.idempotente
