@@ -61,6 +61,9 @@ export default function PainelConciliacaoCatalogo({
                 <span>Assuntos: {impactoEstrutural.assuntosAntes} → {impactoEstrutural.assuntosDepois}</span>
                 <span>Aulas: {impactoEstrutural.aulasAntes} → {impactoEstrutural.aulasDepois}</span>
                 <span>Concluídos: {impactoEstrutural.concluidosAntes} → {impactoEstrutural.concluidosDepois}</span>
+                <span>Revisões: {impactoEstrutural.revisoesAntes} → {impactoEstrutural.revisoesDepois}</span>
+                <span>Sessões: {impactoEstrutural.sessoesAntes} → {impactoEstrutural.sessoesDepois}</span>
+                <span>Questões registradas: {impactoEstrutural.questoesAntes} → {impactoEstrutural.questoesDepois}</span>
               </div>
               <p>
                 <b>{impactoEstrutural.riscosBloqueantes
