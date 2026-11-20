@@ -1,4 +1,9 @@
-import type { Assunto, Materia } from "../types";
+import type { Assunto, Materia, Revisao, SessaoEstudo, RegistroQuestao } from "../types";
+import {
+  reconciliarQuestoesComConteudos,
+  reconciliarRevisoesComConteudos,
+  reconciliarSessoesComConteudos,
+} from "../services/conteudos/sincronizacaoCanonica";
 import type { CursoImportado } from "../types/cursos";
 import type { AnaliseEdital } from "../types/editalInteligente";
 import { listarAssuntosDaMateria } from "../services/conteudos/navegarConteudos";
@@ -14,7 +19,7 @@ import { identificarConteudoCatalogo } from "./catalogoAssuntosCentral";
  */
 export type AlertaImpactoImportacao = {
   tipo: "id-perdido" | "progresso" | "material" | "anotacao" | "aula" |
-    "id-duplicado" | "reimportacao-instavel" | "assunto-duplicado";
+    "id-duplicado" | "reimportacao-instavel" | "assunto-duplicado" | "historico";
   assunto: string;
   detalhe: string;
   bloqueante: boolean;
@@ -29,6 +34,12 @@ export type ImpactoImportacaoEstrutural = {
   concluidosDepois: number;
   aulasAntes: number;
   aulasDepois: number;
+  revisoesAntes: number;
+  revisoesDepois: number;
+  sessoesAntes: number;
+  sessoesDepois: number;
+  questoesAntes: number;
+  questoesDepois: number;
   avisos: AlertaImpactoImportacao[];
   riscosBloqueantes: number;
   duplicacoesParaRevisar: number;
@@ -42,6 +53,9 @@ type Params = {
   editalAnterior?: AnaliseEdital;
   cursos: readonly CursoImportado[];
   cursosAtivosIds: readonly string[];
+  revisoes?: readonly Revisao[];
+  sessoes?: readonly SessaoEstudo[];
+  questoes?: readonly RegistroQuestao[];
 };
 
 function assuntos(materias: readonly Materia[]): Array<{materia: Materia; assunto: Assunto}> {
@@ -150,6 +164,41 @@ export function simularImpactoImportacaoEstrutural(params: Params): ImpactoImpor
     }
   }
 
+  // Estas são as mesmas três rotinas chamadas em aplicarPlano().
+  // A verificação é feita em cópias, sem usar setState/backup/nuvem.
+  const originaisRevisoes = [...(params.revisoes??[])];
+  const originaisSessoes = [...(params.sessoes??[])];
+  const originaisQuestoes = [...(params.questoes??[])];
+  const revisoesMigradas = reconciliarRevisoesComConteudos(materiasResultantes,structuredClone(originaisRevisoes));
+  const sessoesMigradas = reconciliarSessoesComConteudos(materiasResultantes,structuredClone(originaisSessoes));
+  const questoesMigradas = reconciliarQuestoesComConteudos(materiasResultantes,structuredClone(originaisQuestoes));
+  const conferirHistorico = <T extends {id:string}>(
+    tipo: string, anteriores: readonly T[], posteriores: readonly T[],
+    campos: readonly (keyof T)[]
+  ) => {
+    const porId = new Map(posteriores.map(item=>[item.id,item]));
+    if (porId.size !== posteriores.length) {
+      registrar("historico",tipo,"IDs repetidos após a conciliação.");
+    }
+    for (const item of anteriores) {
+      const resultante=porId.get(item.id);
+      if (!resultante) {
+        registrar("historico",tipo+" · "+item.id,"Registro de histórico desapareceu.");
+        continue;
+      }
+      if (campos.some(chave=>JSON.stringify(item[chave])!==JSON.stringify(resultante[chave]))) {
+        registrar("historico",tipo+" · "+item.id,
+          "Etapa, resultado ou data foi alterado sem pedido explícito.");
+      }
+    }
+  };
+  conferirHistorico("Revisão",originaisRevisoes,revisoesMigradas,
+    ["etapa","concluida","dataPrevista","dataConclusao","desempenho","certas","erradas"]);
+  conferirHistorico("Sessão",originaisSessoes,sessoesMigradas,
+    ["minutos","data","conteudoConcluido","quantidadeAcertos","quantidadeErros","finalizadaEm"]);
+  conferirHistorico("Questões",originaisQuestoes,questoesMigradas,
+    ["certas","erradas","minutos","data"]);
+
   // Identidades pedagógicas repetidas merecem conferência, não fusão cega.
   // Não bloquear a mera existência de módulos/aulas distintas.
   const candidatosDuplicados = new Map<string, Array<{nome:string;id:string}>>();
@@ -190,6 +239,12 @@ export function simularImpactoImportacaoEstrutural(params: Params): ImpactoImpor
     concluidosDepois:depois.filter(x=>x.assunto.concluido).length,
     aulasAntes:totalAulas(antes),
     aulasDepois:totalAulas(depois),
+    revisoesAntes:originaisRevisoes.length,
+    revisoesDepois:revisoesMigradas.length,
+    sessoesAntes:originaisSessoes.length,
+    sessoesDepois:sessoesMigradas.length,
+    questoesAntes:originaisQuestoes.length,
+    questoesDepois:questoesMigradas.length,
     avisos, riscosBloqueantes:bloqueantes,
     duplicacoesParaRevisar:avisos.filter(a=>a.tipo==="assunto-duplicado").length,
     seguroEstruturalmente:bloqueantes===0,
