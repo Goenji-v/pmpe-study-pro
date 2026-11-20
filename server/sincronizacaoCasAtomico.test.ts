@@ -88,3 +88,11 @@ test("não existe API de upsert direto do estado completo", async () => {
   assert.doesNotMatch(codigo, /export async function salvarEstadoNaNuvem/);
   assert.doesNotMatch(codigo, /\.from\("configuracoes"\)[\s\S]{0,150}\.upsert\(/);
 });
+
+test("prévia isolada recusa URL do Supabase fora do staging", async () => {
+  const codigo = await readFile("src/lib/supabase.ts", "utf8");
+  assert.match(codigo, /VITE_STUDY_PRO_STAGING_GUARD === "true"/);
+  assert.match(codigo, /SUPABASE_PUBLIC_URL !== "https:\/\/isjzyyoqvftrltkctanw\.supabase\.co"/);
+  assert.match(codigo, /Prévia de testes bloqueada/);
+  assert.ok(codigo.indexOf("Prévia de testes bloqueada") < codigo.indexOf("createClient("));
+});
