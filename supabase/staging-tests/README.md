@@ -60,3 +60,12 @@ Registrar separadamente os testes no PostgreSQL staging (em transação revertid
 - Se habilitado, cria dois usuários anônimos com marca `study_pro_qa_tag=study-pro-pr562-20261120-anon-http`, verifica JWTs reais em PostgREST, concorrência em duas requisições HTTP da mesma identidade, leitura RLS cruzada, negação de UPDATE direto, revisão obsoleta/adulterada e antirregressão.
 - Identidades anônimas são descartáveis, não constituem login permanente nem substituem dois logins independentes no PC e no celular.
 - Ao final, desativar a variável do teste e excluir **somente** os usuários fictícios com essa marca no staging, após verificar contagens.
+
+## Resultado do ensaio GoTrue anônimo — 2026-11-20
+- Tentativa usando `server/stagingAnonymousHttp.test.ts` contra o projeto `isjzyyoqvftrltkctanw`.
+- `signInAnonymously()` confirmou que o provedor de contas anônimas está **desativado** nesse staging; o teste foi pulado explicitamente, sem afirmar que existe uma sessão JWT validada.
+- Vercel: build `f43b0ca` READY, **602 testes aprovados, 2 pulados, 0 falhas**. As duas suítes puladas são de autenticação de contas com credenciais e anônimas.
+- Após a verificação: `STAGING_ANONYMOUS_TEST_ENABLED` foi novamente definido como `false` na branch. No staging: 0 usuários com `study_pro_qa_tag` desse teste, 0 estados em `configuracoes`, 0 backups e 0 alertas dos Security Advisors.
+- **Necessidade de uma ação humana opcional para concluir teste JWT de verdade:** no dashboard do projeto **staging**, em Authentication → Providers → Anonymous Sign-Ins, habilitar somente esse provedor naquele projeto. **Não habilitar no projeto oficial.**
+- A ativação faria contas anônimas receberem a role Postgres `authenticated`; revisar as políticas e não levar essa configuração para produção. Assim que autorizado, habilitar temporariamente a variável opt-in da branch, executar o teste real HTTP e desativá-la novamente; depois excluir por ID/identificador as contas descartáveis, somente no staging.
+- Sem essa configuração, permanecem aprovados os testes de concorrência PostgreSQL, CAS e proibição de acesso HTTP não autenticado, mas **não** os testes reais de login JWT ou navegador.
