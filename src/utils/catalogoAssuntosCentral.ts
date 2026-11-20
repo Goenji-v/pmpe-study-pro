@@ -27,7 +27,7 @@ export type DisciplinaCatalogo = {
 
 export const DISCIPLINAS_CATALOGO: readonly DisciplinaCatalogo[] = [
   { id:"portugues",nome:"Língua Portuguesa",nomesAlternativos:["Português","Gramática"] },
-  { id:"rlm",nome:"Raciocínio Lógico e Matemática",nomesAlternativos:["RLM","Raciocínio lógico","Matemática"] },
+  { id:"rlm",nome:"Raciocínio Lógico e Matemática",nomesAlternativos:["RLM","Raciocínio lógico"] },
   { id:"informatica",nome:"Informática",nomesAlternativos:["Noções de informática","Tecnologia da informação"] },
   { id:"constitucional",nome:"Direito Constitucional",nomesAlternativos:["Constitucional"] },
   { id:"humanos",nome:"Direitos Humanos",nomesAlternativos:["Noções de direitos humanos"] },
@@ -46,16 +46,35 @@ export const FAMILIAS_CATALOGO: readonly FamiliaCatalogo[] = [
       {id:"rlm.conectivos",nome:"Conectivos lógicos",nomesAlternativos:["Conectivos","Operadores lógicos","Conjunção, disjunção, condicional e bicondicional"]},
       {id:"rlm.tabela",nome:"Tabelas-verdade",nomesAlternativos:["Tabela verdade","Tabela lógica","Tabelas verdade"]},
       {id:"rlm.negacao",nome:"Negação de proposições",nomesAlternativos:["Negação","Negação lógica","Negação de conectivos"]},
-      {id:"rlm.equivalencia",nome:"Equivalências lógicas",nomesAlternativos:["Equivalência lógica","Equivalência e implicação lógica","Proposições equivalentes"]},
+      {id:"rlm.equivalencia",nome:"Equivalências lógicas",nomesAlternativos:["Equivalência lógica","Proposições equivalentes"]},
       {id:"rlm.tautologia",nome:"Tautologias, contradições e contingências",nomesAlternativos:["Tautologia","Contradição e contingência"]},
+      {id:"rlm.implicacao",nome:"Implicação lógica",nomesAlternativos:["Implicações lógicas","Relações de implicação lógica"]},
     ],
   },
+  {id:"rlm.predicados",nome:"Lógica de predicados",disciplinaId:"rlm",
+   nomesAlternativos:["Lógica quantificacional"],subassuntos:[
+     {id:"rlm.quantificadores",nome:"Quantificadores lógicos",nomesAlternativos:["Quantificadores","Quantificadores universais e existenciais"]},
+   ]},
   {id:"rlm.argumentativa",nome:"Lógica argumentativa",disciplinaId:"rlm",
-   nomesAlternativos:["Argumentação lógica"],subassuntos:[
-     {id:"rlm.argumentos",nome:"Argumentos, inferências e conclusões",nomesAlternativos:["Lógica argumentativa","Exercícios - Lógica argumentativa","Exercícios de lógica argumentativa","Inferências e conclusões"]},
+   nomesAlternativos:["Argumentação lógica","Lógica de argumentação"],subassuntos:[
+     {id:"rlm.argumentos",nome:"Argumentos, inferências e conclusões",nomesAlternativos:["Lógica argumentativa","Exercícios - Lógica argumentativa","Exercícios de lógica argumentativa","Inferências e conclusões","Argumentos válidos","Validade de argumentos"]},
+     {id:"rlm.analogias",nome:"Analogias e padrões argumentativos",nomesAlternativos:["Analogias"]},
+     {id:"rlm.deducoes",nome:"Inferências e deduções",nomesAlternativos:["Inferências","Deduções","Inferências e deduções"]},
+     {id:"rlm.falacias",nome:"Falácias lógicas",nomesAlternativos:["Falácias","Falácias argumentativas"]},
+   ]},
+  {id:"rlm.diagramas",nome:"Diagramas lógicos",disciplinaId:"rlm",
+   nomesAlternativos:["Diagramas de lógica"],subassuntos:[
+     {id:"rlm.diagrama",nome:"Diagramas lógicos",nomesAlternativos:["Diagramas","Diagramas de conjuntos","Diagramas de Venn"]},
    ]},
   {id:"rlm.combinatoria",nome:"Análise combinatória",disciplinaId:"rlm",
-   nomesAlternativos:["Combinatória"],subassuntos:[{id:"rlm.combinacao",nome:"Combinação simples",nomesAlternativos:["Combinações simples"]}]},
+   nomesAlternativos:["Combinatória","Princípios e técnicas de contagem"],subassuntos:[
+     {id:"rlm.contagem",nome:"Princípios de contagem",nomesAlternativos:["Princípio multiplicativo","Princípios e técnicas de contagem","Princípio fundamental da contagem"]},
+     {id:"rlm.permutacao",nome:"Permutações",nomesAlternativos:["Permutação","Permutação simples"]},
+     {id:"rlm.arranjo",nome:"Arranjos",nomesAlternativos:["Arranjo","Arranjo simples"]},
+     {id:"rlm.combinacao",nome:"Combinação simples",nomesAlternativos:["Combinações simples","Combinações"]},
+   ]},
+  {id:"rlm.probabilidade",nome:"Probabilidade",disciplinaId:"rlm",nomesAlternativos:[],
+   subassuntos:[{id:"rlm.probabilidade",nome:"Probabilidade",nomesAlternativos:["Noções de probabilidade","Cálculo de probabilidade"]}]},
   {id:"portugues.fonologia",nome:"Fonologia e sílaba",disciplinaId:"portugues",
    nomesAlternativos:["Fonologia"],subassuntos:[
      {id:"pt.fonemas",nome:"Fonemas, letras e sons",nomesAlternativos:["Fonemas, letras e sons da fala","Fonema e letra","Fonemas"]},
@@ -168,6 +187,8 @@ export type IdentificacaoCatalogo = {
   idsSubassuntos: string[];
   nomeFamilia: string | null;
   confianca: "alta" | "revisar" | "nenhuma";
+  /** Títulos compostos podem cobrir subassuntos de várias famílias distintas. */
+  familiasIds?: string[];
 };
 /**
  * Apenas igualdade normalizada, aliases CURADOS e títulos compostos conhecidos.
@@ -191,6 +212,50 @@ export function identificarConteudoCatalogo(disciplina: string, nome: string): I
     // Um nome principal representa uma família, não uma aula equivalente a todas.
     if ([familia.nome,...familia.nomesAlternativos].some((x)=>normalizarNomeCatalogo(x)===alvo)) {
       return {tipo:"familia",disciplinaId,familiaId:familia.id,idsSubassuntos:[],nomeFamilia:familia.nome,confianca:"revisar"};
+    }
+  }
+  // Títulos extensos de edital podem citar famílias distintas numa só linha.
+  // A identificação é por termos específicos; nunca por semelhança vaga,
+  // nem por simples presença do título da família.
+  if (disciplinaId === "rlm") {
+    const marcadores: ReadonlyArray<[string, RegExp]> = [
+      ["rlm.prop", /\bproposic(?:ao|oes)\b/],
+      ["rlm.conectivos", /\bconectiv(?:o|os)\b|\boperadores logicos\b/],
+      ["rlm.tabela", /\btabelas?(?: da)? verdade\b|\btabelas? logicas?\b/],
+      ["rlm.negacao", /\bnegac(?:ao|oes)\b/],
+      ["rlm.equivalencia", /\bequivalenc(?:ia|ias)\b/],
+      ["rlm.implicacao", /\bimplicac(?:ao|oes)\b/],
+      ["rlm.tautologia", /\btautolog(?:ia|ias)\b|\bcontradic(?:ao|oes)\b|\bcontingenc(?:ia|ias)\b/],
+      ["rlm.quantificadores", /\bquantificadores?\b/],
+      ["rlm.falacias", /\bfalacias?\b/],
+      ["rlm.analogias", /\banalogias?\b/],
+      ["rlm.deducoes", /\binferenc(?:ia|ias)\b|\b deduc(?:ao|oes)\b/],
+      ["rlm.argumentos", /\bargumentos? validos?\b|\bvalidade de argumentos\b/],
+      ["rlm.diagrama", /\bdiagramas? logicos?\b/],
+      ["rlm.contagem", /\bcontagem\b|\bprincipio multiplicativo\b/],
+      ["rlm.permutacao", /\bpermutac(?:ao|oes)\b/],
+      ["rlm.arranjo", /\barranjos?\b/],
+      ["rlm.combinacao", /\bcombinac(?:ao|oes)\b/],
+      ["rlm.probabilidade", /\bprobabilidade\b/],
+    ];
+    const correspondencias = marcadores.filter(([, regra]) => regra.test(alvo));
+    if (correspondencias.length >= 2) {
+      const idsSubassuntos = correspondencias.map(([id]) => id);
+      const familias = FAMILIAS_CATALOGO.filter((familia) =>
+        familia.disciplinaId === disciplinaId &&
+        familia.subassuntos.some((sub) => idsSubassuntos.includes(sub.id))
+      );
+      // "Conectivos + tabela + negação" pertence a uma família;
+      // "conectivos + quantificadores + falácias" pertence a três.
+      return {
+        tipo: "composto", disciplinaId,
+        familiaId: familias.length === 1 ? familias[0].id : null,
+        familiasIds: familias.map((familia) => familia.id),
+        idsSubassuntos,
+        nomeFamilia: familias.length === 1
+          ? familias[0].nome : "Conteúdo de " + familias.length + " famílias",
+        confianca: "revisar",
+      };
     }
   }
   // Uma aula de História que inclui Nassau E Insurreição não equivale
