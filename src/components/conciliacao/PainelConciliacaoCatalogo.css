@@ -175,3 +175,89 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-cata
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura li > span { color: #213753; }
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura li { background: #fff; border-color: #c6d5e7; }
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura li > small { color: #526981; }
+
+
+/* Simulador demonstrativo de conciliação no próprio Catálogo Central. */
+.catalogo-central-simulacao {
+  margin: 0 16px 16px;
+  padding: 12px 13px;
+  background: #18273c;
+  border: 1px solid #526681;
+  border-radius: 10px;
+  color: #eef3fb;
+}
+.catalogo-central-simulacao > summary {
+  font-size: 13px;
+  font-weight: 780;
+  cursor: pointer;
+  color: #f5f7ff;
+}
+.catalogo-central-simulacao > summary:focus-visible {
+  outline: 2px solid #ff939a;
+  outline-offset: 3px;
+}
+.catalogo-central-simulacao > p {
+  font-size: 11px;
+  color: #b3c4dc;
+  line-height: 1.55;
+  margin: 11px 0 0;
+}
+.catalogo-central-simulacao-metricas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+.catalogo-central-simulacao-metricas span {
+  padding: 9px 12px;
+  border: 1px solid #3a5675;
+  background: #142238;
+  border-radius: 9px;
+  color: #c6d5e7;
+  font-size: 11px;
+}
+.catalogo-central-simulacao-metricas strong {
+  margin-right: 3px;
+  color: #f7c4c7;
+  font-size: 18px;
+}
+.catalogo-central-simulacao-lista { display: grid; gap: 8px; }
+.catalogo-central-simulacao-lista article {
+  border: 1px solid #344967;
+  background: #101e32;
+  padding: 11px 12px;
+  border-radius: 9px;
+}
+.catalogo-central-simulacao-lista article > strong {
+  display: block;
+  color: #f0f4fd;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.catalogo-central-simulacao-lista article > small {
+  display: block;
+  margin: 5px 0;
+  font-weight: 750;
+  color: #ecb1b7;
+  font-size: 10px;
+}
+.catalogo-central-simulacao-lista article > p {
+  color: #bdd0e4;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0;
+}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao-lista article,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao-metricas span {
+  background: #f2f6fc;
+  border-color: #c3d1e1;
+}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao > summary,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao-lista article > strong {
+  color: #263954;
+}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao > p,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao-lista article > p {
+  color: #52677e;
+}
