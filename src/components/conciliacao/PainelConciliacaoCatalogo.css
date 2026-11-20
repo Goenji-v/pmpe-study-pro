@@ -130,3 +130,48 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-disciplinas li,
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-introducao p,
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-rodape { color:#526782; }
+
+
+/* Cobertura de linhas compostas do edital: subassunto + família pedagógica. */
+.conciliacao-catalogo-cobertura {
+  margin-top: 11px;
+  padding: 11px 12px;
+  border: 1px solid rgba(142, 170, 205, .35);
+  border-radius: 9px;
+  background: rgba(17, 48, 77, .6);
+}
+.conciliacao-catalogo-cobertura > strong {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #eaf2ff;
+  margin-bottom: 8px;
+}
+.conciliacao-catalogo-cobertura ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.conciliacao-catalogo-cobertura li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #354b68;
+  border-radius: 8px;
+  background: #14263d;
+}
+.conciliacao-catalogo-cobertura li > span { font-size: 11px; font-weight: 700; color: #eef5ff; }
+.conciliacao-catalogo-cobertura li > small { font-size: 10px; line-height: 1.4; color: #adc1df; }
+@media (max-width: 560px) {
+  .conciliacao-catalogo-cobertura ul { grid-template-columns: 1fr; }
+}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura { background: #f2f6fc; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura > strong,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura li > span { color: #213753; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura li { background: #fff; border-color: #c6d5e7; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-cobertura li > small { color: #526981; }
