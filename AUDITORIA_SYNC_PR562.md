@@ -50,3 +50,12 @@ Data: 2026-11-20. Escopo: **somente leitura** no Supabase hospedado; nenhuma que
 - Supabase Security Advisors no staging: **0 avisos** na configuração desse harness.
 - Não houve alteração no projeto `pmpe-study-pro` oficial.
 - Ainda existem os riscos conhecidos da auditoria: escrita direta por `authenticated` em `configuracoes` e campo `syncRevision` do CAS não validado estritamente no SQL. Exigem uma etapa separada de hardening, primeiro no staging.
+
+## Hardening adicional executado apenas no staging
+- Migration `staging_cas_reject_invalid_revision_payload`: função `public.salvar_estado_app_cas` passa a exigir `p_expected_revision` válido (inteiro não negativo sem overflow), `p_estado` JSON objeto e `syncRevision` numérico exatamente igual a `p_expected_revision + 1`. Falha retorna SQLSTATE `22023` antes de qualquer gravação.
+- Migration `staging_sync_remove_unneeded_direct_table_privileges`: revogadas de `authenticated` permissões `DELETE, TRUNCATE, TRIGGER, REFERENCES` em `configuracoes`; e `TRUNCATE, TRIGGER, REFERENCES` em `backups`. Preservadas permissões necessárias para CAS `SECURITY INVOKER`.
+- Teste real sob papel `authenticated`, transação com `ROLLBACK`: quatro payloads inválidos recusados, criação e progressão válidas aceitas, retry antigo recusado, regressão de histórico bloqueada e RLS entre dois usuários preservado.
+- **Teste de contorno (confirmado):** `authenticated` ainda consegue fazer `UPDATE public.configuracoes` da própria linha, alterando `syncRevision` sem RPC. A operação foi testada em transação revertida; confirma que **a proteção CAS ainda pode ser contornada por gravação direta**. Não afirmar proteção integral.
+- Segurança Advisor do staging: 0 avisos reportados (isso não elimina o risco de UPDATE direto).
+- Para bloquear UPDATE direto mantendo a RPC funcionando será necessária mudança arquitetural cuidadosamente auditada (p.ex. servidor autorizado/rota de escrita isolada) e novos testes de autorização. Não revogar UPDATE indiscriminadamente da RPC `SECURITY INVOKER`, pois isso quebra salvamento.
+- Nenhuma das duas migrações novas foi aplicada à produção; devem ser revisadas e versionadas de maneira apropriada antes de qualquer rollout.
