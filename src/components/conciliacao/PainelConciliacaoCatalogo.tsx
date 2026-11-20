@@ -1,4 +1,5 @@
 import type { RelatorioConciliacao, SituacaoConciliacao } from "../../utils/conciliacaoImportacaoCatalogo";
+import { FAMILIAS_CATALOGO } from "../../utils/catalogoAssuntosCentral";
 import "./PainelConciliacaoCatalogo.css";
 
 const rotulos: Record<SituacaoConciliacao, string> = {
@@ -59,6 +60,25 @@ export default function PainelConciliacaoCatalogo({
                 <strong>{item.materia} · {item.assunto}</strong>
                 <small>{item.familia ? "Família sugerida: " + item.familia + " · " : ""}
                   {item.referencia ? (item.referencia.doArquivo ? "No próprio arquivo: " : "Na conta: ") + item.referencia.assunto : "Sem conteúdo correspondente identificado"}</small>
+                {item.subassuntosIds.length > 1 && (
+                  <div className="conciliacao-catalogo-cobertura">
+                    <strong>Subassuntos identificados (não serão fundidos automaticamente)</strong>
+                    <ul>
+                      {item.subassuntosIds.map((id) => {
+                        const familia = FAMILIAS_CATALOGO.find((grupo) =>
+                          grupo.subassuntos.some((subassunto) => subassunto.id === id)
+                        );
+                        const subassunto = familia?.subassuntos.find((sub) => sub.id === id);
+                        return (
+                          <li key={id}>
+                            <span>{subassunto?.nome ?? id}</span>
+                            <small>{familia?.nome ?? "Família a conferir"}</small>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
                 <p>{item.explicacao}</p>
               </div>
             ))}
