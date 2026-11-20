@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { Materia, Revisao } from "../src/types/index.ts";
 import type { AnaliseEdital } from "../src/types/editalInteligente.ts";
 import { simularImpactoImportacaoEstrutural } from "../src/utils/simulacaoImpactoEstrutural.ts";
-import { listarAssuntosDaMateria } from "../src/services/conteudos/navegarConteudos.ts";
+import { reconciliarRevisoesComConteudos } from "../src/services/conteudos/sincronizacaoCanonica.ts";
 
 const antes: Materia[] = [{
   id:"curso-rlm", nome:"RLM", assuntos:[
@@ -93,4 +93,58 @@ test("proteção da prévia impede aplicação se importador simulado falhar",as
   assert.match(pagina,/!impactoSeguro/);
   assert.match(pagina,/impactoEstrutural=/);
   assert.match(pagina,/sincronizacaoInsegura/);
+});
+
+
+test("pendências repetidas não são apagadas na conciliação; a agenda faz a deduplicação visual",()=>{
+  const revBase:Revisao={
+    id:"r1",materia:"RLM",materiaId:"curso-rlm",
+    assunto:"Conectivos lógicos",assuntoId:"curso-conectivos",
+    dataCriacao:"2026-11-01",dataPrevista:"2026-11-17",etapa:3,concluida:false
+  };
+  const revisoes=[revBase,{...revBase,id:"r2",dataPrevista:"2026-11-18"}];
+  const out=reconciliarRevisoesComConteudos(antes,revisoes);
+  assert.equal(out.length,2);
+  assert.deepEqual(out.map(x=>x.id),["r1","r2"]);
+  assert.deepEqual(out.map(x=>x.dataPrevista),["2026-11-17","2026-11-18"]);
+  const relatorio=simularImpactoImportacaoEstrutural({
+    materiasAtuais:antes,novoEdital:edital,cursos:[],cursosAtivosIds:[],
+    revisoes,
+  });
+  assert.equal(relatorio.revisoesAntes,2);
+  assert.equal(relatorio.revisoesDepois,2);
+  assert.ok(!relatorio.avisos.some(x=>x.tipo==="historico"));
+  assert.equal(revisoes[0].dataPrevista,"2026-11-17");
+});
+
+test("simulador protege dados e quantidades reais de estudo e questões",()=>{
+  const revisoes:Revisao=[{
+    id:"r3",materia:"RLM",materiaId:"curso-rlm",assunto:"Conectivos lógicos",
+    assuntoId:"curso-conectivos",dataCriacao:"2026-11-01",dataPrevista:"2026-11-17",
+    etapa:4,concluida:true,desempenho:"facil",certas:8,erradas:2
+  }];
+  const sessoes=[{
+    id:"sessao-1",data:"2026-11-17",tipo:"aula" as const,
+    materia:"RLM",materiaId:"curso-rlm",assunto:"Conectivos lógicos",
+    assuntoId:"curso-conectivos",minutos:30,conteudoConcluido:true,
+    finalizadaEm:"2026-11-17T13:00:00Z"
+  }];
+  const questoes=[{
+    id:"questao-1",data:"2026-11-17",materia:"RLM",materiaId:"curso-rlm",
+    assunto:"Conectivos lógicos",assuntoId:"curso-conectivos",
+    banca:"AOCP",certas:8,erradas:2,minutos:25
+  }];
+  const snapshot=JSON.stringify({revisoes,sessoes,questoes});
+  const relatorio=simularImpactoImportacaoEstrutural({
+    materiasAtuais:antes,novoEdital:edital,cursos:[],cursosAtivosIds:[],
+    revisoes,sessoes,questoes
+  });
+  assert.equal(relatorio.revisoesAntes,1);
+  assert.equal(relatorio.revisoesDepois,1);
+  assert.equal(relatorio.sessoesAntes,1);
+  assert.equal(relatorio.sessoesDepois,1);
+  assert.equal(relatorio.questoesAntes,1);
+  assert.equal(relatorio.questoesDepois,1);
+  assert.ok(!relatorio.avisos.some(x=>x.tipo==="historico"));
+  assert.equal(JSON.stringify({revisoes,sessoes,questoes}),snapshot);
 });
