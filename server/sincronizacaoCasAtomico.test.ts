@@ -43,7 +43,7 @@ test("usar este aparelho também confirma a revisão com CAS", async () => {
 test("migração de schema usa CAS e nunca faz upsert direto", async () => {
   const codigo = await readFile("src/services/sincronizacaoService.ts", "utf8");
   const inicio = codigo.indexOf("export async function carregarEstadoDaNuvem");
-  const fim = codigo.indexOf("export async function salvarEstadoNaNuvem", inicio);
+  const fim = codigo.indexOf("export async function salvarEstadoEstruturalComSeguranca", inicio);
   const trecho = codigo.slice(inicio, fim);
 
   assert.match(trecho, /salvarEstadoComControleDeRevisao\(/);
@@ -81,4 +81,10 @@ test("restauração quando a nuvem está vazia usa CAS para impedir escrita conc
   assert.ok(inicio >= 0 && fim > inicio);
   assert.match(trecho, /salvarEstadoComControleDeRevisao\([\s\S]*?usuario\.id,[\s\S]*?restaurado,[\s\S]*?0\s*\)/);
   assert.doesNotMatch(trecho, /salvarEstadoNaNuvem\(/);
+});
+
+test("não existe API de upsert direto do estado completo", async () => {
+  const codigo = await readFile("src/services/sincronizacaoService.ts", "utf8");
+  assert.doesNotMatch(codigo, /export async function salvarEstadoNaNuvem/);
+  assert.doesNotMatch(codigo, /\.from\("configuracoes"\)[\s\S]{0,150}\.upsert\(/);
 });
