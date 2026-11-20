@@ -198,20 +198,11 @@ export function reconciliarRevisoesComConteudos(
     };
   });
 
-  // Remove somente duplicidades pendentes da mesma etapa e do mesmo assunto.
-  // Histórico concluído nunca é descartado.
-  const pendentesVistos = new Set<string>();
-  return reconciliadas.filter((revisao) => {
-    if (revisao.concluida) return true;
-
-    const chave = revisao.materiaId && revisao.assuntoId
-      ? `${revisao.materiaId}::${revisao.assuntoId}::${revisao.etapa}`
-      : `${normalizar(revisao.materia)}::${normalizar(revisao.assunto)}::${revisao.etapa}`;
-
-    if (pendentesVistos.has(chave)) return false;
-    pendentesVistos.add(chave);
-    return true;
-  });
+  // A conciliação só atualiza REFERÊNCIAS. Nunca descarta revisões,
+  // mesmo quando duas pendências têm mesmo assunto e etapa: podem ter
+  // históricos, sessões, notas e datas distintas. A lista exibida usa
+  // pendentesUnicasPorAssunto, mas a fonte de verdade mantém todos os IDs.
+  return reconciliadas;
 }
 
 export function referenciasIguais<T>(a: T, b: T) {
