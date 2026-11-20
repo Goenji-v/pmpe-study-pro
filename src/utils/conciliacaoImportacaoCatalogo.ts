@@ -34,6 +34,7 @@ export type ItemConciliacao = CandidatoImportacao & {
   situacao: SituacaoConciliacao;
   referencia?: { materiaId: string; assuntoId: string; materia: string; assunto: string; doArquivo?: boolean };
   familiaId?: string;
+  familiasIds?: string[];
   familia?: string;
   subassuntosIds: string[];
   confianca: "alta" | "revisar" | "nenhuma";
@@ -115,6 +116,7 @@ export function compararImportacaoConteudos(
     const base = {
       ...candidato,
       familiaId: atual.familiaId ?? undefined,
+      familiasIds: atual.familiasIds ?? (atual.familiaId ? [atual.familiaId] : []),
       familia: atual.nomeFamilia ?? undefined,
       subassuntosIds: atual.idsSubassuntos,
       confianca: atual.confianca,
@@ -160,6 +162,29 @@ export function compararImportacaoConteudos(
       };
     }
 
+    // Um título de edital pode mencionar conteúdos de DUAS OU MAIS famílias.
+    // A prévia sugere quais aulas anteriores cobrem trechos do edital,
+    // mas não reaproveita o ID de uma aula como se cobrisse o título todo.
+    if (atual.tipo === "composto" && atual.idsSubassuntos.length > 1) {
+      const candidatosCobertura = daDisciplina.map((existente) => {
+        const compartilhados = atual.idsSubassuntos.filter((id) =>
+          existente.identificado.idsSubassuntos.includes(id)
+        );
+        return { existente, compartilhados };
+      }).filter((item) => item.compartilhados.length > 0)
+        .sort((a,b) => b.compartilhados.length - a.compartilhados.length);
+      const cobertura = new Set(candidatosCobertura.flatMap((item) => item.compartilhados));
+      return {
+        ...base, situacao:"titulo-composto" as const, confianca:"revisar" as const,
+        referencia:referenciar(candidatosCobertura[0]?.existente ?? literal),
+        explicacao: "O título do edital abrange " + atual.idsSubassuntos.length +
+          " subassuntos em " + (base.familiasIds.length || 1) + " família(s). " +
+          (cobertura.size > 0
+            ? cobertura.size + " subassunto(s) identificados nos registros atuais. "
+            : "Nenhuma cobertura específica comprovada no curso existente. ") +
+          "Não copiar um único ID para todo o título; revisar o conteúdo e manter aulas/históricos independentes."
+      };
+    }
     if (literal) return {
       ...base, situacao:"exato" as const, confianca:"alta" as const,
       referencia:referenciar(literal),explicacao:"Mesmo nome normalizado na mesma disciplina. Reaproveitamento de ID deve ser validado pelo importador."
