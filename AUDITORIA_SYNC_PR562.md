@@ -59,3 +59,15 @@ Data: 2026-11-20. Escopo: **somente leitura** no Supabase hospedado; nenhuma que
 - Segurança Advisor do staging: 0 avisos reportados (isso não elimina o risco de UPDATE direto).
 - Para bloquear UPDATE direto mantendo a RPC funcionando será necessária mudança arquitetural cuidadosamente auditada (p.ex. servidor autorizado/rota de escrita isolada) e novos testes de autorização. Não revogar UPDATE indiscriminadamente da RPC `SECURITY INVOKER`, pois isso quebra salvamento.
 - Nenhuma das duas migrações novas foi aplicada à produção; devem ser revisadas e versionadas de maneira apropriada antes de qualquer rollout.
+
+## Gate CAS privado (staging) — 2026-11-20
+
+- A implementação SQL CAS existente foi movida do schema exposto `public` para `study_pro_internal`, com execução `SECURITY DEFINER` e `search_path = ''`. O corpo usa `auth.uid()` e somente tabelas/funções com nomes qualificados. **Esta implementação interna não deve ser exposta na Data API**.
+- Um wrapper SQL `public.salvar_estado_app_cas(bigint,jsonb)` continua `SECURITY INVOKER`, permitido apenas a `authenticated`, delegando para a implementação privada.
+- A role `authenticated` perdeu `INSERT/UPDATE/DELETE` direto em `public.configuracoes`, mantendo leitura RLS. Também revogados direitos extras de `anon`/`public` nessa tabela.
+- Testes SQL reais sob `authenticated` com `ROLLBACK`: INSERT e UPDATE diretos negados; CAS normal aceito; revisão antiga negada; antirregressão negou perda de sessões; RLS bloqueou leitura de outra conta e permitiu salvamento da própria conta. Revisão adulterada recusada e `anon` sem EXECUTE.
+- Verificações de permissões: `authenticated` SELECT=true, INSERT/UPDATE/DELETE=false; RPC pública executável por authenticated=true, anon=false; wrapper SECURITY DEFINER=false; função interna SECURITY DEFINER=true.
+- Advisors de segurança do estágio: 0 alertas; tabelas após teste: 0 configurações, 0 backups.
+- SQL do gate privado salvo em `supabase/staging-tests/cas_private_gateway_prototype.sql`, propositalmente fora de `supabase/migrations`, pois o protótipo **não está pronto para ser aplicado automaticamente à produção**.
+- Limites: teste executado em harness mínimo sem todo esquema do Study Pro, e com sessão simulada via `set local role authenticated` e `request.jwt.claim.sub` em SQL; ainda faltam testes E2E com tokens reais via PostgREST, concorrência entre conexões independentes e compatibilidade com demais consumidores da tabela.
+- Nenhuma mudança no banco oficial ou no site oficial.
