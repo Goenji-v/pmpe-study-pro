@@ -53,3 +53,10 @@ Registrar separadamente os testes no PostgreSQL staging (em transação revertid
 - Security Advisors staging: 0 alertas.
 - **Pendente para liberação**: obter uma conta fictícia por fluxo suportado pelo Supabase Auth sem atingir a cota de e-mail; executar login real e duas sessões autenticadas, sincronização na UI, restauração de backups e simulação de perda de conexão; teste Playwright não foi realizado.
 - Nenhuma alteração no banco/site oficial; PR continua draft.
+
+## Ensaio opcional sem e-mail: GoTrue Anonymous JWT
+- Adicionado `server/stagingAnonymousHttp.test.ts`, executado somente na branch guardada com `STAGING_ANONYMOUS_TEST_ENABLED=true`.
+- Se o provedor de login anônimo estiver desativado no staging, o teste relata a restrição e é **pulado**; não habilitar o provedor automaticamente porque isso pode alterar o acesso disponível ao aplicativo.
+- Se habilitado, cria dois usuários anônimos com marca `study_pro_qa_tag=study-pro-pr562-20261120-anon-http`, verifica JWTs reais em PostgREST, concorrência em duas requisições HTTP da mesma identidade, leitura RLS cruzada, negação de UPDATE direto, revisão obsoleta/adulterada e antirregressão.
+- Identidades anônimas são descartáveis, não constituem login permanente nem substituem dois logins independentes no PC e no celular.
+- Ao final, desativar a variável do teste e excluir **somente** os usuários fictícios com essa marca no staging, após verificar contagens.
