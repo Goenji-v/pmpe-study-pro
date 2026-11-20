@@ -40,3 +40,5 @@ Registrar separadamente os testes no PostgreSQL staging (em transação revertid
 - Fase `login`: autenticação real via GoTrue com duas sessões do usuário A (PC/celular) e usuário B independente; RPC CAS concorrente via PostgREST, RLS de outra conta, escrita direta recusada, revisão antiga e antirregressão. Uma falha de teste falha o build.
 - Após executar, desativar a variável de teste da branch e eliminar as duas contas fictícias do Auth staging (incluindo dados associados por cascade).
 - Nenhuma conta real nem as credenciais de produção devem ser usadas. A verificação ainda não substitui Playwright em dois dispositivos físicos.
+
+- Contas fictícias usam o domínio reservado `example.com`; o Auth hospedado rejeitou `example.invalid` na primeira tentativa. Nunca usar endereço pessoal ou dados reais neste ensaio.
