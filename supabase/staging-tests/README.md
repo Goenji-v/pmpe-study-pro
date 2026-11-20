@@ -31,3 +31,12 @@
 
 ## Ensaio final
 Registrar separadamente os testes no PostgreSQL staging (em transação revertida), a verificação de tabelas/políticas/grants/funções, o estado do deployment Vercel, e quaisquer bloqueios remanescentes. Não afirmar cobertura integral de navegador sem efetivamente executá-la.
+
+## Ensaio com autenticação HTTP real (PR #562)
+
+- Teste temporário `server/stagingAuthHttp.test.ts`, executado no build Vercel **somente quando** `STAGING_AUTH_HTTP_TEST_ENABLED=true` e a URL/guard indicarem staging exatamente.
+- Credenciais para duas contas fictícias armazenadas apenas como variáveis criptografadas da branch; não são commitadas nem expostas no frontend.
+- Fase `signup`: cadastro de contas exclusivamente no Supabase staging via GoTrue HTTPS.
+- Fase `login`: autenticação real via GoTrue com duas sessões do usuário A (PC/celular) e usuário B independente; RPC CAS concorrente via PostgREST, RLS de outra conta, escrita direta recusada, revisão antiga e antirregressão. Uma falha de teste falha o build.
+- Após executar, desativar a variável de teste da branch e eliminar as duas contas fictícias do Auth staging (incluindo dados associados por cascade).
+- Nenhuma conta real nem as credenciais de produção devem ser usadas. A verificação ainda não substitui Playwright em dois dispositivos físicos.
