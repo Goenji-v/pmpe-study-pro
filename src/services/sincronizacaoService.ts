@@ -206,37 +206,6 @@ export async function carregarEstadoDaNuvem(
   }
 }
 
-export async function salvarEstadoNaNuvem(
-  userId: string,
-  estado: EstadoAppNuvem
-): Promise<void> {
-  const estadoNormalizado = normalizarEstadoParaSalvar(
-    estado
-  );
-
-  validarIntegridadeEstado(estadoNormalizado);
-
-  const { error } = await supabase
-    .from("configuracoes")
-    .upsert(
-      {
-        user_id: userId,
-        dados: {
-          appState: estadoNormalizado,
-        },
-      },
-      {
-        onConflict: "user_id",
-      }
-    );
-
-  if (error) {
-    throw new Error(
-      `Erro ao salvar dados na nuvem: ${error.message}`
-    );
-  }
-}
-
 /**
  * Usado apenas para mudanças automáticas de estrutura, nunca para um autosave
  * comum de estudo. A sequência é: backup -> validação -> save. Em caso de erro
