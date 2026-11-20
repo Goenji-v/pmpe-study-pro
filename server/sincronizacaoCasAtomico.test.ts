@@ -62,3 +62,23 @@ test("falha estrutural preserva backup sem rollback de estado potencialmente ant
   assert.doesNotMatch(trecho, /salvarEstadoNaNuvem\(/);
   assert.match(trecho, /A nuvem não foi revertida automaticamente/);
 });
+
+test("cadastro inicial impede disputa entre dois aparelhos com CAS revisão zero", async () => {
+  const codigo = await readFile("src/context/AppContext.tsx", "utf8");
+  const inicio = codigo.indexOf("const estadoInicial = {");
+  const fim = codigo.indexOf("nuvemInicializadaRef.current = true;", inicio);
+  const trecho = codigo.slice(inicio, fim);
+  assert.ok(inicio >= 0 && fim > inicio);
+  assert.match(trecho, /salvarEstadoComControleDeRevisao\([\s\S]*?idDaConta,[\s\S]*?estadoInicial,[\s\S]*?0\s*\)/);
+  assert.doesNotMatch(trecho, /salvarEstadoNaNuvem\(/);
+});
+
+test("restauração quando a nuvem está vazia usa CAS para impedir escrita concorrente", async () => {
+  const codigo = await readFile("src/context/AppContext.tsx", "utf8");
+  const inicio = codigo.indexOf("async function restaurarEstadoCompleto");
+  const fim = codigo.indexOf("useEffect(() => {", inicio);
+  const trecho = codigo.slice(inicio, fim);
+  assert.ok(inicio >= 0 && fim > inicio);
+  assert.match(trecho, /salvarEstadoComControleDeRevisao\([\s\S]*?usuario\.id,[\s\S]*?restaurado,[\s\S]*?0\s*\)/);
+  assert.doesNotMatch(trecho, /salvarEstadoNaNuvem\(/);
+});
