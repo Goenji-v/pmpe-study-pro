@@ -60,7 +60,6 @@ import {
   obterRevisaoSincronizacao,
   salvarEstadoComControleDeRevisao,
   salvarEstadoEstruturalComSeguranca,
-  salvarEstadoNaNuvem,
   validarIntegridadeEstado,
   ConflitoSincronizacaoError,
   type EstadoAppNuvem,
@@ -1561,17 +1560,18 @@ function EstadoDaConta({
             salvoEm: agora,
           };
 
-          await salvarEstadoNaNuvem(
+          // Conta criada em outra sessão após a consulta inicial:
+          // CAS com revisão zero impede sobrescrever aquele estado.
+          const inicialConfirmado = await salvarEstadoComControleDeRevisao(
             idDaConta,
-            estadoInicial
+            estadoInicial,
+            0
           );
 
           if (!ativo) return;
 
-          aplicarEstadoDaNuvem(
-            estadoInicial
-          );
-          confirmarSincronizacaoLocal(idDaConta, estadoInicial);
+          aplicarEstadoDaNuvem(inicialConfirmado);
+          confirmarSincronizacaoLocal(idDaConta, inicialConfirmado);
         }
 
         nuvemInicializadaRef.current = true;
@@ -2220,7 +2220,16 @@ function EstadoDaConta({
         "antes_restauracao_manual"
       );
     } else {
-      await salvarEstadoNaNuvem(usuario.id, restaurado);
+      // Mesmo sem estado remoto na leitura, outra aba pode criá-lo antes
+      // desta gravação. CAS de criação impede sobrescrita silenciosa.
+      const salvo = await salvarEstadoComControleDeRevisao(
+        usuario.id,
+        restaurado,
+        0
+      );
+      aplicarEstadoDaNuvem(salvo);
+      confirmarSincronizacaoLocal(usuario.id, salvo);
+      return;
     }
 
     aplicarEstadoDaNuvem(restaurado);
