@@ -229,7 +229,7 @@ export function identificarConteudoCatalogo(disciplina: string, nome: string): I
       ["rlm.quantificadores", /\bquantificadores?\b/],
       ["rlm.falacias", /\bfalacias?\b/],
       ["rlm.analogias", /\banalogias?\b/],
-      ["rlm.deducoes", /\binferenc(?:ia|ias)\b|\b deduc(?:ao|oes)\b/],
+      ["rlm.deducoes", /\binferenc(?:ia|ias)\b|\bdeduc(?:ao|oes)\b/],
       ["rlm.argumentos", /\bargumentos? validos?\b|\bvalidade de argumentos\b/],
       ["rlm.diagrama", /\bdiagramas? logicos?\b/],
       ["rlm.contagem", /\bcontagem\b|\bprincipio multiplicativo\b/],
