@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./MeuEdital.css";
 import PainelConciliacaoCatalogo from "../../components/conciliacao/PainelConciliacaoCatalogo";
 import CatalogoCentralVisao from "../../components/conciliacao/CatalogoCentralVisao";
+import { simularImpactoImportacaoEstrutural } from "../../utils/simulacaoImpactoEstrutural";
 import {
   candidatosDoEdital,
   compararImportacaoConteudos,
@@ -202,6 +203,31 @@ export default function MeuEdital() {
   const sincronizacaoInsegura = statusNuvem !== "sincronizado";
   const conferenciaValida = !conferenciaNecessaria ||
     conferenciaAceita === conciliacaoEdital?.chaveConferencia;
+  const simulacaoEstrutural = useMemo(() => {
+    if (!analise || !planoPrevio) return null;
+    try {
+      return {
+        impacto: simularImpactoImportacaoEstrutural({
+          materiasAtuais: materias,
+          novoEdital: analise,
+          editalAnterior: config.editalAtivo?.analise,
+          cursos: configCursos.cursos ?? [],
+          cursosAtivosIds: configCursos.cursosAtivosIds ?? [],
+        }),
+        erro: null as string | null,
+      };
+    } catch (erro) {
+      return {
+        impacto: null,
+        erro: erro instanceof Error ? erro.message : "Falha desconhecida ao comparar a grade",
+      };
+    }
+  }, [analise, planoPrevio, materias, config.editalAtivo?.analise,
+      configCursos.cursos, configCursos.cursosAtivosIds]);
+  const impactoSeguro = Boolean(
+    simulacaoEstrutural?.impacto?.seguroEstruturalmente &&
+    simulacaoEstrutural.impacto.idempotente
+  );
 
   const diasAtivos: DiaSemanaId[] = config.diasEstudo?.length
     ? config.diasEstudo
@@ -508,6 +534,10 @@ export default function MeuEdital() {
     }
     if (!conferenciaValida) {
       showToast("Confira as possíveis correspondências do catálogo antes de aplicar o novo edital.", "warning");
+      return;
+    }
+    if (!impactoSeguro) {
+      showToast("Importação bloqueada: a simulação identificou perda de vínculo, risco aos dados ou falha de estabilidade. Confira os alertas.", "warning");
       return;
     }
     if (!analise || !planoPrevio) {
@@ -1244,6 +1274,8 @@ export default function MeuEdital() {
           confirmado={conferenciaAceita === conciliacaoEdital.chaveConferencia}
           onConfirmar={(confirmado) => setConferenciaAceita(confirmado ? conciliacaoEdital.chaveConferencia : null)}
           sincronizacaoInsegura={sincronizacaoInsegura}
+          impactoEstrutural={simulacaoEstrutural?.impacto}
+          erroImpacto={simulacaoEstrutural?.erro}
         />
       )}
 
@@ -1297,8 +1329,10 @@ export default function MeuEdital() {
           <button
             type="button"
             className="edital-botao-principal"
-            disabled={aplicando || sincronizacaoInsegura || !conferenciaValida}
-            title={sincronizacaoInsegura ? "Resolva a sincronização antes de importar" : !conferenciaValida ? "Confira as correspondências do catálogo" : undefined}
+            disabled={aplicando || sincronizacaoInsegura || !conferenciaValida || !impactoSeguro}
+            title={sincronizacaoInsegura ? "Resolva a sincronização antes de importar"
+              : !conferenciaValida ? "Confira as correspondências do catálogo"
+              : !impactoSeguro ? "A simulação estrutural encontrou riscos ou não está disponível" : undefined}
             onClick={() => void aplicarPlano()}
           >
             {aplicando
