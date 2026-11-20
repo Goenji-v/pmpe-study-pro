@@ -261,3 +261,74 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .catalogo-central-simulacao-lista article > p {
   color: #52677e;
 }
+
+
+/* Diagnóstico do importador real — não é uma autorização para mesclar IDs. */
+.conciliacao-catalogo-impacto {
+  margin: 14px 0;
+  padding: 13px 14px;
+  border: 1px solid #a66b48;
+  border-radius: 11px;
+  background: #251f29;
+}
+.conciliacao-catalogo-impacto > strong {
+  display: block;
+  color: #ffdddd;
+  font-size: 13px;
+}
+.conciliacao-catalogo-impacto > p {
+  color: #d6c3bf;
+  line-height: 1.5;
+  font-size: 12px;
+  margin: 8px 0;
+}
+.conciliacao-catalogo-impacto > p b { color: #fff3e7; }
+.conciliacao-catalogo-impacto-numeros {
+  display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0;
+}
+.conciliacao-catalogo-impacto-numeros > span {
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: #302637;
+  border: 1px solid #594b60;
+  color: #f6e5ec;
+  font-size: 11px;
+  font-weight: 700;
+}
+.conciliacao-catalogo-impacto details {
+  border: 1px solid #73575a;
+  border-radius: 8px;
+  padding: 10px;
+}
+.conciliacao-catalogo-impacto summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 780;
+  color: #fff0e6;
+}
+.conciliacao-catalogo-impacto ul {
+  display: grid; gap: 7px; padding: 0; margin: 12px 0 0;
+  list-style: none; max-height: 250px; overflow-y: auto;
+}
+.conciliacao-catalogo-impacto li {
+  display: grid; gap: 3px;
+  padding: 8px;
+  border: 1px solid #6a5359;
+  border-radius: 7px;
+  background: #191e2c;
+}
+.conciliacao-catalogo-impacto li strong { font-size: 11px; color: #ffcbcd; }
+.conciliacao-catalogo-impacto li span { color: #d4c5d0; font-size: 11px; line-height: 1.5; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto {
+  background: #fff6f4; border-color: #d5b6ac;
+}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto > strong,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto > p b,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto summary { color: #76353a; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto > p { color: #67505a; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto-numeros > span,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto li {
+  background: #fff; border-color: #d9c5c4; color: #573e4e;
+}
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto li strong { color: #a32c38; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .conciliacao-catalogo-impacto li span { color: #654e57; }
