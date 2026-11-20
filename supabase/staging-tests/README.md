@@ -42,3 +42,14 @@ Registrar separadamente os testes no PostgreSQL staging (em transação revertid
 - Nenhuma conta real nem as credenciais de produção devem ser usadas. A verificação ainda não substitui Playwright em dois dispositivos físicos.
 
 - Contas fictícias usam o domínio reservado `example.com`; o Auth hospedado rejeitou `example.invalid` na primeira tentativa. Nunca usar endereço pessoal ou dados reais neste ensaio.
+
+## Resultado da etapa Auth HTTP — 20/11/2026
+- Teste real sem sessão em `server/stagingPublicHttp.test.ts`: GoTrue `/auth/v1/health` respondeu HTTP 200; chamadas HTTP anônimas de leitura `configuracoes` e `perfis` e a RPC CAS foram recusadas. **PASS** no build Vercel.
+- Tentativa opt-in de criação de duas contas via API pública GoTrue em `server/stagingAuthHttp.test.ts`: domínios de documentação foram rejeitados como inválidos; tentativa com e-mails de teste randômicos chegou ao limite de envio de e-mails (`email rate limit exceeded`). Portanto, **não há alegação de login real validado**.
+- `STAGING_AUTH_HTTP_TEST_ENABLED` foi desativado na branch e as seis variáveis temporárias do ensaio (modo, enable, emails e senhas) foram neutralizadas. Esse teste permanece no código com `skip` por padrão.
+- As tentativas de Auth não criaram usuário permanente: verificação do staging mostrou 0 contas de teste, 0 linhas de `configuracoes` e 0 linhas de `backups`.
+- A extensão de diagnóstico SQL `http` e o schema temporário `staging_test_http` foram desinstalados do staging após a investigação.
+- Build `1e025a20`: **602 testes aprovados, 1 teste opt-in pulado, 0 falhas**, deployment Vercel READY.
+- Security Advisors staging: 0 alertas.
+- **Pendente para liberação**: obter uma conta fictícia por fluxo suportado pelo Supabase Auth sem atingir a cota de e-mail; executar login real e duas sessões autenticadas, sincronização na UI, restauração de backups e simulação de perda de conexão; teste Playwright não foi realizado.
+- Nenhuma alteração no banco/site oficial; PR continua draft.
