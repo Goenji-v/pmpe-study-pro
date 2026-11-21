@@ -1,16 +1,36 @@
-// One-time staging-only test. Uses normal GoTrue email/password signup,
-// never admin/service keys. All test accounts are tagged for SQL cleanup.
-// Do NOT run against production. No credentials or JWTs are logged.
+// Manual staging-only GoTrue test with PRE-EXISTING, admin-confirmed QA users.
+// NO account signup, SMTP, service_role keys or changes to production.
+// Credentials must come from private environment variables, never the repo.
+// The operator must verify/delete QA rows after the run.
 import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
 
 const URL = 'https://isjzyyoqvftrltkctanw.supabase.co';
-const TAG = 'study-pro-pr562-authenticated-e2e-20261121';
 if (process.env.STUDY_PRO_AUTH_QA_ENABLED !== 'true' ||
     process.env.VITE_SUPABASE_URL !== URL ||
     !process.env.VITE_SUPABASE_ANON_KEY?.startsWith('sb_publishable_')) {
-  throw new Error('Live authenticated QA is disabled or not isolated to staging');
+  throw new Error('Live QA is disabled or not isolated to staging');
+}
+const secrets = [
+  'STUDY_PRO_QA_EMAIL_A',
+  'STUDY_PRO_QA_PASSWORD_A',
+  'STUDY_PRO_QA_EMAIL_B',
+  'STUDY_PRO_QA_PASSWORD_B',
+];
+if (secrets.some(name => !process.env[name])) {
+  throw new Error('Dedicated, admin-confirmed QA credentials must be configured privately');
+}
+const credentialsA = {
+  email: process.env.STUDY_PRO_QA_EMAIL_A,
+  password: process.env.STUDY_PRO_QA_PASSWORD_A,
+};
+const credentialsB = {
+  email: process.env.STUDY_PRO_QA_EMAIL_B,
+  password: process.env.STUDY_PRO_QA_PASSWORD_B,
+};
+if (credentialsA.email === credentialsB.email) {
+  throw new Error('Separate account B is required for cross-user RLS QA');
 }
 const key = process.env.VITE_SUPABASE_ANON_KEY;
 const makeClient = () => createClient(URL, key, {
@@ -18,39 +38,7 @@ const makeClient = () => createClient(URL, key, {
 });
 const clientA = makeClient();
 const clientB = makeClient();
-// Only send confirmation mail to a QA inbox owned and configured by the
-// operator; never make up random recipients on third-party email domains.
-const makeCredentials = () => {
-  const inbox = process.env.STUDY_PRO_QA_OWNED_INBOX ?? '';
-  const match = inbox.match(/^([^@+\\s]+)@([^@\\s]+\\.[^@\\s]+)$/);
-  if (!match) {
-    throw new Error('A dedicated, user-controlled QA email inbox must be configured');
-  }
-  const id = randomBytes(12).toString('hex');
-  return {
-    email: `${match[1]}+pr562-${id}@${match[2]}`,
-    password: randomBytes(32).toString('base64url'),
-  };
-};
-const signup = async (client, kind) => {
-  const credentials = makeCredentials();
-  const { data, error } = await client.auth.signUp({
-    ...credentials, options: { data: { study_pro_qa_tag: TAG, qa_role: kind } },
-  });
-  if (error) {
-    console.log(`AUTH_SIGNUP_BLOCKED_${kind}:`, error.code ?? error.status ?? 'unknown');
-    return { ok: false, error: error.code ?? 'signup-failed' };
-  }
-  if (data.user?.id) {
-    // The account is disposable and identified by its exact QA metadata tag.
-    console.log(`AUTH_QA_USER_CREATED_${kind}:`, data.user.id);
-  }
-  if (!data.session?.access_token) {
-    console.log(`AUTH_CONFIRMATION_REQUIRED_${kind}: GoTrue did not return a session`);
-    return { ok: false, error: 'confirmation-required' };
-  }
-  return { ok: true, credentials, user: data.user, session: data.session, client };
-};
+const liveClients = [clientA,clientB];
 const expectRpc = (result, label) => {
   if (result.error) throw new Error(`${label}: ${result.error.code ?? result.error.message}`);
   const row = Array.isArray(result.data) ? result.data[0] : result.data;
@@ -76,19 +64,32 @@ function state(revision, ids, tag) {
   };
 }
 async function main() {
-  const a = await signup(clientA, 'A');
-  if (!a.ok) return;
-  const b = await signup(clientB, 'B');
-  if (!b.ok) return;
+  const [loginA, loginB] = await Promise.all([
+    clientA.auth.signInWithPassword(credentialsA),
+    clientB.auth.signInWithPassword(credentialsB),
+  ]);
+  if (loginA.error || loginB.error || !loginA.data.user || !loginB.data.user)
+    throw new Error('One or both pre-existing QA users failed to authenticate');
+  const a = loginA.data;
+  const b = loginB.data;
   assert.notEqual(a.user.id, b.user.id, 'must use two independent user accounts');
+  if (a.user.app_metadata?.study_pro_qa !== true ||
+      b.user.app_metadata?.study_pro_qa !== true) {
+    throw new Error('Refusing real user account: both must have admin-set app_metadata.study_pro_qa=true');
+  }
+  const { data: oldState, error: readError } = await clientA.from('configuracoes')
+    .select('user_id').eq('user_id', a.user.id).maybeSingle();
+  if (readError || oldState) {
+    throw new Error('QA account A must have no existing app data; refusing to overwrite history');
+  }
 
-  // Log in twice with the same account to create two independent GoTrue
-  // sessions (the same real end-user on PC and phone).
+  // Independent GoTrue sessions for the same QA account on PC and phone.
   const pc = makeClient();
   const phone = makeClient();
+  liveClients.push(pc,phone);
   const [pcAuth, phoneAuth] = await Promise.all([
-    pc.auth.signInWithPassword(a.credentials),
-    phone.auth.signInWithPassword(a.credentials),
+    pc.auth.signInWithPassword(credentialsA),
+    phone.auth.signInWithPassword(credentialsA),
   ]);
   if (pcAuth.error || phoneAuth.error ||
       !pcAuth.data.session || !phoneAuth.data.session)
@@ -164,7 +165,7 @@ main().catch(error => {
   process.exitCode = 1;
 }).finally(async () => {
   await Promise.allSettled([
-    clientA.auth.signOut(), clientB.auth.signOut(),
+    ...liveClients.map(client => client.auth.signOut()),
   ]);
-  console.log('QA_CLEANUP_SQL_REQUIRED_FOR_TAG:', TAG);
+  console.log('QA ACCOUNT CLEANUP REQUIRED: remove dedicated user A/B and their staging data via authorized admin workflow.');
 });
