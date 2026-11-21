@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import type { Revisao } from "../src/types/index.ts";
 import { encontrarDataDisponivelParaReforco } from "../src/utils/agendadorReforcos.ts";
 import { aplicarRevisaoAdaptativa } from "../src/utils/revisaoAdaptativa.ts";
-import { concluirRevisaoNaLista } from "../src/utils/revisoes.ts";
+import { concluirRevisaoNaLista, encontrarDataDisponivelParaRevisao, criarProximaRevisao } from "../src/utils/revisoes.ts";
+import { aplicarRevisaoPorDuvida } from "../src/utils/revisaoAdaptativa.ts";
 
 const AGORA = new Date("2026-11-21T15:00:00");
 const referencia = {
@@ -110,4 +111,60 @@ test("sem limite configurado continua possível agendar pelo intervalo ideal",()
     revisoes:[],limiteDiario:0,
   });
   assert.equal(data?.toISOString().slice(0,10),"2026-11-22");
+});
+
+
+test("revisão regular, reforço por nota baixa e dúvida disputam a MESMA agenda",()=>{
+  const cinco=Array.from({length:5},(_,i)=>revisao("ocupada"+i,"2026-11-22T12:00:00"));
+  const original=JSON.stringify(cinco);
+  const novoNormal=encontrarDataDisponivelParaRevisao({
+    dataBase:new Date("2026-11-22T12:00:00"),
+    agora:AGORA,revisoes:cinco,limiteDiario:5,
+  });
+  assert.equal(novoNormal.toISOString().slice(0,10),"2026-11-23");
+  const resultadoBaixo=aplicar(cinco,"Crase","nota-b-1");
+  assert.equal(resultadoBaixo.dataAgendada?.slice(0,10),"2026-11-23");
+  const duvida=aplicarRevisaoPorDuvida({
+    revisoes:resultadoBaixo.revisoes,materiaId:"inf",
+    assuntoId:"duvida-word",materia:"Informática",assunto:"Word",
+    limiteDiario:5,agora:AGORA,criarId:()=>"duvida-1",
+  });
+  assert.equal(duvida.acao,"criada");
+  assert.equal(duvida.revisoes.length,7);
+  assert.equal(duvida.revisoes[0].dataPrevista.slice(0,10),"2026-11-23");
+  const regularDepois=encontrarDataDisponivelParaRevisao({
+    dataBase:new Date("2026-11-22T12:00:00"),
+    agora:AGORA,revisoes:duvida.revisoes,limiteDiario:5,
+  });
+  assert.equal(regularDepois.toISOString().slice(0,10),"2026-11-23");
+  assert.equal(JSON.stringify(cinco),original);
+});
+
+test("revisão normal também respeita atrasadas e conclusões já realizadas hoje",()=>{
+  const diaAnterior=Array.from({length:6},(_,i)=>revisao("atrasada"+i,"2026-11-20T12:00:00"));
+  const feitas=[revisao("concluidaHoje","2026-11-21T12:00:00",{
+    concluida:true,dataConclusao:"2026-11-21T14:00:00",
+  })];
+  const data=encontrarDataDisponivelParaRevisao({
+    dataBase:new Date("2026-11-21T12:00:00"),
+    agora:AGORA,revisoes:[...diaAnterior,...feitas],limiteDiario:3,
+  });
+  assert.equal(data.toISOString().slice(0,10),"2026-11-23");
+});
+
+test("após finalizar revisão difícil, a próxima etapa respeita vagas de reforços e histórico",()=>{
+  const concluidas=Array.from({length:2},(_,i)=>revisao("anterior-"+i,"2026-11-21T12:00:00",{
+    concluida:true,dataConclusao:"2026-11-21T13:00:00",
+  }));
+  const atuais=Array.from({length:3},(_,i)=>revisao("pendente-"+i,"2026-11-22T12:00:00"));
+  const fim=revisao("terminada","2026-11-21T12:00:00",{
+    materia:"Português",materiaId:"port",assunto:"Crase",assuntoId:"crase",
+    etapa:2,concluida:true,desempenho:"dificil",
+    dataConclusao:"2026-11-21T15:00:00",
+  });
+  const futuras=criarProximaRevisao(fim,[...concluidas,...atuais,fim],5,AGORA,"etapa3");
+  assert.equal(futuras?.etapa,3);
+  // Três ocupações no dia 22, portanto ainda há duas vagas para a revisão regular.
+  assert.equal(futuras?.dataPrevista.slice(0,10),"2026-11-22");
+  assert.equal(atuais[0].dataPrevista,"2026-11-22T12:00:00");
 });
