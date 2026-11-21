@@ -115,6 +115,7 @@ export default function ResolverSimuladoIA() {
   const {
     materias,
     revisoes,
+    sessoes,
     configuracoes,
     setQuestoes: setRegistrosQuestoes,
     setRevisoes,
@@ -264,6 +265,13 @@ export default function ResolverSimuladoIA() {
       return {
         classe: "agendada",
         texto: "🔁 Revisão adaptativa aplicada automaticamente",
+      };
+    }
+
+    if (resumoRevisaoFinal?.somenteDiagnostico) {
+      return {
+        classe: "amostra",
+        texto: "📝 Treino diagnóstico salvo. A revisão espaçada começa após o estudo concluído; nenhum ciclo paralelo foi criado.",
       };
     }
 
@@ -690,7 +698,7 @@ export default function ResolverSimuladoIA() {
     // pendências na agenda. Questões avulsas mantêm a revisão adaptativa.
     const revisaoAutomaticaPermitida = novoResultado.tipo !== "simulado";
     const resumo: ResumoRevisoesResultadoIA = revisaoAutomaticaPermitida
-      ? aplicarRevisoesDoResultadoIA({ revisoes, diagnostico: diagnosticoAtual, materias })
+      ? aplicarRevisoesDoResultadoIA({ revisoes, diagnostico: diagnosticoAtual, materias, sessoes })
       : { revisoes, criadas: 0, atualizadas: 0, semReferencia: 0 };
 
     if (revisaoAutomaticaPermitida || revisaoDireta) setRevisoes((anteriores) => {
@@ -699,6 +707,7 @@ export default function ResolverSimuladoIA() {
             revisoes: anteriores,
             diagnostico: diagnosticoAtual,
             materias,
+            sessoes,
           }).revisoes
         : anteriores;
 
