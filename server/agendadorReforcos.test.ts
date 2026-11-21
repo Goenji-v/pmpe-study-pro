@@ -186,3 +186,19 @@ test("dúvidas e notas baixas compartilham só duas vagas adaptativas quando a m
   assert.equal(notaBaixa.dataAgendada?.slice(0,10),"2026-11-23");
   assert.equal(notaBaixa.revisoes.length,3);
 });
+
+
+test("reforço urgente criado hoje às 15h não nasce atrasado às 12h",()=>{
+  const agora=new Date("2026-11-21T15:00:00");
+  const nova=aplicarRevisaoAdaptativa({
+    revisoes:[],materia:"Português",materiaId:"p",
+    assunto:"Crase",assuntoId:"crase",conteudoEstudado:true,
+    certas:1,erradas:9,agora,limiteDiario:5,
+    resultadoId:"urgente-hoje",criarId:()=>"u1",
+  });
+  assert.equal(nova.acao,"criada");
+  assert.equal(nova.revisoes.length,1);
+  assert.equal(nova.revisoes[0].dataPrevista.slice(0,10),"2026-11-21");
+  assert.ok(new Date(nova.revisoes[0].dataPrevista).getTime()>=agora.getTime());
+  assert.equal(nova.adiadaPorCapacidade,false);
+});
