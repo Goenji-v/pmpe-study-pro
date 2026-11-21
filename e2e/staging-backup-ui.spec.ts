@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 // Browser interaction test with mocked transport. No real user, JWT or database
 // write. Independent HTTP/JWT and SQL integration tests are documented in PR #562.
@@ -42,6 +43,7 @@ const restoreCases = [
   { name: "restauração válida via RPC CAS", outcome: "success" },
   { name: "revisão concorrente recusa restauração", outcome: "stale" },
   { name: "falha na resposta da RPC não tenta gravar backup antigo", outcome: "uncertain" },
+  { name: "JSON exportado e importado volta pela restauração segura", outcome: "import" },
 ] as const;
 
 for (const scenario of restoreCases) {
@@ -60,6 +62,8 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
   let restorationCalls = 0;
   let wrongWriteCalls = 0;
   let legitimateAutosaves = 0;
+  let importedBackupId: string | null = null;
+  let importedState: ReturnType<typeof state> | null = null;
 
   await page.addInitScript(({ key, session }) => {
     window.localStorage.setItem(key, JSON.stringify(session));
@@ -91,7 +95,7 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
     if (url.pathname.endsWith("/rpc/restaurar_backup_cas")) {
       restorationCalls++;
       const body = req.postDataJSON() as Record<string, unknown>;
-      expect(body.p_backup_id).toBe(backupId);
+      expect(body.p_backup_id).toBe(scenario.outcome === "import" ? importedBackupId : backupId);
       expect(body.p_expected_revision).toBe(current.syncRevision);
       expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
       if (scenario.outcome === "stale") {
@@ -103,7 +107,7 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
           message: "resposta indisponível: estado remoto desconhecido",
         });
       }
-      current = { ...snapshot, syncRevision: current.syncRevision + 1, atualizadoEm: now, salvoEm: now };
+      current = { ...(importedState ?? snapshot), syncRevision: current.syncRevision + 1, atualizadoEm: now, salvoEm: now };
       return json(200, [{
         ok: true, revisao_atual: current.syncRevision,
         backup_seguranca_id: "33333333-3333-4333-8333-333333333333",
@@ -135,8 +139,19 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
       return json(403, { code: "42501", message: "direct writes not allowed" });
     }
     if (url.pathname.endsWith("/backups")) {
+      if (req.method() === "POST") {
+        const payload = req.postDataJSON() as {
+          user_id: string;
+          dados: { tipo: string; estado: ReturnType<typeof state> };
+        };
+        expect(payload.user_id).toBe(userId);
+        expect(payload.dados.tipo).toBe("backup_incremental");
+        importedBackupId = "44444444-3333-4333-8333-444444444444";
+        importedState = payload.dados.estado;
+        return json(201, { id: importedBackupId });
+      }
       if (req.method() !== "GET") {
-        return json(200, []);
+        return json(403, { code: "42501", message: "unsupported write" });
       }
       return json(200, [{
         id: backupId, user_id: userId, nome: "Backup E2E fictício",
@@ -172,10 +187,29 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
     console.info("STAGING_BACKUP_UI_WRITE_COUNTS:", { restorationCalls, wrongWriteCalls, legitimateAutosaves });
     throw error;
   }
-  await restore.click();
+  if (scenario.outcome === "import") {
+    const downloadWaiting = page.waitForEvent("download");
+    await page.getByRole("button", { name: /Exportar backup completo/i }).click();
+    const download = await downloadWaiting;
+    const jsonBackup = await readFile(await download.path());
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "backup-e2e-exportado.json",
+      mimeType: "application/json",
+      buffer: jsonBackup,
+    });
+    await expect(page.getByText("Backup validado", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Restaurar este backup" }).click();
+    await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+  } else {
+    await restore.click();
+  }
   await expect.poll(() => restorationCalls, { timeout: 15_000 }).toBe(1);
-  if (scenario.outcome === "success") {
-    await expect(page.getByText("Backup da linha do tempo restaurado com segurança.")).toBeVisible();
+  if (scenario.outcome === "success" || scenario.outcome === "import") {
+    await expect(page.getByText(
+      scenario.outcome === "import"
+        ? "Backup restaurado com segurança."
+        : "Backup da linha do tempo restaurado com segurança."
+    )).toBeVisible();
   } else if (scenario.outcome === "stale") {
     await expect(page.getByText(/O estado foi alterado por outro dispositivo/i)).toBeVisible();
   } else {
