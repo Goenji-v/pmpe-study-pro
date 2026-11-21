@@ -48,7 +48,8 @@ export function encontrarDataDisponivelParaReforco(params: {
   });
   const realizadasHoje = concluidasHoje.length;
   const adaptativasConcluidasHoje = concluidasHoje.filter(
-    (revisao) => revisao.motivoAdaptativo === "baixo_desempenho"
+    (revisao) => (revisao.motivoAdaptativo === "baixo_desempenho" ||
+      revisao.motivoAdaptativo === "duvida")
   ).length;
 
   const existentes = pendentesUnicasPorAssunto(revisoes)
@@ -78,7 +79,8 @@ export function encontrarDataDisponivelParaReforco(params: {
       ? Math.max(0, capacidade - realizadasHoje) : capacidade;
     const ocupadas = fila.splice(0, capacidadeRestante);
     const adaptativas = ocupadas.filter(
-      ({revisao}) => revisao.motivoAdaptativo === "baixo_desempenho"
+      ({revisao}) => (revisao.motivoAdaptativo === "baixo_desempenho" ||
+      revisao.motivoAdaptativo === "duvida")
     ).length + (eHoje ? adaptativasConcluidasHoje : 0);
     const totalOcupado = ocupadas.length + (eHoje ? realizadasHoje : 0);
     if (dia.getTime() >= diaIdeal.getTime() &&
