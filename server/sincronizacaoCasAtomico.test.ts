@@ -144,3 +144,29 @@ test("protótipo de restauração preserva geração de reinício e copia o hist
   const configUpdate = script.indexOf("update public.configuracoes");
   assert.ok(backupInsert > 0 && configUpdate > backupInsert, "Safety copy must precede cloud update");
 });
+
+test("backup malformado e schema futuro são rejeitados antes de qualquer INSERT de segurança", async () => {
+  const sql = await readFile("supabase/staging-tests/restaurar_backup_cas_prototype.sql", "utf8");
+  const checks = [
+    "schemaVersion", "versao", "metaQuestoesDiaria", "metaMinutosDiaria",
+    "metaRevisoesDiaria", "missoesPorDia", "missoesConcluidas",
+    "v_ids_materias", "v_ids_modulos", "v_ids_assuntos", "v_ids_aulas"
+  ];
+  checks.forEach((key) => assert.ok(sql.includes(key), `Missing backup check: ${key}`));
+  assert.match(sql, /Versão de backup incompatível; migração necessária/);
+  assert.match(sql, /Matéria inválida ou repetida no backup/);
+  assert.match(sql, /Aula inválida ou repetida no backup/);
+  assert.ok(
+    sql.indexOf("Matéria inválida ou repetida no backup") < sql.indexOf("insert into public.backups"),
+    "Malformed backups must fail before creating a safety copy"
+  );
+});
+
+test("o ensaio de navegador cobre falha de conexão e revisão concorrente sem rollback", async () => {
+  const uiTest = await readFile("e2e/staging-backup-ui.spec.ts", "utf8");
+  assert.match(uiTest, /outcome: "stale"/);
+  assert.match(uiTest, /outcome: "uncertain"/);
+  assert.match(uiTest, /MOCK_POST_COMMIT_NETWORK_FAILURE/);
+  assert.match(uiTest, /restorationCalls\)\.toBe\(1\)/);
+  assert.match(uiTest, /wrongWriteCalls\)\.toBe\(0\)/);
+});
