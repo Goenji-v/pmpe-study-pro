@@ -68,7 +68,10 @@ import {
 import {
   criarBackupAutomaticoLocal,
 } from "../services/seguranca/backupAutomaticoService";
-import { restaurarBackupHistoricoStaging } from "../services/seguranca/restauracaoBackupStagingService";
+import {
+  arquivarBackupParaRestauracaoStaging,
+  restaurarBackupHistoricoStaging,
+} from "../services/seguranca/restauracaoBackupStagingService";
 import {
   registrarBackupConflitoNaNuvem,
   sincronizarBackupsConflitoLocaisNaNuvem,
@@ -155,7 +158,7 @@ type AppContextType = {
   ) => Promise<void>;
   restaurarEstadoCompleto: (estado: EstadoAppNuvem) => Promise<void>;
   restaurarBackupHistoricoSeguroStaging: (
-    backupId: string,
+    backupId: string | null,
     backupEstado: EstadoAppNuvem
   ) => Promise<void>;
   aplicarEstadoEstruturalSeguro: (
@@ -2157,7 +2160,7 @@ function EstadoDaConta({
   // Experimental staging-only restore. Do not offer this method in the
   // production UI until the privileged SQL RPC and full E2E are approved.
   async function restaurarBackupHistoricoSeguroStaging(
-    backupId: string,
+    backupId: string | null,
     backupEstado: EstadoAppNuvem
   ): Promise<void> {
     if (!usuario) {
@@ -2214,8 +2217,16 @@ function EstadoDaConta({
       setStatusNuvem("salvando");
 
       try {
+        // Local/imported checkpoints get stored under the same user's
+        // backup RLS policy first. On a failure the imported checkpoint
+        // remains available for manual inspection; never auto-retry.
+        const idRestaurar = backupId ??
+          await arquivarBackupParaRestauracaoStaging(
+            usuario.id,
+            backupEstado
+          );
         const restaurado = await restaurarBackupHistoricoStaging(
-          backupId,
+          idRestaurar,
           revisaoRemota
         );
         aplicarEstadoDaNuvem(restaurado);
