@@ -11,6 +11,7 @@ import {
   rotuloPrioridadeRevisaoAdaptativa,
 } from "../../utils/revisaoAdaptativa";
 import { BANCAS_CONCURSO } from "../../utils/bancasConcurso";
+import { existeEstudoConcluido } from "../../utils/elegibilidadeRevisao";
 
 import type {
   Assunto,
@@ -23,6 +24,7 @@ export default function Questoes() {
     materias,
     questoes,
     revisoes,
+    sessoes,
     setQuestoes,
     setRevisoes,
   } = useApp();
@@ -134,6 +136,11 @@ export default function Questoes() {
       const resultadoRevisao =
         aplicarRevisaoAdaptativa({
           revisoes,
+          conteudoEstudado: existeEstudoConcluido({
+            materias, revisoes, sessoes,
+            materia: materiaSelecionada,
+            assunto: assuntoSelecionado,
+          }),
           materiaId: materiaSelecionada.id,
           moduloId: moduloSelecionado?.id,
           assuntoId: assuntoSelecionado.id,
@@ -144,11 +151,26 @@ export default function Questoes() {
           erradas,
         });
 
-      setRevisoes(
-        resultadoRevisao.revisoes
-      );
+      if (resultadoRevisao.revisoes !== revisoes) {
+        setRevisoes((anteriores) => aplicarRevisaoAdaptativa({
+          revisoes: anteriores,
+          conteudoEstudado: existeEstudoConcluido({
+            materias, revisoes: anteriores, sessoes,
+            materia: materiaSelecionada,
+            assunto: assuntoSelecionado,
+          }),
+          materiaId: materiaSelecionada.id,
+          moduloId: moduloSelecionado?.id,
+          assuntoId: assuntoSelecionado.id,
+          materia, modulo, assunto, certas, erradas,
+        }).revisoes);
+      }
 
-      if (diagnostico) {
+      if (resultadoRevisao.acao === "diagnostico") {
+        mensagemSalvamento =
+          "Treino diagnóstico salvo em " + assunto +
+          ". Não foi criada uma revisão nova: a aula ainda não foi comprovadamente concluída ou já existe um ciclo desse assunto. Sua nota ficou no histórico de questões.";
+      } else if (diagnostico) {
         const quando =
           diagnostico.diasParaRevisao === 0
             ? "para hoje"
