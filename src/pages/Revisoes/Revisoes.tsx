@@ -20,6 +20,7 @@ import type { Revisao, SessaoEstudo } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
+import { montarHistoricoRevisaoIntegrado, type ItemHistoricoRevisao } from "../../utils/historicoRevisoesIntegrado";
 import {
   pendentesUnicasPorAssunto,
   revisoesDoMesmoAssunto,
@@ -620,7 +621,7 @@ function GrupoRevisoes({
           });
 
           const mostrandoHistorico = historicoId === revisao.id;
-          const historico = montarHistoricoRevisao(
+          const historico = montarHistoricoRevisaoIntegrado(
             revisao,
             revisoesBase,
             sessoes
@@ -880,31 +881,6 @@ function PrevisaoRetorno({
   );
 }
 
-type ItemHistoricoRevisao = {
-  revisao: Revisao;
-  sessao?: SessaoEstudo;
-};
-
-function montarHistoricoRevisao(
-  atual: Revisao,
-  revisoes: Revisao[],
-  sessoes: SessaoEstudo[]
-): ItemHistoricoRevisao[] {
-  const trilha = revisoes
-    .filter((item) => mesmaTrilhaRevisao(item, atual))
-    .sort(
-      (a, b) =>
-        dataOrdenacaoRevisao(a) - dataOrdenacaoRevisao(b)
-    );
-
-  return trilha.map((revisao) => ({
-    revisao,
-    sessao:
-      sessoes.find((sessao) => sessao.id === revisao.sessaoId) ??
-      sessoes.find((sessao) => sessao.revisaoId === revisao.id),
-  }));
-}
-
 function HistoricoRevisao({
   revisaoAtual,
   itens,
@@ -916,10 +892,13 @@ function HistoricoRevisao({
     <div className="revisao-historico-assunto">
       <div className="revisao-historico-cabecalho">
         <div>
-          <strong>📋 Histórico deste assunto</strong>
-          <span>{revisaoAtual.assunto}</span>
+          <strong>📋 Histórico integrado deste assunto</strong>
+          <span>{tituloAssuntoPrincipal(revisaoAtual)}</span>
         </div>
-        <small>{itens.length} etapa(s) registrada(s)</small>
+        <small>
+          {itens.length} registro(s) · {itens.filter((item) => item.revisao.concluida).length} concluída(s)
+          {" · "}{itens.filter((item) => !item.revisao.concluida && !item.revisao.integradaEmId).length} pendente(s)
+        </small>
       </div>
 
       <div className="revisao-historico-linha">
@@ -933,9 +912,13 @@ function HistoricoRevisao({
             typeof revisao.erradas === "number"
               ? revisao.certas + revisao.erradas
               : undefined;
+          // Nunca inferir "próxima etapa" de outro subassunto agregado:
+          // a trilha mostra as datas originais de cada registro.
           const proxima = itens
             .slice(indice + 1)
-            .find((item) => item.revisao.etapa > revisao.etapa)?.revisao;
+            .find((item) => item.revisao.materiaId === revisao.materiaId &&
+              item.revisao.assuntoId === revisao.assuntoId &&
+              item.revisao.etapa > revisao.etapa)?.revisao;
 
           return (
             <div
@@ -948,9 +931,12 @@ function HistoricoRevisao({
               <div>
                 <strong>
                   Etapa {revisao.etapa}
-                  {concluida ? " · concluída" : " · pendente"}
+                  {concluida ? " · concluída"
+                    : revisao.integradaEmId ? " · vinculada ao ciclo (não concluída)"
+                      : " · pendente"}
                 </strong>
                 <span>{formatarDataRevisao(data)}</span>
+                <small>Origem: {revisao.assunto} · {revisao.materia}</small>
                 <small>{rotuloAtividadeHistorico(revisao, sessao)}</small>
 
                 {typeof total === "number" && total > 0 && (
@@ -977,10 +963,13 @@ function HistoricoRevisao({
                   </small>
                 )}
 
-                {!concluida && (
+                {!concluida && !revisao.integradaEmId && (
                   <small>
                     Status atual · {planejarRevisaoPendente(revisao).titulo}
                   </small>
+                )}
+                {revisao.integradaEmId && !concluida && (
+                  <small>Registro original preservado; ciclo vinculado em {revisao.integradaEm?.slice(0,10) ?? "data não informada"}.</small>
                 )}
               </div>
             </div>
@@ -995,6 +984,9 @@ function rotuloAtividadeHistorico(
   revisao: Revisao,
   sessao?: SessaoEstudo
 ) {
+  if (revisao.motivoAdaptativo === "baixo_desempenho" && !revisao.concluida) {
+    return "📝 Reforço gerado por resultado de questões";
+  }
   if (sessao?.formatoRevisao === "teoria") {
     return "📖 Revisão de teoria";
   }
@@ -1007,26 +999,3 @@ function rotuloAtividadeHistorico(
   return "✓ Revisão registrada";
 }
 
-function mesmaTrilhaRevisao(a: Revisao, b: Revisao) {
-  if (
-    a.materiaId === b.materiaId &&
-    a.assuntoId === b.assuntoId &&
-    (!a.moduloId || !b.moduloId || a.moduloId === b.moduloId)
-  ) {
-    return true;
-  }
-
-  return (
-    normalizar(a.materia) === normalizar(b.materia) &&
-    normalizar(a.assunto) === normalizar(b.assunto)
-  );
-}
-
-function dataOrdenacaoRevisao(revisao: Revisao) {
-  const data =
-    revisao.dataConclusao ??
-    revisao.dataCriacao ??
-    revisao.dataPrevista;
-  const valor = new Date(data).getTime();
-  return Number.isFinite(valor) ? valor : 0;
-}
