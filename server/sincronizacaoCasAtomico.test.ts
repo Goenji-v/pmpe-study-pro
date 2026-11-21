@@ -170,3 +170,17 @@ test("o ensaio de navegador cobre falha de conexão e revisão concorrente sem r
   assert.match(uiTest, /restorationCalls\)\.toBe\(1\)/);
   assert.match(uiTest, /wrongWriteCalls\)\.toBe\(0\)/);
 });
+
+test("staging: importação JSON e backup local usam CAS e checkpoint sob RLS", async () => {
+  const page = await readFile("src/pages/Backup/Backup.tsx", "utf8");
+  const ctx = await readFile("src/context/AppContext.tsx", "utf8");
+  const service = await readFile("src/services/seguranca/restauracaoBackupStagingService.ts", "utf8");
+  assert.match(page, /if \(RESTAURACAO_SEGURA_STAGING\)[\s\S]*restaurarBackupHistoricoSeguroStaging\(null, arquivoAnalisado\.estado\)/);
+  assert.match(page, /if \(RESTAURACAO_SEGURA_STAGING\)[\s\S]*restaurarBackupHistoricoSeguroStaging\(null, estado\)/);
+  assert.match(ctx, /const idRestaurar = backupId \?\?[\s\S]*arquivarBackupParaRestauracaoStaging/);
+  assert.match(service, /VITE_STUDY_PRO_STAGING_GUARD !== "true"/);
+  assert.match(service, /\.from\("backups"\)/);
+  assert.match(service, /user_id: usuarioId/);
+  assert.match(service, /\.insert\(/);
+  assert.match(service, /\.select\("id"\)/);
+});
