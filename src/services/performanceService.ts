@@ -24,14 +24,20 @@ export type RegistroPerformance = {
 
 const CHAVE_SESSAO = "studypro:performance:session";
 
+function gerarIdSessaoSeguro() {
+  const cripto = globalThis.crypto;
+  if (typeof cripto?.randomUUID === "function") return cripto.randomUUID();
+  const bytes = new Uint8Array(16);
+  cripto.getRandomValues(bytes);
+  return `perf-${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function obterSessaoPerformance() {
   if (typeof window === "undefined") return "server";
   const atual = window.sessionStorage.getItem(CHAVE_SESSAO);
   if (atual) return atual;
 
-  const novo = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `perf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const novo = gerarIdSessaoSeguro();
   window.sessionStorage.setItem(CHAVE_SESSAO, novo);
   return novo;
 }
