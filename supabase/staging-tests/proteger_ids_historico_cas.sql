@@ -38,7 +38,7 @@ as $fn$
         or (
           -- Even at equal list length, losing an old ID is a regression.
           -- Existing objects may be edited while preserving their IDs.
-          select pg_catalog.coalesce(
+          select coalesce(
             pg_catalog.bool_or(
               case
                 when c.chave = 'missoesConcluidas'
