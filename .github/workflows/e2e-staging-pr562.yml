@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr562-staging-browser-${{ github.ref }}
-  cancel-in-progress: true
+  group: pr562-staging-browser-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   browser-smoke-staging:
