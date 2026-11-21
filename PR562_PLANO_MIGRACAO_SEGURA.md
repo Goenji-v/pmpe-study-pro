@@ -51,3 +51,29 @@
 - [PR #562](https://github.com/Goenji-v/pmpe-study-pro/pull/562)
 - [Última execução Playwright aprovada desta rodada](https://github.com/Goenji-v/pmpe-study-pro/actions/runs/44894318433)
 - A Vercel gera um deploy separado para cada commit; conferir o `READY` do **HEAD** da PR antes de encaminhar um link de revisão.
+
+## Novo bloqueio confirmado — GoTrue real e histórico imutável (21/11/2026)
+
+### Tentativa de teste Auth real
+
+Foi implementado `scripts/qa/staging-real-auth-pr562.mjs`, que usa exclusivamente a **chave pública** do staging, nunca uma service-role key. O objetivo é criar dois usuários descartáveis via `supabase.auth.signUp`, gerar duas sessões reais da mesma conta e exercitar CAS, RLS e restauração transacional pela API.
+
+As execuções efetivas no GitHub Actions registraram:
+- `email_address_invalid` no primeiro ensaio (domínio reservado `example.com` rejeitado pelo provedor).
+- Após ajustar o e-mail para domínio aceito: `over_email_send_rate_limit`, o limite de e-mails de confirmação do próprio Supabase Auth.
+- **Nenhum usuário de teste foi criado** (`auth.users` com marcador `study-pro-pr562-authenticated-e2e-20261121`: zero). Não houve login real nem execução das etapas CAS/RLS pela sessão de e-mail.
+- O workflow automático de inscrição foi **removido**, para evitar novas tentativas desnecessárias e preservar o limite de e-mails. O script permanece apenas como ferramenta de QA opt-in, desativado por `STUDY_PRO_AUTH_QA_ENABLED` na ausência de autorização/configuração.
+- O login anônimo continua DESATIVADO; não mudar isso nem diminuir a proteção de e-mail por conveniência.
+
+**Para fechar o E2E integrado:** providenciar via fluxo oficial de Auth Admin **contas temporárias de teste com e-mails confirmados**, ou infraestrutura de e-mail de QA (SMTP e inbox sob controle do proprietário), sem trocar senhas no chat e sem usar dados de alunos; configurar apenas no staging, executar testes com duas sessões reais e remover contas ao término. Sem isso, relatar o bloqueio como pendência — um job `success` que só registra o bloqueio **não comprova E2E real**.
+
+### Nova correção anti-regressão
+
+No Supabase staging, `study_pro_internal.tem_regressao_historico` comparava histórico por IDs mas ignorava toda a checagem quando `configuracoes.dadosReiniciadosEm` mudava. Um estado local desatualizado poderia remover sessões ao alterar apenas esse marcador.
+
+O SQL isolado `supabase/staging-tests/proteger_ids_historico_cas.sql` foi atualizado: **a troca do marcador não desativa mais o bloqueio de regressão no CAS comum**. Para zerar a conta ou restaurar um histórico menor, usar obrigatoriamente a função de restauração transacional que salva a versão anterior primeiro.
+
+Teste PostgreSQL real (transação com `ROLLBACK`): CAS com marcador alterado e sessão excluída foi rejeitado e salvou evidência; a RPC `public.restaurar_backup_cas` com confirmação aceitou a operação, criou backup de segurança e persistiu o estado solicitado. Nenhum dado de QA permaneceu.
+
+**Atenção:** isto é uma política nova testada somente na prévia; antes de migrar para produção, revisar todos os pontos da interface que intencionalmente reduzem histórico e encaminhá-los à operação transacional confirmada.
+
