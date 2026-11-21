@@ -202,3 +202,26 @@ test("backup histórico de schema legado passa por migração antes de chamar a 
   assert.match(page, /restaurarBackupHistoricoSeguroStaging\(/);
   assert.match(page, /RESTAURACAO_SEGURA_STAGING/);
 });
+
+test("CAS staging protege IDs persistentes mesmo com o mesmo número de sessões", async () => {
+  const sql = await readFile("supabase/staging-tests/proteger_ids_historico_cas.sql", "utf8");
+  const collections = [
+    "sessoes", "questoes", "revisoes", "simulados", "missoesConcluidas"
+  ];
+  for (const name of collections) {
+    assert.ok(sql.includes(`('${name}')`), `Coleção ${name} ausente da guarda de IDs`);
+  }
+  assert.match(sql, /create or replace function study_pro_internal\.tem_regressao_historico/);
+  assert.match(sql, /set search_path = ''/);
+  assert.match(sql, /jsonb_array_length\(c\.nova\)\s*</);
+  assert.match(sql, /c\.nova @> pg_catalog\.jsonb_build_array\(item\.value\)/);
+  assert.match(sql, /jsonb_build_object\('id', item\.value ->> 'id'\)/);
+  assert.match(sql, /dadosReiniciadosEm/);
+  assert.doesNotMatch(sql, /create or replace function public\./i);
+});
+
+test("mudança da função anti-regressão é isolada do SQL de produção", async () => {
+  const sql = await readFile("supabase/staging-tests/proteger_ids_historico_cas.sql", "utf8");
+  assert.match(sql, /STAGING ONLY/);
+  assert.match(sql, /Must NOT be added to supabase\/migrations/);
+});
