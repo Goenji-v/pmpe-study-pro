@@ -24,6 +24,7 @@ import {
 } from "../../services/seguranca/backupManualService";
 import {
   listarBackupsAutomaticosLocais,
+  verificarIntegridadeBackupAutomaticoLocal,
   type BackupAutomaticoLocal,
 } from "../../services/seguranca/backupAutomaticoService";
 import {
@@ -238,6 +239,10 @@ export default function Backup() {
   }
 
   async function restaurarBackupAutomatico(backup: BackupAutomaticoLocal) {
+    if (!verificarIntegridadeBackupAutomaticoLocal(backup)) {
+      showToast("O backup automático está corrompido (checksum inválido). Nenhum dado foi alterado.", "error");
+      return;
+    }
     const estado = validarEMigrarEstado(backup.dados);
 
     if (!estado) {
