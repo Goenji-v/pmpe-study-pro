@@ -122,7 +122,7 @@ test("revisão explica data ideal, capacidade da agenda e não diz que a etapa r
 
 test("cada card de revisão oferece histórico próprio do assunto", () => {
   assert.match(fonteRevisoes, /📋 Histórico/);
-  assert.match(fonteRevisoes, /Histórico deste assunto/);
+  assert.match(fonteRevisoes, /Histórico integrado deste assunto/);
   assert.match(fonteRevisoes, /montarHistoricoRevisao/);
   assert.match(fonteRevisoes, /Próxima: Etapa/);
   assert.match(fonteRevisoes, /Revisão de teoria/);
