@@ -65,6 +65,23 @@ begin
   end if;
 
   v_new := jsonb_set(v_snapshot, '{syncRevision}', to_jsonb(v_cur_revision + 1), true);
+
+  -- Preserve the newest account reset generation (same rule as frontend).
+  if (v_current #>> '{configuracoes,dadosReiniciadosEm}') is not null
+     and (
+       v_new #>> '{configuracoes,dadosReiniciadosEm}' is null
+       or v_new #>> '{configuracoes,dadosReiniciadosEm}' <
+          v_current #>> '{configuracoes,dadosReiniciadosEm}'
+     )
+  then
+    v_new := jsonb_set(
+      v_new, '{configuracoes,dadosReiniciadosEm}',
+      to_jsonb(v_current #>> '{configuracoes,dadosReiniciadosEm}'), true
+    );
+    v_new := jsonb_set(
+      v_new, '{configuracoes,armazenamentoPorConta}', 'true'::jsonb, true
+    );
+  end if;
   v_new := jsonb_set(v_new, '{atualizadoEm}', to_jsonb(v_now::text), true);
   v_new := jsonb_set(v_new, '{salvoEm}', to_jsonb(v_now::text), true);
 
