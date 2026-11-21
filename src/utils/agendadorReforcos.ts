@@ -34,6 +34,21 @@ export function encontrarDataDisponivelParaReforco(params: {
   const diaIdeal = new Date(dataIdeal);
   diaIdeal.setHours(0, 0, 0, 0);
 
+  // Conclusões já realizadas HOJE também gastaram parte da meta diária.
+  // Não se contam resultados de questões como revisão concluída.
+  const concluidasHoje = revisoes.filter((revisao) => {
+    if (!revisao.concluida || !revisao.dataConclusao) return false;
+    const data = new Date(revisao.dataConclusao);
+    return Number.isFinite(data.getTime()) &&
+      data.getFullYear() === inicio.getFullYear() &&
+      data.getMonth() === inicio.getMonth() &&
+      data.getDate() === inicio.getDate();
+  });
+  const realizadasHoje = concluidasHoje.length;
+  const adaptativasConcluidasHoje = concluidasHoje.filter(
+    (revisao) => revisao.motivoAdaptativo === "baixo_desempenho"
+  ).length;
+
   const existentes = pendentesUnicasPorAssunto(revisoes)
     .map((revisao) => ({
       revisao,
@@ -56,12 +71,16 @@ export function encontrarDataDisponivelParaReforco(params: {
       proxima += 1;
     }
     // Datas passadas e revisões já agendadas entram antes do reforço novo.
-    const ocupadas = fila.splice(0, capacidade);
+    const eHoje = passo === 0;
+    const capacidadeRestante = eHoje
+      ? Math.max(0, capacidade - realizadasHoje) : capacidade;
+    const ocupadas = fila.splice(0, capacidadeRestante);
     const adaptativas = ocupadas.filter(
       ({revisao}) => revisao.motivoAdaptativo === "baixo_desempenho"
-    ).length;
+    ).length + (eHoje ? adaptativasConcluidasHoje : 0);
+    const totalOcupado = ocupadas.length + (eHoje ? realizadasHoje : 0);
     if (dia.getTime() >= diaIdeal.getTime() &&
-        ocupadas.length < capacidade && adaptativas < vagasAdaptativas &&
+        totalOcupado < capacidade && adaptativas < vagasAdaptativas &&
         fila.length === 0) {
       const disponivel = new Date(dia);
       disponivel.setHours(12, 0, 0, 0);
