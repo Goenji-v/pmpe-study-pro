@@ -5,8 +5,8 @@
 -- Operates on a previously saved backup owned by auth.uid().
 -- Requires explicit confirmation text and expected cloud revision.
 -- Saves original state in a separate backup in the same transaction.
--- The STAGING timeline UI uses this RPC; browser E2E is still pending.
--- Importing manual JSON backups still uses the previous flow.
+-- Staging UI routes timeline, imported JSON and local checkpoints to this RPC.
+-- Browser tests with mock API passed; REAL authenticated staging browser E2E is still pending.
 -- Precondition: schema and tables/backups/RLS exist and are compatible.
 
 CREATE OR REPLACE FUNCTION study_pro_internal.restaurar_backup_cas_impl(p_backup_id uuid, p_expected_revision bigint, p_confirmacao text)
