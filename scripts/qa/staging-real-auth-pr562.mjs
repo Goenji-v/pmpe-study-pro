@@ -20,7 +20,7 @@ const clientA = makeClient();
 const clientB = makeClient();
 const makeCredentials = () => {
   const id = randomBytes(12).toString('hex');
-  return { email: `qa-pr562-${id}@example.com`, password: randomBytes(32).toString('base64url') };
+  return { email: `qa-pr562-${id}@gmail.com`, password: randomBytes(32).toString('base64url') };
 };
 const signup = async (client, kind) => {
   const credentials = makeCredentials();
