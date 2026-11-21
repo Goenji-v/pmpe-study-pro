@@ -362,7 +362,7 @@ export function aplicarRevisaoAdaptativa(
     acao: "criada",
     diagnostico,
     dataAgendada: novaRevisao.dataPrevista,
-    adiadaPorCapacidade: dataPrevista.getTime() > dataIdeal.getTime(),
+    adiadaPorCapacidade: dataPrevista.toDateString() !== dataIdeal.toDateString(),
     teoriaRecomendada: false,
   };
 }
