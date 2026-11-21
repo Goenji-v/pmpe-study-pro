@@ -39,6 +39,8 @@ import type {
 } from "../../types/index";
 
 const CHAVE_ULTIMO_BACKUP = "pmpe_ultimo_backup_schema18";
+const RESTAURACAO_SEGURA_STAGING =
+  import.meta.env.VITE_STUDY_PRO_STAGING_GUARD === "true";
 
 export default function Backup() {
   const {
@@ -52,6 +54,7 @@ export default function Backup() {
     configuracoes,
     missoesConcluidas,
     restaurarEstadoCompleto,
+    restaurarBackupHistoricoSeguroStaging,
     statusNuvem,
     alteracoesPendentes,
     ultimaSincronizacao,
@@ -280,7 +283,18 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(backup.estado);
+      if (RESTAURACAO_SEGURA_STAGING) {
+        // The staging RPC checks the revision and creates a cloud safety
+        // copy atomically before replacing the historical state.
+        await restaurarBackupHistoricoSeguroStaging(
+          backup.id,
+          backup.estado
+        );
+      } else {
+        // Preserve the existing official flow. The experimental RPC
+        // does not exist in the production database.
+        await restaurarEstadoCompleto(backup.estado);
+      }
       showToast("Backup da linha do tempo restaurado com segurança.", "success");
 
       if (usuarioId) {
@@ -455,6 +469,13 @@ export default function Backup() {
           <strong>{backupsHistorico.length}</strong>
         </div>
 
+        {RESTAURACAO_SEGURA_STAGING && (
+          <p className="backup-aviso-restauracao-staging">
+            Prévia de testes: a restauração segura exige o estado da nuvem
+            sincronizado, sem alterações pendentes. Uma cópia de segurança
+            será criada antes de alterar os dados.
+          </p>
+        )}
         {carregandoHistorico ? (
           <div className="backup-empty">Carregando linha do tempo...</div>
         ) : backupsHistorico.length === 0 ? (
@@ -481,7 +502,12 @@ export default function Backup() {
                       <button
                         type="button"
                         onClick={() => void restaurarBackupHistorico(backup)}
-                        disabled={importando}
+                        disabled={
+                          importando ||
+                          (RESTAURACAO_SEGURA_STAGING &&
+                            (statusNuvem !== "sincronizado" ||
+                              alteracoesPendentes > 0))
+                        }
                       >
                         Comparar e restaurar
                       </button>
