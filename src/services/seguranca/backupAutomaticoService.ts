@@ -66,6 +66,22 @@ function checksumTexto(texto: string) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
+/** Confere o checksum original antes de restaurar uma cópia local.
+ * O hash FNV-1a detecta corrupção acidental, não é uma assinatura criptográfica.
+ */
+export function verificarIntegridadeBackupAutomaticoLocal(
+  backup: BackupAutomaticoLocal
+): boolean {
+  if (!backup || typeof backup.checksum !== "string") return false;
+  try {
+    const json = JSON.stringify(backup.dados);
+    return typeof json === "string" &&
+      checksumTexto(json) === backup.checksum;
+  } catch {
+    return false;
+  }
+}
+
 function clonarSerializavel(valor: unknown) {
   const serializado = JSON.stringify(valor);
 
