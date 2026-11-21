@@ -219,7 +219,11 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(arquivoAnalisado.estado);
+      if (RESTAURACAO_SEGURA_STAGING) {
+        await restaurarBackupHistoricoSeguroStaging(null, arquivoAnalisado.estado);
+      } else {
+        await restaurarEstadoCompleto(arquivoAnalisado.estado);
+      }
       setArquivoAnalisado(null);
       showToast("Backup restaurado com segurança.", "success");
     } catch (erro) {
@@ -250,7 +254,11 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(estado);
+      if (RESTAURACAO_SEGURA_STAGING) {
+        await restaurarBackupHistoricoSeguroStaging(null, estado);
+      } else {
+        await restaurarEstadoCompleto(estado);
+      }
       showToast("Backup automático restaurado com segurança.", "success");
     } catch (erro) {
       console.error("Erro ao restaurar backup automático:", erro);
@@ -448,7 +456,12 @@ export default function Backup() {
               <button
                 className="backup-button backup-restaurar-confirmado"
                 onClick={() => void confirmarRestauracaoArquivo()}
-                disabled={importando}
+                disabled={
+                  importando ||
+                  (RESTAURACAO_SEGURA_STAGING &&
+                    (statusNuvem !== "sincronizado" ||
+                      alteracoesPendentes > 0))
+                }
               >
                 Restaurar este backup
               </button>
@@ -545,7 +558,12 @@ export default function Backup() {
                 <button
                   type="button"
                   onClick={() => void restaurarBackupAutomatico(backup)}
-                  disabled={importando}
+                  disabled={
+                    importando ||
+                    (RESTAURACAO_SEGURA_STAGING &&
+                      (statusNuvem !== "sincronizado" ||
+                        alteracoesPendentes > 0))
+                  }
                 >
                   Restaurar
                 </button>
