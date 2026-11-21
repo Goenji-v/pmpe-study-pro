@@ -57,6 +57,8 @@ const restoreCases = [
   { name: "backup automático local corrompido é recusado", outcome: "corrupt_local" },
   { name: "backup antigo migra para checkpoint CAS próprio", outcome: "legacy_history" },
   { name: "backup corrompido no histórico não derruba a tela", outcome: "invalid_history" },
+  { name: "sessão nula em backup não oculta backups válidos", outcome: "invalid_null_record" },
+  { name: "sessões duplicadas em backup não ocultam backups válidos", outcome: "invalid_duplicate_record" },
   { name: "zerar conta cria checkpoint e usa restauração CAS", outcome: "reset" },
   { name: "zerar conta cancela sem palavra de confirmação", outcome: "reset_cancel" },
 ] as const;
@@ -207,10 +209,18 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
           resumo: { sessoes: 0, questoes: 0, revisoes: 0, simulados: 0, missoesConcluidas: 0 },
         },
       };
-      return json(200, scenario.outcome === "invalid_history"
+      const invalidBackupState =
+        scenario.outcome === "invalid_history"
+          ? { schemaVersion: 99, sessoes: null }
+          : scenario.outcome === "invalid_null_record"
+          ? { ...snapshot, sessoes: [null] }
+          : scenario.outcome === "invalid_duplicate_record"
+          ? { ...snapshot, sessoes: [{ id: "repeated" }, { id: "repeated" }] }
+          : null;
+      return json(200, invalidBackupState
         ? [
             { ...valid, id: "55555555-3333-4333-8333-555555555555",
-              dados: { ...valid.dados, estado: { schemaVersion: 99, sessoes: null } } },
+              dados: { ...valid.dados, estado: invalidBackupState } },
             valid,
           ]
         : [valid]);
@@ -236,7 +246,7 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
   await expect(page.getByText("Prévia de testes:", { exact: false })).toBeVisible();
 
   const restore = page.getByRole("button", { name: "Comparar e restaurar" }).first();
-  if (scenario.outcome === "invalid_history") {
+  if (["invalid_history", "invalid_null_record", "invalid_duplicate_record"].includes(scenario.outcome)) {
     // An invalid backup should be ignored; the valid checkpoint remains
     // available and the screen must not crash or expose bogus counts.
     await expect(page.getByRole("button", { name: "Comparar e restaurar" })).toHaveCount(1);
