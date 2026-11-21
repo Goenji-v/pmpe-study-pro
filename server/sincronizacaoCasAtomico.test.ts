@@ -184,3 +184,21 @@ test("staging: importação JSON e backup local usam CAS e checkpoint sob RLS", 
   assert.match(service, /\.insert\(/);
   assert.match(service, /\.select\("id"\)/);
 });
+
+test("histórico de backups valida cada registro e não permite snapshot corrompido ocultar a lista", async () => {
+  const source = await readFile("src/services/seguranca/backupHistoricoService.ts", "utf8");
+  assert.match(source, /const migrado = validarEMigrarEstado\(dados\.estado\)/);
+  assert.match(source, /validarIntegridadeEstado\(migrado\)/);
+  assert.match(source, /catch \{\s*return null;\s*\}/);
+  assert.match(source, /const resumo = resumirEstado\(estado\)/);
+  assert.match(source, /\.filter\(\(backup\): backup is BackupHistoricoNuvem => Boolean\(backup\)\)/);
+});
+
+test("backup histórico de schema legado passa por migração antes de chamar a RPC estrita", async () => {
+  const service = await readFile("src/services/seguranca/backupHistoricoService.ts", "utf8");
+  const page = await readFile("src/pages/Backup/Backup.tsx", "utf8");
+  assert.match(service, /precisaMigracao =\s*obterSchemaVersionEstado/);
+  assert.match(page, /backup\.precisaMigracao \? null : backup\.id/);
+  assert.match(page, /restaurarBackupHistoricoSeguroStaging\(/);
+  assert.match(page, /RESTAURACAO_SEGURA_STAGING/);
+});
