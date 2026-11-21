@@ -15,7 +15,6 @@ export type BackupHistoricoNuvem = {
   diaLocal: string;
   janela?: string;
   syncRevision: number;
-  estado: EstadoAppNuvem;
   resumo: ResumoEstadoBackup;
   alteracoes?: ResumoAlteracoesBackup;
 };
@@ -36,11 +35,17 @@ export type ResumoAlteracoesBackup = {
   missoesConcluidas: number;
 };
 
-type LinhaBackup = {
+type LinhaResumoBackup = {
   id: string;
   nome: string;
-  dados: unknown;
   created_at: string;
+  tipo: unknown;
+  diaLocal: unknown;
+  janela: unknown;
+  criadoEm: unknown;
+  syncRevision: unknown;
+  resumo: unknown;
+  alteracoes: unknown;
 };
 
 export async function registrarBackupIncrementalNuvem(
@@ -55,12 +60,19 @@ export async function registrarBackupIncrementalNuvem(
   const nome = `Auto ${local.dia} ${janela}`;
   const resumo = resumirEstado(estado);
 
+  // Os snapshots completos podem ter centenas de KB cada. Para calcular
+  // diferenças buscamos apenas o resumo do checkpoint mais recente.
   const { data: recentes, error: erroConsulta } = await supabase
     .from("backups")
-    .select("id,nome,dados,created_at")
+    .select("resumo:dados->resumo")
     .eq("user_id", usuarioId)
+    .in("dados->>tipo", [
+      "backup_incremental",
+      "backup_oficial_meio_dia",
+      "backup_oficial_fechamento",
+    ])
     .order("created_at", { ascending: false })
-    .limit(30);
+    .limit(1);
 
   if (erroConsulta) {
     throw new Error(
@@ -68,12 +80,11 @@ export async function registrarBackupIncrementalNuvem(
     );
   }
 
-  const anterior = (recentes ?? [])
-    .map((linha) => normalizarLinha(linha as LinhaBackup))
-    .find(Boolean);
-
+  const resumoAnterior: unknown = recentes?.[0]?.resumo;
   const alteracoes = calcularAlteracoes(
-    anterior?.resumo,
+    resumoAnterior && typeof resumoAnterior === "object"
+      ? resumoAnterior as ResumoEstadoBackup
+      : undefined,
     resumo
   );
 
@@ -115,10 +126,19 @@ export async function listarBackupsHistoricoNuvem(
   const limite = new Date();
   limite.setDate(limite.getDate() - 14);
 
+  // A linha do tempo precisa apenas de metadados e contadores, nunca dos
+  // snapshots completos (que podem totalizar dezenas de MB por conta).
   const { data, error } = await supabase
     .from("backups")
-    .select("id,nome,dados,created_at")
+    .select(
+      "id,nome,created_at,tipo:dados->>tipo,diaLocal:dados->>diaLocal,janela:dados->>janela,criadoEm:dados->>criadoEm,syncRevision:dados->syncRevision,resumo:dados->resumo,alteracoes:dados->alteracoes"
+    )
     .eq("user_id", usuarioId)
+    .in("dados->>tipo", [
+      "backup_incremental",
+      "backup_oficial_meio_dia",
+      "backup_oficial_fechamento",
+    ])
     .gte("created_at", limite.toISOString())
     .order("created_at", { ascending: false })
     .limit(120);
@@ -130,8 +150,32 @@ export async function listarBackupsHistoricoNuvem(
   }
 
   return (data ?? [])
-    .map((linha) => normalizarLinha(linha as LinhaBackup))
+    .map((linha) => normalizarResumoLinha(linha as LinhaResumoBackup))
     .filter((backup): backup is BackupHistoricoNuvem => Boolean(backup));
+}
+
+/** Carrega o estado pesado somente quando o usuário escolhe restaurar. */
+export async function carregarEstadoBackupHistoricoNuvem(
+  usuarioId: string,
+  backupId: string
+): Promise<unknown> {
+  const { data, error } = await supabase
+    .from("backups")
+    .select("dados")
+    .eq("user_id", usuarioId)
+    .eq("id", backupId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Não foi possível carregar este backup: ${error.message}`);
+  }
+
+  const dados: unknown = data?.dados;
+  if (!dados || typeof dados !== "object" || !("estado" in dados)) {
+    throw new Error("O backup solicitado não possui um estado recuperável.");
+  }
+
+  return (dados as { estado: unknown }).estado;
 }
 
 export function resumirEstado(
@@ -146,67 +190,52 @@ export function resumirEstado(
   };
 }
 
-function normalizarLinha(
-  linha: LinhaBackup
+function normalizarResumoLinha(
+  linha: LinhaResumoBackup
 ): BackupHistoricoNuvem | null {
-  if (!linha.dados || typeof linha.dados !== "object") {
-    return null;
-  }
-
-  const dados = linha.dados as {
-    tipo?: unknown;
-    diaLocal?: unknown;
-    janela?: unknown;
-    criadoEm?: unknown;
-    syncRevision?: unknown;
-    estado?: unknown;
-    resumo?: unknown;
-    alteracoes?: unknown;
-  };
-
   if (
-    dados.tipo !== "backup_incremental" &&
-    dados.tipo !== "backup_oficial_meio_dia" &&
-    dados.tipo !== "backup_oficial_fechamento"
+    linha.tipo !== "backup_incremental" &&
+    linha.tipo !== "backup_oficial_meio_dia" &&
+    linha.tipo !== "backup_oficial_fechamento"
   ) {
     return null;
   }
 
-  if (!dados.estado || typeof dados.estado !== "object") {
+  // Todos os checkpoints do Schema 18 gravam um resumo independente.
+  if (!linha.resumo || typeof linha.resumo !== "object") {
     return null;
   }
 
-  const estado = dados.estado as EstadoAppNuvem;
-  const resumo =
-    dados.resumo && typeof dados.resumo === "object"
-      ? (dados.resumo as ResumoEstadoBackup)
-      : resumirEstado(estado);
+  const resumo = linha.resumo as ResumoEstadoBackup;
+  if (
+    !["sessoes", "questoes", "revisoes", "simulados", "missoesConcluidas"]
+      .every((chave) => typeof resumo[chave as keyof ResumoEstadoBackup] === "number")
+  ) {
+    return null;
+  }
 
   return {
     id: linha.id,
     nome: linha.nome,
     criadoEm:
-      typeof dados.criadoEm === "string"
-        ? dados.criadoEm
+      typeof linha.criadoEm === "string"
+        ? linha.criadoEm
         : linha.created_at,
-    tipo: dados.tipo,
+    tipo: linha.tipo,
     diaLocal:
-      typeof dados.diaLocal === "string"
-        ? dados.diaLocal
+      typeof linha.diaLocal === "string"
+        ? linha.diaLocal
         : obterHorarioRecife(new Date(linha.created_at)).dia,
     janela:
-      typeof dados.janela === "string"
-        ? dados.janela
+      typeof linha.janela === "string"
+        ? linha.janela
         : undefined,
     syncRevision:
-      typeof dados.syncRevision === "number"
-        ? dados.syncRevision
-        : obterRevisao(estado),
-    estado,
+      typeof linha.syncRevision === "number" ? linha.syncRevision : 0,
     resumo,
     alteracoes:
-      dados.alteracoes && typeof dados.alteracoes === "object"
-        ? (dados.alteracoes as ResumoAlteracoesBackup)
+      linha.alteracoes && typeof linha.alteracoes === "object"
+        ? linha.alteracoes as ResumoAlteracoesBackup
         : undefined,
   };
 }

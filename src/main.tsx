@@ -10,7 +10,7 @@ import {
   tentarRecarregarChunkObsoletoUmaVez,
 } from "./utils/erroChunkDinamico";
 
-import { deveAdiarAtualizacaoAutomatica } from "./utils/atualizacaoSegura";
+import { deveAdiarAtualizacaoAutomatica, deveAdiarAtualizacaoPorSincronizacao } from "./utils/atualizacaoSegura";
 
 import "./global.css";
 
@@ -50,8 +50,8 @@ async function verificarNovaVersao() {
       return;
     }
 
-    if (deveAdiarAtualizacaoAutomatica(window.location.pathname)) {
-      // Não recarregue prova ou redação durante a atividade.
+    if (deveAdiarAtualizacaoAutomatica(window.location.pathname) || deveAdiarAtualizacaoPorSincronizacao()) {
+      // Não recarregue prova, redação ou fila de sincronização pendente.
       return;
     }
 
