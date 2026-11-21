@@ -21,6 +21,15 @@ function state(revision: number) {
     salvoEm: now, atualizadoEm: now,
   };
 }
+function checksumLocal(json: string) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < json.length; i++) {
+    hash ^= json.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 function fixtureSession() {
   const user = {
     id: userId, aud: "authenticated", role: "authenticated",
@@ -44,6 +53,8 @@ const restoreCases = [
   { name: "revisão concorrente recusa restauração", outcome: "stale" },
   { name: "falha na resposta da RPC não tenta gravar backup antigo", outcome: "uncertain" },
   { name: "JSON exportado e importado volta pela restauração segura", outcome: "import" },
+  { name: "backup automático local restaura com cópia na nuvem", outcome: "local" },
+  { name: "backup automático local corrompido é recusado", outcome: "corrupt_local" },
 ] as const;
 
 for (const scenario of restoreCases) {
@@ -65,11 +76,31 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
   let importedBackupId: string | null = null;
   let importedState: ReturnType<typeof state> | null = null;
 
-  await page.addInitScript(({ key, session }) => {
+  await page.addInitScript(({ key, session, autoBackup }) => {
     window.localStorage.setItem(key, JSON.stringify(session));
+    if (autoBackup) {
+      window.localStorage.setItem(
+        `pmpe:seguranca:backups-automaticos:${session.user.id}`,
+        JSON.stringify([autoBackup])
+      );
+    }
   }, {
     key: "sb-isjzyyoqvftrltkctanw-auth-token",
     session: fixtureSession(),
+    autoBackup: (scenario.outcome === "local" || scenario.outcome === "corrupt_local")
+      ? {
+        id: "auto-fixture-1",
+        usuarioId: userId,
+        criadoEm: now,
+        motivo: "antes_restauracao_manual",
+        schemaVersionOrigem: 18,
+        schemaVersionDestino: 18,
+        checksum: scenario.outcome === "corrupt_local"
+          ? "00000000"
+          : checksumLocal(JSON.stringify(snapshot)),
+        dados: snapshot,
+      }
+      : null,
   });
 
   // Intercept ALL staging URLs: the test never contacts staging with a
@@ -95,7 +126,9 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
     if (url.pathname.endsWith("/rpc/restaurar_backup_cas")) {
       restorationCalls++;
       const body = req.postDataJSON() as Record<string, unknown>;
-      expect(body.p_backup_id).toBe(scenario.outcome === "import" ? importedBackupId : backupId);
+      expect(body.p_backup_id).toBe(
+        ["import", "local"].includes(scenario.outcome) ? importedBackupId : backupId
+      );
       expect(body.p_expected_revision).toBe(current.syncRevision);
       expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
       if (scenario.outcome === "stale") {
@@ -200,14 +233,28 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
     await expect(page.getByText("Backup validado", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Restaurar este backup" }).click();
     await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+  } else if (scenario.outcome === "local" || scenario.outcome === "corrupt_local") {
+    const localButton = page.getByRole("button", { name: "Restaurar", exact: true }).first();
+    await expect(localButton).toBeEnabled();
+    await localButton.click();
+    if (scenario.outcome === "corrupt_local") {
+      await expect(page.getByText(/checksum inválido/i)).toBeVisible();
+      expect(restorationCalls).toBe(0);
+      expect(importedBackupId).toBeNull();
+      expect(wrongWriteCalls).toBe(0);
+      return;
+    }
+    await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
   } else {
     await restore.click();
   }
   await expect.poll(() => restorationCalls, { timeout: 15_000 }).toBe(1);
-  if (scenario.outcome === "success" || scenario.outcome === "import") {
+  if (scenario.outcome === "success" || scenario.outcome === "import" || scenario.outcome === "local") {
     await expect(page.getByText(
       scenario.outcome === "import"
         ? "Backup restaurado com segurança."
+        : scenario.outcome === "local"
+        ? "Backup automático restaurado com segurança."
         : "Backup da linha do tempo restaurado com segurança."
     )).toBeVisible();
   } else if (scenario.outcome === "stale") {
