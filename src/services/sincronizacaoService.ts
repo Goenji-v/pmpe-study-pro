@@ -514,6 +514,33 @@ export function validarIntegridadeEstado(
     }
   });
 
+  // Prevent silent loss when a backup's collection has null entries,
+  // invalid IDs or duplicates. Each record identity must survive CAS.
+  const colecoesComId: Array<[string, unknown]> = [
+    ["sessoes", estado.sessoes],
+    ["questoes", estado.questoes],
+    ["revisoes", estado.revisoes],
+    ["simulados", estado.simulados],
+  ];
+  colecoesComId.forEach(([nome, registros]) => {
+    if (!Array.isArray(registros)) return;
+    const ids = new Set<string>();
+    registros.forEach((registro: unknown, indice) => {
+      const id =
+        registro !== null && typeof registro === "object" && !Array.isArray(registro)
+          ? (registro as { id?: unknown }).id
+          : undefined;
+      if (typeof id !== "string" || !id.trim()) {
+        erros.push(`registro inválido em ${nome} na posição ${indice}`);
+        return;
+      }
+      if (ids.has(id)) {
+        erros.push(`ID duplicado em ${nome}: ${id}`);
+      }
+      ids.add(id);
+    });
+  });
+
   const idsMaterias = new Set<string>();
 
   estado.materias.forEach((materia, indiceMateria) => {
