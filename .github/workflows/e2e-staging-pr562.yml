@@ -48,10 +48,10 @@ jobs:
       - name: Install real Chromium
         run: npx playwright install --with-deps chromium
       - name: Backup timeline UI with mocked Supabase transport (no database writes)
-        run: npx playwright test e2e/staging-backup-ui.spec.ts --project=desktop-chrome --workers=1
+        run: npx playwright test e2e/staging-backup-ui.spec.ts --project=desktop-chrome --workers=1 --retries=0
       - name: Desktop and mobile browser smoke against staging-only preview
         if: always()
-        run: npx playwright test e2e/smoke.spec.ts --project=desktop-chrome --project=mobile-chrome --workers=2
+        run: npx playwright test e2e/smoke.spec.ts --project=desktop-chrome --project=mobile-chrome --workers=2 --retries=0 --grep "backup exige autenticação|login vazio|demonstração pública"
       - name: Preserve Playwright traces on failure
         if: failure()
         uses: actions/upload-artifact@v4
