@@ -202,8 +202,9 @@ test("dúvida em aula cria revisão para o dia seguinte sem duplicar o assunto",
     agora: AGORA,
   });
 
-  assert.equal(repetido.acao, "atualizada");
+  assert.equal(repetido.acao, "registrada");
   assert.equal(repetido.revisoes.length, 1);
+  assert.equal(repetido.revisoes, criado.revisoes);
 });
 
 
@@ -280,4 +281,48 @@ test("duas notas abaixo de 60% trocam orientação para teoria sem antecipar a r
   assert.equal(recuperacao.revisoes[0].sequenciaResultadosBaixos,0);
   assert.equal(recuperacao.revisoes[0].reforcoTeoriaRecomendado,false);
   assert.equal(recuperacao.revisoes[0].dataPrevista,agendada);
+});
+
+
+test("dúvida com revisão existente não muda etapa/data nem cria outro ciclo", () => {
+  const existente=criarRevisao({dataPrevista:"2026-09-10T12:00:00"});
+  const snap=JSON.stringify(existente);
+  const result=aplicarRevisaoPorDuvida({
+    ...referencia, revisoes:[existente],agora:AGORA,limiteDiario:2,
+  });
+  assert.equal(result.acao,"registrada");
+  assert.deepEqual(result.revisoes,[existente]);
+  assert.equal(JSON.stringify(existente),snap);
+});
+
+test("dúvida em outra aula da mesma família não gera revisão paralela",()=>{
+  const pendente:Revisao={
+    id:"r-conectivos",materiaId:"rlm",assuntoId:"logica-conectivos",
+    materia:"RLM",assunto:"Conectivos lógicos",etapa:4,
+    concluida:false,dataCriacao:"2026-08-17",dataPrevista:"2026-09-12T12:00:00",
+  };
+  const result=aplicarRevisaoPorDuvida({
+    revisoes:[pendente],materiaId:"rlm2",assuntoId:"tabelas",
+    materia:"Raciocínio Lógico e Matemática",assunto:"Tabelas-verdade",
+    agora:AGORA,limiteDiario:5,
+  });
+  assert.equal(result.acao,"registrada");
+  assert.equal(result.revisoes[0],pendente);
+});
+
+test("dúvida só agenda reforço após as revisões atrasadas e previstas",()=>{
+  const pendentes:Revisao[]=Array.from({length:3},(_,i)=>({
+    id:"atr-"+i,materiaId:"p",assuntoId:"a"+i,materia:"Português",
+    assunto:"Assunto "+i,etapa:2,concluida:false,
+    dataCriacao:"2026-08-10",dataPrevista:"2026-08-21T12:00:00",
+  }));
+  const resultado=aplicarRevisaoPorDuvida({
+    revisoes:pendentes,...referencia,agora:AGORA,limiteDiario:2,
+    criarId:()=>"reforco-duvida",
+  });
+  assert.equal(resultado.acao,"criada");
+  assert.equal(resultado.revisoes.length,4);
+  assert.equal(resultado.revisoes[0].motivoAdaptativo,"duvida");
+  assert.ok(new Date(resultado.revisoes[0].dataPrevista)>AGORA);
+  assert.deepEqual(resultado.revisoes.slice(1),pendentes);
 });
