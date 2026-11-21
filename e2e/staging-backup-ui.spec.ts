@@ -133,7 +133,15 @@ test("prévia staging: botão de backup usa RPC CAS protegida por meio da interf
   await expect(page.getByText("Prévia de testes:", { exact: false })).toBeVisible();
 
   const restore = page.getByRole("button", { name: "Comparar e restaurar" }).first();
-  await expect(restore).toBeEnabled({ timeout: 20_000 });
+  try {
+    await expect(restore).toBeEnabled({ timeout: 8_000 });
+  } catch (error) {
+    // Debug only: show UI state without outputting session tokens or secrets.
+    const summary = await page.locator("body").innerText();
+    console.info("STAGING_BACKUP_UI_STATUS:", summary.slice(0, 4800));
+    console.info("STAGING_BACKUP_UI_WRITE_COUNTS:", { restorationCalls, wrongWriteCalls });
+    throw error;
+  }
   await restore.click();
   await expect.poll(() => restorationCalls, { timeout: 15_000 }).toBe(1);
   await expect(page.getByText("Backup da linha do tempo restaurado com segurança.")).toBeVisible();
