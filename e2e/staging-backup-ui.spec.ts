@@ -41,7 +41,12 @@ function fixtureSession() {
 test("prévia staging: botão de backup usa RPC CAS protegida por meio da interface", async ({ page }) => {
   test.setTimeout(60_000);
   const target = new URL(process.env.E2E_BASE_URL ?? "");
-  expect(target.hostname).toBe("pmpe-study-9qdvpurh6-pmpe-study-pro.vercel.app");
+  if (process.env.E2E_LOCAL_STAGING_MOCKS === "true") {
+    expect(target.hostname).toBe("127.0.0.1");
+    expect(target.port).toBe("4173");
+  } else {
+    expect(target.hostname).toBe("pmpe-study-9qdvpurh6-pmpe-study-pro.vercel.app");
+  }
 
   let current = state(2);
   const snapshot = state(1);
