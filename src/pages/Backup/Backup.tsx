@@ -300,7 +300,9 @@ export default function Backup() {
         // The staging RPC checks the revision and creates a cloud safety
         // copy atomically before replacing the historical state.
         await restaurarBackupHistoricoSeguroStaging(
-          backup.id,
+          // A legacy snapshot must be migrated into a new user-owned
+          // checkpoint before the strict schema-18 staging RPC accepts it.
+          backup.precisaMigracao ? null : backup.id,
           backup.estado
         );
       } else {
