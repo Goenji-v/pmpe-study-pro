@@ -1,4 +1,5 @@
 import type { Revisao } from "../types";
+import { chaveAssuntoPrincipal } from "./revisoesAssuntoPrincipal";
 
 export const MINIMO_QUESTOES_REVISAO_ADAPTATIVA = 5;
 
@@ -128,6 +129,7 @@ export function orientarRevisaoPorResultado(
 type AcaoRevisaoAdaptativa =
   | "ignorada"
   | "registrada"
+  | "diagnostico"
   | "criada"
   | "atualizada";
 
@@ -141,6 +143,8 @@ type AplicarRevisaoAdaptativaParams = {
   assunto: string;
   certas: number;
   erradas: number;
+  /** Obrigatório: resultado de questões isoladas não comprova aula concluída. */
+  conteudoEstudado: boolean;
   agora?: Date;
   criarId?: () => string;
 };
@@ -220,6 +224,16 @@ export function aplicarRevisaoAdaptativa(
     params.certas,
     params.erradas
   );
+
+  // Um treino realizado antes da conclusão registra apenas a nota na
+  // tabela de questões. NUNCA cria nem antecipa a revisão espaçada.
+  if (!params.conteudoEstudado) {
+    return {
+      revisoes: params.revisoes,
+      acao: "diagnostico",
+      diagnostico,
+    };
+  }
 
   if (!diagnostico) {
     const total = params.certas + params.erradas;
@@ -320,6 +334,17 @@ export function aplicarRevisaoAdaptativa(
       acao: "atualizada",
       diagnostico,
     };
+  }
+
+  // Mesmo que o ID/texto da aula tenha mudado após importar um edital,
+  // nunca abrir uma segunda pendência para a mesma família de revisão.
+  // Não reatribuir IDs do registro anterior a outro subassunto.
+  const chave = chaveAssuntoPrincipal(params);
+  if (chave && params.revisoes.some((revisao) =>
+    !revisao.concluida && !revisao.integradaEmId &&
+    chaveAssuntoPrincipal(revisao) === chave
+  )) {
+    return { revisoes: params.revisoes, acao: "diagnostico", diagnostico };
   }
 
   const novaRevisao: Revisao = {
