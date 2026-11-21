@@ -18,9 +18,19 @@ const makeClient = () => createClient(URL, key, {
 });
 const clientA = makeClient();
 const clientB = makeClient();
+// Only send confirmation mail to a QA inbox owned and configured by the
+// operator; never make up random recipients on third-party email domains.
 const makeCredentials = () => {
+  const inbox = process.env.STUDY_PRO_QA_OWNED_INBOX ?? '';
+  const match = inbox.match(/^([^@+\\s]+)@([^@\\s]+\\.[^@\\s]+)$/);
+  if (!match) {
+    throw new Error('A dedicated, user-controlled QA email inbox must be configured');
+  }
   const id = randomBytes(12).toString('hex');
-  return { email: `qa-pr562-${id}@gmail.com`, password: randomBytes(32).toString('base64url') };
+  return {
+    email: `${match[1]}+pr562-${id}@${match[2]}`,
+    password: randomBytes(32).toString('base64url'),
+  };
 };
 const signup = async (client, kind) => {
   const credentials = makeCredentials();
