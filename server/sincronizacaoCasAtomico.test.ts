@@ -239,3 +239,23 @@ test("staging: marcador de reinício sozinho não autoriza descartar histórico 
   assert.match(restore, /insert into public\.backups/);
   assert.match(restore, /update public\.configuracoes/);
 });
+
+test("restauração rejeita entradas nulas e IDs repetidos em cada coleção essencial", async () => {
+  const sql = await readFile("supabase/staging-tests/restaurar_backup_cas_prototype.sql", "utf8");
+  const source = await readFile("src/services/sincronizacaoService.ts", "utf8");
+  assert.match(sql, /foreach v_colecao in array array\['sessoes','questoes','revisoes','simulados'\]/);
+  assert.match(sql, /jsonb_typeof\(v_registro\) is distinct from 'object'/);
+  assert.match(sql, /jsonb_typeof\(v_registro -> 'id'\) is distinct from 'string'/);
+  assert.match(sql, /'Registro inválido ou duplicado em %'/);
+  assert.ok(
+    sql.indexOf("Registro inválido ou duplicado em %") < sql.indexOf("insert into public.backups"),
+    "O banco deve rejeitar o registro inválido antes de salvar ou substituir o estado"
+  );
+  assert.match(source, /const colecoesComId: Array<\[string, unknown\]>/);
+  assert.match(source, /\["sessoes", estado\.sessoes\]/);
+  assert.match(source, /\["questoes", estado\.questoes\]/);
+  assert.match(source, /\["revisoes", estado\.revisoes\]/);
+  assert.match(source, /\["simulados", estado\.simulados\]/);
+  assert.match(source, /registro inválido em/);
+  assert.match(source, /ID duplicado em/);
+});
