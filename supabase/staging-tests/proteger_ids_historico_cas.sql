@@ -1,8 +1,7 @@
--- STAGING ONLY: strengthen CAS regression detection using persistent IDs.
--- Must NOT be added to supabase/migrations or run against production before
--- completing a release review and compatibility tests.
--- Existing anti-regression counted entries only. Replacing one old session
--- or review with another of the same count was incorrectly accepted.
+-- STAGING ONLY: protect retained study history by persistent IDs.
+-- Do not deploy to production without a coordinated, reviewed migration.
+-- Replaces quadratic per-ID JSONB containment with set-based EXCEPT,
+-- preserving performance for large study histories.
 create or replace function study_pro_internal.tem_regressao_historico(
   p_atual jsonb,
   p_novo jsonb
@@ -11,7 +10,7 @@ language sql
 immutable
 set search_path = ''
 as $fn$
-  with colecoes as (
+  with colecoes as materialized (
     select
       k.chave,
       case when pg_catalog.jsonb_typeof(p_atual -> k.chave) = 'array'
@@ -25,37 +24,49 @@ as $fn$
       ('simulados'),
       ('missoesConcluidas')
     ) as k(chave)
+  ),
+  antigos as (
+    select c.chave,
+      case when c.chave = 'missoesConcluidas'
+        then case when pg_catalog.jsonb_typeof(item.value) = 'string'
+          then item.value #>> '{}' else null end
+        when pg_catalog.jsonb_typeof(item.value) = 'object'
+          and pg_catalog.jsonb_typeof(item.value -> 'id') = 'string'
+        then item.value ->> 'id'
+        else null
+      end as id
+    from colecoes c
+    cross join lateral pg_catalog.jsonb_array_elements(c.antiga) item(value)
+  ),
+  novos as (
+    select c.chave,
+      case when c.chave = 'missoesConcluidas'
+        then case when pg_catalog.jsonb_typeof(item.value) = 'string'
+          then item.value #>> '{}' else null end
+        when pg_catalog.jsonb_typeof(item.value) = 'object'
+          and pg_catalog.jsonb_typeof(item.value -> 'id') = 'string'
+        then item.value ->> 'id'
+        else null
+      end as id
+    from colecoes c
+    cross join lateral pg_catalog.jsonb_array_elements(c.nova) item(value)
   )
   select
     coalesce(p_atual #>> '{configuracoes,dadosReiniciadosEm}', '') =
     coalesce(p_novo  #>> '{configuracoes,dadosReiniciadosEm}', '')
-    and exists (
-      select 1
-      from colecoes c
-      where
-        pg_catalog.jsonb_array_length(c.nova) <
-          pg_catalog.jsonb_array_length(c.antiga)
-        or (
-          -- Even at equal list length, losing an old ID is a regression.
-          -- Existing objects may be edited while preserving their IDs.
-          select coalesce(
-            pg_catalog.bool_or(
-              case
-                when c.chave = 'missoesConcluidas'
-                     and pg_catalog.jsonb_typeof(item.value) = 'string'
-                then not (c.nova @> pg_catalog.jsonb_build_array(item.value))
-                when c.chave <> 'missoesConcluidas'
-                     and pg_catalog.jsonb_typeof(item.value) = 'object'
-                     and pg_catalog.jsonb_typeof(item.value -> 'id') = 'string'
-                then not (c.nova @> pg_catalog.jsonb_build_array(
-                  pg_catalog.jsonb_build_object('id', item.value ->> 'id')
-                ))
-                else false
-              end
-            ),
-            false
-          )
-          from pg_catalog.jsonb_array_elements(c.antiga) as item(value)
-        )
+    and (
+      exists (
+        select 1 from colecoes c
+        where pg_catalog.jsonb_array_length(c.nova) <
+              pg_catalog.jsonb_array_length(c.antiga)
+      )
+      or exists (
+        select 1
+        from (
+          select chave, id from antigos where id is not null
+          except
+          select chave, id from novos where id is not null
+        ) as removidos
+      )
     );
 $fn$;
