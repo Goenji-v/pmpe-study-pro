@@ -16,8 +16,10 @@ export function encontrarDataDisponivelParaReforco(params: {
   agora: Date;
   revisoes: readonly Revisao[];
   limiteDiario: number;
+  /** Mesma agenda para revisões normais e reforços; a reserva se aplica só aos reforços. */
+  categoria?: "regular" | "reforco";
 }): Date | null {
-  const { dataIdeal, agora, revisoes, limiteDiario } = params;
+  const { dataIdeal, agora, revisoes, limiteDiario, categoria = "reforco" } = params;
   if (!Number.isFinite(dataIdeal.getTime()) || !Number.isFinite(agora.getTime())) {
     return null;
   }
@@ -80,7 +82,8 @@ export function encontrarDataDisponivelParaReforco(params: {
     ).length + (eHoje ? adaptativasConcluidasHoje : 0);
     const totalOcupado = ocupadas.length + (eHoje ? realizadasHoje : 0);
     if (dia.getTime() >= diaIdeal.getTime() &&
-        totalOcupado < capacidade && adaptativas < vagasAdaptativas &&
+        totalOcupado < capacidade &&
+        (categoria === "regular" || adaptativas < vagasAdaptativas) &&
         fila.length === 0) {
       const disponivel = new Date(dia);
       disponivel.setHours(12, 0, 0, 0);
