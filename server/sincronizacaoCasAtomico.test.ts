@@ -228,3 +228,14 @@ test("mudança da função anti-regressão é isolada do SQL de produção", asy
   assert.match(sql, /STAGING ONLY/);
   assert.match(sql, /Do not deploy to production/);
 });
+
+test("staging: marcador de reinício sozinho não autoriza descartar histórico via CAS", async () => {
+  const sql = await readFile("supabase/staging-tests/proteger_ids_historico_cas.sql", "utf8");
+  const restore = await readFile("supabase/staging-tests/restaurar_backup_cas_prototype.sql", "utf8");
+  assert.match(sql, /dadosReiniciadosEm marker must not bypass CAS/);
+  assert.doesNotMatch(sql, /coalesce\(p_atual #>> '\{configuracoes,dadosReiniciadosEm\}', ''\)\s*=/);
+  assert.match(sql, /select chave, id from antigos where id is not null/);
+  assert.match(restore, /'CONFIRMO_RESTAURACAO'/);
+  assert.match(restore, /insert into public\.backups/);
+  assert.match(restore, /update public\.configuracoes/);
+});
