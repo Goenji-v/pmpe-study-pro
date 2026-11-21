@@ -104,3 +104,43 @@ test("prévia isolada não utiliza a API externa de produção", async () => {
   assert.match(codigo, /API externa não isolada da produção/);
   assert.ok(codigo.indexOf("API externa não isolada da produção") < codigo.indexOf("const fallbackProducao"));
 });
+
+test("restauração de histórico usa CAS somente no staging e nunca chama o RPC na produção", async () => {
+  const page = await readFile("src/pages/Backup/Backup.tsx", "utf8");
+  const service = await readFile("src/services/seguranca/restauracaoBackupStagingService.ts", "utf8");
+  assert.match(page, /VITE_STUDY_PRO_STAGING_GUARD === "true"/);
+  assert.match(page, /RESTAURACAO_SEGURA_STAGING[\s\S]*restaurarBackupHistoricoSeguroStaging/);
+  assert.match(page, /if \(RESTAURACAO_SEGURA_STAGING\)[\s\S]*restaurarBackupHistoricoSeguroStaging\([\s\S]*else \{[\s\S]*restaurarEstadoCompleto\(backup\.estado\)/);
+  assert.match(service, /VITE_SUPABASE_URL !== "https:\/\/isjzyyoqvftrltkctanw\.supabase\.co"/);
+  assert.match(service, /supabase\.rpc\("restaurar_backup_cas"/);
+  assert.match(service, /p_confirmacao: "CONFIRMO_RESTAURACAO"/);
+});
+
+test("restauração CAS é serializada e bloqueia conflitos, offline e progresso local não salvo", async () => {
+  const ctx = await readFile("src/context/AppContext.tsx", "utf8");
+  const start = ctx.indexOf("async function restaurarBackupHistoricoSeguroStaging(");
+  const end = ctx.indexOf("async function restaurarEstadoCompleto(", start);
+  assert.ok(start > 0 && end > start, "Cannot find staging restore function");
+  const section = ctx.slice(start, end);
+  assert.match(section, /navegadorEstaOnline\(\)/);
+  assert.match(section, /executarOperacaoNuvemSerializada/);
+  assert.match(section, /alteracoesPendentes > 0/);
+  assert.match(section, /obterEstadoPendenteSincronizacao\(usuario\.id\)/);
+  assert.match(section, /assinaturaEstado\(estadoLocal\) !== ultimoEstadoSalvoRef\.current/);
+  assert.match(section, /revisaoRemota !== revisaoBaseRef\.current/);
+  assert.match(section, /criarBackupAutomaticoLocal\(/);
+  assert.match(section, /restaurarBackupHistoricoStaging\(/);
+  assert.match(section, /confirmarSincronizacaoLocal\(/);
+  assert.doesNotMatch(section, /salvarEstadoNaNuvem|onConflict|rollback/i);
+});
+
+test("protótipo de restauração preserva geração de reinício e copia o histórico antes de gravar", async () => {
+  const script = await readFile("supabase/staging-tests/restaurar_backup_cas_prototype.sql", "utf8");
+  assert.match(script, /v_current #>> '\{configuracoes,dadosReiniciadosEm\}'/);
+  assert.match(script, /v_new #>> '\{configuracoes,dadosReiniciadosEm\}'/);
+  assert.match(script, /jsonb_typeof\(v_snapshot -> 'bancoQuestoes'\) IS DISTINCT FROM 'array'/);
+  assert.match(script, /jsonb_typeof\(v_snapshot -> 'simuladosGerados'\) IS DISTINCT FROM 'array'/);
+  const backupInsert = script.indexOf("insert into public.backups");
+  const configUpdate = script.indexOf("update public.configuracoes");
+  assert.ok(backupInsert > 0 && configUpdate > backupInsert, "Safety copy must precede cloud update");
+});
