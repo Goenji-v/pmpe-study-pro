@@ -168,3 +168,21 @@ test("após finalizar revisão difícil, a próxima etapa respeita vagas de refo
   assert.equal(futuras?.dataPrevista.slice(0,10),"2026-11-22");
   assert.equal(atuais[0].dataPrevista,"2026-11-22T12:00:00");
 });
+
+
+test("dúvidas e notas baixas compartilham só duas vagas adaptativas quando a meta é cinco",()=>{
+  const primeira=aplicarRevisaoPorDuvida({
+    revisoes:[],materiaId:"inf",assuntoId:"windows",materia:"Informática",
+    assunto:"Windows",agora:AGORA,limiteDiario:5,criarId:()=>"duvida1",
+  });
+  const segunda=aplicarRevisaoPorDuvida({
+    revisoes:primeira.revisoes,materiaId:"p",assuntoId:"gramatica",
+    materia:"Português",assunto:"Sintaxe",agora:AGORA,
+    limiteDiario:5,criarId:()=>"duvida2",
+  });
+  const notaBaixa=aplicar(segunda.revisoes,"Crase","nota3",5);
+  assert.equal(primeira.revisoes[0].dataPrevista.slice(0,10),"2026-11-22");
+  assert.equal(segunda.revisoes[0].dataPrevista.slice(0,10),"2026-11-22");
+  assert.equal(notaBaixa.dataAgendada?.slice(0,10),"2026-11-23");
+  assert.equal(notaBaixa.revisoes.length,3);
+});
