@@ -20,6 +20,7 @@ const referencia = {
   materia: "Português",
   modulo: "Fonologia",
   assunto: "Encontros vocálicos",
+  conteudoEstudado: true,
 };
 
 test("não dispara revisão com menos de cinco questões", () => {
@@ -205,4 +206,38 @@ test("dúvida em aula cria revisão para o dia seguinte sem duplicar o assunto",
 
   assert.equal(repetido.acao, "atualizada");
   assert.equal(repetido.revisoes.length, 1);
+});
+
+
+test("nota baixa antes de concluir a aula é diagnóstico, sem criar revisão", () => {
+  const resultado=aplicarRevisaoAdaptativa({
+    revisoes:[], ...referencia,
+    conteudoEstudado:false, certas:2, erradas:8, agora:AGORA,
+  });
+  assert.equal(resultado.acao,"diagnostico");
+  assert.equal(resultado.diagnostico?.percentual,20);
+  assert.deepEqual(resultado.revisoes,[]);
+});
+
+test("treino antes da aula não antecipa nem altera revisão já existente", () => {
+  const pendente=criarRevisao({dataPrevista:"2026-09-01T12:00:00"});
+  const resultado=aplicarRevisaoAdaptativa({
+    revisoes:[pendente], ...referencia,
+    conteudoEstudado:false, certas:1, erradas:9, agora:AGORA,
+  });
+  assert.equal(resultado.acao,"diagnostico");
+  assert.equal(resultado.revisoes[0],pendente);
+});
+
+test("duas aulas já estudadas na mesma família não criam ciclos de revisão paralelos", () => {
+  const revisaoRLM:Revisao={id:"rlm-principal",materiaId:"rlm-1",assuntoId:"conectivos",
+    materia:"RLM",assunto:"Conectivos lógicos",etapa:3,dataCriacao:"2026-08-10",
+    dataPrevista:"2026-08-23",concluida:false};
+  const resultado=aplicarRevisaoAdaptativa({
+    revisoes:[revisaoRLM],materiaId:"rlm-2",assuntoId:"tabelas",
+    materia:"Raciocínio Lógico e Matemática",assunto:"Tabelas-verdade",
+    certas:2,erradas:8,conteudoEstudado:true,agora:AGORA,
+  });
+  assert.equal(resultado.acao,"diagnostico");
+  assert.deepEqual(resultado.revisoes,[revisaoRLM]);
 });
