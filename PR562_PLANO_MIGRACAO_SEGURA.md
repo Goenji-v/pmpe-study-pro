@@ -56,7 +56,7 @@
 
 ### Tentativa de teste Auth real
 
-Foi implementado `scripts/qa/staging-real-auth-pr562.mjs`, que usa exclusivamente a **chave pública** do staging, nunca uma service-role key. O objetivo é criar dois usuários descartáveis via `supabase.auth.signUp`, gerar duas sessões reais da mesma conta e exercitar CAS, RLS e restauração transacional pela API.
+Foi implementado `scripts/qa/staging-real-auth-pr562.mjs`, usando exclusivamente a **chave pública** do staging, nunca uma service-role key. O script **não cria mais usuários automaticamente**: exige duas contas de QA pré-existentes e confirmadas, com `app_metadata.study_pro_qa=true` definido pelo administrador. Ao iniciar, recusa contas com histórico já existente e exige duas sessões GoTrue independentes da conta A para exercitar CAS, RLS e restauração transacional pela API.
 
 As execuções efetivas no GitHub Actions registraram:
 - `email_address_invalid` no primeiro ensaio (domínio reservado `example.com` rejeitado pelo provedor).
@@ -76,4 +76,20 @@ O SQL isolado `supabase/staging-tests/proteger_ids_historico_cas.sql` foi atuali
 Teste PostgreSQL real (transação com `ROLLBACK`): CAS com marcador alterado e sessão excluída foi rejeitado e salvou evidência; a RPC `public.restaurar_backup_cas` com confirmação aceitou a operação, criou backup de segurança e persistiu o estado solicitado. Nenhum dado de QA permaneceu.
 
 **Atenção:** isto é uma política nova testada somente na prévia; antes de migrar para produção, revisar todos os pontos da interface que intencionalmente reduzem histórico e encaminhá-los à operação transacional confirmada.
+
+### Procedimento seguro para liberar o teste integrado
+
+1. **Somente no projeto Supabase STAGING** (`isjzyyoqvftrltkctanw`), administrador autorizado cria duas contas de QA via *Authentication → Users* / Auth Admin, com e-mail controlado, senha aleatória e confirmação de e-mail. Não desativar verificação de e-mail para o projeto.
+2. Marcar ambas com `app_metadata.study_pro_qa=true` usando o Auth Admin na infraestrutura autorizada (não `user_metadata` editável pelo usuário). Não usar nenhuma conta existente com dados de estudo.
+3. Fornecer ao executor de QA as quatro variáveis de segredo **em ambiente privado**, nunca em commit, chat, logs públicos ou variáveis `VITE_`: `STUDY_PRO_QA_EMAIL_A`, `STUDY_PRO_QA_PASSWORD_A`, `STUDY_PRO_QA_EMAIL_B`, `STUDY_PRO_QA_PASSWORD_B`.
+4. O teste usa `STUDY_PRO_AUTH_QA_ENABLED=true`, `VITE_SUPABASE_URL=https://isjzyyoqvftrltkctanw.supabase.co` e a **chave pública** do staging em `VITE_SUPABASE_ANON_KEY`. O script valida a identidade das contas, o marcador de QA e a ausência de histórico antes de gravar.
+5. Executar `node scripts/qa/staging-real-auth-pr562.mjs` em executor seguro. A execução deve **falhar** se não houver autenticação real, credenciais completas ou se a conta tiver histórico.
+6. **Limpeza obrigatória:** revogar sessões, excluir as duas contas e registros de QA pelo Admin, confirmar zero contas/estados/backups de teste no staging e executar os Security Advisors. O script não faz exclusão automática de usuários nem gerencia credenciais administrativas.
+7. Só após esse teste com API real, executar Playwright no navegador com as mesmas sessões de QA, incluindo teste de desconexão; manter a proteção da prévia Vercel ativa. Esta fase ainda não foi realizada.
+
+### Validação adicional da restauração — registros de estudo malformados
+
+O SQL staging `supabase/staging-tests/restaurar_backup_cas_prototype.sql` e o TypeScript `validarIntegridadeEstado` agora rejeitam itens nulos, IDs vazios e IDs repetidos em `sessoes`, `questoes`, `revisoes` e `simulados`. O SQL valida os registros **antes** de criar a cópia de segurança ou substituir o estado.
+
+Teste SQL em transação revertida: **8 combinações inválidas bloqueadas** sem alterar revisão ou estado; backup válido aceito com cópia de segurança. Nenhum usuário ou dado fictício persistiu.
 
