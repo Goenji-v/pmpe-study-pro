@@ -53,6 +53,9 @@ type AplicarRevisoesParams = {
   diagnostico: DiagnosticoAssuntoIA[];
   materias: Materia[];
   sessoes?: SessaoEstudo[];
+  limiteDiario?: number;
+  /** ID estável da tentativa IA, não de cada render ou atualização de estado. */
+  resultadoId?: string;
   agora?: Date;
 };
 
@@ -312,6 +315,8 @@ export function aplicarRevisoesDoResultadoIA({
   diagnostico,
   materias,
   sessoes = [],
+  limiteDiario = 0,
+  resultadoId,
   agora,
 }: AplicarRevisoesParams): ResumoRevisoesResultadoIA {
   let proximas = revisoes;
@@ -343,6 +348,9 @@ export function aplicarRevisoesDoResultadoIA({
       assunto: referencia.assunto.nome,
       certas: item.certas,
       erradas: item.erradas + item.emBranco,
+      limiteDiario,
+      // Diferentes assuntos da mesma tentativa recebem marcadores próprios.
+      resultadoId: resultadoId ? resultadoId + ":" + item.chave : undefined,
       agora,
     });
 
