@@ -259,3 +259,17 @@ test("restauração rejeita entradas nulas e IDs repetidos em cada coleção ess
   assert.match(source, /registro inválido em/);
   assert.match(source, /ID duplicado em/);
 });
+
+test("teste real de GoTrue não cria contas automaticamente nem gera falso positivo", async () => {
+  const qa = await readFile("scripts/qa/staging-real-auth-pr562.mjs", "utf8");
+  assert.doesNotMatch(qa, /auth\.signUp\(/);
+  assert.match(qa, /STUDY_PRO_QA_EMAIL_A/);
+  assert.match(qa, /STUDY_PRO_QA_PASSWORD_A/);
+  assert.match(qa, /STUDY_PRO_QA_EMAIL_B/);
+  assert.match(qa, /STUDY_PRO_QA_PASSWORD_B/);
+  assert.match(qa, /app_metadata\?\.study_pro_qa !== true/);
+  assert.match(qa, /readError \|\| oldState/);
+  assert.match(qa, /STUDY_PRO_AUTH_QA_ENABLED !== 'true'/);
+  assert.match(qa, /process\.exitCode = 1/);
+  assert.doesNotMatch(qa, /example\.com|@gmail\.com/);
+});
