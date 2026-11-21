@@ -1,0 +1,57 @@
+name: E2E Study Pro Staging PR562
+
+on:
+  push:
+    branches:
+      - fix/proteger-gravacoes-estruturais-cas
+    paths:
+      - "src/**"
+      - "server/**"
+      - "e2e/**"
+      - "playwright.config.ts"
+      - "package*.json"
+      - ".github/workflows/e2e-staging-pr562.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr562-staging-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-smoke-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      E2E_BASE_URL: https://pmpe-study-9qdvpurh6-pmpe-study-pro.vercel.app
+      CI: "true"
+    steps:
+      - name: Checkout PR branch (never production)
+        uses: actions/checkout@v4
+      - name: Require isolated Vercel preview URL
+        shell: bash
+        run: |
+          node -e 'const u = new URL(process.env.E2E_BASE_URL); if(u.hostname !== "pmpe-study-9qdvpurh6-pmpe-study-pro.vercel.app") process.exit(1)'
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install real Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile browser smoke against staging-only preview
+        run: npx playwright test e2e/smoke.spec.ts --project=desktop-chrome --project=mobile-chrome --workers=2
+      - name: Preserve Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr562-staging-browser-diagnostic
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
