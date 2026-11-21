@@ -1,6 +1,9 @@
 name: E2E Study Pro Staging PR562
 
 on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - fix/proteger-gravacoes-estruturais-cas
@@ -22,6 +25,7 @@ concurrency:
 
 jobs:
   browser-smoke-staging:
+    if: github.event_name != 'pull_request' || github.head_ref == 'fix/proteger-gravacoes-estruturais-cas'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
