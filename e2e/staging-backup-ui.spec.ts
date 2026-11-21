@@ -172,6 +172,11 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
       return json(403, { code: "42501", message: "direct writes not allowed" });
     }
     if (url.pathname.endsWith("/backups")) {
+      if (req.method() === "POST" && url.searchParams.has("on_conflict")) {
+        // Normal autosave checkpoints use an UPSERT, which must not be
+        // confused with the new explicit import-before-restore INSERT.
+        return json(200, []);
+      }
       if (req.method() === "POST") {
         const payload = req.postDataJSON() as {
           user_id: string;
