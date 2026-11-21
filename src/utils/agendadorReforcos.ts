@@ -1,0 +1,74 @@
+import type { Revisao } from "../types";
+import { pendentesUnicasPorAssunto } from "./revisoesAssuntoPrincipal";
+
+/**
+ * Agenda de reforço adaptativo, usando a mesma lista de pendências da agenda.
+ *
+ * Prioridade conservadora:
+ * - revisões existentes (inclusive atrasadas) ocupam vagas primeiro;
+ * - novas notas baixas não deslocam nem antecipam tarefas que já existem;
+ * - reforços novos usam no máximo metade das vagas diárias, reservando
+ *   capacidade para revisões regulares;
+ * - nada neste cálculo reescreve datas ou registros anteriores.
+ */
+export function encontrarDataDisponivelParaReforco(params: {
+  dataIdeal: Date;
+  agora: Date;
+  revisoes: readonly Revisao[];
+  limiteDiario: number;
+}): Date | null {
+  const { dataIdeal, agora, revisoes, limiteDiario } = params;
+  if (!Number.isFinite(dataIdeal.getTime()) || !Number.isFinite(agora.getTime())) {
+    return null;
+  }
+  if (!Number.isFinite(limiteDiario) || limiteDiario <= 0) {
+    const ideal = new Date(dataIdeal);
+    ideal.setHours(12, 0, 0, 0);
+    return ideal;
+  }
+
+  const capacidade = Math.max(1, Math.floor(limiteDiario));
+  const vagasAdaptativas = Math.max(1, Math.floor(capacidade / 2));
+  const inicio = new Date(agora);
+  inicio.setHours(0, 0, 0, 0);
+  const diaIdeal = new Date(dataIdeal);
+  diaIdeal.setHours(0, 0, 0, 0);
+
+  const existentes = pendentesUnicasPorAssunto(revisoes)
+    .map((revisao) => ({
+      revisao,
+      data: new Date(revisao.dataPrevista).getTime(),
+    }))
+    .filter(({data}) => Number.isFinite(data))
+    .sort((a,b) => a.data - b.data || a.revisao.id.localeCompare(b.revisao.id));
+
+  // Projeta a ocupação, sem salvar a redistribuição: atrasadas consomem
+  // as primeiras vagas antes de receber um reforço novo.
+  let proxima = 0;
+  const fila: Array<(typeof existentes)[number]> = [];
+  const dia = new Date(inicio);
+  for (let passo = 0; passo < 730; passo += 1) {
+    const fimDia = new Date(dia);
+    fimDia.setDate(fimDia.getDate() + 1);
+    while (proxima < existentes.length &&
+      existentes[proxima].data < fimDia.getTime()) {
+      fila.push(existentes[proxima]);
+      proxima += 1;
+    }
+    // Datas passadas e revisões já agendadas entram antes do reforço novo.
+    const ocupadas = fila.splice(0, capacidade);
+    const adaptativas = ocupadas.filter(
+      ({revisao}) => revisao.motivoAdaptativo === "baixo_desempenho"
+    ).length;
+    if (dia.getTime() >= diaIdeal.getTime() &&
+        ocupadas.length < capacidade && adaptativas < vagasAdaptativas &&
+        fila.length === 0) {
+      const disponivel = new Date(dia);
+      disponivel.setHours(12, 0, 0, 0);
+      return disponivel;
+    }
+    dia.setDate(dia.getDate() + 1);
+  }
+  // Caso extremo: manter nota no histórico, sem criar tarefa com data falsa.
+  return null;
+}
