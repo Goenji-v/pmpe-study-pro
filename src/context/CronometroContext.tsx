@@ -728,6 +728,7 @@ export function CronometroProvider({
           materia: sessaoAtiva.materia,
           modulo: sessaoAtiva.modulo,
           assunto: sessaoAtiva.assunto,
+          limiteDiario: configuracoes.metaRevisoesDiaria,
           agora: new Date(finalizadaEm),
           criarId: () => `${sessaoId}:revisao-duvida`,
         }).revisoes
