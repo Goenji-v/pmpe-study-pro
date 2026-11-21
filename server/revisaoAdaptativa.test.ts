@@ -71,7 +71,7 @@ test("cria revisão urgente no mesmo dia e registra o resultado crítico", () =>
   );
 });
 
-test("antecipa revisão já existente em vez de duplicar", () => {
+test("nota baixa em revisão já existente mantém a data e evita ciclo repetido", () => {
   const existente = criarRevisao({
     dataPrevista: "2026-08-27T12:00:00",
   });
@@ -87,10 +87,8 @@ test("antecipa revisão já existente em vez de duplicar", () => {
   assert.equal(resultado.acao, "atualizada");
   assert.equal(resultado.revisoes.length, 1);
   assert.equal(resultado.revisoes[0].id, existente.id);
-  assert.equal(
-    new Date(resultado.revisoes[0].dataPrevista).getDate(),
-    AGORA.getDate()
-  );
+  assert.equal(resultado.revisoes[0].dataPrevista, existente.dataPrevista);
+  assert.equal(resultado.revisoes[0].etapa, existente.etapa);
 });
 
 test("não enfraquece uma revisão urgente pendente após um resultado menos crítico", () => {
@@ -240,4 +238,46 @@ test("duas aulas já estudadas na mesma família não criam ciclos de revisão p
   });
   assert.equal(resultado.acao,"diagnostico");
   assert.deepEqual(resultado.revisoes,[revisaoRLM]);
+});
+
+
+test("duas notas abaixo de 60% trocam orientação para teoria sem antecipar a revisão", () => {
+  const primeira=aplicarRevisaoAdaptativa({
+    revisoes:[],...referencia,resultadoId:"tentativa-1",
+    certas:4,erradas:6,agora:AGORA,criarId:()=>"rev-unica",limiteDiario:5,
+  });
+  assert.equal(primeira.acao,"criada");
+  assert.equal(primeira.revisoes[0].sequenciaResultadosBaixos,1);
+  const agendada=primeira.revisoes[0].dataPrevista;
+  const segunda=aplicarRevisaoAdaptativa({
+    revisoes:primeira.revisoes,...referencia,resultadoId:"tentativa-2",
+    certas:3,erradas:7,agora:AGORA,limiteDiario:5,
+  });
+  assert.equal(segunda.acao,"atualizada");
+  assert.equal(segunda.revisoes.length,1);
+  assert.equal(segunda.revisoes[0].id,"rev-unica");
+  assert.equal(segunda.revisoes[0].dataPrevista,agendada);
+  assert.equal(segunda.revisoes[0].sequenciaResultadosBaixos,2);
+  assert.equal(segunda.teoriaRecomendada,true);
+  assert.equal(planejarRevisaoPendente(segunda.revisoes[0]).modo,"teoria_questoes");
+  assert.match(planejarRevisaoPendente(segunda.revisoes[0]).titulo,/Rever teoria e erros/);
+  const repetida=aplicarRevisaoAdaptativa({
+    revisoes:segunda.revisoes,...referencia,resultadoId:"tentativa-2",
+    certas:3,erradas:7,agora:AGORA,limiteDiario:5,
+  });
+  assert.equal(repetida.acao,"ignorada");
+  assert.equal(repetida.revisoes,segunda.revisoes);
+  const terceira=aplicarRevisaoAdaptativa({
+    revisoes:segunda.revisoes,...referencia,resultadoId:"tentativa-3",
+    certas:5,erradas:5,agora:AGORA,limiteDiario:5,
+  });
+  assert.equal(terceira.revisoes.length,1);
+  assert.equal(terceira.revisoes[0].sequenciaResultadosBaixos,2);
+  const recuperacao=aplicarRevisaoAdaptativa({
+    revisoes:terceira.revisoes,...referencia,resultadoId:"tentativa-4",
+    certas:8,erradas:2,agora:AGORA,limiteDiario:5,
+  });
+  assert.equal(recuperacao.revisoes[0].sequenciaResultadosBaixos,0);
+  assert.equal(recuperacao.revisoes[0].reforcoTeoriaRecomendado,false);
+  assert.equal(recuperacao.revisoes[0].dataPrevista,agendada);
 });
