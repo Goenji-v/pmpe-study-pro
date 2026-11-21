@@ -55,6 +55,8 @@ const restoreCases = [
   { name: "JSON exportado e importado volta pela restauração segura", outcome: "import" },
   { name: "backup automático local restaura com cópia na nuvem", outcome: "local" },
   { name: "backup automático local corrompido é recusado", outcome: "corrupt_local" },
+  { name: "backup antigo migra para checkpoint CAS próprio", outcome: "legacy_history" },
+  { name: "backup corrompido no histórico não derruba a tela", outcome: "invalid_history" },
 ] as const;
 
 for (const scenario of restoreCases) {
@@ -127,7 +129,7 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
       restorationCalls++;
       const body = req.postDataJSON() as Record<string, unknown>;
       expect(body.p_backup_id).toBe(
-        ["import", "local"].includes(scenario.outcome) ? importedBackupId : backupId
+        ["import", "local", "legacy_history"].includes(scenario.outcome) ? importedBackupId : backupId
       );
       expect(body.p_expected_revision).toBe(current.syncRevision);
       expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
@@ -191,15 +193,25 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
       if (req.method() !== "GET") {
         return json(403, { code: "42501", message: "unsupported write" });
       }
-      return json(200, [{
+      const historySnapshot = scenario.outcome === "legacy_history"
+        ? { ...snapshot, schemaVersion: 17, versao: 17 }
+        : snapshot;
+      const valid = {
         id: backupId, user_id: userId, nome: "Backup E2E fictício",
         created_at: now, dados: {
           tipo: "backup_incremental", syncRevision: 1,
           criadoEm: now, diaLocal: now.slice(0, 10),
-          estado: snapshot,
+          estado: historySnapshot,
           resumo: { sessoes: 0, questoes: 0, revisoes: 0, simulados: 0, missoesConcluidas: 0 },
         },
-      }]);
+      };
+      return json(200, scenario.outcome === "invalid_history"
+        ? [
+            { ...valid, id: "55555555-3333-4333-8333-555555555555",
+              dados: { ...valid.dados, estado: { schemaVersion: 99, sessoes: null } } },
+            valid,
+          ]
+        : [valid]);
     }
     return json(200, []);
   });
@@ -216,6 +228,14 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
   await expect(page.getByText("Prévia de testes:", { exact: false })).toBeVisible();
 
   const restore = page.getByRole("button", { name: "Comparar e restaurar" }).first();
+  if (scenario.outcome === "invalid_history") {
+    // An invalid backup should be ignored; the valid checkpoint remains
+    // available and the screen must not crash or expose bogus counts.
+    await expect(page.getByRole("button", { name: "Comparar e restaurar" })).toHaveCount(1);
+    expect(restorationCalls).toBe(0);
+    expect(pageErrors).toEqual([]);
+    return;
+  }
   try {
     await expect(restore).toBeEnabled({ timeout: 8_000 });
   } catch (error) {
@@ -252,9 +272,12 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
     await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
   } else {
     await restore.click();
+    if (scenario.outcome === "legacy_history") {
+      await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+    }
   }
   await expect.poll(() => restorationCalls, { timeout: 15_000 }).toBe(1);
-  if (scenario.outcome === "success" || scenario.outcome === "import" || scenario.outcome === "local") {
+  if (scenario.outcome === "success" || scenario.outcome === "import" || scenario.outcome === "local" || scenario.outcome === "legacy_history") {
     await expect(page.getByText(
       scenario.outcome === "import"
         ? "Backup restaurado com segurança."
