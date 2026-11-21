@@ -329,6 +329,16 @@ export default function Backup() {
   }
 
   async function limparDados() {
+    if (
+      RESTAURACAO_SEGURA_STAGING &&
+      (statusNuvem !== "sincronizado" || alteracoesPendentes > 0)
+    ) {
+      showToast(
+        "Antes de zerar a conta, confirme que todos os estudos foram sincronizados.",
+        "warning"
+      );
+      return;
+    }
     const primeiraConfirmacao = window.confirm(
       "Tem certeza que deseja zerar esta conta em todos os aparelhos?"
     );
@@ -338,6 +348,16 @@ export default function Backup() {
       "Serão removidos matérias, assuntos, edital, plano, cursos, progresso, questões, revisões e simulados. Um backup automático será criado antes. Deseja continuar?"
     );
     if (!segundaConfirmacao) return;
+
+    if (RESTAURACAO_SEGURA_STAGING) {
+      const palavra = window.prompt(
+        "Para confirmar a exclusão completa na conta de testes, escreva exatamente ZERAR MINHA CONTA:"
+      );
+      if (palavra !== "ZERAR MINHA CONTA") {
+        showToast("Limpeza cancelada. Nenhum dado foi alterado.", "info");
+        return;
+      }
+    }
 
     const agora = new Date().toISOString();
     const dadosVazios = criarDadosIniciaisDaConta(configuracoes.nomeUsuario);
@@ -349,10 +369,16 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(montarEstadoNuvem({
+      const estadoZerado = montarEstadoNuvem({
         ...dadosVazios,
         configuracoes: configuracoesVazias,
-      }));
+      });
+      if (RESTAURACAO_SEGURA_STAGING) {
+        // Enforce the same atomic pre-reset safety copy as any restore.
+        await restaurarBackupHistoricoSeguroStaging(null, estadoZerado);
+      } else {
+        await restaurarEstadoCompleto(estadoZerado);
+      }
       showToast("Conta zerada em todos os aparelhos. O backup anterior foi preservado.", "success");
     } catch (erro) {
       console.error("Erro ao zerar a conta:", erro);
@@ -598,7 +624,15 @@ export default function Backup() {
             Zera matérias, assuntos, edital, plano, cursos e histórico em todos os aparelhos.
             Um backup automático é criado antes.
           </p>
-          <button className="backup-button backup-limpar" disabled={importando} onClick={() => void limparDados()}>
+          <button
+            className="backup-button backup-limpar"
+            disabled={
+              importando ||
+              (RESTAURACAO_SEGURA_STAGING &&
+                (statusNuvem !== "sincronizado" || alteracoesPendentes > 0))
+            }
+            onClick={() => void limparDados()}
+          >
             🗑 Zerar conta completamente
           </button>
         </div>
