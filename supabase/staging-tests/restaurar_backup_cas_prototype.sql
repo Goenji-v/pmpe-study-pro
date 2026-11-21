@@ -32,6 +32,9 @@ declare
   v_ids_modulos text[];
   v_ids_assuntos text[];
   v_ids_aulas text[];
+  v_colecao text;
+  v_registro jsonb;
+  v_ids_registros text[];
 begin
   if v_uid is null then raise exception 'Autenticação obrigatória' using errcode = '42501'; end if;
   if p_confirmacao is distinct from 'CONFIRMO_RESTAURACAO'
@@ -114,6 +117,27 @@ begin
   ) then
     raise exception 'Identificadores de missões inválidos' using errcode='22023';
   end if;
+
+  -- A valid top-level array must also contain valid distinct records.
+  -- Without this, a backup containing null or duplicate sessions can replace
+  -- the active study history without failing the earlier type checks.
+  foreach v_colecao in array array['sessoes','questoes','revisoes','simulados']
+  loop
+    v_ids_registros := array[]::text[];
+    for v_registro in select value
+      from pg_catalog.jsonb_array_elements(v_snapshot -> v_colecao)
+    loop
+      if jsonb_typeof(v_registro) is distinct from 'object'
+         or jsonb_typeof(v_registro -> 'id') is distinct from 'string'
+         or pg_catalog.btrim(v_registro ->> 'id') = ''
+         or (v_registro ->> 'id') = any(v_ids_registros)
+      then
+        raise exception 'Registro inválido ou duplicado em %', v_colecao
+          using errcode='22023';
+      end if;
+      v_ids_registros := pg_catalog.array_append(v_ids_registros, v_registro ->> 'id');
+    end loop;
+  end loop;
 
   -- Mirror the key integrity checks in validarIntegridadeEstado:
   -- materia/modulo/assunto/aula must have unique, nonempty IDs per parent.
