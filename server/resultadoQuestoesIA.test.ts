@@ -222,16 +222,18 @@ test("80% não cria revisão automática", () => {
   assert.equal(resultado.revisoes.length, 0);
 });
 
-test("20% cria revisão urgente para o mesmo dia", () => {
+test("20% após aula concluída cria revisão urgente para o mesmo dia", () => {
   const questoes = Array.from({ length: 10 }, (_, indice) => criarQuestao(indice));
   const diagnostico = calcularDiagnosticoQuestoesIA(
     questoes,
     responder(questoes, 2)
   );
+  const materiasEstudadas = structuredClone(materias);
+  materiasEstudadas[0].modulos![0].assuntos[0].concluido = true;
   const resultado = aplicarRevisoesDoResultadoIA({
     revisoes: [],
     diagnostico,
-    materias,
+    materias: materiasEstudadas,
     agora: new Date("2026-08-22T12:00:00.000Z"),
   });
 
@@ -265,4 +267,19 @@ test("auditoria substitui a nota antiga sem duplicar nem apagar registros manuai
   assert.equal(cache[0].percentual, 50);
   assert.deepEqual(cache[1], { id: "outro" });
   assert.equal(aplicarAuditoriasResultadosLocais(cache, [resultado]), cache);
+});
+
+
+test("20% antes da aula fica como diagnóstico mesmo tendo referência no edital", () => {
+  const questoes=Array.from({length:10},(_,i)=>criarQuestao(i));
+  const diagnostico=calcularDiagnosticoQuestoesIA(questoes,responder(questoes,2));
+  const snapshot=JSON.stringify(materias);
+  const resultado=aplicarRevisoesDoResultadoIA({
+    revisoes:[], diagnostico,materias,agora:new Date("2026-08-22T12:00:00.000Z")
+  });
+  assert.equal(resultado.criadas,0);
+  assert.equal(resultado.atualizadas,0);
+  assert.equal(resultado.somenteDiagnostico,1);
+  assert.equal(resultado.revisoes.length,0);
+  assert.equal(JSON.stringify(materias),snapshot);
 });
