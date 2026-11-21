@@ -72,11 +72,11 @@ test("revisão de simulado antiga não consome vaga do limite diário", () => {
   const simulado = { ...criarRevisao("simulado", true), dataPrevista: base.toISOString() };
   const visivel = { ...criarRevisao("regular"), dataPrevista: base.toISOString() };
   const disponivel = encontrarDataDisponivelParaRevisao({
-    dataBase: base, revisoes: [simulado], limiteDiario: 1,
+    dataBase: base, agora: base, revisoes: [simulado], limiteDiario: 1,
   });
   assert.equal(disponivel.getDate(), base.getDate());
   const ocupado = encontrarDataDisponivelParaRevisao({
-    dataBase: base, revisoes: [simulado, visivel], limiteDiario: 1,
+    dataBase: base, agora: base, revisoes: [simulado, visivel], limiteDiario: 1,
   });
   assert.equal(ocupado.getDate(), 11);
 });
