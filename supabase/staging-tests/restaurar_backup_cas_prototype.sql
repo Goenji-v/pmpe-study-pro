@@ -56,6 +56,8 @@ begin
      or jsonb_typeof(v_snapshot -> 'questoes') IS DISTINCT FROM 'array'
      or jsonb_typeof(v_snapshot -> 'simulados') IS DISTINCT FROM 'array'
      or jsonb_typeof(v_snapshot -> 'missoesConcluidas') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'bancoQuestoes') IS DISTINCT FROM 'array'
+     or jsonb_typeof(v_snapshot -> 'simuladosGerados') IS DISTINCT FROM 'array'
      or jsonb_typeof(v_snapshot -> 'materias') IS DISTINCT FROM 'array'
      or jsonb_typeof(v_snapshot -> 'configuracoes') IS DISTINCT FROM 'object'
   then
