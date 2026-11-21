@@ -57,6 +57,8 @@ jobs:
           exit 1
       - name: Browser click backup restore (mocked database)
         run: npx playwright test e2e/staging-backup-ui.spec.ts --project=desktop-chrome --workers=1 --retries=0 --repeat-each=3
+      - name: Independent PC and phone browsers share CAS state (mock only)
+        run: npx playwright test e2e/staging-two-device-sync.spec.ts --project=desktop-chrome --workers=1 --retries=0
       - name: Public navigation smoke on desktop and mobile
         if: always()
         run: npx playwright test e2e/smoke.spec.ts --project=desktop-chrome --project=mobile-chrome --workers=2 --retries=0 --grep "backup exige autenticação|login vazio|demonstração pública"
