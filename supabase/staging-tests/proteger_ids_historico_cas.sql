@@ -51,10 +51,10 @@ as $fn$
     from colecoes c
     cross join lateral pg_catalog.jsonb_array_elements(c.nova) item(value)
   )
-  select
-    coalesce(p_atual #>> '{configuracoes,dadosReiniciadosEm}', '') =
-    coalesce(p_novo  #>> '{configuracoes,dadosReiniciadosEm}', '')
-    and (
+  -- The dadosReiniciadosEm marker must not bypass CAS by itself.
+  -- Destructive operations require the dedicated restore RPC, which creates
+  -- an atomic safety backup before replacing state.
+  select (
       exists (
         select 1 from colecoes c
         where pg_catalog.jsonb_array_length(c.nova) <
