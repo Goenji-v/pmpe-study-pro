@@ -5,6 +5,7 @@ import type {
   TipoSessao,
 } from "../types";
 import { revisaoOriginadaDeSimulado } from "./revisoesRegulares";
+import { encontrarDataDisponivelParaReforco } from "./agendadorReforcos";
 import {
   chaveAssuntoPrincipal,
   integrarPendenciasNaConclusao,
@@ -37,24 +38,21 @@ export function encontrarDataDisponivelParaRevisao(params: {
   dataBase: Date;
   revisoes: Revisao[];
   limiteDiario: number;
+  agora?: Date;
 }): Date {
-  const { dataBase, revisoes, limiteDiario } = params;
-  if (!Number.isFinite(limiteDiario) || limiteDiario <= 0) return dataBase;
-
-  const candidato = new Date(dataBase);
-  candidato.setHours(12, 0, 0, 0);
-
-  for (let i = 0; i < 365; i += 1) {
-    const chave = chaveData(candidato);
-    const quantidade = pendentesUnicasPorAssunto(revisoes).filter(
-      (revisao) => chaveData(revisao.dataPrevista) === chave
-    ).length;
-
-    if (quantidade < limiteDiario) return candidato;
-    candidato.setDate(candidato.getDate() + 1);
-  }
-
-  return candidato;
+  const data = encontrarDataDisponivelParaReforco({
+    dataIdeal: params.dataBase,
+    agora: params.agora ?? new Date(),
+    revisoes: params.revisoes,
+    limiteDiario: params.limiteDiario,
+    categoria: "regular",
+  });
+  // A agenda usa a mesma capacidade para revisões regulares e reforços.
+  // Nunca gravar uma data falsa se não houver vaga em horizonte calculável.
+  if (!data) throw new Error(
+    "Não foi possível encontrar uma vaga segura na agenda de revisões."
+  );
+  return data;
 }
 
 export function criarPrimeiraRevisao(params: {
@@ -125,6 +123,7 @@ export function criarProximaRevisao(
     dataBase: dataIdeal,
     revisoes: revisoesExistentes,
     limiteDiario,
+    agora,
   });
 
   return {
