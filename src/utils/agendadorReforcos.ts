@@ -89,6 +89,12 @@ export function encontrarDataDisponivelParaReforco(params: {
         fila.length === 0) {
       const disponivel = new Date(dia);
       disponivel.setHours(12, 0, 0, 0);
+      // Urgência no próprio dia não pode nascer às 12h se a pessoa
+      // terminou o treino às 15h: isso criaria uma revisão "atrasada"
+      // antes mesmo de ela existir.
+      if (passo === 0 && disponivel.getTime() < agora.getTime()) {
+        return new Date(agora);
+      }
       return disponivel;
     }
     dia.setDate(dia.getDate() + 1);
