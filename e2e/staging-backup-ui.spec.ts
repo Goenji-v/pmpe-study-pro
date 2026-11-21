@@ -57,6 +57,8 @@ const restoreCases = [
   { name: "backup automático local corrompido é recusado", outcome: "corrupt_local" },
   { name: "backup antigo migra para checkpoint CAS próprio", outcome: "legacy_history" },
   { name: "backup corrompido no histórico não derruba a tela", outcome: "invalid_history" },
+  { name: "zerar conta cria checkpoint e usa restauração CAS", outcome: "reset" },
+  { name: "zerar conta cancela sem palavra de confirmação", outcome: "reset_cancel" },
 ] as const;
 
 for (const scenario of restoreCases) {
@@ -129,7 +131,7 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
       restorationCalls++;
       const body = req.postDataJSON() as Record<string, unknown>;
       expect(body.p_backup_id).toBe(
-        ["import", "local", "legacy_history"].includes(scenario.outcome) ? importedBackupId : backupId
+        ["import", "local", "legacy_history", "reset"].includes(scenario.outcome) ? importedBackupId : backupId
       );
       expect(body.p_expected_revision).toBe(current.syncRevision);
       expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
@@ -221,7 +223,13 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
 
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("dialog", (dialog) => dialog.accept());
+  page.on("dialog", (dialog) =>
+    dialog.accept(
+      dialog.type() === "prompt"
+        ? (scenario.outcome === "reset_cancel" ? "NÃO" : "ZERAR MINHA CONTA")
+        : undefined
+    )
+  );
   await page.goto("/backup", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: /Histórico de segurança/i })).toBeVisible({ timeout: 25_000 });
@@ -245,7 +253,19 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
     console.info("STAGING_BACKUP_UI_WRITE_COUNTS:", { restorationCalls, wrongWriteCalls, legitimateAutosaves });
     throw error;
   }
-  if (scenario.outcome === "import") {
+  if (scenario.outcome === "reset" || scenario.outcome === "reset_cancel") {
+    const resetButton = page.getByRole("button", { name: /Zerar conta completamente/i });
+    await expect(resetButton).toBeEnabled({ timeout: 15_000 });
+    await resetButton.click();
+    if (scenario.outcome === "reset_cancel") {
+      await expect(page.getByText("Limpeza cancelada. Nenhum dado foi alterado.")).toBeVisible();
+      expect(restorationCalls).toBe(0);
+      expect(wrongWriteCalls).toBe(0);
+      return;
+    }
+    await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+    expect(importedState?.configuracoes).toHaveProperty("dadosReiniciadosEm");
+  } else if (scenario.outcome === "import") {
     const downloadWaiting = page.waitForEvent("download");
     await page.getByRole("button", { name: /Exportar backup completo/i }).click();
     const download = await downloadWaiting;
@@ -277,9 +297,11 @@ test(`prévia staging: ${scenario.name}`, async ({ page }) => {
     }
   }
   await expect.poll(() => restorationCalls, { timeout: 15_000 }).toBe(1);
-  if (scenario.outcome === "success" || scenario.outcome === "import" || scenario.outcome === "local" || scenario.outcome === "legacy_history") {
+  if (scenario.outcome === "success" || scenario.outcome === "import" || scenario.outcome === "local" || scenario.outcome === "legacy_history" || scenario.outcome === "reset") {
     await expect(page.getByText(
-      scenario.outcome === "import"
+      scenario.outcome === "reset"
+        ? "Conta zerada em todos os aparelhos. O backup anterior foi preservado."
+        : scenario.outcome === "import"
         ? "Backup restaurado com segurança."
         : scenario.outcome === "local"
         ? "Backup automático restaurado com segurança."
