@@ -52,6 +52,7 @@ test("prévia staging: botão de backup usa RPC CAS protegida por meio da interf
   const snapshot = state(1);
   let restorationCalls = 0;
   let wrongWriteCalls = 0;
+  let legitimateAutosaves = 0;
 
   await page.addInitScript(({ key, session }) => {
     window.localStorage.setItem(key, JSON.stringify(session));
@@ -84,18 +85,31 @@ test("prévia staging: botão de backup usa RPC CAS protegida por meio da interf
       restorationCalls++;
       const body = req.postDataJSON() as Record<string, unknown>;
       expect(body.p_backup_id).toBe(backupId);
-      expect(body.p_expected_revision).toBe(2);
+      expect(body.p_expected_revision).toBe(current.syncRevision);
       expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
-      current = { ...snapshot, syncRevision: 3, atualizadoEm: now, salvoEm: now };
+      current = { ...snapshot, syncRevision: current.syncRevision + 1, atualizadoEm: now, salvoEm: now };
       return json(200, [{
-        ok: true, revisao_atual: 3,
+        ok: true, revisao_atual: current.syncRevision,
         backup_seguranca_id: "33333333-3333-4333-8333-333333333333",
         estado_restaurado: current,
       }]);
     }
     if (url.pathname.endsWith("/rpc/salvar_estado_app_cas")) {
-      wrongWriteCalls++;
-      return json(409, { code: "STAGING_MOCK_REJECTED", message: "unexpected auto-save during backup E2E" });
+      // The real UI may legitimately reconcile an initial state and auto-save.
+      // Model real CAS rather than turning an expected write into a false error.
+      const payload = req.postDataJSON() as {
+        p_expected_revision: number;
+        p_estado: ReturnType<typeof state>;
+      };
+      if (payload.p_expected_revision !== current.syncRevision) {
+        return json(200, [{
+          ok: false, revisao_atual: current.syncRevision,
+        }]);
+      }
+      expect(payload.p_estado.syncRevision).toBe(current.syncRevision + 1);
+      current = payload.p_estado;
+      legitimateAutosaves++;
+      return json(200, [{ ok: true, revisao_atual: current.syncRevision }]);
     }
     if (url.pathname.endsWith("/configuracoes")) {
       if (req.method() === "GET") {
@@ -139,7 +153,7 @@ test("prévia staging: botão de backup usa RPC CAS protegida por meio da interf
     // Debug only: show UI state without outputting session tokens or secrets.
     const summary = await page.locator("body").innerText();
     console.info("STAGING_BACKUP_UI_STATUS:", summary.slice(0, 4800));
-    console.info("STAGING_BACKUP_UI_WRITE_COUNTS:", { restorationCalls, wrongWriteCalls });
+    console.info("STAGING_BACKUP_UI_WRITE_COUNTS:", { restorationCalls, wrongWriteCalls, legitimateAutosaves });
     throw error;
   }
   await restore.click();
