@@ -418,6 +418,12 @@ export type Revisao = {
   erradas?: number;
   /** Sinal que antecipou a revisão fora do ciclo normal. */
   motivoAdaptativo?: "duvida" | "baixo_desempenho";
+  /** Evita processar duas vezes o mesmo resultado de questões/IA. */
+  ultimaTentativaAdaptativaId?: string;
+  /** Contagem conservadora, limitada a 2; não reinicia a etapa espaçada. */
+  sequenciaResultadosBaixos?: number;
+  /** Dois resultados abaixo de 60% pedem revisão da teoria antes de novo treino. */
+  reforcoTeoriaRecomendado?: boolean;
   reagendadaEm?: string;
   /** Origem rastreável da revisão extraordinária criada após simulado. */
   origemSimulado?: {
