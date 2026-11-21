@@ -38,7 +38,14 @@ function fixtureSession() {
   };
 }
 
-test("prévia staging: botão de backup usa RPC CAS protegida por meio da interface", async ({ page }) => {
+const restoreCases = [
+  { name: "restauração válida via RPC CAS", outcome: "success" },
+  { name: "revisão concorrente recusa restauração", outcome: "stale" },
+  { name: "falha na resposta da RPC não tenta gravar backup antigo", outcome: "uncertain" },
+] as const;
+
+for (const scenario of restoreCases) {
+test(`prévia staging: ${scenario.name}`, async ({ page }) => {
   test.setTimeout(60_000);
   const target = new URL(process.env.E2E_BASE_URL ?? "");
   if (process.env.E2E_LOCAL_STAGING_MOCKS === "true") {
@@ -87,6 +94,15 @@ test("prévia staging: botão de backup usa RPC CAS protegida por meio da interf
       expect(body.p_backup_id).toBe(backupId);
       expect(body.p_expected_revision).toBe(current.syncRevision);
       expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
+      if (scenario.outcome === "stale") {
+        return json(200, [{ ok: false, revisao_atual: current.syncRevision + 1 }]);
+      }
+      if (scenario.outcome === "uncertain") {
+        return json(503, {
+          code: "MOCK_POST_COMMIT_NETWORK_FAILURE",
+          message: "resposta indisponível: estado remoto desconhecido",
+        });
+      }
       current = { ...snapshot, syncRevision: current.syncRevision + 1, atualizadoEm: now, salvoEm: now };
       return json(200, [{
         ok: true, revisao_atual: current.syncRevision,
@@ -158,7 +174,15 @@ test("prévia staging: botão de backup usa RPC CAS protegida por meio da interf
   }
   await restore.click();
   await expect.poll(() => restorationCalls, { timeout: 15_000 }).toBe(1);
-  await expect(page.getByText("Backup da linha do tempo restaurado com segurança.")).toBeVisible();
+  if (scenario.outcome === "success") {
+    await expect(page.getByText("Backup da linha do tempo restaurado com segurança.")).toBeVisible();
+  } else if (scenario.outcome === "stale") {
+    await expect(page.getByText(/O estado foi alterado por outro dispositivo/i)).toBeVisible();
+  } else {
+    await expect(page.getByText(/Não foi possível confirmar a restauração na nuvem/i)).toBeVisible();
+  }
+  expect(restorationCalls).toBe(1);
   expect(wrongWriteCalls).toBe(0);
   expect(pageErrors).toEqual([]);
 });
+}
