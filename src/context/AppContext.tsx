@@ -68,6 +68,7 @@ import {
 import {
   criarBackupAutomaticoLocal,
 } from "../services/seguranca/backupAutomaticoService";
+import { restaurarBackupHistoricoStaging } from "../services/seguranca/restauracaoBackupStagingService";
 import {
   registrarBackupConflitoNaNuvem,
   sincronizarBackupsConflitoLocaisNaNuvem,
@@ -153,6 +154,10 @@ type AppContextType = {
     preferencia: "nuvem" | "local"
   ) => Promise<void>;
   restaurarEstadoCompleto: (estado: EstadoAppNuvem) => Promise<void>;
+  restaurarBackupHistoricoSeguroStaging: (
+    backupId: string,
+    backupEstado: EstadoAppNuvem
+  ) => Promise<void>;
   aplicarEstadoEstruturalSeguro: (
     estado: EstadoAppNuvem,
     motivo?: "antes_migracao_edital" | "antes_reconciliacao_estrutural"
@@ -2149,6 +2154,88 @@ function EstadoDaConta({
     });
   }
 
+  // Experimental staging-only restore. Do not offer this method in the
+  // production UI until the privileged SQL RPC and full E2E are approved.
+  async function restaurarBackupHistoricoSeguroStaging(
+    backupId: string,
+    backupEstado: EstadoAppNuvem
+  ): Promise<void> {
+    if (!usuario) {
+      throw new Error("É necessário entrar na conta de testes antes de restaurar.");
+    }
+    if (!navegadorEstaOnline()) {
+      throw new Error("A restauração de backup da nuvem exige conexão ativa.");
+    }
+
+    validarIntegridadeEstado(backupEstado);
+
+    return executarOperacaoNuvemSerializada(async () => {
+      if (
+        statusNuvem !== "sincronizado" ||
+        alteracoesPendentes > 0 ||
+        conflitoRef.current ||
+        obterEstadoPendenteSincronizacao(usuario.id)
+      ) {
+        throw new Error(
+          "Existem alterações pendentes ou conflito de sincronização. Sincronize a conta antes de restaurar."
+        );
+      }
+
+      const estadoLocal = montarEstadoNuvem(dadosAtuaisRef.current);
+      if (assinaturaEstado(estadoLocal) !== ultimoEstadoSalvoRef.current) {
+        throw new Error(
+          "Há mudanças neste aparelho que ainda não foram confirmadas na nuvem. Sincronize antes de restaurar."
+        );
+      }
+
+      const remoto = await carregarEstadoDaNuvem(usuario.id);
+      if (!remoto) {
+        throw new Error("Não foi possível confirmar a revisão atual da nuvem.");
+      }
+      const revisaoRemota = obterRevisaoSincronizacao(remoto);
+      if (
+        revisaoRemota !== revisaoBaseRef.current ||
+        !estadosEquivalentesParaSincronizacao(estadoLocal, remoto)
+      ) {
+        throw new ConflitoSincronizacaoError(
+          revisaoRemota,
+          revisaoBaseRef.current,
+          "Outro aparelho alterou o estado na nuvem. Atualize ou resolva o conflito antes de restaurar."
+        );
+      }
+
+      // A RPC também faz um backup em nuvem na mesma transação.
+      // Guardamos a cópia local antes de enviar a restauração.
+      criarBackupAutomaticoLocal(
+        usuario.id,
+        estadoLocal,
+        "antes_restauracao_manual"
+      );
+      setStatusNuvem("salvando");
+
+      try {
+        const restaurado = await restaurarBackupHistoricoStaging(
+          backupId,
+          revisaoRemota
+        );
+        aplicarEstadoDaNuvem(restaurado);
+        confirmarSincronizacaoLocal(usuario.id, restaurado);
+      } catch (erro) {
+        if (erro instanceof ConflitoSincronizacaoError) {
+          marcarConflito(erro);
+        } else {
+          // The RPC may have committed even if the network response was lost.
+          // Never retry automatically or write the previous state back.
+          setStatusNuvem("erro");
+          setErroNuvem(
+            erro instanceof Error ? erro.message : "Falha na restauração."
+          );
+        }
+        throw erro;
+      }
+    });
+  }
+
   async function restaurarEstadoCompleto(
     estado: EstadoAppNuvem
   ) {
@@ -2719,6 +2806,7 @@ function EstadoDaConta({
         sincronizarAgora,
         resolverConflitoSincronizacao,
         restaurarEstadoCompleto,
+        restaurarBackupHistoricoSeguroStaging,
         aplicarEstadoEstruturalSeguro,
         definirConclusaoAssunto,
         definirConclusaoAula,
