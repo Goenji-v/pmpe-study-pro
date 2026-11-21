@@ -214,8 +214,11 @@ test("CAS staging protege IDs persistentes mesmo com o mesmo número de sessões
   assert.match(sql, /create or replace function study_pro_internal\.tem_regressao_historico/);
   assert.match(sql, /set search_path = ''/);
   assert.match(sql, /jsonb_array_length\(c\.nova\)\s*</);
-  assert.match(sql, /c\.nova @> pg_catalog\.jsonb_build_array\(item\.value\)/);
-  assert.match(sql, /jsonb_build_object\('id', item\.value ->> 'id'\)/);
+  assert.match(sql, /select chave, id from antigos where id is not null/);
+  assert.match(sql, /select chave, id from novos where id is not null/);
+  assert.match(sql, /\bexcept\b/);
+  assert.match(sql, /item\.value ->> 'id'/);
+  assert.match(sql, /item\.value #>> '\{\}'/);
   assert.match(sql, /dadosReiniciadosEm/);
   assert.doesNotMatch(sql, /create or replace function public\./i);
 });
@@ -223,5 +226,5 @@ test("CAS staging protege IDs persistentes mesmo com o mesmo número de sessões
 test("mudança da função anti-regressão é isolada do SQL de produção", async () => {
   const sql = await readFile("supabase/staging-tests/proteger_ids_historico_cas.sql", "utf8");
   assert.match(sql, /STAGING ONLY/);
-  assert.match(sql, /Must NOT be added to supabase\/migrations/);
+  assert.match(sql, /Do not deploy to production/);
 });
