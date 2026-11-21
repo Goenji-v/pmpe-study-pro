@@ -160,3 +160,117 @@ test("dois navegadores: restauração no PC impede sobrescrita obsoleta do celul
     await Promise.all(contexts.map(ctx => ctx.close()));
   }
 });
+
+
+test("rede cai e volta: restauração bloqueia offline e usa a revisão atual ao reconectar", async ({ browser }) => {
+  test.setTimeout(100_000);
+  expect(process.env.E2E_LOCAL_STAGING_MOCKS).toBe("true");
+  expect(new URL(process.env.E2E_BASE_URL ?? "").hostname).toBe("127.0.0.1");
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  let remote = state(3);
+  let restoreCalls = 0;
+  let directWrites = 0;
+  let casWrites = 0;
+  try {
+    await page.addInitScript(({ session }) => {
+      window.localStorage.setItem(
+        "sb-isjzyyoqvftrltkctanw-auth-token",
+        JSON.stringify(session)
+      );
+    }, { session: makeSession() });
+
+    await page.route(endpoint + "/**", async route => {
+      const req = route.request();
+      const url = new URL(req.url());
+      const respond = (status: number, data: unknown) => route.fulfill({
+        status, contentType: "application/json", body: JSON.stringify(data),
+      });
+      if (url.pathname.includes("/auth/v1/user")) return respond(200, makeSession().user);
+      if (url.pathname.includes("/auth/v1/")) return respond(200, {});
+      if (url.pathname.endsWith("/rpc/meu_contexto_comercial"))
+        return respond(404, { code: "PGRST202", message: "mock only" });
+      if (url.pathname.endsWith("/configuracoes")) {
+        if (req.method() === "GET")
+          return respond(200, { user_id: userId, dados: { appState: remote } });
+        directWrites++;
+        return respond(403, { code: "42501", message: "direct write forbidden" });
+      }
+      if (url.pathname.endsWith("/backups")) {
+        if (req.method() === "GET")
+          return respond(200, [{
+            id: backupId, user_id: userId, nome: "Backup anterior",
+            created_at: now, dados: {
+              tipo: "backup_incremental", diaLocal: now.slice(0, 10),
+              criadoEm: now, syncRevision: 1, estado: state(1),
+            },
+          }]);
+        if (req.method() === "POST" && url.searchParams.has("on_conflict"))
+          return respond(200, []);
+        return respond(403, { code: "42501", message: "unexpected backup write" });
+      }
+      if (url.pathname.endsWith("/rpc/salvar_estado_app_cas")) {
+        const body = req.postDataJSON() as {
+          p_expected_revision: number;
+          p_estado: ReturnType<typeof state>;
+        };
+        if (body.p_expected_revision !== remote.syncRevision)
+          return respond(200, [{ ok: false, revisao_atual: remote.syncRevision }]);
+        expect(body.p_estado.syncRevision).toBe(remote.syncRevision + 1);
+        remote = body.p_estado;
+        casWrites++;
+        return respond(200, [{ ok: true, revisao_atual: remote.syncRevision }]);
+      }
+      if (url.pathname.endsWith("/rpc/restaurar_backup_cas")) {
+        restoreCalls++;
+        const body = req.postDataJSON() as {
+          p_backup_id: string;
+          p_expected_revision: number;
+          p_confirmacao: string;
+        };
+        expect(body.p_backup_id).toBe(backupId);
+        expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
+        if (body.p_expected_revision !== remote.syncRevision)
+          return respond(200, [{ ok: false, revisao_atual: remote.syncRevision }]);
+        remote = { ...state(1), syncRevision: remote.syncRevision + 1 };
+        return respond(200, [{
+          ok: true, revisao_atual: remote.syncRevision,
+          backup_seguranca_id: "33333333-3333-4333-8333-333333333333",
+          estado_restaurado: remote,
+        }]);
+      }
+      return respond(200, []);
+    });
+    await page.route("https://study-pro-staging-api.invalid/**", route =>
+      route.fulfill({ status: 503, body: "{}" })
+    );
+    page.on("dialog", dialog => dialog.accept());
+
+    await page.goto("/backup", { waitUntil: "domcontentloaded" });
+    const restore = page.getByRole("button", { name: "Comparar e restaurar" }).first();
+    await expect(restore).toBeEnabled({ timeout: 25_000 });
+    const revisionBeforeOffline = remote.syncRevision;
+
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+    await expect(page.getByText("Offline — dados locais protegidos")).toBeVisible({ timeout: 10_000 });
+    await expect(restore).toBeDisabled({ timeout: 10_000 });
+    expect(restoreCalls).toBe(0);
+    expect(remote.syncRevision).toBe(revisionBeforeOffline);
+
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect(restore).toBeEnabled({ timeout: 25_000 });
+    const currentRevision = remote.syncRevision;
+    await restore.click();
+    await expect(page.getByText("Backup da linha do tempo restaurado com segurança."))
+      .toBeVisible({ timeout: 20_000 });
+    expect(restoreCalls).toBe(1);
+    expect(remote.syncRevision).toBe(currentRevision + 1);
+    expect(directWrites).toBe(0);
+    expect(casWrites).toBeGreaterThanOrEqual(0);
+  } finally {
+    await context.close();
+  }
+});
