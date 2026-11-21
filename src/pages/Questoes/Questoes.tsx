@@ -25,6 +25,7 @@ export default function Questoes() {
     questoes,
     revisoes,
     sessoes,
+    configuracoes,
     setQuestoes,
     setRevisoes,
   } = useApp();
@@ -141,6 +142,8 @@ export default function Questoes() {
             materia: materiaSelecionada,
             assunto: assuntoSelecionado,
           }),
+          limiteDiario: configuracoes.metaRevisoesDiaria,
+          resultadoId: novoRegistro.id,
           materiaId: materiaSelecionada.id,
           moduloId: moduloSelecionado?.id,
           assuntoId: assuntoSelecionado.id,
@@ -159,6 +162,8 @@ export default function Questoes() {
             materia: materiaSelecionada,
             assunto: assuntoSelecionado,
           }),
+          limiteDiario: configuracoes.metaRevisoesDiaria,
+          resultadoId: novoRegistro.id,
           materiaId: materiaSelecionada.id,
           moduloId: moduloSelecionado?.id,
           assuntoId: assuntoSelecionado.id,
@@ -169,21 +174,17 @@ export default function Questoes() {
       if (resultadoRevisao.acao === "diagnostico") {
         mensagemSalvamento =
           "Treino diagnóstico salvo em " + assunto +
-          ". Não foi criada uma revisão nova: a aula ainda não foi comprovadamente concluída ou já existe um ciclo desse assunto. Sua nota ficou no histórico de questões.";
+          ". Nenhuma revisão extra foi criada: a aula ainda não foi concluída, já existe um ciclo do assunto ou a agenda precisa de espaço. Sua nota continua no histórico de questões.";
       } else if (diagnostico) {
-        const quando =
-          diagnostico.diasParaRevisao === 0
-            ? "para hoje"
-            : diagnostico.diasParaRevisao === 1
-              ? "para amanhã"
-              : `para daqui a ${diagnostico.diasParaRevisao} dias`;
-
+        const data = resultadoRevisao.dataAgendada
+          ? new Date(resultadoRevisao.dataAgendada).toLocaleDateString("pt-BR")
+          : null;
         mensagemSalvamento =
           resultadoRevisao.acao === "atualizada"
-            ? `Resultado registrado. A revisão pendente de ${assunto} foi atualizada ${quando} (${diagnostico.percentual}% de acerto), mas continua aberta. Para concluí-la, use Revisões → Revisar.`
-            : `${rotuloPrioridadeRevisaoAdaptativa(
-                diagnostico.prioridade
-              )} de ${assunto} criada ${quando} (${diagnostico.percentual}% de acerto).`;
+            ? `Resultado registrado (${diagnostico.percentual}%). A revisão de ${assunto} continua na data original${data ? ": " + data : ""}, sem criar outro ciclo.${resultadoRevisao.teoriaRecomendada ? " Dois resultados baixos seguidos: revise a teoria e os erros antes do próximo treino." : ""}`
+            : resultadoRevisao.acao === "criada"
+              ? `${rotuloPrioridadeRevisaoAdaptativa(diagnostico.prioridade)} de ${assunto} agendada para ${data ?? "a próxima vaga"} (${diagnostico.percentual}% de acerto).${resultadoRevisao.adiadaPorCapacidade ? " O reforço foi distribuído para respeitar o limite diário e as revisões atrasadas." : ""}`
+              : `Resultado registrado em ${assunto}; nenhuma nova revisão foi necessária.`;
       } else if (resultadoRevisao.acao === "registrada") {
         mensagemSalvamento =
           `Resultado registrado em ${assunto}. A revisão pendente continua aberta; para concluí-la, use Revisões → Revisar e finalize a sessão como Teoria ou Questões.`;
