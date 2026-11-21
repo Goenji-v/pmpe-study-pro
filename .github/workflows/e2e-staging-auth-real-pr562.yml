@@ -1,7 +1,8 @@
 name: Study Pro PR562 Real GoTrue Staging QA
 on:
-  push:
-    branches: [fix/proteger-gravacoes-estruturais-cas]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
     paths:
       - "scripts/qa/staging-real-auth-pr562.mjs"
       - ".github/workflows/e2e-staging-auth-real-pr562.yml"
@@ -13,6 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   staging-real-auth:
+    if: github.event_name != 'pull_request' || github.head_ref == 'fix/proteger-gravacoes-estruturais-cas'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
