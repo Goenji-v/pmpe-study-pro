@@ -89,3 +89,11 @@ Registrar separadamente os testes no PostgreSQL staging (em transação revertid
 - **PENDÊNCIA DE SEGURANÇA NO PROJETO:** após habilitar o login anônimo, o Supabase Security Advisor passou a apontar **69 alertas WARN do tipo `auth_allow_anonymous_sign_ins`**, decorrentes de políticas RLS que incluem a role `authenticated`, a mesma usada por identidades anônimas. Não confundir com acesso aos dados de outras contas: o teste de isolamento passou, mas as 69 advertências requerem desativar o provedor de login anônimo ou uma revisão geral das políticas antes de habilitá-lo de forma permanente.
 - **Ação manual necessária:** desativar novamente **Allow anonymous sign-ins** em Supabase staging → Authentication → Providers/Settings → Save changes. Esta configuração de Auth não é alterável pelas ferramentas MCP disponíveis. Não habilitar no oficial.
 - Continuam pendentes: autenticação e sincronização em dois navegadores reais, uso da UI para backup/restauração, revisão de SECURITY DEFINER e separação do backend de IA.
+
+## Reversão do login anônimo confirmada e auditoria de backup — 21/11/2026
+- O usuário desativou **Allow anonymous sign-ins** no dashboard do Supabase staging.
+- Security Advisors novamente consultados: **0 alertas**; antes, com o provedor temporário habilitado, haviam aparecido 69 alertas `auth_allow_anonymous_sign_ins`.
+- Banco staging permaneceu `ACTIVE_HEALTHY`, sem contas temporárias do último teste, linhas de configurações ou backups. Role `anon` continua sem permissão de executar `public.salvar_estado_app_cas(bigint,jsonb)`.
+- No protótipo `restaurar_backup_cas` reforçamos a validação de snapshots para exigir também as coleções `bancoQuestoes` e `simuladosGerados`, exigidas pela validação de estado do aplicativo. A função interna de staging foi atualizada e o SQL do repositório sincronizado.
+- Novo ensaio PostgreSQL com `ROLLBACK`: backup incompleto, sem `simuladosGerados`, foi rejeitado; restauração de backup completo foi aceita e gerou cópia de segurança contendo o estado anterior; nenhum registro ficou após a transação.
+- O protótipo é **somente do staging, não está integrado à interface**, e não substitui o teste E2E com dois navegadores físicos nem a revisão externa de `SECURITY DEFINER`. Não mover para migrações de produção sem aprovação.
