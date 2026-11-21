@@ -1,6 +1,17 @@
 const urlConfigurada =
   import.meta.env.VITE_API_URL?.trim();
 
+// Isolated sync preview must not send authenticated requests to the production API.
+// Until a separate staging backend exists, API-only features stay intentionally disabled.
+if (
+  import.meta.env.VITE_STUDY_PRO_STAGING_GUARD === "true" &&
+  urlConfigurada !== "https://study-pro-staging-api.invalid"
+) {
+  throw new Error(
+    "Prévia de testes bloqueada: API externa não isolada da produção."
+  );
+}
+
 const fallbackProducao =
   "https://pmpe-study-pro-api.onrender.com";
 

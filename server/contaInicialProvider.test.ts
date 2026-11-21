@@ -13,7 +13,24 @@ test("Provider real cria vazio, troca conta sem herdar estado e descarta fila an
   // hooks React e fila offline são exatamente os usados pelo aplicativo.
   const nuvem = new Map<string, any>();
   const ambiente: any = { usuario: { id: "conta-a", user_metadata: { nome: "Ana" } } };
+  let perderRespostaAposCommit = false;
   const supabase = {
+    async rpc(nome: string, args: { p_expected_revision: number; p_estado: any }) {
+      assert.equal(nome, "salvar_estado_app_cas");
+      const uid = ambiente.usuario.id;
+      const atual = nuvem.get(uid);
+      const revisaoAtual = atual?.syncRevision ?? 0;
+      if (revisaoAtual !== args.p_expected_revision) {
+        return { data: { ok: false, revisao_atual: revisaoAtual }, error: null };
+      }
+      const revisaoNova = revisaoAtual + 1;
+      nuvem.set(uid, structuredClone({ ...args.p_estado, syncRevision: revisaoNova }));
+      if (perderRespostaAposCommit) {
+        perderRespostaAposCommit = false;
+        return { data: null, error: { message: "resposta perdida após commit" } };
+      }
+      return { data: { ok: true, revisao_atual: revisaoNova }, error: null };
+    },
     from(tabela: string) {
       let uid = "";
       const query: any = {
@@ -59,6 +76,31 @@ test("Provider real cria vazio, troca conta sem herdar estado e descarta fila an
     assert.equal(document.querySelector("output")?.textContent, "Ana:0");
     assert.equal(nuvem.get("conta-a").materias.length, 0);
     assert.equal(nuvem.get("conta-a").configuracoes.planoPadraoAtivo, false);
+    // Dois aparelhos partem da mesma revisão: só um pode gravar.
+    const snapshot = structuredClone(nuvem.get("conta-a"));
+    const proposta1 = { ...snapshot, missoesConcluidas: ["aparelho-1"] };
+    const proposta2 = { ...snapshot, missoesConcluidas: ["aparelho-2"] };
+    const [primeira, segunda] = await Promise.all([
+      supabase.rpc("salvar_estado_app_cas", { p_expected_revision: snapshot.syncRevision, p_estado: proposta1 }),
+      supabase.rpc("salvar_estado_app_cas", { p_expected_revision: snapshot.syncRevision, p_estado: proposta2 }),
+    ]);
+    assert.equal(primeira.data?.ok, true);
+    assert.equal(segunda.data?.ok, false);
+    assert.deepEqual(nuvem.get("conta-a").missoesConcluidas, ["aparelho-1"]);
+
+    // Resposta perdida depois de commit: o retry com revisão antiga é recusado.
+    const antesDaQueda = structuredClone(nuvem.get("conta-a"));
+    perderRespostaAposCommit = true;
+    const falhaRede = await supabase.rpc("salvar_estado_app_cas", {
+      p_expected_revision: antesDaQueda.syncRevision,
+      p_estado: { ...antesDaQueda, missoesConcluidas: ["confirmado-sem-resposta"] },
+    });
+    assert.match(falhaRede.error?.message ?? "", /resposta perdida/);
+    const tentativaAntiga = await supabase.rpc("salvar_estado_app_cas", {
+      p_expected_revision: antesDaQueda.syncRevision, p_estado: proposta2,
+    });
+    assert.equal(tentativaAntiga.data?.ok, false);
+    assert.deepEqual(nuvem.get("conta-a").missoesConcluidas, ["confirmado-sem-resposta"]);
     const anterior = structuredClone(nuvem.get("conta-a"));
     anterior.materias = [{ id: "minha", nome: "Minha matéria", cor: "#123456", modulos: [{ id: "meu", nome: "Meu módulo", assuntos: [] }] }];
     nuvem.set("conta-a", anterior);

@@ -1,0 +1,319 @@
+import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+
+// Browser interaction test with mocked transport. No real user, JWT or database
+// write. Independent HTTP/JWT and SQL integration tests are documented in PR #562.
+const endpoint = "https://isjzyyoqvftrltkctanw.supabase.co";
+const userId = "11111111-3333-4333-8333-111111111111";
+const backupId = "22222222-3333-4333-8333-222222222222";
+const now = new Date().toISOString();
+const config = {
+  nomeUsuario: "Aluno E2E fictício", concurso: "", bancaPadrao: "",
+  metaQuestoesDiaria: 30, metaMinutosDiaria: 120,
+  metaRevisoesDiaria: 5, missoesPorDia: 1,
+  tema: "escuro", planoPadraoAtivo: false, armazenamentoPorConta: true,
+};
+function state(revision: number) {
+  return {
+    schemaVersion: 18, versao: 18, materias: [], questoes: [], sessoes: [],
+    revisoes: [], simulados: [], bancoQuestoes: [], simuladosGerados: [],
+    missoesConcluidas: [], configuracoes: config, syncRevision: revision,
+    salvoEm: now, atualizadoEm: now,
+  };
+}
+function checksumLocal(json: string) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < json.length; i++) {
+    hash ^= json.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function fixtureSession() {
+  const user = {
+    id: userId, aud: "authenticated", role: "authenticated",
+    email: "study-pro-fixture@example.invalid",
+    app_metadata: { provider: "email", providers: ["email"] },
+    user_metadata: { nome: "Aluno E2E fictício" },
+    created_at: now, last_sign_in_at: now, identities: [],
+  };
+  const b64 = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  return {
+    access_token: b64({ alg: "none", typ: "JWT" }) + "." +
+      b64({ sub: userId, role: "authenticated", exp: Math.floor(Date.now() / 1000) + 3600 }) + ".test",
+    refresh_token: "fixture-refresh-token", token_type: "bearer",
+    expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600,
+    user,
+  };
+}
+
+const restoreCases = [
+  { name: "restauração válida via RPC CAS", outcome: "success" },
+  { name: "revisão concorrente recusa restauração", outcome: "stale" },
+  { name: "falha na resposta da RPC não tenta gravar backup antigo", outcome: "uncertain" },
+  { name: "JSON exportado e importado volta pela restauração segura", outcome: "import" },
+  { name: "backup automático local restaura com cópia na nuvem", outcome: "local" },
+  { name: "backup automático local corrompido é recusado", outcome: "corrupt_local" },
+  { name: "backup antigo migra para checkpoint CAS próprio", outcome: "legacy_history" },
+  { name: "backup corrompido no histórico não derruba a tela", outcome: "invalid_history" },
+  { name: "zerar conta cria checkpoint e usa restauração CAS", outcome: "reset" },
+  { name: "zerar conta cancela sem palavra de confirmação", outcome: "reset_cancel" },
+] as const;
+
+for (const scenario of restoreCases) {
+test(`prévia staging: ${scenario.name}`, async ({ page }) => {
+  test.setTimeout(60_000);
+  const target = new URL(process.env.E2E_BASE_URL ?? "");
+  if (process.env.E2E_LOCAL_STAGING_MOCKS === "true") {
+    expect(target.hostname).toBe("127.0.0.1");
+    expect(target.port).toBe("4173");
+  } else {
+    expect(target.hostname).toBe("pmpe-study-9qdvpurh6-pmpe-study-pro.vercel.app");
+  }
+
+  let current = state(2);
+  const snapshot = state(1);
+  let restorationCalls = 0;
+  let wrongWriteCalls = 0;
+  let legitimateAutosaves = 0;
+  let importedBackupId: string | null = null;
+  let importedState: ReturnType<typeof state> | null = null;
+
+  await page.addInitScript(({ key, session, autoBackup }) => {
+    window.localStorage.setItem(key, JSON.stringify(session));
+    if (autoBackup) {
+      window.localStorage.setItem(
+        `pmpe:seguranca:backups-automaticos:${session.user.id}`,
+        JSON.stringify([autoBackup])
+      );
+    }
+  }, {
+    key: "sb-isjzyyoqvftrltkctanw-auth-token",
+    session: fixtureSession(),
+    autoBackup: (scenario.outcome === "local" || scenario.outcome === "corrupt_local")
+      ? {
+        id: "auto-fixture-1",
+        usuarioId: userId,
+        criadoEm: now,
+        motivo: "antes_restauracao_manual",
+        schemaVersionOrigem: 18,
+        schemaVersionDestino: 18,
+        checksum: scenario.outcome === "corrupt_local"
+          ? "00000000"
+          : checksumLocal(JSON.stringify(snapshot)),
+        dados: snapshot,
+      }
+      : null,
+  });
+
+  // Intercept ALL staging URLs: the test never contacts staging with a
+  // forged JWT and never changes production or the staging database.
+  await page.route(endpoint + "/**", async (route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    const json = (status: number, payload: unknown) => route.fulfill({
+      status,
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+
+    if (url.pathname.includes("/auth/v1/user")) {
+      return json(200, fixtureSession().user);
+    }
+    if (url.pathname.includes("/auth/v1/")) {
+      return json(200, {});
+    }
+    if (url.pathname.endsWith("/rpc/meu_contexto_comercial")) {
+      return json(404, { code: "PGRST202", message: "meu_contexto_comercial unavailable in mocked session" });
+    }
+    if (url.pathname.endsWith("/rpc/restaurar_backup_cas")) {
+      restorationCalls++;
+      const body = req.postDataJSON() as Record<string, unknown>;
+      expect(body.p_backup_id).toBe(
+        ["import", "local", "legacy_history", "reset"].includes(scenario.outcome) ? importedBackupId : backupId
+      );
+      expect(body.p_expected_revision).toBe(current.syncRevision);
+      expect(body.p_confirmacao).toBe("CONFIRMO_RESTAURACAO");
+      if (scenario.outcome === "stale") {
+        return json(200, [{ ok: false, revisao_atual: current.syncRevision + 1 }]);
+      }
+      if (scenario.outcome === "uncertain") {
+        return json(503, {
+          code: "MOCK_POST_COMMIT_NETWORK_FAILURE",
+          message: "resposta indisponível: estado remoto desconhecido",
+        });
+      }
+      current = { ...(importedState ?? snapshot), syncRevision: current.syncRevision + 1, atualizadoEm: now, salvoEm: now };
+      return json(200, [{
+        ok: true, revisao_atual: current.syncRevision,
+        backup_seguranca_id: "33333333-3333-4333-8333-333333333333",
+        estado_restaurado: current,
+      }]);
+    }
+    if (url.pathname.endsWith("/rpc/salvar_estado_app_cas")) {
+      // The real UI may legitimately reconcile an initial state and auto-save.
+      // Model real CAS rather than turning an expected write into a false error.
+      const payload = req.postDataJSON() as {
+        p_expected_revision: number;
+        p_estado: ReturnType<typeof state>;
+      };
+      if (payload.p_expected_revision !== current.syncRevision) {
+        return json(200, [{
+          ok: false, revisao_atual: current.syncRevision,
+        }]);
+      }
+      expect(payload.p_estado.syncRevision).toBe(current.syncRevision + 1);
+      current = payload.p_estado;
+      legitimateAutosaves++;
+      return json(200, [{ ok: true, revisao_atual: current.syncRevision }]);
+    }
+    if (url.pathname.endsWith("/configuracoes")) {
+      if (req.method() === "GET") {
+        return json(200, { user_id: userId, dados: { appState: current } });
+      }
+      wrongWriteCalls++;
+      return json(403, { code: "42501", message: "direct writes not allowed" });
+    }
+    if (url.pathname.endsWith("/backups")) {
+      if (req.method() === "POST" && url.searchParams.has("on_conflict")) {
+        // Normal autosave checkpoints use an UPSERT, which must not be
+        // confused with the new explicit import-before-restore INSERT.
+        return json(200, []);
+      }
+      if (req.method() === "POST") {
+        const payload = req.postDataJSON() as {
+          user_id: string;
+          dados: { tipo: string; estado: ReturnType<typeof state> };
+        };
+        expect(payload.user_id).toBe(userId);
+        expect(payload.dados.tipo).toBe("backup_incremental");
+        importedBackupId = "44444444-3333-4333-8333-444444444444";
+        importedState = payload.dados.estado;
+        return json(201, { id: importedBackupId });
+      }
+      if (req.method() !== "GET") {
+        return json(403, { code: "42501", message: "unsupported write" });
+      }
+      const historySnapshot = scenario.outcome === "legacy_history"
+        ? { ...snapshot, schemaVersion: 17, versao: 17 }
+        : snapshot;
+      const valid = {
+        id: backupId, user_id: userId, nome: "Backup E2E fictício",
+        created_at: now, dados: {
+          tipo: "backup_incremental", syncRevision: 1,
+          criadoEm: now, diaLocal: now.slice(0, 10),
+          estado: historySnapshot,
+          resumo: { sessoes: 0, questoes: 0, revisoes: 0, simulados: 0, missoesConcluidas: 0 },
+        },
+      };
+      return json(200, scenario.outcome === "invalid_history"
+        ? [
+            { ...valid, id: "55555555-3333-4333-8333-555555555555",
+              dados: { ...valid.dados, estado: { schemaVersion: 99, sessoes: null } } },
+            valid,
+          ]
+        : [valid]);
+    }
+    return json(200, []);
+  });
+  await page.route("https://study-pro-staging-api.invalid/**", (route) =>
+    route.fulfill({ status: 503, body: "{}" })
+  );
+
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("dialog", (dialog) =>
+    dialog.accept(
+      dialog.type() === "prompt"
+        ? (scenario.outcome === "reset_cancel" ? "NÃO" : "ZERAR MINHA CONTA")
+        : undefined
+    )
+  );
+  await page.goto("/backup", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: /Histórico de segurança/i })).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByText("Prévia de testes:", { exact: false })).toBeVisible();
+
+  const restore = page.getByRole("button", { name: "Comparar e restaurar" }).first();
+  if (scenario.outcome === "invalid_history") {
+    // An invalid backup should be ignored; the valid checkpoint remains
+    // available and the screen must not crash or expose bogus counts.
+    await expect(page.getByRole("button", { name: "Comparar e restaurar" })).toHaveCount(1);
+    expect(restorationCalls).toBe(0);
+    expect(pageErrors).toEqual([]);
+    return;
+  }
+  try {
+    await expect(restore).toBeEnabled({ timeout: 8_000 });
+  } catch (error) {
+    // Debug only: show UI state without outputting session tokens or secrets.
+    const summary = await page.locator("body").innerText();
+    console.info("STAGING_BACKUP_UI_STATUS:", summary.slice(0, 4800));
+    console.info("STAGING_BACKUP_UI_WRITE_COUNTS:", { restorationCalls, wrongWriteCalls, legitimateAutosaves });
+    throw error;
+  }
+  if (scenario.outcome === "reset" || scenario.outcome === "reset_cancel") {
+    const resetButton = page.getByRole("button", { name: /Zerar conta completamente/i });
+    await expect(resetButton).toBeEnabled({ timeout: 15_000 });
+    await resetButton.click();
+    if (scenario.outcome === "reset_cancel") {
+      await expect(page.getByText("Limpeza cancelada. Nenhum dado foi alterado.")).toBeVisible();
+      expect(restorationCalls).toBe(0);
+      expect(wrongWriteCalls).toBe(0);
+      return;
+    }
+    await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+    expect(importedState?.configuracoes).toHaveProperty("dadosReiniciadosEm");
+  } else if (scenario.outcome === "import") {
+    const downloadWaiting = page.waitForEvent("download");
+    await page.getByRole("button", { name: /Exportar backup completo/i }).click();
+    const download = await downloadWaiting;
+    const jsonBackup = await readFile(await download.path());
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "backup-e2e-exportado.json",
+      mimeType: "application/json",
+      buffer: jsonBackup,
+    });
+    await expect(page.getByText("Backup validado", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Restaurar este backup" }).click();
+    await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+  } else if (scenario.outcome === "local" || scenario.outcome === "corrupt_local") {
+    const localButton = page.getByRole("button", { name: "Restaurar", exact: true }).first();
+    await expect(localButton).toBeEnabled();
+    await localButton.click();
+    if (scenario.outcome === "corrupt_local") {
+      await expect(page.getByText(/checksum inválido/i)).toBeVisible();
+      expect(restorationCalls).toBe(0);
+      expect(importedBackupId).toBeNull();
+      expect(wrongWriteCalls).toBe(0);
+      return;
+    }
+    await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+  } else {
+    await restore.click();
+    if (scenario.outcome === "legacy_history") {
+      await expect.poll(() => importedBackupId, { timeout: 15_000 }).not.toBeNull();
+    }
+  }
+  await expect.poll(() => restorationCalls, { timeout: 15_000 }).toBe(1);
+  if (scenario.outcome === "success" || scenario.outcome === "import" || scenario.outcome === "local" || scenario.outcome === "legacy_history" || scenario.outcome === "reset") {
+    await expect(page.getByText(
+      scenario.outcome === "reset"
+        ? "Conta zerada em todos os aparelhos. O backup anterior foi preservado."
+        : scenario.outcome === "import"
+        ? "Backup restaurado com segurança."
+        : scenario.outcome === "local"
+        ? "Backup automático restaurado com segurança."
+        : "Backup da linha do tempo restaurado com segurança."
+    )).toBeVisible();
+  } else if (scenario.outcome === "stale") {
+    await expect(page.getByText(/O estado foi alterado por outro dispositivo/i)).toBeVisible();
+  } else {
+    await expect(page.getByText(/Não foi possível confirmar a restauração na nuvem/i)).toBeVisible();
+  }
+  expect(restorationCalls).toBe(1);
+  expect(wrongWriteCalls).toBe(0);
+  expect(pageErrors).toEqual([]);
+});
+}

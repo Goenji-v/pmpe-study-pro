@@ -19,6 +19,17 @@ if (
   );
 }
 
+// Never let the isolated sync-preview connect to the real users' database.
+// This flag is configured only on the PR #562 Vercel preview branch.
+if (
+  import.meta.env.VITE_STUDY_PRO_STAGING_GUARD === "true" &&
+  SUPABASE_PUBLIC_URL !== "https://isjzyyoqvftrltkctanw.supabase.co"
+) {
+  throw new Error(
+    "Prévia de testes bloqueada: conexão Supabase fora do staging isolado."
+  );
+}
+
 export const supabase =
   createClient(
     SUPABASE_PUBLIC_URL,

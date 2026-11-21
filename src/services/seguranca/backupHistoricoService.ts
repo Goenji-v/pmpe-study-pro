@@ -1,6 +1,12 @@
 import { supabase } from "../../lib/supabase";
 
-import type { EstadoAppNuvem } from "../sincronizacaoService";
+import {
+  obterSchemaVersionEstado,
+  validarEMigrarEstado,
+  validarIntegridadeEstado,
+  type EstadoAppNuvem,
+} from "../sincronizacaoService";
+import { SCHEMA_VERSION_ATUAL } from "./schemaVersion";
 
 export type TipoBackupHistorico =
   | "backup_incremental"
@@ -16,6 +22,8 @@ export type BackupHistoricoNuvem = {
   janela?: string;
   syncRevision: number;
   estado: EstadoAppNuvem;
+  /** Backup antigo precisa de migração e novo checkpoint CAS no staging. */
+  precisaMigracao: boolean;
   resumo: ResumoEstadoBackup;
   alteracoes?: ResumoAlteracoesBackup;
 };
@@ -176,11 +184,24 @@ function normalizarLinha(
     return null;
   }
 
-  const estado = dados.estado as EstadoAppNuvem;
-  const resumo =
-    dados.resumo && typeof dados.resumo === "object"
-      ? (dados.resumo as ResumoEstadoBackup)
-      : resumirEstado(estado);
+  // A single corrupted or future-schema backup must never hide all
+  // remaining historical checkpoints or crash the backup screen.
+  // Recompute the summary from the validated contents rather than trusting
+  // arbitrary persisted counts.
+  let estado: EstadoAppNuvem;
+  try {
+    const migrado = validarEMigrarEstado(dados.estado);
+    if (!migrado) return null;
+    validarIntegridadeEstado(migrado);
+    estado = migrado;
+  } catch {
+    return null;
+  }
+  const origem = dados.estado as { schemaVersion?: unknown; versao?: unknown };
+  const precisaMigracao =
+    obterSchemaVersionEstado(dados.estado) !== SCHEMA_VERSION_ATUAL ||
+    origem.versao !== SCHEMA_VERSION_ATUAL;
+  const resumo = resumirEstado(estado);
 
   return {
     id: linha.id,
@@ -203,6 +224,7 @@ function normalizarLinha(
         ? dados.syncRevision
         : obterRevisao(estado),
     estado,
+    precisaMigracao,
     resumo,
     alteracoes:
       dados.alteracoes && typeof dados.alteracoes === "object"

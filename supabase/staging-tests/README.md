@@ -1,0 +1,108 @@
+# Study Pro — staging isolado para ensaio de sincronização (PR #562)
+
+## Escopo e fronteiras
+- Ambiente **único de destino**: Supabase `pmpe-study-pro-staging` (`isjzyyoqvftrltkctanw`).
+- Banco oficial `pmpe-study-pro` foi consultado **somente para metadados de estrutura** (`pg_catalog`, `information_schema`, políticas, nomes de buckets e definição de funções). Não foram copiadas linhas de usuários, sessões, questões, pagamentos, arquivos ou segredos.
+- A estrutura do banco staging foi recriada **vazia** a partir do catálogo de produção; não representa um dump de dados nem é um mecanismo automático para atualizar produção.
+- Não ativar backups automáticos, `pg_cron` de produção ou qualquer rotina de envio externo no staging.
+- A PR permanece em rascunho; **nunca fazer merge/deploy oficial sem aprovação do proprietário**.
+
+## Estrutura do banco staging
+1. Harness de CAS com `configuracoes` e `backups`, RLS de proprietário e gate privado `study_pro_internal.salvar_estado_app_cas`. `public.salvar_estado_app_cas` é wrapper `SECURITY INVOKER`. A permissão direta de INSERT/UPDATE/DELETE de `configuracoes` está revogada de `authenticated`.
+2. Estruturas das outras 68 tabelas públicas derivadas dos metadados do banco oficial, com colunas, defaults, identidade, constraints, relações, índices e RLS ativo. Total alvo **70 tabelas públicas**.
+3. Políticas RLS das demais tabelas, privilégios de tabela limitados a SELECT/INSERT/UPDATE/DELETE por função e papéis, espelhando as regras existentes, sem habilitar TRUNCATE para clientes.
+4. Funções `public` (exceto CAS substituída pelo gate), `private`, `api_private` reconstruídas com base em suas definições, e grants explícitos iguais aos direitos de execução de `authenticated`/`anon` no oficial. Os schemas privados não estão expostos pelo Data API.
+5. Triggers das 70 tabelas e trigger de criação de perfil `on_auth_user_created` na tabela `auth.users`.
+6. Quatro buckets de Storage replicados **apenas como metadados**, vazios: `fundos-dashboard`, `imagens-publicas`, `loja-wallpapers`, `materiais`. As 14 políticas de Storage também foram reproduzidas.
+7. Duas Edge Functions implantadas do código na branch de testes: `importar-curso-publico` e `publicar-questoes-ia`, ambas com verificação JWT ativa. A função legada `e2e-simulado-pdf-20260930` não foi implantada (não é parte das funcionalidades normais). Nenhuma credencial externa de produção foi transferida.
+
+## Isolamento do Vercel
+- Branch Preview `fix/proteger-gravacoes-estruturais-cas` possui `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` exclusivos do staging.
+- `VITE_STUDY_PRO_STAGING_GUARD=true` bloqueia no código uma URL Supabase diferente da do staging.
+- `VITE_API_URL=https://study-pro-staging-api.invalid` **desabilita intencionalmente chamadas ao backend Render oficial**, até que um servidor API staging separado esteja operacional. O frontend bloqueia inicialização se receber outra URL de API sob a guarda. Assim, geração de IA e análises por backend externo não funcionarão na prévia por enquanto.
+- `VITE_SENTRY_DSN` vazio exclusivamente nessa branch para evitar misturar eventos de teste ao monitoramento oficial.
+- Configurações globais de produção não foram alteradas. **Deploys antigos** não devem ser usados para testes.
+
+## Limitações / critérios de liberação
+- Staging é **schema-only**: não contém cursos reais, questões oficiais nem materiais de alunos. Fluxos dependentes de dados públicos podem aparecer vazios até que sejam criadas **fixtures fictícias**.
+- A configuração de Auth HTTP (registro por e-mail, confirmação e redirecionamentos) deve ser verificada em um navegador com conta fictícia. Testes SQL com `SET ROLE authenticated` e claims simulados **não equivalem a JWT real via PostgREST**.
+- Ainda requer teste ponta a ponta com dois clientes navegadores, reconexão, recuperação de backup, fluxos de IA com backend staging próprio e revisão independente das funções SECURITY DEFINER.
+- Nada foi aplicado ao banco ou site oficial. A PR #562 é exclusivamente de avaliação.
+
+## Ensaio final
+Registrar separadamente os testes no PostgreSQL staging (em transação revertida), a verificação de tabelas/políticas/grants/funções, o estado do deployment Vercel, e quaisquer bloqueios remanescentes. Não afirmar cobertura integral de navegador sem efetivamente executá-la.
+
+## Ensaio com autenticação HTTP real (PR #562)
+
+- Teste temporário `server/stagingAuthHttp.test.ts`, executado no build Vercel **somente quando** `STAGING_AUTH_HTTP_TEST_ENABLED=true` e a URL/guard indicarem staging exatamente.
+- Credenciais para duas contas fictícias armazenadas apenas como variáveis criptografadas da branch; não são commitadas nem expostas no frontend.
+- Fase `signup`: cadastro de contas exclusivamente no Supabase staging via GoTrue HTTPS.
+- Fase `login`: autenticação real via GoTrue com duas sessões do usuário A (PC/celular) e usuário B independente; RPC CAS concorrente via PostgREST, RLS de outra conta, escrita direta recusada, revisão antiga e antirregressão. Uma falha de teste falha o build.
+- Após executar, desativar a variável de teste da branch e eliminar as duas contas fictícias do Auth staging (incluindo dados associados por cascade).
+- Nenhuma conta real nem as credenciais de produção devem ser usadas. A verificação ainda não substitui Playwright em dois dispositivos físicos.
+
+- Contas fictícias usam o domínio reservado `example.com`; o Auth hospedado rejeitou `example.invalid` na primeira tentativa. Nunca usar endereço pessoal ou dados reais neste ensaio.
+
+## Resultado da etapa Auth HTTP — 20/11/2026
+- Teste real sem sessão em `server/stagingPublicHttp.test.ts`: GoTrue `/auth/v1/health` respondeu HTTP 200; chamadas HTTP anônimas de leitura `configuracoes` e `perfis` e a RPC CAS foram recusadas. **PASS** no build Vercel.
+- Tentativa opt-in de criação de duas contas via API pública GoTrue em `server/stagingAuthHttp.test.ts`: domínios de documentação foram rejeitados como inválidos; tentativa com e-mails de teste randômicos chegou ao limite de envio de e-mails (`email rate limit exceeded`). Portanto, **não há alegação de login real validado**.
+- `STAGING_AUTH_HTTP_TEST_ENABLED` foi desativado na branch e as seis variáveis temporárias do ensaio (modo, enable, emails e senhas) foram neutralizadas. Esse teste permanece no código com `skip` por padrão.
+- As tentativas de Auth não criaram usuário permanente: verificação do staging mostrou 0 contas de teste, 0 linhas de `configuracoes` e 0 linhas de `backups`.
+- A extensão de diagnóstico SQL `http` e o schema temporário `staging_test_http` foram desinstalados do staging após a investigação.
+- Build `1e025a20`: **602 testes aprovados, 1 teste opt-in pulado, 0 falhas**, deployment Vercel READY.
+- Security Advisors staging: 0 alertas.
+- **Pendente para liberação**: obter uma conta fictícia por fluxo suportado pelo Supabase Auth sem atingir a cota de e-mail; executar login real e duas sessões autenticadas, sincronização na UI, restauração de backups e simulação de perda de conexão; teste Playwright não foi realizado.
+- Nenhuma alteração no banco/site oficial; PR continua draft.
+
+## Ensaio opcional sem e-mail: GoTrue Anonymous JWT
+- Adicionado `server/stagingAnonymousHttp.test.ts`, executado somente na branch guardada com `STAGING_ANONYMOUS_TEST_ENABLED=true`.
+- Se o provedor de login anônimo estiver desativado no staging, o teste relata a restrição e é **pulado**; não habilitar o provedor automaticamente porque isso pode alterar o acesso disponível ao aplicativo.
+- Se habilitado, cria dois usuários anônimos com marca `study_pro_qa_tag=study-pro-pr562-20261120-anon-http`, verifica JWTs reais em PostgREST, concorrência em duas requisições HTTP da mesma identidade, leitura RLS cruzada, negação de UPDATE direto, revisão obsoleta/adulterada e antirregressão.
+- Identidades anônimas são descartáveis, não constituem login permanente nem substituem dois logins independentes no PC e no celular.
+- Ao final, desativar a variável do teste e excluir **somente** os usuários fictícios com essa marca no staging, após verificar contagens.
+
+## Resultado do ensaio GoTrue anônimo — 2026-11-20
+- Tentativa usando `server/stagingAnonymousHttp.test.ts` contra o projeto `isjzyyoqvftrltkctanw`.
+- `signInAnonymously()` confirmou que o provedor de contas anônimas está **desativado** nesse staging; o teste foi pulado explicitamente, sem afirmar que existe uma sessão JWT validada.
+- Vercel: build `f43b0ca` READY, **602 testes aprovados, 2 pulados, 0 falhas**. As duas suítes puladas são de autenticação de contas com credenciais e anônimas.
+- Após a verificação: `STAGING_ANONYMOUS_TEST_ENABLED` foi novamente definido como `false` na branch. No staging: 0 usuários com `study_pro_qa_tag` desse teste, 0 estados em `configuracoes`, 0 backups e 0 alertas dos Security Advisors.
+- **Necessidade de uma ação humana opcional para concluir teste JWT de verdade:** no dashboard do projeto **staging**, em Authentication → Providers → Anonymous Sign-Ins, habilitar somente esse provedor naquele projeto. **Não habilitar no projeto oficial.**
+- A ativação faria contas anônimas receberem a role Postgres `authenticated`; revisar as políticas e não levar essa configuração para produção. Assim que autorizado, habilitar temporariamente a variável opt-in da branch, executar o teste real HTTP e desativá-la novamente; depois excluir por ID/identificador as contas descartáveis, somente no staging.
+- Sem essa configuração, permanecem aprovados os testes de concorrência PostgreSQL, CAS e proibição de acesso HTTP não autenticado, mas **não** os testes reais de login JWT ou navegador.
+
+## Ensaio de restauração explícita de backup no staging — 20/11/2026
+- **Problema reproduzido:** ao tentar restaurar um backup antigo com menos sessões, o fluxo atual chama a função CAS normal, que recusa a regressão. O histórico atual fica protegido, porém a restauração intencional não se completa.
+- **Protótipo preparado somente no staging** em [restaurar_backup_cas_prototype.sql](./restaurar_backup_cas_prototype.sql): recebe o ID de um backup da própria conta, a revisão esperada e a confirmação explícita `CONFIRMO_RESTAURACAO`; verifica `auth.uid()`, a propriedade do backup, o formato básico do estado e a revisão sob bloqueio de linha. Cria uma cópia de segurança do estado anterior e grava a restauração na **mesma transação** com revisão incrementada.
+- A função privilegiada reside em `study_pro_internal` com `SECURITY DEFINER` e `search_path` vazio; a função pública `public.restaurar_backup_cas` é `SECURITY INVOKER`. `anon` não possui `EXECUTE`.
+- Testes reais em transações revertidas: restauração válida, backup de segurança criado, restauração inversa do backup de segurança, bloqueio de confirmação ausente, conflito em revisão antiga, isolamento entre contas e rejeição de backup incompleto (campos ausentes). **Todos aprovados.**
+- Após os testes, o banco continuou com **0 linhas** em `configuracoes` e `backups`, sem usuários fictícios; Security Advisors: 0 alertas.
+- **Atenção:** isto é um PROTÓTIPO de SQL, **não está integrado ao botão de restauração da interface** e não pode ser considerado solução já publicada. Importação de arquivo JSON local também não é atendida por este protótipo.
+- Antes de integrar, auditar SECURITY DEFINER por terceiro, verificar integridade e migração da versão do backup, executar testes HTTP com JWT real, concorrência, restauração UI e descarte/reversão em caso de erro. Não aplicar em produção sem autorização expressa.
+
+## Teste de GoTrue com JWT real concluído — 20/11/2026
+- O usuário habilitou manualmente **Anonymous Sign-Ins** apenas no Supabase staging (projeto `isjzyyoqvftrltkctanw`).
+- Flag temporária `STAGING_ANONYMOUS_TEST_ENABLED=true` ativada exclusivamente na branch preview; novo deployment Git `dbcc84b`, ID `dpl_FonTbi4s7ZAkm5EDJrVXmjZi5iAx`, chegou a `READY`.
+- **603 testes PASS, 1 SKIP (fluxo por email), 0 FAIL**. `STAGING_ANONYMOUS_HTTP_PASS` confirmou tokens JWT de GoTrue emitidos para duas identidades distintas, duas requisições HTTP simultâneas de escrita do mesmo token com apenas uma vencedora, histórico anterior preservado, isolamento RLS entre identidades, UPDATE direto negado, revisão antiga/adulterada e regressão histórica rejeitadas.
+- O teste usa **duas requisições HTTP com o mesmo token de usuário**, não duas sessões autenticadas independentes em navegadores ou dispositivos.
+- Dois usuários anônimos de teste foram identificados estritamente pela marca `study_pro_qa_tag=study-pro-pr562-20261120-anon-http` e removidos do staging por IDs exatos. Verificação após a exclusão: **0 usuários da marca, 0 linhas em `configuracoes` e 0 backups**.
+- A flag Vercel `STAGING_ANONYMOUS_TEST_ENABLED` foi retornada a `false` e verificada.
+- **PENDÊNCIA DE SEGURANÇA NO PROJETO:** após habilitar o login anônimo, o Supabase Security Advisor passou a apontar **69 alertas WARN do tipo `auth_allow_anonymous_sign_ins`**, decorrentes de políticas RLS que incluem a role `authenticated`, a mesma usada por identidades anônimas. Não confundir com acesso aos dados de outras contas: o teste de isolamento passou, mas as 69 advertências requerem desativar o provedor de login anônimo ou uma revisão geral das políticas antes de habilitá-lo de forma permanente.
+- **Ação manual necessária:** desativar novamente **Allow anonymous sign-ins** em Supabase staging → Authentication → Providers/Settings → Save changes. Esta configuração de Auth não é alterável pelas ferramentas MCP disponíveis. Não habilitar no oficial.
+- Continuam pendentes: autenticação e sincronização em dois navegadores reais, uso da UI para backup/restauração, revisão de SECURITY DEFINER e separação do backend de IA.
+
+## Reversão do login anônimo confirmada e auditoria de backup — 21/11/2026
+- O usuário desativou **Allow anonymous sign-ins** no dashboard do Supabase staging.
+- Security Advisors novamente consultados: **0 alertas**; antes, com o provedor temporário habilitado, haviam aparecido 69 alertas `auth_allow_anonymous_sign_ins`.
+- Banco staging permaneceu `ACTIVE_HEALTHY`, sem contas temporárias do último teste, linhas de configurações ou backups. Role `anon` continua sem permissão de executar `public.salvar_estado_app_cas(bigint,jsonb)`.
+- No protótipo `restaurar_backup_cas` reforçamos a validação de snapshots para exigir também as coleções `bancoQuestoes` e `simuladosGerados`, exigidas pela validação de estado do aplicativo. A função interna de staging foi atualizada e o SQL do repositório sincronizado.
+- Novo ensaio PostgreSQL com `ROLLBACK`: backup incompleto, sem `simuladosGerados`, foi rejeitado; restauração de backup completo foi aceita e gerou cópia de segurança contendo o estado anterior; nenhum registro ficou após a transação.
+- O protótipo é **somente do staging, não está integrado à interface**, e não substitui o teste E2E com dois navegadores físicos nem a revisão externa de `SECURITY DEFINER`. Não mover para migrações de produção sem aprovação.
+
+## Integração na interface da prévia — 21/11/2026
+- A branch de testes passou a incluir `src/services/seguranca/restauracaoBackupStagingService.ts` (RPC `public.restaurar_backup_cas`, exclusivamente se `VITE_STUDY_PRO_STAGING_GUARD=true` e a URL for a do staging).
+- `src/context/AppContext.tsx`: novo método `restaurarBackupHistoricoSeguroStaging` na fila serializada de operações de nuvem. Antes de chamar a RPC, verifica conexão, `statusNuvem=sincronizado`, inexistência de pendências/conflito local, assinatura do estado atual e revisão/estado remoto. Cria backup local, depois chama SQL. Só aplica o estado e confirma a revisão após resposta válida. Não faz rollback inseguro nem repete a operação após perda de resposta.
+- `src/pages/Backup/Backup.tsx`: botão **Comparar e restaurar** da linha do tempo utiliza o novo método **somente no staging**; fica desabilitado enquanto a sincronização estiver pendente. A branch mantém o fluxo anterior para ambientes sem a guarda, sem enviar RPC experimental à produção.
+- SQL de staging passou a **preservar o `dadosReiniciadosEm` mais recente** em `configuracoes`. Ensaio em transação com `ROLLBACK`: backup anterior com um registro foi restaurado preservando o marcador de reinício atual, e backup de segurança gravou o estado anterior com duas sessões. PASS.
+- `server/sincronizacaoCasAtomico.test.ts` ganhou três testes de regressão do isolamento, da fila de sincronização e do fluxo de restauração. Vercel commit `c6e32ab`, deployment `dpl_GY4DyUN1DfAMtMgBH3j1dqAiVpyH`: **READY, 605 PASS, 2 SKIP, 0 FAIL**, compilação TypeScript e Vite concluídas.
+- **NÃO afirmar E2E real:** não foi efetuado teste de clique no navegador usando uma conta autenticada. Os testes de código e SQL não cobrem a recuperação de conexão e a interface sob condições reais.
+- Restauração de JSON importado, backup local e limpeza completa da conta **não** foram migradas para o protótipo. O SQL de staging não deve ser copiado diretamente ao oficial.

@@ -1,0 +1,74 @@
+name: Study Pro PR562 Local Browser UI
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [fix/proteger-gravacoes-estruturais-cas]
+    paths:
+      - "src/**"
+      - "e2e/**"
+      - "package*.json"
+      - ".github/workflows/e2e-staging-local-pr562.yml"
+permissions:
+  contents: read
+concurrency:
+  group: pr562-local-mocked-browser-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  mocked-ui:
+    if: github.event_name != 'pull_request' || github.head_ref == 'fix/proteger-gravacoes-estruturais-cas'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CI: "true"
+      E2E_BASE_URL: http://127.0.0.1:4173
+      E2E_LOCAL_STAGING_MOCKS: "true"
+      VITE_STUDY_PRO_STAGING_GUARD: "true"
+      VITE_SUPABASE_URL: https://isjzyyoqvftrltkctanw.supabase.co
+      VITE_SUPABASE_ANON_KEY: mock-only-public-key-not-a-real-supabase-credential
+      VITE_API_URL: https://study-pro-staging-api.invalid
+      VITE_SENTRY_DSN: ""
+    steps:
+      - name: Checkout isolated PR branch
+        uses: actions/checkout@v4
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Dependencies
+        run: npm ci
+      - name: Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start Vite locally (mock-only, no real credentials)
+        shell: bash
+        run: |
+          npm run dev:web -- --host 127.0.0.1 --port 4173 --strictPort >/tmp/study-pro-mock-vite.log 2>&1 &
+          echo $! >/tmp/study-pro-mock-vite.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/backup >/dev/null; then
+              echo "Local staging UI is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          tail -n 60 /tmp/study-pro-mock-vite.log
+          exit 1
+      - name: Browser click backup restore (mocked database)
+        run: npx playwright test e2e/staging-backup-ui.spec.ts --project=desktop-chrome --workers=1 --retries=0 --repeat-each=3
+      - name: Independent PC and phone browsers share CAS state (mock only)
+        run: npx playwright test e2e/staging-two-device-sync.spec.ts --project=desktop-chrome --workers=1 --retries=0
+      - name: Public navigation smoke on desktop and mobile
+        if: always()
+        run: npx playwright test e2e/smoke.spec.ts --project=desktop-chrome --project=mobile-chrome --workers=2 --retries=0 --grep "backup exige autenticação|login vazio|demonstração pública"
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr562-local-mocked-ui-traces
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
