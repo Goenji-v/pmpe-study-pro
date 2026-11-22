@@ -887,7 +887,11 @@ function ConteudoDaRevisao({
     })),
     ...(assunto.pdf ? [{ chave: assunto.id + ":pdf", nome: "PDF do assunto", url: assunto.pdf, assunto: assunto.nome }] : []),
   ]);
-  const linkSeguro = (url: string | undefined) => Boolean(url && /^https?:\\/\\//i.test(url));
+  const linkSeguro = (url: string | undefined) => {
+    if (!url) return false;
+    try { return ["http:", "https:"].includes(new URL(url).protocol); }
+    catch { return false; }
+  };
 
   return (
     <section className="revisao-conteudo-vinculado" aria-label={`Conteúdos vinculados à revisão de ${revisao.assunto}`}>
