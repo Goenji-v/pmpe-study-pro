@@ -649,3 +649,75 @@
     gap: 4px;
   }
 }
+
+/* Reparo seguro de referências antigas de curso/revisão; não altera histórico. */
+.revisoes-reparo-vinculos { padding:16px; margin:16px 0; border-radius:13px; background:#251d16; border:1px solid #92400e; color:#fef3c7; }
+.revisoes-reparo-vinculos h2 { font-size:18px; margin:0 0 6px; }
+.revisoes-reparo-vinculos p { font-size:13px; line-height:1.5; color:#fde68a; margin:4px 0 14px; }
+.revisoes-reparo-vinculos button { cursor:pointer; border:1px solid #a16207; background:#78350f; color:#fff; border-radius:9px; padding:9px 12px; font-weight:700; }
+.revisoes-reparo-vinculos button:disabled { opacity:.45; cursor:not-allowed; }
+.revisoes-reparo-item { border-top:1px solid rgba(253,230,138,.24); padding:10px 0; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; }
+.revisoes-reparo-item strong { font-size:13px; }
+.revisoes-reparo-campos { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; width:100%; }
+.revisoes-reparo-campos label { flex:1; display:flex; flex-direction:column; gap:7px; font-size:12px; }
+.revisoes-reparo-campos select { width:100%; max-width:100%; border-radius:9px; border:1px solid #a16207; padding:10px; background:#171717; color:#fff; }
+@media (max-width:700px) { .revisoes-reparo-campos { flex-direction:column; align-items:stretch; } .revisoes-reparo-campos label { width:100%; } .revisoes-reparo-campos button { width:100%; } }
+
+
+
+/* Revisão única: mantém a agenda padrão e apenas informa a consolidação. */
+.revisoes-blocos-explicacao {
+  margin: 0 0 13px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: rgba(51, 87, 125, .14);
+  border: 1px solid rgba(83, 124, 169, .23);
+  color: #a9bdd7;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.revisoes-blocos-explicacao strong { color: #f2f6fe; }
+.revisao-assunto-principal-nota {
+  display: block;
+  margin: 4px 0 5px !important;
+  color: #f4a0a4 !important;
+  font-size: 11px;
+  font-weight: 700;
+}
+.revisoes-historico-integracao {
+  margin: 0 0 20px;
+  padding: 15px 17px;
+  border-radius: 12px;
+  border: 1px solid #31435c;
+  background: #142137;
+}
+.revisoes-historico-integracao summary {
+  color: #dfeaf9;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 750;
+}
+.revisoes-historico-integracao > p {
+  color: #9bafc9;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.revisoes-historico-integracao-lista { display: grid; gap: 7px; }
+.revisoes-historico-integracao-lista > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 15px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1b2c43;
+  font-size: 12px;
+}
+.revisoes-historico-integracao-lista strong { color: #f0f4ff; }
+.revisoes-historico-integracao-lista span { color: #a8bbd1; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisoes-blocos-explicacao,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisoes-historico-integracao { color:#3b4c63; background: #f1f6fd; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisoes-blocos-explicacao strong,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisoes-historico-integracao summary,
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisoes-historico-integracao-lista strong { color: #1c304d; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisoes-historico-integracao-lista > div { background: #e1ebf8; }
+html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisoes-historico-integracao-lista span { color: #536780; }

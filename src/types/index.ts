@@ -391,6 +391,16 @@ export type ConfiguracoesApp = {
 
 export type Revisao = {
   id: string;
+  /** Revisão antiga vinculada a uma revisão única do mesmo assunto principal.
+   * Mantém a etapa, a data e o status original para auditoria.
+   * Não equivale a conclusão, não altera notas e não aparece como pendência.
+   */
+  integradaEmId?: string;
+  integradaEm?: string;
+  /** Revisão de um bloco didático inteiro (ex.: Classes de palavras). */
+  escopoGrupo?: boolean;
+  /** IDs dos assuntos que formam o bloco; mantém a rastreabilidade histórica. */
+  grupoAssuntosIds?: string[];
   sessaoId?: string;
   materiaId: string;
   moduloId?: string;
@@ -408,6 +418,12 @@ export type Revisao = {
   erradas?: number;
   /** Sinal que antecipou a revisão fora do ciclo normal. */
   motivoAdaptativo?: "duvida" | "baixo_desempenho";
+  /** Evita processar duas vezes o mesmo resultado de questões/IA. */
+  ultimaTentativaAdaptativaId?: string;
+  /** Contagem conservadora, limitada a 2; não reinicia a etapa espaçada. */
+  sequenciaResultadosBaixos?: number;
+  /** Dois resultados abaixo de 60% pedem revisão da teoria antes de novo treino. */
+  reforcoTeoriaRecomendado?: boolean;
   reagendadaEm?: string;
   /** Origem rastreável da revisão extraordinária criada após simulado. */
   origemSimulado?: {

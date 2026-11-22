@@ -198,15 +198,19 @@ test("ciclo normal usa 1, 5, 7, 14 e 30 dias", () => {
   );
 });
 
-test("agenda respeita a capacidade e preserva outra revisão pendente sem duplicar", () => {
-  const ocupada = { ...revisao, id: "outra", assuntoId: "silabas", dataPrevista: new Date(2026, 8, 3, 12).toISOString() };
+test("agenda respeita capacidade de assunto independente e integra ciclos do mesmo tema", () => {
+  const ocupada = { ...revisao, id: "outra", assunto: "Crase", assuntoId: "crase", dataPrevista: new Date(2026, 8, 3, 12).toISOString() };
   const resultado = concluirRevisaoNaLista({ ...parametros, desempenho: "dificil", limiteDiario: 1, revisoes: [revisao, ocupada] });
   assert.equal(new Date(resultado[0].dataPrevista).getDate(), 4);
   assert.equal(resultado.find((item) => item.id === "outra"), ocupada);
   const jaAgendada = { ...revisao, id: "agendada", etapa: 3 as const };
-  const semDuplicata = concluirRevisaoNaLista({ ...parametros, revisoes: [revisao, jaAgendada] });
-  assert.equal(semDuplicata.length, 2);
-  assert.equal(semDuplicata[1], jaAgendada);
+  const unificadas = concluirRevisaoNaLista({ ...parametros, revisoes: [revisao, jaAgendada] });
+  assert.equal(unificadas.length, 3);
+  assert.equal(unificadas.find((item) => item.id === "agendada")?.concluida, false);
+  assert.equal(unificadas.find((item) => item.id === "agendada")?.integradaEmId, revisao.id);
+  assert.equal(unificadas.find((item) => item.id === "proxima")?.etapa, 3);
+  assert.equal(unificadas.filter((item) => !item.concluida && !item.integradaEmId).length, 1);
+  assert.deepEqual(concluirRevisaoNaLista({ ...parametros, revisoes: unificadas }), unificadas);
 });
 
 test("sessão sem vínculo ou de outro conteúdo nunca conclui uma revisão", () => {

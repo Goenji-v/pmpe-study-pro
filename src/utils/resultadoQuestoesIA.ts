@@ -5,10 +5,12 @@ import type {
   RegistroQuestao,
   ResultadoQuestoesIAPersistido,
   Revisao,
+  SessaoEstudo,
   Simulado,
   TipoSessaoQuestoesIA,
 } from "../types";
 import { aplicarRevisaoAdaptativa } from "./revisaoAdaptativa";
+import { existeEstudoConcluido } from "./elegibilidadeRevisao";
 
 export type LetraAlternativaIA = "A" | "B" | "C" | "D" | "E";
 
@@ -50,6 +52,10 @@ type AplicarRevisoesParams = {
   revisoes: Revisao[];
   diagnostico: DiagnosticoAssuntoIA[];
   materias: Materia[];
+  sessoes?: SessaoEstudo[];
+  limiteDiario?: number;
+  /** ID estável da tentativa IA, não de cada render ou atualização de estado. */
+  resultadoId?: string;
   agora?: Date;
 };
 
@@ -58,6 +64,7 @@ export type ResumoRevisoesResultadoIA = {
   criadas: number;
   atualizadas: number;
   semReferencia: number;
+  somenteDiagnostico?: number;
 };
 
 export function mesclarResultadosQuestoesIANoHistorico({
@@ -307,12 +314,16 @@ export function aplicarRevisoesDoResultadoIA({
   revisoes,
   diagnostico,
   materias,
+  sessoes = [],
+  limiteDiario = 0,
+  resultadoId,
   agora,
 }: AplicarRevisoesParams): ResumoRevisoesResultadoIA {
   let proximas = revisoes;
   let criadas = 0;
   let atualizadas = 0;
   let semReferencia = 0;
+  let somenteDiagnostico = 0;
 
   diagnostico.forEach((item) => {
     const referencia = localizarReferenciaCanonica(materias, item);
@@ -324,6 +335,11 @@ export function aplicarRevisoesDoResultadoIA({
 
     const resultado = aplicarRevisaoAdaptativa({
       revisoes: proximas,
+      conteudoEstudado: existeEstudoConcluido({
+        materias, revisoes: proximas, sessoes,
+        materia: referencia.materia,
+        assunto: referencia.assunto,
+      }),
       materiaId: referencia.materia.id,
       moduloId: referencia.modulo.id,
       assuntoId: referencia.assunto.id,
@@ -332,12 +348,16 @@ export function aplicarRevisoesDoResultadoIA({
       assunto: referencia.assunto.nome,
       certas: item.certas,
       erradas: item.erradas + item.emBranco,
+      limiteDiario,
+      // Diferentes assuntos da mesma tentativa recebem marcadores próprios.
+      resultadoId: resultadoId ? resultadoId + ":" + item.chave : undefined,
       agora,
     });
 
     proximas = resultado.revisoes;
     if (resultado.acao === "criada") criadas += 1;
     if (resultado.acao === "atualizada") atualizadas += 1;
+    if (resultado.acao === "diagnostico") somenteDiagnostico += 1;
   });
 
   return {
@@ -345,6 +365,7 @@ export function aplicarRevisoesDoResultadoIA({
     criadas,
     atualizadas,
     semReferencia,
+    somenteDiagnostico,
   };
 }
 
