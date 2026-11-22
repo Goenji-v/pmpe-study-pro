@@ -5,6 +5,12 @@ import type {
   TipoSessao,
 } from "../types";
 import { revisaoOriginadaDeSimulado } from "./revisoesRegulares";
+import { encontrarDataDisponivelParaReforco } from "./agendadorReforcos";
+import {
+  chaveAssuntoPrincipal,
+  integrarPendenciasNaConclusao,
+  pendentesUnicasPorAssunto,
+} from "./revisoesAssuntoPrincipal";
 
 export const INTERVALOS_REVISAO_DIAS: Record<EtapaRevisao, number> = {
   1: 1,
@@ -32,24 +38,21 @@ export function encontrarDataDisponivelParaRevisao(params: {
   dataBase: Date;
   revisoes: Revisao[];
   limiteDiario: number;
+  agora?: Date;
 }): Date {
-  const { dataBase, revisoes, limiteDiario } = params;
-  if (!Number.isFinite(limiteDiario) || limiteDiario <= 0) return dataBase;
-
-  const candidato = new Date(dataBase);
-  candidato.setHours(12, 0, 0, 0);
-
-  for (let i = 0; i < 365; i += 1) {
-    const chave = chaveData(candidato);
-    const quantidade = revisoes.filter(
-      (revisao) => !revisaoOriginadaDeSimulado(revisao) && !revisao.concluida && chaveData(revisao.dataPrevista) === chave
-    ).length;
-
-    if (quantidade < limiteDiario) return candidato;
-    candidato.setDate(candidato.getDate() + 1);
-  }
-
-  return candidato;
+  const data = encontrarDataDisponivelParaReforco({
+    dataIdeal: params.dataBase,
+    agora: params.agora ?? new Date(),
+    revisoes: params.revisoes,
+    limiteDiario: params.limiteDiario,
+    categoria: "regular",
+  });
+  // A agenda usa a mesma capacidade para revisões regulares e reforços.
+  // Nunca gravar uma data falsa se não houver vaga em horizonte calculável.
+  if (!data) throw new Error(
+    "Não foi possível encontrar uma vaga segura na agenda de revisões."
+  );
+  return data;
 }
 
 export function criarPrimeiraRevisao(params: {
@@ -98,13 +101,18 @@ export function criarProximaRevisao(
   if (revisaoAtual.etapa >= 5) return null;
   const proximaEtapa = (revisaoAtual.etapa + 1) as EtapaRevisao;
 
+  const chavePrincipal = chaveAssuntoPrincipal(revisaoAtual);
   const jaExiste = revisoesExistentes.some(
     (item) =>
       !item.concluida &&
+      !item.integradaEmId &&
       item.id !== revisaoAtual.id &&
-      item.materiaId === revisaoAtual.materiaId &&
-      item.assuntoId === revisaoAtual.assuntoId &&
-      (!item.moduloId || !revisaoAtual.moduloId || item.moduloId === revisaoAtual.moduloId)
+      !revisaoOriginadaDeSimulado(item) &&
+      (chavePrincipal
+        ? chaveAssuntoPrincipal(item) === chavePrincipal
+        : item.materiaId === revisaoAtual.materiaId &&
+          item.assuntoId === revisaoAtual.assuntoId &&
+          (!item.moduloId || !revisaoAtual.moduloId || item.moduloId === revisaoAtual.moduloId))
   );
   if (jaExiste) return null;
 
@@ -115,6 +123,7 @@ export function criarProximaRevisao(
     dataBase: dataIdeal,
     revisoes: revisoesExistentes,
     limiteDiario,
+    agora,
   });
 
   return {
@@ -125,6 +134,10 @@ export function criarProximaRevisao(
     materia: revisaoAtual.materia,
     modulo: revisaoAtual.modulo,
     assunto: revisaoAtual.assunto,
+    ...(revisaoAtual.escopoGrupo ? {
+      escopoGrupo: true,
+      grupoAssuntosIds: revisaoAtual.grupoAssuntosIds,
+    } : {}),
     etapa: proximaEtapa,
     dataCriacao: agora.toISOString(),
     dataPrevista: dataPrevista.toISOString(),
@@ -269,7 +282,8 @@ export function concluirRevisaoNaLista(params: {
     sessaoIdRecuperacao,
   } = params;
   const atual = revisoes.find((item) => item.id === revisaoId);
-  if (!atual || atual.concluida || (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
+  if (!atual || atual.concluida || atual.integradaEmId ||
+      (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
   const concluida: Revisao = {
     ...atual,
     concluida: true,
@@ -297,8 +311,23 @@ export function concluirRevisaoNaLista(params: {
           }),
   };
   const atualizadas = revisoes.map((item) => item.id === revisaoId ? concluida : item);
-  const proxima = criarProximaRevisao(concluida, atualizadas, limiteDiario, agora, proximaId);
-  return proxima ? [proxima, ...atualizadas] : atualizadas;
+  // Um registro confirmado encerra UMA revisão do assunto principal.
+  // Os outros registros pendentes são vinculados, nunca falsamente concluídos.
+  // O ciclo seguinte usa a MENOR etapa pendente anterior para não antecipar
+  // indevidamente a conclusão do conjunto (ex.: etapas 5 + 3 -> etapa 4).
+  const integradas = integrarPendenciasNaConclusao({
+    revisoes: atualizadas,
+    revisaoPrincipal: concluida,
+    agora,
+  });
+  const proxima = criarProximaRevisao(
+    { ...concluida, etapa: integradas.etapaMaisConservadora },
+    integradas.revisoes,
+    limiteDiario,
+    agora,
+    proximaId
+  );
+  return proxima ? [proxima, ...integradas.revisoes] : integradas.revisoes;
 }
 
 const JANELA_RECUPERACAO_REVISAO_MS = 72 * 60 * 60 * 1000;
@@ -424,7 +453,7 @@ export function recuperarConclusoesRevisaoPorSessoesOrfas(params: {
   let revisoesAtualizadas = params.revisoes;
 
   for (const revisao of params.revisoes.filter(
-    (item) => !item.concluida
+    (item) => !item.concluida && !item.integradaEmId
   )) {
     const sessao = sessoesDisponiveis.find(
       (item) =>
@@ -501,8 +530,14 @@ export function redistribuirRevisoesPendentes(
   if (!Number.isFinite(limiteDiario) || limiteDiario <= 0) return revisoes;
 
   const concluidas = revisoes.filter((revisao) => revisao.concluida);
-  const pendentes = revisoes
-    .filter((revisao) => !revisao.concluida)
+  const ativas = pendentesUnicasPorAssunto(revisoes);
+  const idsAtivos = new Set(ativas.map((revisao) => revisao.id));
+  // Não deslocar ciclos antigos vinculados nem outras pendências ocultas.
+  // Preservar seus IDs, datas e etapas como vieram da nuvem.
+  const preservadas = revisoes.filter(
+    (revisao) => !revisao.concluida && !idsAtivos.has(revisao.id)
+  );
+  const pendentes = [...ativas]
     .sort(
       (a, b) =>
         new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime() ||
@@ -543,7 +578,7 @@ export function redistribuirRevisoesPendentes(
     };
   });
 
-  return [...reorganizadas, ...concluidas];
+  return [...reorganizadas, ...preservadas, ...concluidas];
 }
 
 export function inicioDoDia(data: Date) {
