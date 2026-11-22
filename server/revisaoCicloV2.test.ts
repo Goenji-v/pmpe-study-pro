@@ -5,9 +5,9 @@ import {
  obterFormatoRevisaoV2, inventariarRevisoesLegadasV2
 } from "../src/utils/revisaoCicloV2";
 
-test("aula gera uma revisão D+1 e já registra recordação de 4h", () => {
+test("aula agenda D+1, e a recordação de 4h só é marcada após concluir essa revisão", () => {
  const c=iniciarCicloRevisaoV2({materiaId:"rlm",aulaId:"argumentativa",dataAula:"2026-11-22"});
- assert.equal(c.quatroHorasRegistrada,true);
+ assert.equal(c.quatroHorasRegistrada,false);
  assert.equal(c.marco,"d1");
  assert.equal(c.proximaData,"2026-11-23");
  assert.equal(c.historico.length,0);
@@ -18,6 +18,7 @@ test("fluxo aprovado: D+1, D+7 e D+14 sem ciclo paralelo", () => {
  const a=iniciarCicloRevisaoV2({materiaId:"rlm",aulaId:"argumentativa",dataAula:"2026-11-22"});
  const b=concluirEtapaRevisaoV2(a,{dataConclusao:"2026-11-23",sessaoId:"teoria"});
  assert.equal(b.marco,"d7");
+ assert.equal(b.quatroHorasRegistrada,true);
  assert.equal(b.proximaData,"2026-11-29");
  assert.equal(obterFormatoRevisaoV2(b.marco!),"questoes");
  const c=concluirEtapaRevisaoV2(b,{dataConclusao:"2026-11-29",percentual:60,sessaoId:"questoes-1"});
