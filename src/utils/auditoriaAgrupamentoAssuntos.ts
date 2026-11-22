@@ -82,6 +82,26 @@ export type GrupoAssuntosVisual = {
  * Agrupa apenas na apresentação. Os Assunto originais continuam inalterados,
  * com seus próprios IDs para checkbox, estudo, aula, questão e histórico.
  */
+/**
+ * Organização somente visual do RLM do RDC pelos quatro blocos oficiais.
+ * Não altera IDs, conclusões, revisões, vínculos nem aulas persistidas.
+ */
+function blocoRlmParaExibicao(materia: string, nome: string): { chave: string; titulo: string } | null {
+  const normalizar = (valor: string) => valor.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!/raciocinio logico|^rlm$/.test(normalizar(materia))) return null;
+  const nomeNormalizado = normalizar(nome);
+  if (/principios? e tecnicas? de contagem|principios? da contagem|probabilidade|probalidade|combinatoria|combinacao|permutac|arranjos?/.test(nomeNormalizado))
+    return { chave: "rlm:contagem", titulo: "Princípios e técnicas de contagem e probabilidade" };
+  if (/diagramas? logicos?|conjuntos|problemas matriciais/.test(nomeNormalizado))
+    return { chave: "rlm:diagramas", titulo: "Diagramas lógicos" };
+  if (/logica de argumentacao|logica argumentativa|argumentos? validos?|inferencias?|deducoes?|analogias?|equivalencias?|implicac|sequencias? logicas?/.test(nomeNormalizado))
+    return { chave: "rlm:argumentacao", titulo: "Lógica de argumentação" };
+  if (/estruturas? logicas?|proposicoes?|conectivos?|negac|tabela verdade|quantificadores?|falacias?|tautologias?|contradicoes?|contingencias?/.test(nomeNormalizado))
+    return { chave: "rlm:estruturas", titulo: "Estruturas lógicas" };
+  return { chave: "rlm:complementares", titulo: "Aulas complementares do curso" };
+}
+
 export function agruparAssuntosParaExibicao(
   materia: string,
   moduloId: string,
@@ -89,6 +109,8 @@ export function agruparAssuntosParaExibicao(
 ): GrupoAssuntosVisual[] {
   const contagem = new Map<string, number>();
   const descritores = assuntos.map((assunto) => {
+    const blocoRlm = blocoRlmParaExibicao(materia, assunto.nome);
+    if (blocoRlm) return { chave: blocoRlm.chave, titulo: blocoRlm.titulo, tipo: "tema" as const };
     const parte = identificarParte(assunto.nome);
     if (parte) {
       const nomeBase = parte.titulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
