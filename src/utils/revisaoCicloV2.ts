@@ -68,6 +68,11 @@ export function concluirEtapaRevisaoV2(
   ciclo: CicloRevisaoV2,
   params: { dataConclusao: string; percentual?: number; sessaoId?: string }
 ): CicloRevisaoV2 {
+  // Replay protection is checked BEFORE validating the next checkpoint: a
+  // duplicated submission belongs to the already-completed checkpoint.
+  if (params.sessaoId && ciclo.historico.some(e => e.sessaoId === params.sessaoId)) {
+    return ciclo;
+  }
   if (!ciclo.marco || !ciclo.proximaData) throw new Error("cycle is finished");
   const formato = obterFormatoRevisaoV2(ciclo.marco);
   if (formato === "questoes" && (params.percentual === undefined ||
@@ -75,10 +80,6 @@ export function concluirEtapaRevisaoV2(
     params.percentual < 0 || params.percentual > 100)) {
     throw new Error("question review requires a valid percentage");
   }
-  if (params.sessaoId && ciclo.historico.some(e => e.sessaoId === params.sessaoId)) {
-    return ciclo; // same session: idempotent, cannot generate another review
-  }
-
   const precisaReforco = formato === "questoes" &&
     (params.percentual as number) < LIMIAR_APROVACAO_REVISAO;
   const evento: ResultadoRevisaoV2 = {
