@@ -68,10 +68,10 @@ export const FAMILIAS_CATALOGO: readonly FamiliaCatalogo[] = [
    ]},
   {id:"rlm.combinatoria",nome:"Análise combinatória",disciplinaId:"rlm",
    nomesAlternativos:["Combinatória","Princípios e técnicas de contagem"],subassuntos:[
-     {id:"rlm.contagem",nome:"Princípios de contagem",nomesAlternativos:["Princípio multiplicativo","Princípios e técnicas de contagem","Princípio fundamental da contagem"]},
+     {id:"rlm.contagem",nome:"Princípios de contagem",nomesAlternativos:["Princípios da contagem","Princípio multiplicativo","Princípios e técnicas de contagem","Princípio fundamental da contagem"]},
      {id:"rlm.permutacao",nome:"Permutações",nomesAlternativos:["Permutação","Permutação simples"]},
      {id:"rlm.arranjo",nome:"Arranjos",nomesAlternativos:["Arranjo","Arranjo simples"]},
-     {id:"rlm.combinacao",nome:"Combinação simples",nomesAlternativos:["Combinações simples","Combinações"]},
+     {id:"rlm.combinacao",nome:"Combinação simples",nomesAlternativos:["Combinação","Análise combinatória (combinação)","Combinações simples","Combinações"]},
    ]},
   {id:"rlm.probabilidade",nome:"Probabilidade",disciplinaId:"rlm",nomesAlternativos:[],
    subassuntos:[{id:"rlm.probabilidade",nome:"Probabilidade",nomesAlternativos:["Noções de probabilidade","Cálculo de probabilidade"]}]},
