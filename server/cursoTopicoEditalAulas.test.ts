@@ -49,6 +49,6 @@ test("associação de aula ambígua não inventa vínculo exclusivo", () => {
   const materia=grade.find(x=>x.nome==="Raciocínio Lógico e Matemática");
   assert.ok(materia);
   // Não permitir que a aula "Arranjo" seja atribuída ao tópico errado por um empate semântico.
-  const vinculadas= materia.assuntos.flatMap(a=>(a.aulas??[]).filter(v=>v.nome==="Arranjo").map(v=>a.nome));
+  const vinculadas= materia.assuntos.flatMap(a=>(a.aulas??[]).filter(v=>v.nome==="Arranjo").map(()=>a.nome));
   assert.ok(vinculadas.length>0);
 });
