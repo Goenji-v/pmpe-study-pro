@@ -30,6 +30,7 @@ import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
 import { aulasDaFontePrincipal } from "../utils/progressoFontesCursos";
 import type { ConfiguracoesComCursos } from "../types/cursos";
 import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
+import { garantirTopicosIndividuais } from "../utils/topicosIndividuais";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
 import { deveAplicarMigracaoEstruturalRemota } from "../utils/migracaoEstruturalConta";
@@ -211,7 +212,11 @@ function criarEstadoInicialDaConta(nome = ""):
   return montarEstadoNuvem(criarDadosIniciaisDaConta(nome));
 }
 
-function reconciliarMateriasComPlano(
+function reconciliarMateriasComPlano(materias: Materia[], padrao: boolean) {
+  return garantirTopicosIndividuais(reconciliarMateriasComPlanoBase(materias, padrao));
+}
+
+function reconciliarMateriasComPlanoBase(
   materiasSalvas: Materia[],
   planoPadraoAtivo = true
 ): Materia[] {

@@ -1,3 +1,4 @@
+import { partesDoAssunto, topicosDaMateria } from "./topicosIndividuais";
 import type { Assunto, Materia } from "../types/index";
 import { criarAnalisePlanejamentoUnificada, materiasEquivalentes } from "./uniaoGradeEstudos";
 import {
@@ -200,7 +201,27 @@ export function gerarPlanoEdital(
   const quantidadeNoDia = (dia: DiaSemanaId) => Math.max(1, Math.min(4, Math.round(configuracoes.materiasPorDiaSemana?.[dia] ?? materiasPorDia)));
   const totalSlotsSemana = diasEstudo.reduce((total, dia) => total + quantidadeNoDia(dia), 0);
 
-  const filas = criarFilas(analise);
+  const filas = criarFilas({...analise, materias: analise.materias.map(materia => {
+    const fonte = materiasUnificadas?.find(m => m.id === materia.conteudoCanonicoId || m.id === materia.id || materiasEquivalentes(m.nome, materia.nome));
+    const topicos = fonte ? topicosDaMateria(fonte) : [];
+    const usados = new Set<string>();
+    const assuntos = materia.assuntos.flatMap(assunto => {
+      const partes = partesDoAssunto(assunto.nome);
+      const nomes = new Set(partes);
+      const itens = topicos.filter(t => t.assunto.id === (assunto.conteudoCanonicoId ?? assunto.id) ||
+        nomes.has(t.nome) || nomes.has(t.assunto.nome));
+      if (!partes && !itens.some(t => t.id !== t.assunto.id || t.aula?.origemCurso)) return [assunto];
+      if (!itens.length && partes) return partes.map(nome => ({...assunto, nome, id: assunto.id + ":topico:" + slugEdital(nome), conteudoCanonicoId: undefined}));
+      return itens.map(t => ({...assunto, nome: t.nome, id: t.id, conteudoCanonicoId: t.id,
+        topico: {materiaId: fonte!.id, moduloId: t.modulo.id, assuntoId: t.assunto.id, aulaId: t.aula?.id, url: t.aula?.url}}));
+    }).filter(a => {
+      const id = a.conteudoCanonicoId ?? a.id;
+      if (usados.has(id)) return false;
+      usados.add(id);
+      return true;
+    });
+    return {...materia, assuntos};
+  })});
   const sequencia = montarSequenciaEquilibrada(filas, totalSlotsSemana);
 
   const reservaRevisao = revisoesPorDia > 0
@@ -237,6 +258,7 @@ export function gerarPlanoEdital(
           materiaId: item.materia.id,
           materia: item.materia.nome,
           assuntoId: item.assuntoId,
+          topico: item.assunto.topico,
           assunto: item.nomePlano,
           prioridade: item.assunto.prioridade,
           duracaoMinutos: duracaoMissao,
@@ -442,7 +464,7 @@ function criarFilas(analise: AnaliseEdital): FilaMateria[] {
                 assuntoOriginal.conteudoCanonicoId ??
                 assuntoOriginal.id,
             };
-            const partes = destrincharAssuntoParaPlano(assunto.nome);
+            const partes = assunto.topico ? [assunto.nome] : destrincharAssuntoParaPlano(assunto.nome);
             return partes.map((nomePlano, indice) => ({
               assunto,
               nomePlano,

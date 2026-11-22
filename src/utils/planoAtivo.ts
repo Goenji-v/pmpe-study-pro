@@ -18,6 +18,8 @@ export function criarPlanoAtivo(config: ConfiguracoesApp, materias: Materia[], _
     base = plano.semanas.map(s => ({numero: s.numero, nome: `Semana ${String(s.numero).padStart(2, '0')}`, dias: s.dias.map(d => ({
       numero: ['seg','ter','qua','qui','sex','sab','dom'].indexOf(d.diaSemana) + 1,
       missoes: d.missoes.map((m, i) => {
+        if (m.topico) return {id: m.id, numero: i + 1, materia: m.materia, assunto: m.assunto,
+          tipo: m.tipo ?? 'conteudo', urlAula: m.topico.url, conteudo: m.topico};
         const aula = !m.tipo || m.tipo === 'conteudo'
           ? encontrarAulasNosConteudos(materias, (config as ConfiguracoesComCursos).cursosAtivosIds ?? [], m.materia, m.assunto, 1)[0]
           : undefined;

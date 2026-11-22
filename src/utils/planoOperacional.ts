@@ -1,3 +1,4 @@
+import { topicosDaMateria } from "./topicosIndividuais";
 import type { ConfiguracoesApp, Materia } from "../types";
 import type { SemanaPlano } from "../data/planoPMPE";
 
@@ -25,6 +26,9 @@ export function obterConclusoesPlanoOperacional(
   const concluidas = new Set(concluidasInformadas);
 
   for (const materia of materias) {
+    for (const topico of topicosDaMateria(materia)) {
+      if (topico.aula?.concluida) concluidas.add(`conteudo-${materia.id}-${topico.id}`);
+    }
     for (const modulo of listarModulosDaMateria(materia)) {
       for (const assunto of modulo.assuntos) {
         if (assunto.concluido) {

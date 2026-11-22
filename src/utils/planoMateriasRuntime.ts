@@ -1,3 +1,4 @@
+import { topicosDaMateria } from "./topicosIndividuais";
 import type { Materia, ConfiguracoesApp } from "../types";
 import type {
   DiaPlano,
@@ -35,9 +36,7 @@ export function criarPlanoMateriasRuntime(
   const filas = materiasFonte
     .map((materia) => ({
       materia,
-      itens: listarModulosDaMateria(materia).flatMap((modulo) =>
-        modulo.assuntos.map((assunto) => ({ modulo, assunto }))
-      ),
+      itens: topicosDaMateria(materia),
     }))
     .filter((fila) => fila.itens.length > 0);
 
@@ -48,6 +47,9 @@ export function criarPlanoMateriasRuntime(
     moduloId: string;
     assuntoId: string;
     assunto: string;
+    topicoId: string;
+    aulaId?: string;
+    urlAula?: string;
   }> = [];
   let ponteiro = 0;
 
@@ -62,7 +64,10 @@ export function criarPlanoMateriasRuntime(
         materia: fila.materia,
         moduloId: item.modulo.id,
         assuntoId: item.assunto.id,
-        assunto: item.assunto.nome,
+        assunto: item.nome,
+        topicoId: item.id,
+        aulaId: item.aula?.id,
+        urlAula: item.aula?.url,
       });
       ponteiro = (indice + 1) % filas.length;
       encontrou = true;
@@ -86,21 +91,24 @@ export function criarPlanoMateriasRuntime(
       indiceConteudo += bloco.length;
 
       const missoes: MissaoPlano[] = bloco.map((item, indice) => ({
-        id: `conteudo-${item.materia.id}-${item.assuntoId}`,
+        id: `conteudo-${item.materia.id}-${item.topicoId}`,
         numero: indice + 1,
         materia: item.materia.nome,
         assunto: item.assunto,
         tipo: "conteudo",
+        urlAula: item.urlAula,
         conteudo: {
           materiaId: item.materia.id,
           moduloId: item.moduloId,
           assuntoId: item.assuntoId,
+          aulaId: item.aulaId,
         },
         conteudos: [
           {
             materiaId: item.materia.id,
             moduloId: item.moduloId,
             assuntoId: item.assuntoId,
+          aulaId: item.aulaId,
           },
         ],
       }));

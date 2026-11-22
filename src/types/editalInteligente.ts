@@ -26,6 +26,7 @@ export const DIAS_SEMANA: Array<{
 export type PrioridadeEdital = "alta" | "media" | "baixa";
 
 export type AssuntoEdital = {
+  topico?: { materiaId: string; moduloId: string; assuntoId: string; aulaId?: string; url?: string };
   id: string;
   /** ID estável do conteúdo no Study Pro. Pode sobreviver a vários editais. */
   conteudoCanonicoId?: string;
@@ -53,6 +54,7 @@ export type AnaliseEdital = {
 };
 
 export type MissaoPlanoEdital = {
+  topico?: { materiaId: string; moduloId: string; assuntoId: string; aulaId?: string; url?: string };
   tipo?: "conteudo" | "redacao" | "simulado";
   id: string;
   ordem: number;

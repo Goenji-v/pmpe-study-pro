@@ -1,3 +1,4 @@
+import { topicosDaMateria } from "../../utils/topicosIndividuais";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
@@ -327,7 +328,7 @@ const [
         : modulo?.id ?? prefill.moduloId,
       assunto: prefill.revisaoId && prefill.tipo === "revisao"
         ? prefill.assunto
-        : assunto?.nome ?? prefill.assunto,
+        : prefill.aulaId ? prefill.assunto : assunto?.nome ?? prefill.assunto,
       assuntoId: prefill.revisaoId && prefill.tipo === "revisao"
         ? prefill.assuntoId
         : assunto?.id ?? prefill.assuntoId,
@@ -379,11 +380,13 @@ const [
   const assuntosComModulo = useMemo(
     () =>
       materiaSelecionada
-        ? listarAssuntosUnificadosComModulo(materiaSelecionada)
+        ? estado.tipo === "aula" ? listarModulosDaMateria(materiaSelecionada).flatMap(modulo => modulo.assuntos.map(assunto => ({modulo, assunto}))) : listarAssuntosUnificadosComModulo(materiaSelecionada)
         : [],
-    [materiaSelecionada]
+    [materiaSelecionada, estado.tipo]
   );
 
+  const topicos = useMemo(() => materiaSelecionada ? topicosDaMateria(materiaSelecionada) : [], [materiaSelecionada]);
+  const topicoAtual = topicos.find(t => t.assunto.id === estado.assuntoId && (!estado.aulaId || t.aula?.id === estado.aulaId));
   const assuntosDisponiveis = useMemo(
     () => assuntosComModulo.map(({ assunto }) => assunto),
     [assuntosComModulo]
@@ -596,18 +599,19 @@ const [
   function selecionarAssunto(
     assuntoId: string
   ) {
-    const selecao = assuntosComModulo.find(
+    const topico = estado.tipo === "aula" ? topicos.find(t => t.id === assuntoId) : undefined;
+    const selecao = topico ?? assuntosComModulo.find(
       ({ assunto }) => assunto.id === assuntoId
     );
     const assunto = selecao?.assunto;
-    const proximaAula = assunto
+    const proximaAula = topico?.aula ?? (assunto
       ? localizarProximaAula(assunto)
-      : undefined;
+      : undefined);
 
     atualizarDados({
       modulo: selecao?.modulo.nome,
       moduloId: selecao?.modulo.id,
-      assunto: assunto?.nome ?? "",
+      assunto: topico?.nome ?? assunto?.nome ?? "",
       assuntoId: assunto?.id,
       aulaId: proximaAula?.id,
       urlAula: proximaAula?.url ?? assunto?.aula,
@@ -1177,7 +1181,7 @@ const [
                 <>
                   <select
                     value={
-                      estado.assuntoId ?? ""
+                      (estado.tipo === "aula" ? topicoAtual?.id : estado.assuntoId) ?? ""
                     }
                     onChange={(
                       evento
@@ -1197,7 +1201,7 @@ const [
                         : "Selecione primeiro a matéria"}
                     </option>
 
-                    {assuntosDisponiveis.map(
+                    {(estado.tipo === "aula" ? topicos : assuntosDisponiveis).map(
                       (assunto) => (
                         <option
                           key={

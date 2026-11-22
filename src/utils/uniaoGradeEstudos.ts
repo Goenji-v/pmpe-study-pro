@@ -66,6 +66,8 @@ export function scoreAssociacaoAssunto(alvo: string, candidato: string) {
   return scoreTexto(alvo, candidato);
 }
 
+import { garantirTopicosIndividuais } from "./topicosIndividuais";
+
 export function unificarGradeEditalCursos({
   materiasAtuais,
   analiseEdital,
@@ -93,7 +95,7 @@ export function unificarGradeEditalCursos({
     );
   });
 
-  return normalizarGrade(materias)
+  return garantirTopicosIndividuais(normalizarGrade(materias))
     .filter((materia) => materia.assuntos.length > 0)
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }

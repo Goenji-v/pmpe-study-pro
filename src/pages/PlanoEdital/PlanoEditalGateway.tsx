@@ -337,6 +337,15 @@ export default function PlanoEditalGateway() {
   }
 
   function aulasDaMissao(missao: MissaoPlanoEdital) {
+    if (missao.topico) {
+      const ref = missao.topico;
+      const materia = materias.find(m => m.id === ref.materiaId);
+      const modulo = materia && listarModulosDaMateria(materia).find(m => m.id === ref.moduloId);
+      const aula = modulo?.assuntos.find(a => a.id === ref.assuntoId)?.aulas?.find(a => a.id === ref.aulaId);
+      return aula && modulo ? [{cursoId: aula.origemCurso?.cursoId ?? "", curso: aula.origemCurso?.cursoNome ?? "Aula",
+        materia: missao.materia, modulo: modulo.nome, aula: aula.nome, url: aula.url, moduloId: modulo.id,
+        assuntoId: ref.assuntoId, aulaId: aula.id, concluida: aula.concluida, score: 1}] : [];
+    }
     const doCurso = encontrarAulasParaMissao(
       cursosSincronizados,
       cursosAtivosIds,
@@ -371,6 +380,12 @@ export default function PlanoEditalGateway() {
   }
 
   function iniciarMissaoDoPlano(missao: MissaoPlanoEdital) {
+    if (missao.topico) {
+      navigate("/central-estudos", {state: {prefillSessao: {...missao.topico, materia: missao.materia,
+        assunto: missao.assunto, objetivo: "Estudar " + missao.assunto, missaoId: missao.id,
+        tipo: "aula", urlAula: missao.topico.url}}});
+      return;
+    }
     if (abrirMissaoCanonica(missao)) {
       return;
     }
