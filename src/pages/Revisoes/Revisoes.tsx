@@ -20,6 +20,12 @@ import type { Revisao, SessaoEstudo } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
+import { montarHistoricoRevisaoIntegrado, type ItemHistoricoRevisao } from "../../utils/historicoRevisoesIntegrado";
+import {
+  pendentesUnicasPorAssunto,
+  revisoesDoMesmoAssunto,
+  tituloAssuntoPrincipal,
+} from "../../utils/revisoesAssuntoPrincipal";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 
 type DesempenhoRevisao = "facil" | "media" | "dificil";
@@ -33,11 +39,22 @@ export default function Revisoes() {
   const location = useLocation();
   const revisaoAbertaRef = useRef<string | null>(null);
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
+  const [revisaoParaVincular, setRevisaoParaVincular] = useState<string | null>(null);
+  const [destinoRevisao, setDestinoRevisao] = useState("");
+  const destinosRevisao = useMemo(() => materias.flatMap((materia) =>
+    (materia.modulos ?? []).flatMap((modulo) => modulo.assuntos.map((assunto) => ({
+      materia, modulo, assunto,
+    })))
+  ), [materias]);
+  const revisoesSemVinculo = useMemo(() => pendentesUnicasPorAssunto(revisoes).filter((revisao) =>
+    !revisao.escopoGrupo &&
+    !revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)
+  ), [materias, revisoes]);
 
   const revisoesComModulo = useMemo(
     () =>
       revisoes.map((revisao) => {
-        if (revisao.modulo || revisao.moduloId) return revisao;
+        if (revisao.escopoGrupo || revisao.modulo || revisao.moduloId) return revisao;
 
         const materia = materias.find(
           (item) => item.id === revisao.materiaId || item.nome === revisao.materia
@@ -50,18 +67,17 @@ export default function Revisoes() {
 
         return modulo
           ? { ...revisao, modulo: modulo.nome, moduloId: modulo.id }
-          : { ...revisao, modulo: "Geral" };
+          : { ...revisao, modulo: "⚠ Vínculo pendente" };
       }),
     [materias, revisoes]
   );
 
   const revisoesPendentes = useMemo(
-    () =>
-      revisoesComModulo
-        .filter((revisao) => !revisao.concluida)
-        .sort(
-          (a, b) => new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()
-        ),
+    () => pendentesUnicasPorAssunto(revisoesComModulo),
+    [revisoesComModulo]
+  );
+  const revisoesIntegradas = useMemo(
+    () => revisoesComModulo.filter((revisao) => Boolean(revisao.integradaEmId)),
     [revisoesComModulo]
   );
 
@@ -91,6 +107,13 @@ export default function Revisoes() {
   );
 
   function obterDadosCanonicos(revisao: Revisao) {
+    if (revisao.escopoGrupo) {
+      return {
+        materia: revisao.materia, materiaId: revisao.materiaId,
+        modulo: revisao.modulo, moduloId: revisao.moduloId,
+        assunto: revisao.assunto, assuntoId: revisao.assuntoId,
+      };
+    }
     const referencia = localizarReferenciaCanonica(materias, {
       materia: revisao.materia,
       materiaId: revisao.materiaId,
@@ -145,6 +168,16 @@ export default function Revisoes() {
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   function abrirRevisao(revisao: Revisao) {
+    if (revisao.escopoGrupo) {
+      showToast("Revisão do bloco completo: as questões abrangem todas as partes estudadas.", "info");
+      abrirQuestoesIA(revisao);
+      return;
+    }
+    if (!revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)) {
+      showToast("A aula desta revisão não foi localizada. O histórico foi preservado; confira o conteúdo antes de estudar.", "warning");
+      navigate("/estudos", { state: { termoBusca: revisao.assunto } });
+      return;
+    }
     if (revisao.origemSimulado?.vinculo === "sem_conteudo") {
       showToast(
         "Esse assunto veio do simulado, mas ainda não possui aula vinculada ao edital. Vou abrir questões IA sem apontar uma aula incorreta.",
@@ -187,7 +220,7 @@ export default function Revisoes() {
       JSON.stringify({
         materia: dados.materia,
         modulo: dados.modulo,
-        assunto: dados.assunto,
+        assunto: tituloAssuntoPrincipal(revisao),
         quantidade,
       })
     );
@@ -238,6 +271,13 @@ export default function Revisoes() {
   }
 
   function concluirRevisao(revisao: Revisao, desempenho: DesempenhoRevisao) {
+    const relacionadas = revisoesDoMesmoAssunto(revisoes, revisao);
+    const etapaEfetiva = Math.min(revisao.etapa, ...relacionadas.map((item) => item.etapa));
+    if (relacionadas.length > 1 && !window.confirm(
+      "Concluir a revisão única de " + tituloAssuntoPrincipal(revisao) +
+      "? Os " + relacionadas.length + " registros pendentes serão vinculados ao mesmo ciclo " +
+      "sem apagar datas, etapas ou registros anteriores. Será agendado apenas um próximo retorno."
+    )) return;
     const agora = new Date();
     const proximaId = crypto.randomUUID();
     setRevisoes((anteriores) => concluirRevisaoNaLista({
@@ -246,7 +286,7 @@ export default function Revisoes() {
     }));
 
     showToast(
-      (desempenho !== "facil" || revisao.etapa < 5)
+      (desempenho !== "facil" || etapaEfetiva < 5)
         ? "Revisão concluída. Próxima revisão agendada conforme seu desempenho."
         : "Ciclo de revisões finalizado.",
       "success"
@@ -268,6 +308,28 @@ export default function Revisoes() {
     );
 
     showToast("Revisão excluída.", "info");
+  }
+
+  function corrigirVinculo(revisaoId: string) {
+    const destino = destinosRevisao[Number(destinoRevisao)];
+    if (!destino || !revisoes.some((revisao) => revisao.id === revisaoId && !revisao.concluida)) {
+      showToast("Selecione um assunto válido para corrigir o vínculo.", "warning");
+      return;
+    }
+    // Somente a referência da pendência é alterada. Histórico, etapa, data
+    // e resultados continuam exatamente como antes.
+    setRevisoes((anteriores) => anteriores.map((revisao) => revisao.id !== revisaoId
+      ? revisao
+      : {
+          ...revisao,
+          materiaId: destino.materia.id, materia: destino.materia.nome,
+          moduloId: destino.modulo.id, modulo: destino.modulo.nome,
+          assuntoId: destino.assunto.id, assunto: destino.assunto.nome,
+        }
+    ));
+    setRevisaoParaVincular(null);
+    setDestinoRevisao("");
+    showToast("Revisão vinculada ao assunto selecionado. Seu histórico foi preservado.", "success");
   }
 
   function reorganizarAgenda() {
@@ -322,9 +384,39 @@ export default function Revisoes() {
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
       <p className="revisoes-subtitle">
-        O Study Pro usa seu desempenho para indicar como revisar. Clique em Revisar para abrir a Central de Estudos já vinculada a esta pendência; escolha Teoria ou Questões e, ao finalizar a sessão, a revisão é concluída e a próxima é agendada automaticamente.
+        Uma única revisão por assunto principal, mesmo quando as aulas têm nomes diferentes. Os registros anteriores são preservados e o próximo retorno segue um ciclo único.
       </p>
 
+      {revisoesSemVinculo.length > 0 && (
+        <section className="revisoes-reparo-vinculos" aria-label="Revisões com vínculo pendente">
+          <h2>⚠ Revisões sem aula localizada ({revisoesSemVinculo.length})</h2>
+          <p>Essas revisões não foram apagadas. Elas podem ser de cursos antigos, como Fonologia e Sílaba. Associe ao assunto correto, sem perder datas ou tentativas. Não atribuímos outro conteúdo automaticamente.</p>
+          {revisoesSemVinculo.map((revisao) => (
+            <div key={revisao.id} className="revisoes-reparo-item">
+              <strong>{revisao.materia} → {revisao.assunto}</strong>
+              {revisaoParaVincular === revisao.id ? (
+                <div className="revisoes-reparo-campos">
+                  <label>Assunto correspondente
+                    <select value={destinoRevisao} onChange={(e) => setDestinoRevisao(e.target.value)}>
+                      <option value="">Selecione</option>
+                      {destinosRevisao.map((destino, indice) => (
+                        <option value={indice} key={destino.materia.id + ":" + destino.modulo.id + ":" + destino.assunto.id}>
+                          {destino.materia.nome} → {destino.modulo.nome} → {destino.assunto.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" disabled={!destinoRevisao} onClick={() => corrigirVinculo(revisao.id)}>Salvar vínculo</button>
+                  <button type="button" onClick={() => { setRevisaoParaVincular(null); setDestinoRevisao(""); }}>Cancelar</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setRevisaoParaVincular(revisao.id); setDestinoRevisao(""); }}>Associar ao assunto correto</button>
+              )}
+            </div>
+          ))}
+          <button type="button" onClick={() => navigate("/cursos")}>Ver cursos importados</button>
+        </section>
+      )}
       <div className="revisoes-toolbar">
         <span>
           Limite atual: <strong>{configuracoes.metaRevisoesDiaria || "sem limite"}</strong> revisão(ões)/dia
@@ -332,6 +424,9 @@ export default function Revisoes() {
         <button type="button" onClick={reorganizarAgenda} title="Redistribui atrasos e excesso diário sem antecipar revisões futuras nem alterar conclusões.">Reorganizar agenda</button>
       </div>
 
+      <p className="revisoes-blocos-explicacao">
+        A agenda agora conta <strong>um único compromisso por assunto principal</strong>. As aulas continuam no plano; não existe checklist ou agenda paralela.
+      </p>
       <div className="revisoes-resumo">
         <ResumoCard titulo="Atrasadas" valor={atrasadas.length} classe="resumo-atrasado" />
         <ResumoCard titulo="Hoje" valor={paraHoje.length} classe="resumo-hoje" />
@@ -358,6 +453,20 @@ export default function Revisoes() {
         </>
       )}
 
+      {revisoesIntegradas.length > 0 && (
+        <details className="revisoes-historico-integracao">
+          <summary>Registros anteriores vinculados ({revisoesIntegradas.length}) — histórico preservado</summary>
+          <p>Essas pendências foram reunidas ao ciclo do assunto principal após a conclusão confirmada. As datas, etapas e IDs originais permanecem guardados.</p>
+          <div className="revisoes-historico-integracao-lista">
+            {revisoesIntegradas.slice(0, 30).map((item) => (
+              <div key={item.id}>
+                <strong>{item.materia} · {item.assunto}</strong>
+                <span>Etapa {item.etapa} · data original {formatarDataRevisao(item.dataPrevista)}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       {revisoesConcluidas.length > 0 && (
         <div className="revisoes-grupo">
           <h2>✅ Histórico de revisões</h2>
@@ -436,6 +545,7 @@ function GrupoRevisoes({
   const [opcoesId, setOpcoesId] = useState<string | null>(null);
   const [historicoId, setHistoricoId] = useState<string | null>(null);
 
+
   function alternarAvaliacao(id: string) {
     setAvaliandoId((atual) => (atual === id ? null : id));
     setOpcoesId(null);
@@ -462,6 +572,16 @@ function GrupoRevisoes({
           const avaliando = avaliandoId === revisao.id;
           const mostrandoOpcoes = opcoesId === revisao.id;
           const plano = planejarRevisaoPendente(revisao);
+          const relacionadas = revisoesDoMesmoAssunto(revisoesBase, revisao);
+          const assuntoPrincipal = tituloAssuntoPrincipal(revisao);
+          const etapaEfetiva = Math.min(revisao.etapa, ...relacionadas.map((item) => item.etapa));
+          const idsRelacionados = new Set(relacionadas.map((item) => item.id));
+          const revisoesParaPrevisao = relacionadas.length > 1
+            ? revisoesBase.filter((item) => !idsRelacionados.has(item.id) || item.id === revisao.id)
+            : revisoesBase;
+          const revisaoParaPrevisao = etapaEfetiva !== revisao.etapa
+            ? { ...revisao, etapa: etapaEfetiva as Revisao["etapa"] }
+            : revisao;
           const temFlashcards = Boolean(
             buscarPacoteQuestoesFlashcards(
               revisao.materia,
@@ -482,26 +602,26 @@ function GrupoRevisoes({
                   ? "Amanhã"
                   : `Daqui a ${diferenca} dias`;
           const previsaoDificil = preverDetalhesProximaRevisaoPorDesempenho({
-            revisao,
+            revisao: revisaoParaPrevisao,
             desempenho: "dificil",
-            revisoesExistentes: revisoesBase,
+            revisoesExistentes: revisoesParaPrevisao,
             limiteDiario,
           });
           const previsaoMedia = preverDetalhesProximaRevisaoPorDesempenho({
-            revisao,
+            revisao: revisaoParaPrevisao,
             desempenho: "media",
-            revisoesExistentes: revisoesBase,
+            revisoesExistentes: revisoesParaPrevisao,
             limiteDiario,
           });
           const previsaoFacil = preverDetalhesProximaRevisaoPorDesempenho({
-            revisao,
+            revisao: revisaoParaPrevisao,
             desempenho: "facil",
-            revisoesExistentes: revisoesBase,
+            revisoesExistentes: revisoesParaPrevisao,
             limiteDiario,
           });
 
           const mostrandoHistorico = historicoId === revisao.id;
-          const historico = montarHistoricoRevisao(
+          const historico = montarHistoricoRevisaoIntegrado(
             revisao,
             revisoesBase,
             sessoes
@@ -512,11 +632,16 @@ function GrupoRevisoes({
               <div className="revisao-conteudo">
                 <strong>{revisao.materia}</strong>
                 {revisao.modulo && <small className="revisao-caminho">{revisao.modulo}</small>}
-                <p>{revisao.assunto}</p>
+                <p>{assuntoPrincipal}</p>
+                {relacionadas.length > 1 && (
+                  <small className="revisao-assunto-principal-nota">
+                    {relacionadas.length} registros do mesmo assunto · uma revisão e um próximo retorno
+                  </small>
+                )}
                 {rotuloOrigemRevisaoSimulado(revisao, nomesSimulados) && (
                   <small className="revisao-origem-simulado">{rotuloOrigemRevisaoSimulado(revisao, nomesSimulados)}</small>
                 )}
-                <span>Etapa {revisao.etapa} • {formatarDataRevisao(revisao.dataPrevista)}</span>
+                <span>Etapa {etapaEfetiva} • {formatarDataRevisao(revisao.dataPrevista)}{relacionadas.length > 1 ? " · ciclo unificado" : ""}</span>
                 <small>
                   {diferenca < 0
                     ? `Atrasada há ${Math.abs(diferenca)} dia(s)`
@@ -564,11 +689,13 @@ function GrupoRevisoes({
                   <button
                     type="button"
                     className="revisao-iniciar"
-                    onClick={() => abrirRevisao(revisao)}
+                    onClick={() => relacionadas.length > 1 ? abrirQuestoesIA(revisao) : abrirRevisao(revisao)}
                   >
-                    {plano.modo === "teoria_questoes"
-                      ? "📖 Rever teoria"
-                      : "🧩 Fazer questões"}
+                    {relacionadas.length > 1
+                      ? "🧩 Revisar assunto"
+                      : plano.modo === "teoria_questoes"
+                        ? "📖 Rever teoria"
+                        : "🧩 Fazer questões"}
                   </button>
                   <button
                     type="button"
@@ -754,31 +881,6 @@ function PrevisaoRetorno({
   );
 }
 
-type ItemHistoricoRevisao = {
-  revisao: Revisao;
-  sessao?: SessaoEstudo;
-};
-
-function montarHistoricoRevisao(
-  atual: Revisao,
-  revisoes: Revisao[],
-  sessoes: SessaoEstudo[]
-): ItemHistoricoRevisao[] {
-  const trilha = revisoes
-    .filter((item) => mesmaTrilhaRevisao(item, atual))
-    .sort(
-      (a, b) =>
-        dataOrdenacaoRevisao(a) - dataOrdenacaoRevisao(b)
-    );
-
-  return trilha.map((revisao) => ({
-    revisao,
-    sessao:
-      sessoes.find((sessao) => sessao.id === revisao.sessaoId) ??
-      sessoes.find((sessao) => sessao.revisaoId === revisao.id),
-  }));
-}
-
 function HistoricoRevisao({
   revisaoAtual,
   itens,
@@ -790,10 +892,13 @@ function HistoricoRevisao({
     <div className="revisao-historico-assunto">
       <div className="revisao-historico-cabecalho">
         <div>
-          <strong>📋 Histórico deste assunto</strong>
-          <span>{revisaoAtual.assunto}</span>
+          <strong>📋 Histórico integrado deste assunto</strong>
+          <span>{tituloAssuntoPrincipal(revisaoAtual)}</span>
         </div>
-        <small>{itens.length} etapa(s) registrada(s)</small>
+        <small>
+          {itens.length} registro(s) · {itens.filter((item) => item.revisao.concluida).length} concluída(s)
+          {" · "}{itens.filter((item) => !item.revisao.concluida && !item.revisao.integradaEmId).length} pendente(s)
+        </small>
       </div>
 
       <div className="revisao-historico-linha">
@@ -807,9 +912,13 @@ function HistoricoRevisao({
             typeof revisao.erradas === "number"
               ? revisao.certas + revisao.erradas
               : undefined;
+          // Nunca inferir "próxima etapa" de outro subassunto agregado:
+          // a trilha mostra as datas originais de cada registro.
           const proxima = itens
             .slice(indice + 1)
-            .find((item) => item.revisao.etapa > revisao.etapa)?.revisao;
+            .find((item) => item.revisao.materiaId === revisao.materiaId &&
+              item.revisao.assuntoId === revisao.assuntoId &&
+              item.revisao.etapa > revisao.etapa)?.revisao;
 
           return (
             <div
@@ -822,9 +931,12 @@ function HistoricoRevisao({
               <div>
                 <strong>
                   Etapa {revisao.etapa}
-                  {concluida ? " · concluída" : " · pendente"}
+                  {concluida ? " · concluída"
+                    : revisao.integradaEmId ? " · vinculada ao ciclo (não concluída)"
+                      : " · pendente"}
                 </strong>
                 <span>{formatarDataRevisao(data)}</span>
+                <small>Origem: {revisao.assunto} · {revisao.materia}</small>
                 <small>{rotuloAtividadeHistorico(revisao, sessao)}</small>
 
                 {typeof total === "number" && total > 0 && (
@@ -851,10 +963,13 @@ function HistoricoRevisao({
                   </small>
                 )}
 
-                {!concluida && (
+                {!concluida && !revisao.integradaEmId && (
                   <small>
                     Status atual · {planejarRevisaoPendente(revisao).titulo}
                   </small>
+                )}
+                {revisao.integradaEmId && !concluida && (
+                  <small>Registro original preservado; ciclo vinculado em {revisao.integradaEm?.slice(0,10) ?? "data não informada"}.</small>
                 )}
               </div>
             </div>
@@ -869,6 +984,9 @@ function rotuloAtividadeHistorico(
   revisao: Revisao,
   sessao?: SessaoEstudo
 ) {
+  if (revisao.motivoAdaptativo === "baixo_desempenho" && !revisao.concluida) {
+    return "📝 Reforço gerado por resultado de questões";
+  }
   if (sessao?.formatoRevisao === "teoria") {
     return "📖 Revisão de teoria";
   }
@@ -881,26 +999,3 @@ function rotuloAtividadeHistorico(
   return "✓ Revisão registrada";
 }
 
-function mesmaTrilhaRevisao(a: Revisao, b: Revisao) {
-  if (
-    a.materiaId === b.materiaId &&
-    a.assuntoId === b.assuntoId &&
-    (!a.moduloId || !b.moduloId || a.moduloId === b.moduloId)
-  ) {
-    return true;
-  }
-
-  return (
-    normalizar(a.materia) === normalizar(b.materia) &&
-    normalizar(a.assunto) === normalizar(b.assunto)
-  );
-}
-
-function dataOrdenacaoRevisao(revisao: Revisao) {
-  const data =
-    revisao.dataConclusao ??
-    revisao.dataCriacao ??
-    revisao.dataPrevista;
-  const valor = new Date(data).getTime();
-  return Number.isFinite(valor) ? valor : 0;
-}
