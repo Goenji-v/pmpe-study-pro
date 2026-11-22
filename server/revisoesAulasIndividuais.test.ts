@@ -29,6 +29,12 @@ test("Arranjo, Permutação e Combinação são aulas e revisões independentes"
   assert.equal(next.assunto, "Permutação");
 });
 
+test("A versão do curso com título Análise combinatória (combinação) é reconhecida", () => {
+  const aulas = aulasDeSubassuntosDistintos("Raciocínio Lógico e Matemática",
+    assunto(["Permutação", "Arranjo", "Análise combinatória (combinação)"]));
+  assert.equal(aulas.length, 3);
+});
+
 test("Aulas do mesmo conteúdo, materiais e nomes sem mapeamento não são artificialmente separados", () => {
   assert.deepEqual(aulasDeSubassuntosDistintos("Informática", assunto(["Windows parte 1", "Windows parte 2"])), []);
   assert.deepEqual(aulasDeSubassuntosDistintos("Raciocínio Lógico e Matemática", assunto(["Arranjo", "Arranjo simples"])), []);
