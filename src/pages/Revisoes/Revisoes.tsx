@@ -16,7 +16,7 @@ import {
   redistribuirRevisoesPendentes,
   reagendarRevisao,
 } from "../../utils/revisoes";
-import type { Revisao, SessaoEstudo } from "../../types";
+import type { Assunto, Materia, Revisao, SessaoEstudo } from "../../types";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
 import { materiasEquivalentes } from "../../utils/uniaoGradeEstudos";
 import { planejarRevisaoPendente } from "../../utils/revisaoAdaptativa";
@@ -41,6 +41,7 @@ export default function Revisoes() {
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
   const [revisaoParaVincular, setRevisaoParaVincular] = useState<string | null>(null);
   const [destinoRevisao, setDestinoRevisao] = useState("");
+  const [revisaoEmExibicaoId, setRevisaoEmExibicaoId] = useState<string | null>(null);
   const destinosRevisao = useMemo(() => materias.flatMap((materia) =>
     (materia.modulos ?? []).flatMap((modulo) => modulo.assuntos.map((assunto) => ({
       materia, modulo, assunto,
@@ -163,14 +164,13 @@ export default function Revisoes() {
     if (!revisao) return;
     revisaoAbertaRef.current = id;
     if (revisao.concluida) {showToast('Esta revisão já foi concluída.', 'info'); return;}
-    abrirRevisao(revisao);
+    setRevisaoEmExibicaoId(id);
   }, [location.state, revisoesComModulo]);
   /* oxlint-enable react-hooks/exhaustive-deps */
 
-  function abrirRevisao(revisao: Revisao) {
+  function iniciarSessaoRevisao(revisao: Revisao) {
     if (revisao.escopoGrupo) {
-      showToast("Revisão do bloco completo: as questões abrangem todas as partes estudadas.", "info");
-      abrirQuestoesIA(revisao);
+      showToast("Revise as aulas e materiais das partes do bloco. Para registrar a sessão de uma aula, abra o conteúdo correspondente.", "info");
       return;
     }
     if (!revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)) {
@@ -179,11 +179,7 @@ export default function Revisoes() {
       return;
     }
     if (revisao.origemSimulado?.vinculo === "sem_conteudo") {
-      showToast(
-        "Esse assunto veio do simulado, mas ainda não possui aula vinculada ao edital. Vou abrir questões IA sem apontar uma aula incorreta.",
-        "info"
-      );
-      abrirQuestoesIA(revisao);
+      showToast("Esta revisão ainda não possui aula vinculada. Confira os conteúdos antes de iniciar uma sessão.", "warning");
       return;
     }
 
@@ -368,7 +364,10 @@ export default function Revisoes() {
   }
 
   const propsGrupo = {
-    abrirRevisao,
+    abrirRevisao: (revisao: Revisao) => setRevisaoEmExibicaoId((atual) => atual === revisao.id ? null : revisao.id),
+    iniciarSessaoRevisao,
+    revisaoEmExibicaoId,
+    materias,
     abrirQuestoesIA,
     abrirFlashcards: abrirFlashcardsDaRevisao,
     concluirRevisao,
@@ -516,6 +515,9 @@ type GrupoRevisoesProps = {
   titulo: string;
   revisoes: Revisao[];
   abrirRevisao: (revisao: Revisao) => void;
+  iniciarSessaoRevisao: (revisao: Revisao) => void;
+  revisaoEmExibicaoId: string | null;
+  materias: Materia[];
   abrirQuestoesIA: (revisao: Revisao) => void;
   abrirFlashcards: (revisao: Revisao) => void;
   concluirRevisao: (revisao: Revisao, desempenho: DesempenhoRevisao) => void;
@@ -531,6 +533,9 @@ function GrupoRevisoes({
   titulo,
   revisoes,
   abrirRevisao,
+  iniciarSessaoRevisao,
+  revisaoEmExibicaoId,
+  materias,
   abrirQuestoesIA,
   abrirFlashcards,
   concluirRevisao,
@@ -689,13 +694,10 @@ function GrupoRevisoes({
                   <button
                     type="button"
                     className="revisao-iniciar"
-                    onClick={() => relacionadas.length > 1 ? abrirQuestoesIA(revisao) : abrirRevisao(revisao)}
+                    onClick={() => abrirRevisao(revisao)}
+                    aria-expanded={revisaoEmExibicaoId === revisao.id}
                   >
-                    {relacionadas.length > 1
-                      ? "🧩 Revisar assunto"
-                      : plano.modo === "teoria_questoes"
-                        ? "📖 Rever teoria"
-                        : "🧩 Fazer questões"}
+                    {revisaoEmExibicaoId === revisao.id ? "Fechar revisão" : "📚 Resolver revisão"}
                   </button>
                   <button
                     type="button"
@@ -808,6 +810,16 @@ function GrupoRevisoes({
                 )}
               </div>
 
+              {revisaoEmExibicaoId === revisao.id && (
+                <ConteudoDaRevisao
+                  revisao={revisao}
+                  relacionadas={relacionadas}
+                  materias={materias}
+                  iniciarSessaoRevisao={iniciarSessaoRevisao}
+                  abrirQuestoesIA={abrirQuestoesIA}
+                />
+              )}
+
               {mostrandoHistorico && (
                 <HistoricoRevisao
                   revisaoAtual={revisao}
@@ -819,6 +831,102 @@ function GrupoRevisoes({
         })}
       </div>
     </div>
+  );
+}
+
+
+/** Consulta, sem modificar progresso, as aulas e materiais já vinculados às revisões integradas. */
+function ConteudoDaRevisao({
+  revisao, relacionadas, materias, iniciarSessaoRevisao, abrirQuestoesIA,
+}: {
+  revisao: Revisao;
+  relacionadas: Revisao[];
+  materias: Materia[];
+  iniciarSessaoRevisao: (revisao: Revisao) => void;
+  abrirQuestoesIA: (revisao: Revisao) => void;
+}) {
+  const encontrados: Array<{ assunto: Assunto; materiaNome: string }> = [];
+  const ids = new Set<string>();
+  const incluir = (materiaId: string, assunto: Assunto, materiaNome: string) => {
+    const chave = materiaId + ":" + assunto.id;
+    if (ids.has(chave)) return;
+    ids.add(chave);
+    encontrados.push({ assunto, materiaNome });
+  };
+  for (const relacionada of relacionadas) {
+    if (relacionada.escopoGrupo && relacionada.grupoAssuntosIds?.length) {
+      const materia = materias.find((item) =>
+        item.id === relacionada.materiaId || materiasEquivalentes(item.nome, relacionada.materia)
+      );
+      if (materia) {
+        for (const modulo of materia.modulos ?? []) {
+          for (const assunto of modulo.assuntos) {
+            if (relacionada.grupoAssuntosIds.includes(assunto.id)) incluir(materia.id, assunto, materia.nome);
+          }
+        }
+      }
+    } else {
+      const referencia = localizarReferenciaCanonica(materias, {
+        materia: relacionada.materia, materiaId: relacionada.materiaId,
+        modulo: relacionada.modulo, moduloId: relacionada.moduloId,
+        assunto: relacionada.assunto, assuntoId: relacionada.assuntoId,
+      });
+      if (referencia) incluir(referencia.materia.id, referencia.assunto, referencia.materia.nome);
+    }
+  }
+  const aulas = encontrados.flatMap(({ assunto }) =>
+    (assunto.aulas ?? []).map((aula) => ({
+      chave: assunto.id + ":" + aula.id, nome: aula.nome, assunto: assunto.nome,
+      url: aula.url, concluida: aula.concluida,
+    }))
+  );
+  const materiais = encontrados.flatMap(({ assunto }) => [
+    ...(assunto.materiais ?? []).map((material) => ({
+      chave: assunto.id + ":" + material.id, nome: material.nome,
+      url: material.url, assunto: assunto.nome,
+    })),
+    ...(assunto.pdf ? [{ chave: assunto.id + ":pdf", nome: "PDF do assunto", url: assunto.pdf, assunto: assunto.nome }] : []),
+  ]);
+  const linkSeguro = (url: string | undefined) => Boolean(url && /^https?:\\/\\//i.test(url));
+
+  return (
+    <section className="revisao-conteudo-vinculado" aria-label={`Conteúdos vinculados à revisão de ${revisao.assunto}`}>
+      <h3>📚 Revisar {tituloAssuntoPrincipal(revisao)}</h3>
+      <p>Confira as aulas e os materiais deste assunto. As questões são opcionais e não iniciam automaticamente.</p>
+      <div className="revisao-conteudo-secoes">
+        <div>
+          <h4>Aulas vinculadas ({aulas.length})</h4>
+          {aulas.length ? (
+            <ul>{aulas.map((aula) => (
+              <li key={aula.chave}>
+                <span>{aula.concluida ? "✓ " : ""}{aula.nome}</span>
+                {encontrados.length > 1 && <small>{aula.assunto}</small>}
+                {linkSeguro(aula.url) && <a href={aula.url} target="_blank" rel="noopener noreferrer">Abrir aula</a>}
+              </li>
+            ))}</ul>
+          ) : <p>Nenhuma videoaula vinculada foi encontrada.</p>}
+        </div>
+        <div>
+          <h4>Materiais vinculados ({materiais.length})</h4>
+          {materiais.length ? (
+            <ul>{materiais.map((material) => (
+              <li key={material.chave}>
+                <span>{material.nome}</span>
+                {encontrados.length > 1 && <small>{material.assunto}</small>}
+                {linkSeguro(material.url) && <a href={material.url} target="_blank" rel="noopener noreferrer">Abrir material</a>}
+              </li>
+            ))}</ul>
+          ) : <p>Nenhum PDF ou material vinculado foi encontrado.</p>}
+        </div>
+      </div>
+      {encontrados.length === 0 && <p className="revisao-vinculo-pendente">O assunto ainda precisa ser vinculado a uma aula. Nenhum conteúdo foi associado automaticamente.</p>}
+      <div className="revisao-conteudo-acoes">
+        {!revisao.escopoGrupo && encontrados.length > 0 && (
+          <button type="button" onClick={() => iniciarSessaoRevisao(revisao)}>Iniciar revisão teórica</button>
+        )}
+        <button type="button" onClick={() => abrirQuestoesIA(revisao)}>Questões IA (opcional)</button>
+      </div>
+    </section>
   );
 }
 
