@@ -49,7 +49,7 @@ Os dois itens de lógica argumentativa têm **`assuntoId` diferentes**, correspo
 
 `src/utils/revisaoCicloV2.ts`:
 - Chave estável: `(materiaId, aulaId)`; uma cadeia de revisão por aula e uma única próxima tarefa.
-- Ao concluir aula, registra o marco de 4h já cumprido e programa D+1.
+- Ao concluir a aula, agenda D+1. A conclusão dessa primeira revisão marca o marco de 4h já cumprido; antes de realizá-la o marco permanece pendente.
 - D+1: revisão curta teórica; depois D+7 (baseado na data da aula).
 - D+7: questões; **>=60%** segue D+14, **<60%** repete o mesmo marco em 4 dias (não duplica fila).
 - D+14: questões; novamente **<60%** reforço do mesmo marco em 4 dias.
