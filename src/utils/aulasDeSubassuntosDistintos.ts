@@ -36,3 +36,30 @@ export function aulasDeSubassuntosDistintos(
   if (new Set(ids).size !== aulas.length) return [];
   return aulas;
 }
+
+/**
+ * Projeção apenas de interface: quando o tópico composto do edital já contém
+ * a aula real do curso, não repetir essa mesma aula no seletor de assuntos.
+ * Não apaga nem reescreve assuntos/sessões legados.
+ * Em caso de dúvida, mantém o assunto visível.
+ */
+export function assuntosPrincipaisSemDuplicarAulas(
+  materiaNome: string,
+  assuntos: Assunto[]
+): Assunto[] {
+  return assuntos.filter((candidato) => {
+    const sub = identificarConteudoCatalogo(materiaNome, candidato.nome);
+    if (sub.tipo !== "subassunto" || sub.idsSubassuntos.length !== 1) return true;
+    const id = sub.idsSubassuntos[0];
+    const pais = assuntos.filter((principal) => {
+      if (principal.id === candidato.id) return false;
+      const tipo = identificarConteudoCatalogo(materiaNome, principal.nome);
+      if (tipo.tipo !== "composto" || !tipo.idsSubassuntos.includes(id)) return false;
+      return (principal.aulas ?? []).some((aula) => {
+        const aulaSub = identificarConteudoCatalogo(materiaNome, aula.nome);
+        return aulaSub.tipo === "subassunto" && aulaSub.idsSubassuntos.includes(id);
+      });
+    });
+    return pais.length !== 1;
+  });
+}
