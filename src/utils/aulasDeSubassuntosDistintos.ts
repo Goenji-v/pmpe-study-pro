@@ -21,7 +21,17 @@ export function aulasDeSubassuntosDistintos(
   if (identificacoes.some((item) =>
     item.tipo !== "subassunto" || item.idsSubassuntos.length !== 1
   )) return [];
-  const ids = identificacoes.map((item) => item.idsSubassuntos[0]);
+  const ids = identificacoes.map((item, indice) => {
+    // O curso distingue princípios de contagem e princípio multiplicativo
+    // mesmo quando o catálogo geral os aproxima dentro da mesma família.
+    if (item.idsSubassuntos[0] === "rlm.contagem") {
+      const nome = aulas[indice].nome.normalize("NFD")
+        .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+      if (/principio multiplicativo/.test(nome)) return "rlm.contagem.multiplicativo";
+      if (/principios? (de|da) contagem/.test(nome)) return "rlm.contagem.principios";
+    }
+    return item.idsSubassuntos[0];
+  });
   // Subassuntos individuais diferentes; não confundir sinônimos.
   if (new Set(ids).size !== aulas.length) return [];
   return aulas;
