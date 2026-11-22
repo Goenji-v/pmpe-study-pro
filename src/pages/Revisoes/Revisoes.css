@@ -745,3 +745,36 @@ html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-conteudo
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-conteudo-secoes li small { color: #53657d; }
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-conteudo-secoes > div { border-color: #d2ddeb; }
 html[data-study-base-theme="claro"][data-study-theme="padrao"] .revisao-conteudo-secoes a { color: #1d518c; }
+
+
+/* O painel aberto ocupa uma linha inteira abaixo do resumo e dos botões;
+   sem isso, como terceiro filho flex, espreme o resumo em uma faixa estreita. */
+.revisao-card > .revisao-conteudo-vinculado {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  order: 3;
+  margin: 0;
+}
+.revisao-card > .revisao-conteudo {
+  flex: 1 1 320px;
+  min-width: min(100%, 260px);
+}
+.revisao-card > .revisao-lateral {
+  flex: 0 1 auto;
+}
+.revisao-conteudo-secoes li,
+.revisao-conteudo-secoes li span {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .revisao-card > .revisao-conteudo {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .revisao-card > .revisao-lateral {
+    width: 100%;
+    min-width: 0;
+  }
+}
