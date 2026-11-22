@@ -53,6 +53,7 @@ import {
 import {
   useAuth,
 } from "./AuthContext";
+import { supabase } from "../lib/supabase";
 
 import {
   carregarEstadoDaNuvem,
@@ -153,6 +154,7 @@ type AppContextType = {
   alteracoesPendentes: number;
   ultimaSincronizacao: string | null;
   sincronizarAgora: () => Promise<void>;
+  excluirSessaoHistoricoSeguro: (sessaoId: string) => Promise<void>;
   resolverConflitoSincronizacao: (
     preferencia: "nuvem" | "local"
   ) => Promise<void>;
@@ -1978,6 +1980,55 @@ function EstadoDaConta({
     );
   }
 
+  // In staging, intentional deletion must use an atomic, backup-protected RPC.
+  // An ordinary autosave shrinking sessoes is correctly rejected by anti-regression.
+  async function excluirSessaoHistoricoSeguro(sessaoId: string): Promise<void> {
+    if (import.meta.env.VITE_STUDY_PRO_STAGING_GUARD !== "true") {
+      setSessoes((atuais) => atuais.filter((sessao) => sessao.id !== sessaoId));
+      return;
+    }
+    if (!usuario || !navegadorEstaOnline()) {
+      throw new Error("É necessário entrar na conta e estar online para excluir uma sessão.");
+    }
+
+    return executarOperacaoNuvemSerializada(async () => {
+      if (conflitoRef.current || obterEstadoPendenteSincronizacao(usuario.id)) {
+        throw new Error("Resolva primeiro a sincronização pendente escolhendo a nuvem. Nenhuma sessão foi excluída.");
+      }
+      const atual = montarEstadoNuvem(dadosAtuaisRef.current);
+      if (assinaturaEstado(atual) !== ultimoEstadoSalvoRef.current) {
+        throw new Error("Aguarde a sincronização das alterações atuais antes de excluir. Nenhuma sessão foi excluída.");
+      }
+      setStatusNuvem("salvando");
+      try {
+        const { data, error } = await supabase.rpc("excluir_sessao_historico_cas", {
+          p_expected_revision: revisaoBaseRef.current,
+          p_sessao_id: sessaoId,
+        });
+        if (error) throw new Error(error.message);
+        const resultado = Array.isArray(data) ? data[0] : data;
+        if (!resultado?.ok || !resultado?.estado) {
+          marcarConflito(new ConflitoSincronizacaoError(
+            Number(resultado?.revisao_atual ?? 0),
+            revisaoBaseRef.current,
+            "Outro aparelho modificou o histórico. Carregue a nuvem antes de excluir. Nenhuma sessão foi apagada."
+          ));
+          throw new Error("A nuvem mudou. Nenhuma sessão foi excluída; atualize os dados.");
+        }
+        const estado = resultado.estado as EstadoAppNuvem;
+        validarIntegridadeEstado(estado);
+        aplicarEstadoDaNuvem(estado);
+        confirmarSincronizacaoLocal(usuario.id, estado);
+      } catch (erro) {
+        if (!conflitoRef.current) {
+          setErroNuvem(erro instanceof Error ? erro.message : "Falha ao excluir a sessão.");
+          setStatusNuvem("erro");
+        }
+        throw erro;
+      }
+    });
+  }
+
   async function resolverConflitoSincronizacao(
     preferencia: "nuvem" | "local"
   ) {
@@ -2815,6 +2866,7 @@ function EstadoDaConta({
         alteracoesPendentes,
         ultimaSincronizacao,
         sincronizarAgora,
+        excluirSessaoHistoricoSeguro,
         resolverConflitoSincronizacao,
         restaurarEstadoCompleto,
         restaurarBackupHistoricoSeguroStaging,
