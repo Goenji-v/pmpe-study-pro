@@ -928,7 +928,7 @@ function ConteudoDaRevisao({
         {!revisao.escopoGrupo && encontrados.length > 0 && (
           <button type="button" onClick={() => iniciarSessaoRevisao(revisao)}>📖 Rever teoria — iniciar sessão</button>
         )}
-        <button type="button" onClick={() => abrirQuestoesIA(revisao)}>Questões IA (opcional)</button>
+        <button type="button" onClick={() => abrirQuestoesIA(revisao)}>Fazer questões IA (opcional)</button>
       </div>
     </section>
   );
