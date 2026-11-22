@@ -15,7 +15,7 @@ import type {
 
 export default function HistoricoSessoes() {
   const location = useLocation();
-  const { sessoes, setSessoes } = useApp();
+  const { sessoes, setSessoes, excluirSessaoHistoricoSeguro } = useApp();
   const { showToast } = useToast();
 
   const [busca, setBusca] = useEstadoNavegacao("historico:busca", "");
@@ -26,6 +26,8 @@ export default function HistoricoSessoes() {
     const estado = location.state as { periodo?: "todos" | "hoje" | "semana" | "mes" } | null;
     return estado?.periodo ?? "todos";
   });
+
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const [editandoId, setEditandoId] = useState<
     string | null
@@ -170,27 +172,26 @@ export default function HistoricoSessoes() {
     );
   }
 
-  function excluirSessao(id: string) {
+  async function excluirSessao(id: string) {
+    if (excluindoId !== null) return;
     const confirmar = window.confirm(
-      "Deseja excluir esta sessão de estudo?"
+      "Deseja excluir esta sessão de estudo? No Staging, o Study Pro criará um backup na nuvem antes de apagar."
     );
-
     if (!confirmar) return;
 
-    setSessoes((anteriores) =>
-      anteriores.filter(
-        (sessao) => sessao.id !== id
-      )
-    );
-
-    if (editandoId === id) {
-      cancelarEdicao();
+    setExcluindoId(id);
+    try {
+      await excluirSessaoHistoricoSeguro(id);
+      if (editandoId === id) cancelarEdicao();
+      showToast("Sessão excluída e exclusão confirmada na nuvem.", "success");
+    } catch (erro) {
+      showToast(
+        erro instanceof Error ? erro.message : "Não foi possível excluir a sessão.",
+        "error"
+      );
+    } finally {
+      setExcluindoId(null);
     }
-
-    showToast(
-      "Sessão excluída.",
-      "info"
-    );
   }
 
   function duplicarSessao(
