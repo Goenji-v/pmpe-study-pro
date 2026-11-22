@@ -60,7 +60,7 @@ test("revisão legada resolve a matéria atual mesmo quando o assunto não exist
   assert.match(fonteRevisoes, /const materiaCanonica/);
   assert.match(fonteRevisoes, /materiaCanonica\?\.nome \?\? revisao\.materia/);
   assert.match(fonteRevisoes, /materiaMudou/);
-  assert.match(fonteRevisoes, /assunto: referencia\?\.assunto\.nome \?\? revisao\.assunto/);
+  assert.match(fonteRevisoes, /revisao\.aulaId \? revisao\.assunto/);
 });
 
 
