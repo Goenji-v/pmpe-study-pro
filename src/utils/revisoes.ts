@@ -59,6 +59,7 @@ export function criarPrimeiraRevisao(params: {
   materiaId: string;
   moduloId?: string;
   assuntoId: string;
+  aulaId?: string;
   materia: string;
   modulo?: string;
   assunto: string;
@@ -78,6 +79,7 @@ export function criarPrimeiraRevisao(params: {
     materiaId: params.materiaId,
     moduloId: params.moduloId,
     assuntoId: params.assuntoId,
+    ...(params.aulaId ? { aulaId: params.aulaId } : {}),
     materia: params.materia,
     modulo: params.modulo,
     assunto: params.assunto,
@@ -112,6 +114,7 @@ export function criarProximaRevisao(
         ? chaveAssuntoPrincipal(item) === chavePrincipal
         : item.materiaId === revisaoAtual.materiaId &&
           item.assuntoId === revisaoAtual.assuntoId &&
+          item.aulaId === revisaoAtual.aulaId &&
           (!item.moduloId || !revisaoAtual.moduloId || item.moduloId === revisaoAtual.moduloId))
   );
   if (jaExiste) return null;
@@ -131,6 +134,7 @@ export function criarProximaRevisao(
     materiaId: revisaoAtual.materiaId,
     moduloId: revisaoAtual.moduloId,
     assuntoId: revisaoAtual.assuntoId,
+    ...(revisaoAtual.aulaId ? { aulaId: revisaoAtual.aulaId } : {}),
     materia: revisaoAtual.materia,
     modulo: revisaoAtual.modulo,
     assunto: revisaoAtual.assunto,
