@@ -25,5 +25,5 @@ test("Centro de Estudos possui os recursos da tela aprovada", () => {
   assert.match(central, /"pmpe:central-estudos:prefill"/);
   assert.match(central, /formatoRevisao === "teoria"/);
   assert.match(central, /formatoRevisao === "questoes"/);
-  assert.match(central, /MATERIAIS VINCULADOS|Materiais vinculados/);
+  assert.match(central, /MateriaisDoAssunto/);
 });
