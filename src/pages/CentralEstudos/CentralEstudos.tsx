@@ -48,6 +48,7 @@ import {
   listarModulosDaMateria,
 } from "../../services/conteudos/navegarConteudos";
 import { localizarProximaAula } from "../../services/conteudos/localizarConteudo";
+import { assuntosPrincipaisSemDuplicarAulas } from "../../utils/aulasDeSubassuntosDistintos";
 import { resolverLinksAtividade } from "../../utils/linksAtividade";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { salvarArquivoMaterial } from "../../services/materiaisService";
@@ -385,8 +386,10 @@ const [
   );
 
   const assuntosDisponiveis = useMemo(
-    () => assuntosComModulo.map(({ assunto }) => assunto),
-    [assuntosComModulo]
+    () => assuntosPrincipaisSemDuplicarAulas(
+      materiaSelecionada?.nome ?? "", assuntosComModulo.map(({ assunto }) => assunto)
+    ),
+    [assuntosComModulo, materiaSelecionada?.nome]
   );
 
   const selecaoAssunto = useMemo(
@@ -1237,7 +1240,7 @@ const [
               )}
             </div>
 
-            {estado.tipo === "aula" &&
+            {(estado.tipo === "aula" || estado.tipo === "revisao") &&
               assuntoSelecionado &&
               aulasDisponiveis.length > 0 && (
                 <div className="central-estudos-campo">
