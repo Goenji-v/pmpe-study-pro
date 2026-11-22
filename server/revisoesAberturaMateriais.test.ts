@@ -15,7 +15,7 @@ test("resolver abre aulas e materiais, não o gerador de questões", () => {
 
 test("geração de questões continua opcional e separada", () => {
   assert.match(revisoes, /Questões IA \(opcional\)/);
-  assert.match(revisoes, /Iniciar revisão teórica/);
+  assert.match(revisoes, /Rever teoria — iniciar sessão/);
   assert.match(revisoes, /const linkSeguro =/);
 });
 
