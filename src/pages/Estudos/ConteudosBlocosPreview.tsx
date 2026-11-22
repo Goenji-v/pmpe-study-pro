@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { listarModulosDaMateria } from '../../services/conteudos/navegarConteudos';
 import { agruparAssuntosParaExibicao } from '../../utils/auditoriaAgrupamentoAssuntos';
@@ -8,7 +9,7 @@ import { listarMateriais, abrirMaterial, type MaterialEstudo } from '../../servi
 import { materialCorrespondeAoAssunto } from '../../utils/correspondenciaMateriais';
 import { abrirPdfInterno, ehLinkPdf } from '../../services/leitorMaterial';
 import { avaliarBlocoPreview } from './regrasBlocoPreview';
-import type { Assunto, Materia, Modulo } from '../../types';
+import type { Assunto, AulaAssunto, Materia, Modulo } from '../../types';
 import type { ConfiguracoesComCursos } from '../../types/cursos';
 import './ConteudosBlocosPreview.css';
 
@@ -21,6 +22,23 @@ const prioridade = (assuntos:Assunto[]) => assuntos.some(a=>a.prioridade==='alta
 
 export default function ConteudosBlocosPreview() {
  const app=useApp();
+ const navigate = useNavigate();
+
+ function estudarTopico(bloco: Bloco, assunto: Assunto, aula?: AulaAssunto) {
+   navigate('/central-estudos', {state: {prefillSessao: {
+     materia: bloco.materia.nome,
+     materiaId: bloco.materia.id,
+     modulo: bloco.modulo.nome,
+     moduloId: bloco.modulo.id,
+     assunto: assunto.nome,
+     assuntoId: assunto.id,
+     aulaId: aula?.id,
+     tipo: 'aula',
+     objetivo: 'Estudar ' + (aula?.nome ?? assunto.nome),
+     urlAula: aula ? aula.url : assunto.aula,
+     urlQuestoes: assunto.questoes,
+   }}});
+ }
  const [extras,setExtras]=useState<Materia[]>([]);
  const [modulosExtras,setModulosExtras]=useState<Record<string,Modulo[]>>({});
  const [assuntosExtras,setAssuntosExtras]=useState<Record<string,Assunto[]>>({});
@@ -108,7 +126,35 @@ export default function ConteudosBlocosPreview() {
   {materia&&!perfil&&<div className="cb-panel"><header className="cb-panel-heading"><div><h2>{materia.nome}</h2><p>{modulo?modulo.nome==='Geral'?'Assuntos da matéria':modulo.nome:'Escolha um módulo'}</p></div><div className="cb-actions"><button onClick={()=>abrirCadastro('modulo')}>＋ Novo módulo</button>{modulo&&<button onClick={()=>abrirCadastro('assunto')}>＋ Novo assunto</button>}</div></header>
    {!modulo&&modulos.map(m=><button className="cb-module" key={m.id} onClick={()=>setModId(m.id)}><strong>{m.nome}</strong><span>{m.assuntos.length} assuntos →</span></button>)}
    {modulo&&<>{candidatos.length>0&&<div className="cb-group-hint"><span>{candidatos.filter(g=>!aprovados[g.chave]).length} sugestões de blocos. Nada é reunido sem sua confirmação.</span><button onClick={()=>setSugestoes(true)}>Conferir agrupamentos</button></div>}
-   <div className="cb-table" role="table" aria-label="Assuntos"><div className="cb-topic-row cb-label" role="row"><span>Assunto / bloco</span><span>Prioridade</span><span>Aulas</span><span>Detalhes</span></div>{blocos.map(b=>{const lista=b.assuntos.flatMap(a=>a.aulas?.length?a.aulas:[{concluida:a.concluido}]);return <div className="cb-topic-row" role="row" key={b.id}><div><strong>{b.nome}</strong>{b.assuntos.length>1&&<small>{b.assuntos.length} partes no bloco</small>}</div><span className={'cb-priority '+prioridade(b.assuntos)}>{prioridade(b.assuntos)==='media'?'Média':prioridade(b.assuntos)==='alta'?'Alta':'Baixa'}</span><span>{lista.filter(a=>a.concluida).length}/{lista.length}</span><button onClick={()=>abrirPerfil(b)}>Perfil →</button></div>;})}</div>{blocos.length===0&&<p className="cb-empty">Nenhum assunto neste módulo. Use “Novo assunto” para experimentar o cadastro.</p>}</>}
+   <div className="cb-table" aria-label="Assuntos e aulas">
+     {blocos.map(bloco => (
+       <section key={bloco.id} className="cb-panel">
+         <header className="cb-panel-heading">
+           <h3>{bloco.nome}</h3>
+           <button onClick={() => abrirPerfil(bloco)}>Ver detalhes</button>
+         </header>
+         {bloco.assuntos.map(assunto => {
+           const aulas = assunto.aulas ?? [];
+           if (!aulas.length) {
+             const cadastrado = app.materias.some(m => m.id === bloco.materia.id &&
+               listarModulosDaMateria(m).some(mod => mod.id === bloco.modulo.id &&
+                 mod.assuntos.some(a => a.id === assunto.id)));
+             return <div className="cb-lesson" key={assunto.id}>
+               {bloco.assuntos.length > 1 && <strong>{assunto.nome}</strong>}
+               <span>{assunto.concluido ? 'Concluído' : 'Pendente'}</span>
+               {cadastrado && <button onClick={() => estudarTopico(bloco, assunto)}>Estudar tópico</button>}
+             </div>;
+           }
+           return <ul key={assunto.id} className="cb-topic-lessons">
+             {aulas.map(aula => <li key={aula.id} className="cb-lesson">
+               <div><strong>{aula.nome}</strong><small>{aula.concluida ? 'Concluída' : 'Pendente'}</small></div>
+               <button aria-label={'Estudar ' + aula.nome} onClick={() => estudarTopico(bloco, assunto, aula)}>Estudar aula</button>
+             </li>)}
+           </ul>;
+         })}
+       </section>
+     ))}
+   </div>{blocos.length===0&&<p className="cb-empty">Nenhum assunto neste módulo. Use “Novo assunto” para experimentar o cadastro.</p>}</>}
   </div>}
   {perfil&&<>
    <header className="cb-panel-heading"><div><h2>{perfil.nome}</h2><p>Perfil do assunto · prioridade {prioridade(perfil.assuntos)==='media'?'média':prioridade(perfil.assuntos)}</p></div></header>

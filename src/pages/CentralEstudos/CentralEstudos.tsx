@@ -342,6 +342,7 @@ const [
       missaoId: prefill.missaoId,
       semana: prefill.semana,
       dia: prefill.dia,
+      aulaId: prefill.aulaId,
       urlAula: prefill.urlAula,
       urlQuestoes: prefill.urlQuestoes,
     });

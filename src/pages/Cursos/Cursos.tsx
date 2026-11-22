@@ -149,7 +149,7 @@ export default function Cursos() {
     }
   }
 
-  function analisarTexto() {
+  async function analisarTexto() {
     if (!textoColado.trim()) {
       setMensagem("Cole a grade do curso, o cronograma ou a lista de aulas.");
       return;
@@ -157,10 +157,13 @@ export default function Cursos() {
     try {
       const nome = nomeManual.trim() || "Curso importado";
       setEditandoId(null);
-      const curso = organizarCapturaCurso(capturaDeTexto(textoColado, nome), nome);
+      const curso = textoColado.trimStart().startsWith("{")
+        ? await extrairCursoDeArquivo(new File([textoColado], "grade.json", {type: "application/json"}))
+        : organizarCapturaCurso(capturaDeTexto(textoColado, nome), nome);
       setPreview(curso);
       setMensagem("Texto organizado. Confira a estrutura antes de importar.");
     } catch (erro) {
+      setPreview(null);
       setMensagem(erro instanceof Error ? erro.message : "Não foi possível organizar o texto.");
     }
   }
@@ -612,7 +615,7 @@ export default function Cursos() {
 
             <div className="cursos-upload-card">
               <h2>2. Colar grade/cronograma</h2>
-              <p>Útil quando o curso fornece a lista em PDF ou quando copiar e colar é mais simples.</p>
+              <p>Cole a lista de aulas ou o conteúdo do JSON exportado do curso.</p>
               <textarea value={textoColado} onChange={(e) => setTextoColado(e.target.value)} placeholder={'Português\nMódulo 01 - Fonologia\nAula 01 - Fonema e letra\nAula 02 - Dígrafos\n\nRLM\nMódulo 01 - Proposições...'} />
               <button type="button" onClick={analisarTexto} disabled={!textoColado.trim()}>Organizar texto</button>
             </div>

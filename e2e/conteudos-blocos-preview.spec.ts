@@ -3,7 +3,7 @@ import {build} from 'esbuild';
 import {readFile} from 'node:fs/promises';
 let js:string,css:string;
 test.beforeAll(async()=>{
- const result=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`import React from 'react';import{createRoot}from'react-dom/client';import Page from './src/pages/Estudos/ConteudosBlocosPreview';createRoot(document.getElementById('root')).render(<Page/>);`},bundle:true,write:false,platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"','import.meta.env':'{}'},loader:{'.css':'empty'},plugins:[{name:'fixture',setup(b){
+ const result=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`import React from 'react';import{createRoot}from'react-dom/client';import {BrowserRouter,Routes,Route,useLocation} from 'react-router-dom';import Page from './src/pages/Estudos/ConteudosBlocosPreview';function Destino(){return <output>{JSON.stringify(useLocation().state.prefillSessao)}</output>}createRoot(document.getElementById('root')).render(<BrowserRouter><Routes><Route path="/" element={<Page/>}/><Route path="/central-estudos" element={<Destino/>}/></Routes></BrowserRouter>);`},bundle:true,write:false,platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"','import.meta.env':'{}'},loader:{'.css':'empty'},plugins:[{name:'fixture',setup(b){
  b.onLoad({filter:/\/context\/AppContext\.tsx$/},()=>({loader:'tsx',contents:`const materias=[{id:'p',nome:'Português',assuntos:[],modulos:[{id:'g',nome:'Geral',ordem:0,assuntos:[{id:'a',nome:'Fonologia',prioridade:'alta',concluido:false,aulas:[{id:'a1',nome:'Aula 1 — Dígrafos',url:'https://example.com/1',ordem:0,concluida:false},{id:'a2',nome:'Aula 2 — Encontros vocálicos',url:'https://example.com/2',ordem:1,concluida:false}]}]}]}];export const useApp=()=>({materias,questoes:[],sessoes:[],revisoes:[],configuracoes:{}});`}));
  b.onLoad({filter:/\/services\/materiaisService\.ts$/},()=>({loader:'ts',contents:`export const listarMateriais=async()=>[];export const abrirMaterial=async()=>{};`}));
  b.onLoad({filter:/\/services\/leitorMaterial\.ts$/},()=>({loader:'ts',contents:`export const abrirPdfInterno=()=>{};export const ehLinkPdf=(u)=>u.endsWith('.pdf');`}));
@@ -13,7 +13,7 @@ async function abrir(page:import('@playwright/test').Page){page.on('pageerror',e
 for(const width of [1440,390])test(`matérias em tabela e perfil sem excesso ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900});await abrir(page);
  await expect(page.getByRole('table',{name:'Matérias',exact:true})).toBeVisible();
- await page.getByRole('row').filter({hasText:'Português'}).click();await page.getByRole('button',{name:'Perfil →',exact:true}).click();
+ await page.getByRole('row').filter({hasText:'Português'}).click();await page.getByRole('button',{name:'Ver detalhes',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Fonologia',exact:true})).toBeVisible();
  await expect(page.getByRole('heading',{name:'Aulas cadastradas'})).toHaveCount(0);
  await page.getByRole('button',{name:/Aulas.*aulas vinculadas/}).click();
@@ -21,7 +21,7 @@ for(const width of [1440,390])test(`matérias em tabela e perfil sem excesso ${w
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
 test('confirmar aula, mínimo de questões e revisão de reforço sem gravação',async({page})=>{
- await abrir(page);await page.getByRole('row').filter({hasText:'Português'}).click();await page.getByRole('button',{name:'Perfil →',exact:true}).click();
+ await abrir(page);await page.getByRole('row').filter({hasText:'Português'}).click();await page.getByRole('button',{name:'Ver detalhes',exact:true}).click();
  await page.getByRole('button',{name:'Testar conclusão',exact:true}).click();await expect(page.getByRole('button',{name:'Simular conclusão e primeira revisão'})).toBeDisabled();await page.getByRole('button',{name:'Fechar',exact:true}).click();
  await page.getByRole('button',{name:/Aulas.*aulas vinculadas/}).click();
  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Simular fim da sessão'}).nth(i).click();await page.getByRole('button',{name:'Sim, terminei a aula',exact:true}).click();}
@@ -32,6 +32,15 @@ test('confirmar aula, mínimo de questões e revisão de reforço sem gravação
 });
 test('cadastro contextual mantém matéria e módulo como rascunho',async({page})=>{
  await abrir(page);await page.getByRole('row').filter({hasText:'Português'}).click();await page.getByRole('button',{name:'＋ Novo assunto',exact:true}).click();
- await expect(page.getByRole('dialog')).toContainText('Português → Geral');await page.getByLabel('Nome',{exact:true}).fill('Crase');await page.getByRole('button',{name:'Adicionar à prévia',exact:true}).click();await expect(page.getByRole('row').filter({hasText:'Crase'})).toBeVisible();
- await page.reload();await page.addScriptTag({content:js});await page.getByRole('row').filter({hasText:'Português'}).click();await expect(page.getByRole('row').filter({hasText:'Crase'})).toHaveCount(0);
+ await expect(page.getByRole('dialog')).toContainText('Português → Geral');await page.getByLabel('Nome',{exact:true}).fill('Crase');await page.getByRole('button',{name:'Adicionar à prévia',exact:true}).click();await expect(page.getByRole('heading',{name:'Crase',exact:true})).toBeVisible();
+ await page.reload();await page.addScriptTag({content:js});await page.getByRole('row').filter({hasText:'Português'}).click();await expect(page.getByRole('heading',{name:'Crase',exact:true})).toHaveCount(0);
+});
+
+test('cada tópico abre sua aula e mantém o vínculo do assunto', async ({page}) => {
+  await abrir(page);
+  await page.getByRole('row').filter({hasText:'Português'}).click();
+  await expect(page.getByRole('button', {name: /^Estudar Aula/})).toHaveCount(2);
+  await page.getByRole('button', {name:'Estudar Aula 2 — Encontros vocálicos'}).click();
+  const sessao = JSON.parse(await page.locator('output').innerText());
+  expect(sessao).toMatchObject({materiaId:'p', moduloId:'g', assuntoId:'a', aulaId:'a2', urlAula:'https://example.com/2'});
 });
