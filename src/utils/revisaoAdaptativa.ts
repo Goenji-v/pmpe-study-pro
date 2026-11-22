@@ -1,4 +1,6 @@
 import type { Revisao } from "../types";
+import { chaveAssuntoPrincipal } from "./revisoesAssuntoPrincipal";
+import { encontrarDataDisponivelParaReforco } from "./agendadorReforcos";
 
 export const MINIMO_QUESTOES_REVISAO_ADAPTATIVA = 5;
 
@@ -38,8 +40,21 @@ export type PlanoRevisaoPendente = {
 };
 
 export function planejarRevisaoPendente(
-  revisao: Pick<Revisao, "certas" | "erradas">
+  revisao: Pick<Revisao, "certas" | "erradas" | "reforcoTeoriaRecomendado">
 ): PlanoRevisaoPendente {
+  if (revisao.reforcoTeoriaRecomendado) {
+    return {
+      modo: "teoria_questoes",
+      quantidadeQuestoes: 5,
+      titulo: "Rever teoria e erros antes de novo treino",
+      descricao: "Dois resultados seguidos abaixo de 60%: revise a explicação dos erros e resolva 5 questões direcionadas. A revisão atual permanece na data marcada, sem criar um ciclo paralelo.",
+      percentual: typeof revisao.certas === "number" && typeof revisao.erradas === "number"
+        ? calcularAproveitamentoQuestoes(revisao.certas, revisao.erradas)
+        : undefined,
+      total: typeof revisao.certas === "number" && typeof revisao.erradas === "number"
+        ? revisao.certas + revisao.erradas : undefined,
+    };
+  }
   const orientacao = orientarRevisaoPorResultado(
     revisao.certas,
     revisao.erradas
@@ -128,6 +143,7 @@ export function orientarRevisaoPorResultado(
 type AcaoRevisaoAdaptativa =
   | "ignorada"
   | "registrada"
+  | "diagnostico"
   | "criada"
   | "atualizada";
 
@@ -141,6 +157,11 @@ type AplicarRevisaoAdaptativaParams = {
   assunto: string;
   certas: number;
   erradas: number;
+  /** Obrigatório: resultado de questões isoladas não comprova aula concluída. */
+  conteudoEstudado: boolean;
+  limiteDiario?: number;
+  /** ID da tentativa salva, para impedir repetição do mesmo resultado. */
+  resultadoId?: string;
   agora?: Date;
   criarId?: () => string;
 };
@@ -149,6 +170,10 @@ export type ResultadoRevisaoAdaptativa = {
   revisoes: Revisao[];
   acao: AcaoRevisaoAdaptativa;
   diagnostico: DiagnosticoRevisaoAdaptativa | null;
+  /** Data efetiva após aplicar capacidade, não apenas data ideal do reforço. */
+  dataAgendada?: string;
+  adiadaPorCapacidade?: boolean;
+  teoriaRecomendada?: boolean;
 };
 
 const PESO_PRIORIDADE: Record<PrioridadeRevisaoAdaptativa, number> = {
@@ -217,109 +242,99 @@ export function aplicarRevisaoAdaptativa(
   params: AplicarRevisaoAdaptativaParams
 ): ResultadoRevisaoAdaptativa {
   const diagnostico = diagnosticarRevisaoAdaptativa(
-    params.certas,
-    params.erradas
+    params.certas, params.erradas
   );
+  const total = params.certas + params.erradas;
 
-  if (!diagnostico) {
-    const total = params.certas + params.erradas;
-    if (total < MINIMO_QUESTOES_REVISAO_ADAPTATIVA) {
-      return {
-        revisoes: params.revisoes,
-        acao: "ignorada",
-        diagnostico: null,
-      };
-    }
-
-    const indiceExistente = params.revisoes.findIndex(
-      (revisao) =>
-        !revisao.concluida &&
-        mesmaReferencia(revisao, params)
-    );
-
-    if (indiceExistente < 0) {
-      return {
-        revisoes: params.revisoes,
-        acao: "ignorada",
-        diagnostico: null,
-      };
-    }
-
-    return {
-      revisoes: params.revisoes.map((revisao, indice) =>
-        indice === indiceExistente
-          ? {
-              ...revisao,
-              certas: params.certas,
-              erradas: params.erradas,
-            }
-          : revisao
-      ),
-      acao: "registrada",
-      diagnostico: null,
-    };
+  // Nota isolada não é comprovação de aula concluída.
+  if (!params.conteudoEstudado) {
+    return { revisoes: params.revisoes, acao: "diagnostico", diagnostico };
+  }
+  if (total < MINIMO_QUESTOES_REVISAO_ADAPTATIVA) {
+    return { revisoes: params.revisoes, acao: "ignorada", diagnostico: null };
   }
 
-  const agora = params.agora ?? new Date();
-  const dataPrevista = criarDataPrevista(
-    agora,
-    diagnostico.diasParaRevisao
-  );
-
-  const indiceExistente = params.revisoes.findIndex(
-    (revisao) =>
-      !revisao.concluida &&
-      mesmaReferencia(revisao, params)
+  const indiceExistente = params.revisoes.findIndex((revisao) =>
+    !revisao.concluida && !revisao.integradaEmId &&
+    mesmaReferencia(revisao, params)
   );
 
   if (indiceExistente >= 0) {
     const existente = params.revisoes[indiceExistente];
-    const previstaExistente = new Date(existente.dataPrevista);
-    const deveAntecipar =
-      Number.isNaN(previstaExistente.getTime()) ||
-      dataPrevista.getTime() < previstaExistente.getTime();
+    if (params.resultadoId &&
+        existente.ultimaTentativaAdaptativaId === params.resultadoId) {
+      return {
+        revisoes: params.revisoes, acao: "ignorada", diagnostico,
+        dataAgendada: existente.dataPrevista,
+        teoriaRecomendada: Boolean(existente.reforcoTeoriaRecomendado),
+      };
+    }
 
+    const baixo60 = params.certas / total < 0.6;
+    const sequenciaAntiga = existente.sequenciaResultadosBaixos ??
+      (existente.motivoAdaptativo === "baixo_desempenho" &&
+        typeof existente.certas === "number" &&
+        typeof existente.erradas === "number" &&
+        existente.certas + existente.erradas >= MINIMO_QUESTOES_REVISAO_ADAPTATIVA &&
+        existente.certas / (existente.certas + existente.erradas) < 0.6 ? 1 : 0);
+    const sequencia = baixo60 ? Math.min(2, sequenciaAntiga + 1) : 0;
     const diagnosticoExistente =
       typeof existente.certas === "number" &&
       typeof existente.erradas === "number"
-        ? diagnosticarRevisaoAdaptativa(
-            existente.certas,
-            existente.erradas
-          )
+        ? diagnosticarRevisaoAdaptativa(existente.certas, existente.erradas)
         : null;
-
-    const manterResultadoMaisCritico =
-      diagnosticoExistente !== null &&
+    const manterResultadoMaisCritico = Boolean(diagnostico &&
+      diagnosticoExistente &&
       PESO_PRIORIDADE[diagnosticoExistente.prioridade] <=
-        PESO_PRIORIDADE[diagnostico.prioridade];
+        PESO_PRIORIDADE[diagnostico.prioridade]);
 
-    const revisaoAtualizada: Revisao = {
+    // Uma revisão já aberta é a mesma pendência. Nova nota baixa NÃO
+    // antecipa sua data nem reinicia a etapa. O treino permanece auditável
+    // no histórico de questões, separado do ciclo de revisão.
+    const atualizada: Revisao = {
       ...existente,
-      materiaId: params.materiaId,
-      moduloId: params.moduloId ?? existente.moduloId,
-      assuntoId: params.assuntoId,
-      materia: params.materia,
-      modulo: params.modulo ?? existente.modulo,
-      assunto: params.assunto,
-      dataPrevista: deveAntecipar
-        ? dataPrevista.toISOString()
-        : existente.dataPrevista,
-      certas: manterResultadoMaisCritico
-        ? existente.certas
-        : params.certas,
-      erradas: manterResultadoMaisCritico
-        ? existente.erradas
-        : params.erradas,
-      motivoAdaptativo: "baixo_desempenho",
+      certas: manterResultadoMaisCritico ? existente.certas : params.certas,
+      erradas: manterResultadoMaisCritico ? existente.erradas : params.erradas,
+      sequenciaResultadosBaixos: sequencia,
+      reforcoTeoriaRecomendado: sequencia >= 2,
+      ...(params.resultadoId
+        ? { ultimaTentativaAdaptativaId: params.resultadoId } : {}),
     };
-
     return {
-      revisoes: params.revisoes.map((revisao, indice) =>
-        indice === indiceExistente ? revisaoAtualizada : revisao
+      revisoes: params.revisoes.map((item, indice) =>
+        indice === indiceExistente ? atualizada : item
       ),
-      acao: "atualizada",
+      acao: diagnostico ? "atualizada" : "registrada",
       diagnostico,
+      dataAgendada: existente.dataPrevista,
+      teoriaRecomendada: sequencia >= 2,
     };
+  }
+
+  if (!diagnostico) {
+    return { revisoes: params.revisoes, acao: "ignorada", diagnostico: null };
+  }
+
+  // A família é a unidade da agenda. ID/título diferentes dentro da
+  // mesma família não devem produzir uma segunda pendência.
+  const chave = chaveAssuntoPrincipal(params);
+  if (chave && params.revisoes.some((revisao) =>
+    !revisao.concluida && !revisao.integradaEmId &&
+    chaveAssuntoPrincipal(revisao) === chave
+  )) {
+    return { revisoes: params.revisoes, acao: "diagnostico", diagnostico };
+  }
+
+  const agora = params.agora ?? new Date();
+  const dataIdeal = criarDataPrevista(agora, diagnostico.diasParaRevisao);
+  const dataPrevista = encontrarDataDisponivelParaReforco({
+    dataIdeal, agora, revisoes: params.revisoes,
+    limiteDiario: params.limiteDiario ?? 0,
+  });
+  if (!dataPrevista) {
+    // O treino foi salvo na tabela de questões, mas não prometemos uma
+    // data de revisão fora da capacidade definida pelo estudante.
+    return { revisoes: params.revisoes, acao: "diagnostico", diagnostico };
   }
 
   const novaRevisao: Revisao = {
@@ -337,12 +352,18 @@ export function aplicarRevisaoAdaptativa(
     certas: params.certas,
     erradas: params.erradas,
     motivoAdaptativo: "baixo_desempenho",
+    sequenciaResultadosBaixos: params.certas / total < 0.6 ? 1 : 0,
+    reforcoTeoriaRecomendado: false,
+    ...(params.resultadoId
+      ? { ultimaTentativaAdaptativaId: params.resultadoId } : {}),
   };
-
   return {
     revisoes: [novaRevisao, ...params.revisoes],
     acao: "criada",
     diagnostico,
+    dataAgendada: novaRevisao.dataPrevista,
+    adiadaPorCapacidade: dataPrevista.toDateString() !== dataIdeal.toDateString(),
+    teoriaRecomendada: false,
   };
 }
 
@@ -354,44 +375,40 @@ type AplicarRevisaoPorDuvidaParams = {
   materia: string;
   modulo?: string;
   assunto: string;
+  limiteDiario?: number;
   agora?: Date;
   criarId?: () => string;
 };
 
+/**
+ * Dúvida da aula concluída é reforço, não outro ciclo de revisão.
+ * A revisão pendente existente (mesmo assunto ou família curada) conserva
+ * ID, data e etapa. Se não houver, o agendador central encontra uma vaga.
+ */
 export function aplicarRevisaoPorDuvida(
   params: AplicarRevisaoPorDuvidaParams
 ): Pick<ResultadoRevisaoAdaptativa, "revisoes" | "acao"> {
-  const agora = params.agora ?? new Date();
-  const dataPrevista = criarDataPrevista(agora, 1);
-  const indiceExistente = params.revisoes.findIndex(
-    (revisao) => !revisao.concluida && mesmaReferencia(revisao, params)
+  const chave = chaveAssuntoPrincipal(params);
+  const existente = params.revisoes.find((revisao) =>
+    !revisao.concluida && !revisao.integradaEmId &&
+    (mesmaReferencia(revisao, params) ||
+      (Boolean(chave) && chaveAssuntoPrincipal(revisao) === chave))
   );
+  if (existente) {
+    // A dúvida permanece registrada na sessão de estudo original.
+    // Não antecipar uma pendência já aberta nem mudar sua origem/resultado.
+    return { revisoes: params.revisoes, acao: "registrada" };
+  }
 
-  if (indiceExistente >= 0) {
-    const existente = params.revisoes[indiceExistente];
-    const atual = new Date(existente.dataPrevista);
-    const antecipar =
-      Number.isNaN(atual.getTime()) ||
-      dataPrevista.getTime() < atual.getTime();
-
-    return {
-      revisoes: params.revisoes.map((revisao, indice) =>
-        indice === indiceExistente
-          ? {
-              ...revisao,
-              materiaId: params.materiaId,
-              moduloId: params.moduloId ?? revisao.moduloId,
-              assuntoId: params.assuntoId,
-              materia: params.materia,
-              modulo: params.modulo ?? revisao.modulo,
-              assunto: params.assunto,
-              dataPrevista: antecipar ? dataPrevista.toISOString() : revisao.dataPrevista,
-              motivoAdaptativo: "duvida",
-            }
-          : revisao
-      ),
-      acao: "atualizada",
-    };
+  const agora = params.agora ?? new Date();
+  const dataIdeal = criarDataPrevista(agora, 1);
+  const dataPrevista = encontrarDataDisponivelParaReforco({
+    dataIdeal, agora, revisoes: params.revisoes,
+    limiteDiario: params.limiteDiario ?? 0,
+    categoria: "reforco",
+  });
+  if (!dataPrevista) {
+    return { revisoes: params.revisoes, acao: "diagnostico" };
   }
 
   const novaRevisao: Revisao = {
@@ -408,11 +425,7 @@ export function aplicarRevisaoPorDuvida(
     concluida: false,
     motivoAdaptativo: "duvida",
   };
-
-  return {
-    revisoes: [novaRevisao, ...params.revisoes],
-    acao: "criada",
-  };
+  return { revisoes: [novaRevisao, ...params.revisoes], acao: "criada" };
 }
 
 export function rotuloPrioridadeRevisaoAdaptativa(
