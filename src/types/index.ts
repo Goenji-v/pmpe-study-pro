@@ -391,6 +391,8 @@ export type ConfiguracoesApp = {
 
 export type Revisao = {
   id: string;
+  /** Aula específica que originou a revisão; ausente em registros históricos antigos. */
+  aulaId?: string;
   /** Revisão antiga vinculada a uma revisão única do mesmo assunto principal.
    * Mantém a etapa, a data e o status original para auditoria.
    * Não equivale a conclusão, não altera notas e não aparece como pendência.
