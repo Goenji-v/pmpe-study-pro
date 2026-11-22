@@ -168,31 +168,17 @@ export default function Revisoes() {
   /* oxlint-enable react-hooks/exhaustive-deps */
 
   function abrirRevisao(revisao: Revisao) {
-    if (revisao.escopoGrupo) {
-      showToast("Revisão do bloco completo: as questões abrangem todas as partes estudadas.", "info");
-      abrirQuestoesIA(revisao);
-      return;
-    }
-    if (!revisao.origemSimulado && !localizarReferenciaCanonica(materias, revisao)) {
-      showToast("A aula desta revisão não foi localizada. O histórico foi preservado; confira o conteúdo antes de estudar.", "warning");
-      navigate("/estudos", { state: { termoBusca: revisao.assunto } });
-      return;
-    }
-    if (revisao.origemSimulado?.vinculo === "sem_conteudo") {
-      showToast(
-        "Esse assunto veio do simulado, mas ainda não possui aula vinculada ao edital. Vou abrir questões IA sem apontar uma aula incorreta.",
-        "info"
-      );
-      abrirQuestoesIA(revisao);
-      return;
-    }
-
+    // Todas as revisões usam a mesma tela de sessão do Centro de Estudos.
+    // Questões IA é uma ação secundária explícita, nunca o destino de Resolver.
     const dados = obterDadosCanonicos(revisao);
     const plano = planejarRevisaoPendente(revisao);
-    const formatoRecomendado =
-      plano.modo === "teoria_questoes"
-        ? "teoria"
-        : "questoes";
+
+    if (!localizarReferenciaCanonica(materias, revisao) && !revisao.escopoGrupo) {
+      showToast(
+        "Esta revisão ainda não tem uma aula localizada. A sessão será aberta sem associar materiais de outro assunto.",
+        "warning"
+      );
+    }
 
     sessionStorage.setItem(
       "pmpe:central-estudos:prefill",
@@ -200,7 +186,7 @@ export default function Revisoes() {
         ...dados,
         revisaoId: revisao.id,
         tipo: "revisao",
-        formatoRevisao: formatoRecomendado,
+        formatoRevisao: "teoria",
         objetivo: `Revisar ${dados.assunto}`,
         observacao: `Revisão etapa ${revisao.etapa} · ${plano.titulo}`,
       })
@@ -689,13 +675,9 @@ function GrupoRevisoes({
                   <button
                     type="button"
                     className="revisao-iniciar"
-                    onClick={() => relacionadas.length > 1 ? abrirQuestoesIA(revisao) : abrirRevisao(revisao)}
+                    onClick={() => abrirRevisao(revisao)}
                   >
-                    {relacionadas.length > 1
-                      ? "🧩 Revisar assunto"
-                      : plano.modo === "teoria_questoes"
-                        ? "📖 Rever teoria"
-                        : "🧩 Fazer questões"}
+                    📚 Resolver revisão
                   </button>
                   <button
                     type="button"
