@@ -75,7 +75,7 @@ export function identificarGrupoIntegrado(revisao: Pick<Revisao, "materia" | "as
   let grupo: GrupoIntegradoId | null = null;
 
   if (materia === "rlm" &&
-    (/\bconectiv|\btabelas? (da )?(verdade|logica)|\bnegac|\bequivalenc|\btautolog|\bcontradic|\bcontingenc|\bproposic/.test(assunto))) {
+    (/\blogica proposicional\b|\bconectiv|\btabelas? (da )?(verdade|logica)|\bnegac|\bequivalenc|\btautolog|\bcontradic|\bcontingenc|\bproposic/.test(assunto))) {
     grupo = "logica-proposicional";
   } else if (materia === "portugues" &&
     (/\bfonem|\bletras e sons|\bsom da fala|\bdigraf|\bencontro(s)? (consonantal|consonantais|vocalic|vocalicos)|\bsilab|\bmonossilab|\bditong|\btritong|\bhiato/.test(assunto))) {
