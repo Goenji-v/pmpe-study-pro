@@ -11,6 +11,7 @@ import { useToast } from "../../context/ToastContext";
 import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";
 import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
+import { aulasDeSubassuntosDistintos } from "../../utils/aulasDeSubassuntosDistintos";
 import {
   materiaTemCursoImportado,
   moduloGerenciadoPorCurso,
@@ -178,15 +179,15 @@ export default function Estudos() {
     return calcularMetricasDoAssunto({ materia, modulo, assunto, sessoes, questoes, revisoes });
   }
 
-  function abrirCentral(materia: Materia, modulo: Modulo, assunto: Assunto) {
-    const proximaAula = (assunto.aulas ?? [])
+  function abrirCentral(materia: Materia, modulo: Modulo, assunto: Assunto, aulaEspecifica?: AulaAssunto) {
+    const proximaAula = aulaEspecifica ?? (assunto.aulas ?? [])
       .slice()
       .sort((a, b) => a.ordem - b.ordem)
       .find((aula) => !aula.concluida) ?? assunto.aulas?.[0];
     sessionStorage.setItem("pmpe:central-estudos:prefill", JSON.stringify({
       materia: materia.nome, materiaId: materia.id, modulo: modulo.nome, moduloId: modulo.id,
-      assunto: assunto.nome, assuntoId: assunto.id, tipo: "aula",
-      objetivo: proximaAula ? `Estudar ${assunto.nome} · ${proximaAula.nome}` : `Estudar ${assunto.nome}`,
+      assunto: assunto.nome, assuntoId: assunto.id, aulaId: proximaAula?.id, tipo: "aula",
+      objetivo: aulaEspecifica ? `Estudar ${aulaEspecifica.nome}` : proximaAula ? `Estudar ${assunto.nome} · ${proximaAula.nome}` : `Estudar ${assunto.nome}`,
       urlAula: proximaAula?.url ?? assunto.aula,
       urlQuestoes: assunto.questoes,
     }));
@@ -683,6 +684,8 @@ export default function Estudos() {
                             <input
                               type="checkbox"
                               checked={assunto.concluido}
+                              disabled={aulasDeSubassuntosDistintos(materia.nome, assunto).length > 0}
+                              title={aulasDeSubassuntosDistintos(materia.nome, assunto).length > 0 ? "Conclua cada aula separadamente" : undefined}
                               onChange={() => definirConclusaoAssunto(materia.id, assunto.id, !assunto.concluido, modulo.id)}
                             />
                           </label>
@@ -821,7 +824,7 @@ export default function Estudos() {
                             )}
                           </div>
 
-                          {assuntosExpandidos[assunto.id] && (
+                          {(assuntosExpandidos[assunto.id] || aulasDeSubassuntosDistintos(materia.nome, assunto).length > 0) && (
                             <div className="conteudos-etapas-assunto">
                               {(assunto.aulas ?? []).length > 0 && (
                                 <section>
@@ -845,6 +848,9 @@ export default function Estudos() {
                                           {aula.nome}
                                         </span>
                                       </label>
+                                      {aulasDeSubassuntosDistintos(materia.nome, assunto).some((item) => item.id === aula.id) && (
+                                        <button type="button" onClick={() => abrirCentral(materia, modulo, assunto, aula)}>▶ Estudar tópico</button>
+                                      )}
                                       {aula.url && <button type="button" onClick={() => window.open(aula.url, "_blank", "noopener,noreferrer")}>Abrir aula</button>}
                                     </div>
                                   ))}
