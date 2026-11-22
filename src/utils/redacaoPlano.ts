@@ -47,17 +47,3 @@ export function localizarMissaoRedacaoPendenteDoDia(
   return situacao.status === "pendente" ? situacao.vinculo : null;
 }
 
-/**
- * Only carry over a draft's mission reference if it still belongs to the
- * pending mission visible today. Otherwise record a free-standing exercise.
- */
-export function resolverVinculoRedacaoAoIniciar(
-  vinculoPendente: VinculoRedacaoPlano | null,
-  vinculoDaSessao: { missaoId?: string; semana?: number; dia?: number }
-): VinculoRedacaoPlano | null {
-  if (!vinculoPendente) return null;
-  if (vinculoDaSessao.missaoId && vinculoDaSessao.missaoId !== vinculoPendente.missaoId) {
-    return vinculoPendente;
-  }
-  return vinculoPendente;
-}
