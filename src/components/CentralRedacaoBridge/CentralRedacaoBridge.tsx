@@ -21,7 +21,7 @@ import {
   criarPlanoOperacional,
   obterConclusoesPlanoOperacional,
 } from "../../utils/planoOperacional";
-import { localizarMissaoRedacaoPendenteDoDia } from "../../utils/redacaoPlano";
+import { obterSituacaoRedacaoDoDia } from "../../utils/redacaoPlano";
 import {
   montarObservacaoRedacao,
   type ModalidadeRedacao,
@@ -115,9 +115,9 @@ export default function CentralRedacaoBridge() {
 
   const diaAtual = obterDiaAtualPlano();
 
-  const vinculoRedacaoHoje = useMemo(
+  const situacaoRedacaoHoje = useMemo(
     () =>
-      localizarMissaoRedacaoPendenteDoDia(
+      obterSituacaoRedacaoDoDia(
         planoCalendario,
         concluidasPlano,
         semanaAtual,
@@ -125,6 +125,10 @@ export default function CentralRedacaoBridge() {
       ),
     [diaAtual, concluidasPlano, planoCalendario, semanaAtual]
   );
+
+  const vinculoRedacaoHoje = situacaoRedacaoHoje.status === "pendente"
+    ? situacaoRedacaoHoje.vinculo
+    : null;
 
   useEffect(() => {
     if (
@@ -146,15 +150,10 @@ export default function CentralRedacaoBridge() {
         rascunho?.objetivo ||
         "Atividade de redação",
       observacao: rascunho?.observacao ?? "",
-      missaoId:
-        vinculoRedacaoHoje?.missaoId ??
-        rascunho?.missaoId,
-      semana:
-        vinculoRedacaoHoje?.semana ??
-        rascunho?.semana,
-      dia:
-        vinculoRedacaoHoje?.dia ??
-        rascunho?.dia,
+      // Do not reattach an old draft to a completed or different mission.
+      missaoId: vinculoRedacaoHoje?.missaoId,
+      semana: vinculoRedacaoHoje?.semana,
+      dia: vinculoRedacaoHoje?.dia,
     });
 
     if (rascunho) {
@@ -398,21 +397,18 @@ export default function CentralRedacaoBridge() {
       tipo: TIPO_REDACAO,
       objetivo: sessaoAtiva.objetivo,
       observacao: sessaoAtiva.observacao,
-      missaoId:
-        sessaoAtiva.missaoId ??
-        vinculoRedacaoHoje?.missaoId,
-      semana:
-        sessaoAtiva.semana ??
-        vinculoRedacaoHoje?.semana,
-      dia:
-        sessaoAtiva.dia ??
-        vinculoRedacaoHoje?.dia,
+      // A cached draft is not authoritative: credit only today's pending mission.
+      missaoId: vinculoRedacaoHoje?.missaoId,
+      semana: vinculoRedacaoHoje?.semana,
+      dia: vinculoRedacaoHoje?.dia,
     });
 
     if (iniciada) {
       showToast(
-        "Treino de redação iniciado. O cronômetro será retomado mesmo após atualizar a página.",
-        "success"
+        vinculoRedacaoHoje
+          ? "Treino vinculado à missão de redação pendente. Ao finalizar, o Study Pro marcará esta missão como concluída."
+          : "Treino avulso iniciado: não há missão de redação pendente para este dia. O registro entrará no Histórico, mas não concluirá outra missão.",
+        vinculoRedacaoHoje ? "success" : "info"
       );
     }
   }
@@ -521,9 +517,15 @@ export default function CentralRedacaoBridge() {
               </div>
 
               <small>
-                {!cronometroAtivo
-                  ? "Tema, objetivo e observações são salvos automaticamente neste aparelho."
-                  : "Sessão salva automaticamente. Se atualizar ou fechar a página, o cronômetro retoma do ponto correto."}
+                {cronometroAtivo
+                  ? sessaoAtiva.missaoId
+                    ? "Este treino está vinculado à missão de redação. Ao finalizar, a missão será marcada como concluída."
+                    : "Este treino é avulso: será registrado no Histórico, sem alterar o Plano Tático."
+                  : situacaoRedacaoHoje.status === "pendente"
+                    ? "Missão de redação pendente encontrada para hoje. O treino será vinculado ao iniciá-lo."
+                    : situacaoRedacaoHoje.status === "concluida"
+                      ? "A missão de redação deste dia já está concluída. Novos treinos serão avulsos."
+                      : "Não há missão de redação prevista para hoje. Este treino será avulso."}
               </small>
             </div>
           </>,
@@ -584,8 +586,8 @@ export default function CentralRedacaoBridge() {
 
             <div className="central-redacao-finalizacao-info finalizacao-campo-largo">
               {modalidadeFinalizacao === "treino"
-                ? "O treino será identificado no Histórico e o tempo entrará normalmente no Dashboard. Se houver uma missão de redação pendente hoje, ela também será concluída com este mesmo registro."
-                : "A redação completa será identificada no Histórico, com a nota quando informada. O tempo entra normalmente no Dashboard e conclui a missão de redação pendente do dia sem duplicação."}
+                ? "O treino será identificado no Histórico. Uma missão só será concluída se este treino tiver sido iniciado com vínculo à missão pendente."
+                : "A redação completa será identificada no Histórico, com a nota quando informada. A missão só será concluída se este treino estiver vinculado à missão pendente."}
             </div>
           </>,
           destinoFinalizacao
