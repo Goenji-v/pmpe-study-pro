@@ -48,6 +48,7 @@ import {
   listarModulosDaMateria,
 } from "../../services/conteudos/navegarConteudos";
 import { localizarProximaAula } from "../../services/conteudos/localizarConteudo";
+import { assuntosPrincipaisSemDuplicarAulas } from "../../utils/aulasDeSubassuntosDistintos";
 import { resolverLinksAtividade } from "../../utils/linksAtividade";
 import { criarDadosSessaoDaMissao } from "../../services/conteudos/sincronizacaoCanonica";
 import { salvarArquivoMaterial } from "../../services/materiaisService";
@@ -336,6 +337,7 @@ const [
           ? "aula"
           : prefill.tipo,
       revisaoId: prefill.revisaoId,
+      aulaId: prefill.aulaId,
       formatoRevisao: prefill.formatoRevisao,
       objetivo: prefill.objetivo ?? "",
       observacao: prefill.observacao ?? "",
@@ -384,8 +386,10 @@ const [
   );
 
   const assuntosDisponiveis = useMemo(
-    () => assuntosComModulo.map(({ assunto }) => assunto),
-    [assuntosComModulo]
+    () => assuntosPrincipaisSemDuplicarAulas(
+      materiaSelecionada?.nome ?? "", assuntosComModulo.map(({ assunto }) => assunto)
+    ),
+    [assuntosComModulo, materiaSelecionada?.nome]
   );
 
   const selecaoAssunto = useMemo(
@@ -1214,29 +1218,19 @@ const [
                     )}
                   </select>
 
-                  <input
-                    value={
-                      estado.assunto
-                    }
-                    onChange={(
-                      evento
-                    ) =>
-                      alterarCampo(
-                        "assunto",
-                        evento.target
-                          .value
-                      )
-                    }
-                    disabled={
-                      estado.ativo
-                    }
-                    placeholder="Ou digite um assunto personalizado"
-                  />
+                  {!assuntoSelecionado && (
+                    <input
+                      value={estado.assunto}
+                      onChange={(evento) => alterarCampo("assunto", evento.target.value)}
+                      disabled={estado.ativo}
+                      placeholder="Ou digite um assunto personalizado"
+                    />
+                  )}
                 </>
               )}
             </div>
 
-            {estado.tipo === "aula" &&
+            {(estado.tipo === "aula" || estado.tipo === "revisao") &&
               assuntoSelecionado &&
               aulasDisponiveis.length > 0 && (
                 <div className="central-estudos-campo">

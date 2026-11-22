@@ -182,8 +182,10 @@ export function reconciliarRevisoesComConteudos(
   revisoes: Revisao[]
 ): Revisao[] {
   const reconciliadas = revisoes.map((revisao) => {
-    // Um bloco didático não deve ser reescrito como se fosse apenas uma de suas aulas.
-    if (revisao.escopoGrupo) return revisao;
+    // Blocos e revisões por videoaula conservam seu próprio título e identidade.
+    // Reescrever o assunto de uma aula para o assunto pai apagaria a separação
+    // entre Arranjo, Permutação e Combinação após sincronizar com a nuvem.
+    if (revisao.escopoGrupo || revisao.aulaId) return revisao;
     const referencia = localizarReferenciaCanonica(materias, revisao);
     if (!referencia) return revisao;
 

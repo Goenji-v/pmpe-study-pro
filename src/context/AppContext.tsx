@@ -26,6 +26,7 @@ import {
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
 import { chaveAssuntoPrincipal } from "../utils/revisoesAssuntoPrincipal";
+import { aulasDeSubassuntosDistintos } from "../utils/aulasDeSubassuntosDistintos";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
 import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
@@ -2427,8 +2428,37 @@ function EstadoDaConta({
     const escopoRevisao = planejarEscopoRevisao({
       materia, modulo: localizacao.modulo, assunto, concluido,
     });
-    // Partes do mesmo bloco não agendam ciclos independentes.
-    if (concluido && modo === "agora" && escopoRevisao.completo) {
+    const aulasSeparadas = aulasDeSubassuntosDistintos(materia.nome, assunto);
+    // Se o curso separa subassuntos comprovadamente diferentes, cada aula
+    // recebe sua própria revisão, sem criar uma revisão extra do bloco todo.
+    if (concluido && modo === "agora" && aulasSeparadas.length > 0) {
+      const alvos = preservarAulas
+        ? aulasSeparadas.filter((aula) => aula.concluida)
+        : aulasSeparadas;
+      setRevisoes((anteriores) => {
+        let resultado = anteriores;
+        for (const aula of alvos) {
+          if (resultado.some((rev) =>
+            !rev.concluida && !rev.integradaEmId &&
+            rev.materiaId === materia.id && rev.assuntoId === assunto.id &&
+            rev.aulaId === aula.id
+          )) continue;
+          const nova = criarPrimeiraRevisao({
+            materiaId: materia.id,
+            moduloId: localizacao.modulo.id,
+            assuntoId: assunto.id,
+            aulaId: aula.id,
+            materia: materia.nome,
+            modulo: localizacao.modulo.nome,
+            assunto: aula.nome,
+            revisoesExistentes: resultado,
+            limiteDiario: configuracoes.metaRevisoesDiaria,
+          });
+          resultado = [nova, ...resultado];
+        }
+        return resultado;
+      });
+    } else if (concluido && modo === "agora" && escopoRevisao.completo) {
       setRevisoes((anteriores) => {
         const chavePrincipal = chaveAssuntoPrincipal({
           materia: materia.nome,
@@ -2463,7 +2493,8 @@ function EstadoDaConta({
           ...anteriores,
         ];
       });
-    } else if (!concluido || modo === "ja-estudado") {
+    } else if (aulasSeparadas.length === 0 && (!concluido || modo === "ja-estudado")) {
+      // Revisões de aulas distintas são preservadas mesmo se o assunto pai for reaberto.
       // Reabrir parte do bloco cancela somente a revisão pendente do próprio bloco;
       // tentativas e revisões concluídas nunca são removidas.
       setRevisoes((anteriores) =>
@@ -2503,6 +2534,33 @@ function EstadoDaConta({
         : aula
     );
     const assuntoCompleto = aulasAtualizadas.length > 0 && aulasAtualizadas.every((aula) => aula.concluida);
+
+    // A conclusão individual de Arranjo, Permutação, Combinação e de
+    // outros subassuntos curados não depende das aulas irmãs.
+    const aulasSeparadas = aulasDeSubassuntosDistintos(materia.nome, assunto);
+    if (concluida && !assunto.aulas.find((aula) => aula.id === aulaId)?.concluida &&
+        aulasSeparadas.some((aula) => aula.id === aulaId)) {
+      const aula = aulasSeparadas.find((item) => item.id === aulaId)!;
+      setRevisoes((anteriores) => {
+        if (anteriores.some((rev) =>
+          !rev.concluida && !rev.integradaEmId &&
+          rev.materiaId === materia.id && rev.assuntoId === assunto.id &&
+          rev.aulaId === aula.id
+        )) return anteriores;
+        const nova = criarPrimeiraRevisao({
+          materiaId: materia.id,
+          moduloId: localizacao.modulo.id,
+          assuntoId: assunto.id,
+          aulaId: aula.id,
+          materia: materia.nome,
+          modulo: localizacao.modulo.nome,
+          assunto: aula.nome,
+          revisoesExistentes: anteriores,
+          limiteDiario: configuracoes.metaRevisoesDiaria,
+        });
+        return [nova, ...anteriores];
+      });
+    }
 
     setMaterias((anteriores) =>
       anteriores.map((itemMateria) =>

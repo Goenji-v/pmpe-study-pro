@@ -21,6 +21,7 @@ import {
   identificarDisciplina,
   textoIdentidadeCurso,
 } from "./classificacaoCurso";
+import { identificarConteudoCatalogo } from "./catalogoAssuntosCentral";
 
 const STOPWORDS = new Set([
   "a", "ao", "aos", "as", "com", "como", "da", "das", "de", "do", "dos",
@@ -722,11 +723,24 @@ function aplicarCursoNaGrade(
             assuntosAtuais().filter((assunto) => !assunto.complementarAoEdital)
           );
 
+          // Um tópico do edital pode cobrir várias aulas do curso. Identificar
+          // explicitamente uma subaula dentro do tópico composto (ex.: o edital
+          // diz permutações, arranjos, combinações; a aula diz apenas Arranjo).
+          // Nunca associar caso existam dois tópicos candidatos.
+          const vinculoSubassunto = localizarTopicoCompostoDaAula(
+            materia.nome,
+            aulaCurso.nome,
+            assuntosAtuais().filter((assunto) => !assunto.complementarAoEdital)
+          );
           const usarModulo =
             associacaoAula.status !== "automatico" &&
             associacaoModulo.status === "automatico";
 
-          if (associacaoAula.status === "automatico") {
+          if (vinculoSubassunto) {
+            alvo = vinculoSubassunto;
+            status = "automatico";
+            candidatos = [{ assuntoId: alvo.id, nome: alvo.nome, score: 1 }];
+          } else if (associacaoAula.status === "automatico") {
             alvo = associacaoAula.assunto;
             status = "automatico";
             candidatos = associacaoAula.candidatos;
@@ -786,6 +800,24 @@ function aplicarCursoNaGrade(
   }
 
   return resultado;
+}
+
+/** Associa a aula pontual ao tópico composto do edital sem criar card irmão.
+ * Só nomes reconhecidos pelo catálogo e associação única são aceitos.
+ */
+function localizarTopicoCompostoDaAula(
+  materia: string,
+  tituloAula: string,
+  assuntos: Assunto[]
+): Assunto | null {
+  const aula = identificarConteudoCatalogo(materia, tituloAula);
+  if (aula.tipo !== "subassunto" || aula.idsSubassuntos.length !== 1) return null;
+  const id = aula.idsSubassuntos[0];
+  const candidatos = assuntos.filter((assunto) => {
+    const edital = identificarConteudoCatalogo(materia, assunto.nome);
+    return edital.tipo === "composto" && edital.idsSubassuntos.includes(id);
+  });
+  return candidatos.length === 1 ? candidatos[0] : null;
 }
 
 function resolverAssociacao(

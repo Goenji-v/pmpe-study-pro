@@ -112,6 +112,7 @@ export default function Revisoes() {
         materia: revisao.materia, materiaId: revisao.materiaId,
         modulo: revisao.modulo, moduloId: revisao.moduloId,
         assunto: revisao.assunto, assuntoId: revisao.assuntoId,
+        aulaId: revisao.aulaId,
       };
     }
     const referencia = localizarReferenciaCanonica(materias, {
@@ -148,7 +149,8 @@ export default function Revisoes() {
       moduloId:
         referencia?.modulo.id ??
         (!materiaMudou ? revisao.moduloId : undefined),
-      assunto: referencia?.assunto.nome ?? revisao.assunto,
+      assunto: revisao.aulaId ? revisao.assunto : (referencia?.assunto.nome ?? revisao.assunto),
+      aulaId: revisao.aulaId,
       assuntoId:
         referencia?.assunto.id ??
         (!materiaMudou ? revisao.assuntoId : undefined),
