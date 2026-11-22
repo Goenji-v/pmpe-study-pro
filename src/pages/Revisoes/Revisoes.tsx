@@ -677,11 +677,7 @@ function GrupoRevisoes({
                     className="revisao-iniciar"
                     onClick={() => abrirRevisao(revisao)}
                   >
-                    {relacionadas.length > 1
-                      ? "🧩 Revisar assunto"
-                      : plano.modo === "teoria_questoes"
-                        ? "📖 Rever teoria"
-                        : "🧩 Fazer questões"}
+                    📚 Resolver revisão
                   </button>
                   <button
                     type="button"
