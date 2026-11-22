@@ -2,8 +2,8 @@
  * Review Cycle V2 (staging prototype, deliberately not connected to the
  * official review UI). A lesson produces one chain, never parallel queues.
  *
- * 4-hour recall is recorded as already completed when the lesson ends.
- * The remaining checkpoints are D+1, D+7 and D+14 from the lesson date.
+ * Lesson completion schedules D+1; completing that first review records
+ * the 4-hour-recall milestone. Later checkpoints are D+7 and D+14.
  * A result below 60% repeats the SAME checkpoint in four days; it never
  * creates an additional pending review.
  */
@@ -20,7 +20,7 @@ export type CicloRevisaoV2 = {
   aulaId: string;
   materiaId: string;
   aulaConcluidaEm: string;
-  quatroHorasRegistrada: true;
+  quatroHorasRegistrada: boolean;
   marco: MarcoRevisao | null;
   proximaData: string | null;
   historico: ResultadoRevisaoV2[];
@@ -52,7 +52,7 @@ export function iniciarCicloRevisaoV2(params: {
     materiaId: params.materiaId,
     aulaId: params.aulaId,
     aulaConcluidaEm: params.dataAula,
-    quatroHorasRegistrada: true,
+    quatroHorasRegistrada: false,
     marco: "d1",
     proximaData: diaLocal(params.dataAula, 1),
     historico: [],
@@ -102,6 +102,7 @@ export function concluirEtapaRevisaoV2(
     ? params.dataConclusao
     : dataIdeal;
   return { ...ciclo, marco: proximo, proximaData: data,
+    quatroHorasRegistrada: ciclo.quatroHorasRegistrada || ciclo.marco === "d1",
     historico: [...ciclo.historico, evento] };
 }
 
