@@ -336,6 +336,7 @@ const [
           ? "aula"
           : prefill.tipo,
       revisaoId: prefill.revisaoId,
+      aulaId: prefill.aulaId,
       formatoRevisao: prefill.formatoRevisao,
       objetivo: prefill.objetivo ?? "",
       observacao: prefill.observacao ?? "",
