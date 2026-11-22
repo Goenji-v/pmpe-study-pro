@@ -26,7 +26,7 @@ export function aulasDeSubassuntosDistintos(
     // mesmo quando o catálogo geral os aproxima dentro da mesma família.
     if (item.idsSubassuntos[0] === "rlm.contagem") {
       const nome = aulas[indice].nome.normalize("NFD")
-        .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+        .replace(/\p{M}/gu, "").toLowerCase();
       if (/principio multiplicativo/.test(nome)) return "rlm.contagem.multiplicativo";
       if (/principios? (de|da) contagem/.test(nome)) return "rlm.contagem.principios";
     }
