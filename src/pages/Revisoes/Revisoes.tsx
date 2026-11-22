@@ -926,7 +926,7 @@ function ConteudoDaRevisao({
       {encontrados.length === 0 && <p className="revisao-vinculo-pendente">O assunto ainda precisa ser vinculado a uma aula. Nenhum conteúdo foi associado automaticamente.</p>}
       <div className="revisao-conteudo-acoes">
         {!revisao.escopoGrupo && encontrados.length > 0 && (
-          <button type="button" onClick={() => iniciarSessaoRevisao(revisao)}>Iniciar revisão teórica</button>
+          <button type="button" onClick={() => iniciarSessaoRevisao(revisao)}>📖 Rever teoria — iniciar sessão</button>
         )}
         <button type="button" onClick={() => abrirQuestoesIA(revisao)}>Questões IA (opcional)</button>
       </div>
