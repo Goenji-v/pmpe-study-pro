@@ -35,6 +35,13 @@ test("A versão do curso com título Análise combinatória (combinação) é re
   assert.equal(aulas.length, 3);
 });
 
+test("Subtópico de contagem contém aulas separadas do princípio multiplicativo", () => {
+  const aulas = aulasDeSubassuntosDistintos("Raciocínio Lógico e Matemática",
+    assunto(["Princípios da contagem", "Princípio multiplicativo", "Permutação", "Arranjo", "Combinação", "Probabilidade"]));
+  assert.deepEqual(aulas.map(a => a.nome),
+    ["Princípios da contagem", "Princípio multiplicativo", "Permutação", "Arranjo", "Combinação", "Probabilidade"]);
+});
+
 test("Aulas do mesmo conteúdo, materiais e nomes sem mapeamento não são artificialmente separados", () => {
   assert.deepEqual(aulasDeSubassuntosDistintos("Informática", assunto(["Windows parte 1", "Windows parte 2"])), []);
   assert.deepEqual(aulasDeSubassuntosDistintos("Raciocínio Lógico e Matemática", assunto(["Arranjo", "Arranjo simples"])), []);
