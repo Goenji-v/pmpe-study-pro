@@ -111,6 +111,7 @@ export default function ResolverSimuladoIA() {
   const {
     materias,
     revisoes,
+    sessoes,
     configuracoes,
     setQuestoes: setRegistrosQuestoes,
     setRevisoes,
@@ -686,7 +687,8 @@ export default function ResolverSimuladoIA() {
     // pendências na agenda. Questões avulsas mantêm a revisão adaptativa.
     const revisaoAutomaticaPermitida = novoResultado.tipo !== "simulado";
     const resumo: ResumoRevisoesResultadoIA = revisaoAutomaticaPermitida
-      ? aplicarRevisoesDoResultadoIA({ revisoes, diagnostico: diagnosticoAtual, materias })
+      ? aplicarRevisoesDoResultadoIA({ revisoes, diagnostico: diagnosticoAtual, materias, sessoes,
+        limiteDiario: configuracoes.metaRevisoesDiaria, resultadoId: novoResultado.id, agora: new Date(novoResultado.data) })
       : { revisoes, criadas: 0, atualizadas: 0, semReferencia: 0 };
 
     if (revisaoAutomaticaPermitida || revisaoDireta) setRevisoes((anteriores) => {
@@ -695,6 +697,10 @@ export default function ResolverSimuladoIA() {
             revisoes: anteriores,
             diagnostico: diagnosticoAtual,
             materias,
+            sessoes,
+            limiteDiario: configuracoes.metaRevisoesDiaria,
+            resultadoId: novoResultado.id,
+            agora: new Date(novoResultado.data),
           }).revisoes
         : anteriores;
 
