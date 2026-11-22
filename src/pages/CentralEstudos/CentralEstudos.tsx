@@ -1218,24 +1218,14 @@ const [
                     )}
                   </select>
 
-                  <input
-                    value={
-                      estado.assunto
-                    }
-                    onChange={(
-                      evento
-                    ) =>
-                      alterarCampo(
-                        "assunto",
-                        evento.target
-                          .value
-                      )
-                    }
-                    disabled={
-                      estado.ativo
-                    }
-                    placeholder="Ou digite um assunto personalizado"
-                  />
+                  {!assuntoSelecionado && (
+                    <input
+                      value={estado.assunto}
+                      onChange={(evento) => alterarCampo("assunto", evento.target.value)}
+                      disabled={estado.ativo}
+                      placeholder="Ou digite um assunto personalizado"
+                    />
+                  )}
                 </>
               )}
             </div>
