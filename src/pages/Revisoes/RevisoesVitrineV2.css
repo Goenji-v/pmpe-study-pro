@@ -145,3 +145,11 @@
 @media(max-width:470px){.rv2-topbar{flex-direction:column;gap:8px}.rv2-tabs button{font-size:10px}.rv2-entry-main strong{font-size:13px}.rv2-entry{padding:12px 9px}.rv2-entry-date{font-size:9px}.rv2-secondary-actions button{font-size:10px}}
 
 @media(max-width:760px){.rv2-details.rv2-details-expanded{order:-1}.rv2-details.rv2-details-expanded + .rv2-list-panel{order:0}}
+
+.rv2-priority-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 17px;background:linear-gradient(115deg,rgba(117,39,43,.24),rgba(35,37,43,.76));border:1px solid #75474b;border-radius:12px;padding:13px 16px}
+.rv2-priority-strip>div{display:flex;flex-direction:column;gap:5px}
+.rv2-priority-strip strong{display:flex;align-items:center;gap:7px;font-size:13px;color:#ffe8e9}
+.rv2-priority-strip span{color:#c5b7ba;font-size:11px;line-height:1.5}
+.rv2-priority-strip button{display:flex;align-items:center;gap:5px;flex-shrink:0;border:1px solid #9f5056;background:#662e34;color:#fff;border-radius:9px;padding:9px 12px;font-weight:750;font-size:12px;cursor:pointer}
+.rv2-priority-strip button:hover{background:#824047}
+@media(max-width:520px){.rv2-priority-strip{align-items:stretch;flex-direction:column}.rv2-priority-strip button{justify-content:center}}
