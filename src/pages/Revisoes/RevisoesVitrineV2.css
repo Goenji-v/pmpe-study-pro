@@ -154,20 +154,21 @@
 .rv2-priority-strip button:hover{background:#824047}
 @media(max-width:520px){.rv2-priority-strip{align-items:stretch;flex-direction:column}.rv2-priority-strip button{justify-content:center}}
 
-/* Status de revisão: vermelho = pendente/atrasada, amarelo = hoje, verde suave = amanhã */
+/* Paleta Study Pro: atrasada = vermelho; hoje = verde; amanhã = laranja. */
 .rv2-entry-date.urgente,
 .rv2-entry-date.pendente{
-  background:#682b31;
-  color:#ffd9dc;
-  border:1px solid #a94a53;
+  background:#7f2026;
+  color:#ffe3e5;
+  border:1px solid #d94750;
 }
 .rv2-entry-date.hoje{
-  background:#66501f;
-  color:#ffedb0;
-  border:1px solid #a9873b;
+  background:#337418;
+  color:#f2ffe9;
+  border:1px solid #5DD62C;
+  box-shadow:0 0 0 1px rgba(93,214,44,.12);
 }
 .rv2-entry-date.amanha{
-  background:#244c37;
-  color:#c8f1d5;
-  border:1px solid #427c59;
+  background:#684018;
+  color:#ffe6c7;
+  border:1px solid #e89a43;
 }
