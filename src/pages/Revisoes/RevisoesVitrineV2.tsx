@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BookOpen, CheckCircle2, ChevronRight, Clock3, Layers3, ListChecks, Search, ShieldCheck, Sparkles, CalendarDays, Play, History, GraduationCap } from "lucide-react";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import type { Revisao, SessaoEstudo } from "../../types";
 import { calcularDiasDiferenca, formatarDataRevisao } from "../../utils/revisoes";
@@ -55,8 +56,9 @@ export default function RevisoesVitrineV2(props: {
   const [ordem, setOrdem] = useState<"data"|"materia">("data");
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
   const [verAntigos, setVerAntigos] = useState(false);
+  const [mostrarDetalhesMobile, setMostrarDetalhesMobile] = useState(false);
 
-  const listaBase = aba === "historico" ? concluidas : pendentes;
+  const listaBase = aba === "historico" ? concluidas : aba === "catalogo" ? [...pendentes,...concluidas] : pendentes;
   const lista = useMemo(() => listaBase
     .filter((r) => {
       const q = normalizar(busca);
@@ -106,17 +108,24 @@ export default function RevisoesVitrineV2(props: {
     <section className="rv2-root" aria-label="Prévia do novo painel de revisões">
       <header className="rv2-topbar">
         <div>
-          <span className="rv2-eyebrow">STUDY PRO · PRÉVIA DO LAYOUT</span>
-          <h1>Revisões</h1>
-          <p>Suas revisões reais, organizadas por aula. O novo ciclo V2 ainda não está ativo.</p>
+          <span className="rv2-eyebrow">STUDY PRO · CENTRAL DE REVISÕES</span>
+          <h1>Suas revisões</h1>
+          <p>Acompanhe cada aula, consulte seu histórico e mantenha o foco no próximo estudo.</p>
         </div>
-        <span className="rv2-protected">Histórico preservado</span>
+        <span className="rv2-protected"><ShieldCheck size={14} aria-hidden="true"/> Prévia protegida</span>
       </header>
 
+      <div className="rv2-status-banner" role="note"><Layers3 size={17} aria-hidden="true" /><span><strong>Visual renovado.</strong> Os registros são reais, mas o ciclo de revisão ainda usa as regras antigas. Nenhum histórico foi migrado.</span></div>
+      <div className="rv2-kpis" aria-label="Resumo da agenda">
+        <div className="rv2-kpi"><span><ListChecks size={15}/> Pendentes</span><strong>{pendentes.length}</strong></div>
+        <div className="rv2-kpi"><span><Clock3 size={15}/> Hoje e atrasadas</span><strong>{totalHoje}</strong></div>
+        <div className="rv2-kpi"><span><CalendarDays size={15}/> Próximas</span><strong>{totalAmanha+totalProximas}</strong></div>
+        <div className="rv2-kpi"><span><CheckCircle2 size={15}/> Concluídas</span><strong>{concluidas.length}</strong></div>
+      </div>
       <div className="rv2-tabs" role="tablist" aria-label="Áreas das revisões">
-        <button type="button" role="tab" aria-selected={aba==="revisoes"} className={aba==="revisoes"?"active":""} onClick={()=>setAba("revisoes")}>▤ Minhas Revisões</button>
-        <button type="button" role="tab" aria-selected={aba==="catalogo"} className={aba==="catalogo"?"active":""} onClick={()=>setAba("catalogo")}>▱ Catálogo de Assuntos</button>
-        <button type="button" role="tab" aria-selected={aba==="historico"} className={aba==="historico"?"active":""} onClick={()=>setAba("historico")}>◷ Histórico</button>
+        <button type="button" role="tab" aria-selected={aba==="revisoes"} className={aba==="revisoes"?"active":""} onClick={()=>setAba("revisoes")}><BookOpen size={16}/> Minhas revisões</button>
+        <button type="button" role="tab" aria-selected={aba==="catalogo"} className={aba==="catalogo"?"active":""} onClick={()=>setAba("catalogo")}><Layers3 size={16}/> Catálogo de assuntos</button>
+        <button type="button" role="tab" aria-selected={aba==="historico"} className={aba==="historico"?"active":""} onClick={()=>setAba("historico")}><History size={16}/> Histórico</button>
       </div>
 
       <div className="rv2-layout">
@@ -132,7 +141,7 @@ export default function RevisoesVitrineV2(props: {
           </div>
           <div className="rv2-search-row">
             <label className="rv2-search">
-              <span aria-hidden="true">⌕</span>
+              <Search size={17} aria-hidden="true"/>
               <input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar matéria, assunto ou aula…" aria-label="Buscar revisões" />
             </label>
             <select value={ordem} onChange={e=>setOrdem(e.target.value as "data"|"materia")} aria-label="Ordenar revisões">
@@ -146,7 +155,7 @@ export default function RevisoesVitrineV2(props: {
             {lista.slice(0,verAntigos?300:60).map(r=>{
               const dias=calcularDiasDiferenca(r.dataPrevista);
               return (
-                <button key={r.id} type="button" role="listitem" className={`rv2-entry ${r.id===selecionada?.id?"selected":""}`} onClick={()=>setSelecionadaId(r.id)}>
+                <button key={r.id} type="button" role="listitem" className={`rv2-entry ${r.id===selecionada?.id?"selected":""}`} onClick={()=>{setSelecionadaId(r.id);setMostrarDetalhesMobile(true)}} aria-pressed={r.id===selecionada?.id}>
                   <span className="rv2-entry-code">{codigoLegado(r)}</span>
                   <span className="rv2-entry-main">
                     <strong>{r.assunto}</strong>
@@ -154,7 +163,7 @@ export default function RevisoesVitrineV2(props: {
                     <small className="rv2-entry-stage">{r.concluida?"Concluída":"Etapa legada "+r.etapa} · {formatarDataRevisao(r.concluida?r.dataConclusao||r.dataPrevista:r.dataPrevista)}</small>
                   </span>
                   <span className={`rv2-entry-date ${corPorPrazo(dias)}`}>{r.concluida?"Feita":rotuloPrazo(dias)}</span>
-                  <span className="rv2-chevron" aria-hidden="true">›</span>
+                  <ChevronRight className="rv2-chevron" size={18} aria-hidden="true"/>
                 </button>
               );
             })}
@@ -162,21 +171,22 @@ export default function RevisoesVitrineV2(props: {
           {lista.length>60 && <button type="button" className="rv2-showmore" onClick={()=>setVerAntigos(v=>!v)}>{verAntigos?"Mostrar menos":`Ver todos os ${lista.length} registros`}</button>}
         </div>
 
-        <aside className="rv2-details" aria-label="Detalhes da revisão selecionada">
+        <aside className={`rv2-details ${mostrarDetalhesMobile?"rv2-details-expanded":""}`} aria-label="Detalhes da revisão selecionada">
           {selecionada ? (
             <>
+              <div className="rv2-details-mobile-top"><span>DETALHES DA AULA</span><button type="button" onClick={()=>setMostrarDetalhesMobile(false)}>Fechar</button></div>
               <div className="rv2-details-title">
                 <div className="rv2-details-code">{codigoLegado(selecionada)}</div>
                 <div><h2>{selecionada.assunto}</h2><p>{nomeDisciplina(selecionada.materia)} › {selecionada.modulo||"Geral"}</p></div>
               </div>
-              <div className="rv2-aliases"><strong>Nomes reconhecidos</strong><div>{aliasesSeguros(selecionada).map(a=><span key={a}>{a}</span>)}</div><small>Outros sinônimos só serão aplicados após validação do catálogo.</small></div>
+              <div className="rv2-aliases"><strong>Identificação do assunto</strong><div>{aliasesSeguros(selecionada).map(a=><span key={a}>{a}</span>)}</div><small>Outros sinônimos só serão aplicados após validação do catálogo.</small></div>
               <section className="rv2-cycle">
-                <h3>▣ Ciclo de revisão</h3>
-                <p className="rv2-muted">Modelo previsto: D+1 → D+7 → D+14. Seu histórico atual continua no sistema legado.</p>
+                <h3><CalendarDays size={16}/> Ciclo de revisão</h3>
+                <p className="rv2-muted">Modelo proposto: D+1 → D+7 → D+14. A etapa atual ainda é do sistema anterior.</p>
                 <div className="rv2-timeline">
                   {(["Aula","D+1","D+7","D+14"] as const).map((step,i)=>(
-                    <div key={step} className={i===Math.min(selecionada.etapa,3)?"is-current":""}>
-                      <span className="rv2-dot">{i===0?"✓":i}</span>
+                    <div key={step} className="">
+                      <span className="rv2-dot">{i===0?<GraduationCap size={15}/>:i}</span>
                       <strong>{step}</strong>
                       <small>{i===0?"Estudo":i===1?"Teoria":"Questões"}</small>
                     </div>
@@ -184,22 +194,22 @@ export default function RevisoesVitrineV2(props: {
                 </div>
               </section>
               <section className="rv2-result">
-                <h3>▥ Resultado registrado</h3>
+                <h3><CheckCircle2 size={16}/> Último resultado disponível</h3>
                 <strong>{percentual===null?"Sem resultado numérico":`${acertos} de ${(acertos||0)+(erros||0)} acertos (${percentual}%)`}</strong>
                 <small>{registros.filter(r=>r.concluida).length} revisões concluídas nessa aula · {sessoesDoAssunto.length} atividades vinculadas</small>
               </section>
               <section className="rv2-next">
-                <h3>◎ Próxima ação</h3>
+                <h3><Clock3 size={16}/> Próxima ação</h3>
                 <strong>{selecionada.concluida?"Revisão já concluída":rotuloPrazo(calcularDiasDiferenca(selecionada.dataPrevista))}</strong>
                 <p>{selecionada.concluida?"Consulte o histórico desta aula.":planejarRevisaoPendente(selecionada).titulo}</p>
                 <small>Data no sistema atual: {formatarDataRevisao(selecionada.dataPrevista)}</small>
               </section>
-              {!selecionada.concluida && <button className="rv2-primary" type="button" onClick={()=>abrirRevisao(selecionada)}>▷ Executar revisão</button>}
+              {!selecionada.concluida && <button className="rv2-primary" type="button" onClick={()=>abrirRevisao(selecionada)}><Play size={16} fill="currentColor"/> Executar revisão</button>}
               <div className="rv2-secondary-actions">
-                <button type="button" onClick={abrirComplementar}>▤ Estudo complementar</button>
-                <button type="button" onClick={()=>{setAba("historico");setBusca(selecionada.assunto);setSelecionadaId(null)}}>◷ Ver histórico</button>
+                <button type="button" onClick={abrirComplementar}><BookOpen size={15}/> Estudo complementar</button>
+                <button type="button" onClick={()=>{setAba("historico");setBusca(selecionada.assunto);setSelecionadaId(null);setMostrarDetalhesMobile(false)}}><History size={15}/> Ver histórico</button>
               </div>
-              {!selecionada.concluida && <button type="button" className="rv2-questions" onClick={()=>abrirQuestoesIA(selecionada)}>✦ Questões IA desta aula</button>}
+              {!selecionada.concluida && <button type="button" className="rv2-questions" onClick={()=>abrirQuestoesIA(selecionada)}><Sparkles size={15}/> Questões IA desta aula</button>}
             </>
           ) : <p className="rv2-empty">Selecione uma revisão para ver os detalhes.</p>}
         </aside>
