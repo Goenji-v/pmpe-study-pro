@@ -58,7 +58,7 @@ export default function RevisoesVitrineV2(props: {
   const [verAntigos, setVerAntigos] = useState(false);
   const [mostrarDetalhesMobile, setMostrarDetalhesMobile] = useState(false);
 
-  const listaBase = aba === "historico" ? concluidas : aba === "catalogo" ? [...pendentes,...concluidas] : pendentes;
+  const listaBase = useMemo(() => aba === "historico" ? concluidas : aba === "catalogo" ? [...pendentes,...concluidas] : pendentes, [aba,concluidas,pendentes]);
   const lista = useMemo(() => listaBase
     .filter((r) => {
       const q = normalizar(busca);
