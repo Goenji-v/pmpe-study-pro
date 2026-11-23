@@ -21,10 +21,10 @@ function rotuloPrazo(dias: number) {
   if (dias < 0) return `Atrasada ${Math.abs(dias)}d`;
   if (dias === 0) return "Hoje";
   if (dias === 1) return "Amanhã";
-  return `Em ${dias} dias`;
+  return "Pendente";
 }
 function corPorPrazo(dias: number) {
-  return dias <= 0 ? "urgente" : dias === 1 ? "amanha" : "futura";
+  return dias < 0 ? "urgente" : dias === 0 ? "hoje" : dias === 1 ? "amanha" : "pendente";
 }
 function percentualRevisao(revisao: Revisao): number | null {
   const certas = revisao.certas;
