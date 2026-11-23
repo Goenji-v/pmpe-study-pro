@@ -26,6 +26,22 @@ function rotuloPrazo(dias: number) {
 function corPorPrazo(dias: number) {
   return dias <= 0 ? "urgente" : dias === 1 ? "amanha" : "futura";
 }
+function percentualRevisao(revisao: Revisao): number | null {
+  const certas = revisao.certas;
+  const erradas = revisao.erradas;
+  if (typeof certas !== "number" || typeof erradas !== "number" || certas+erradas<=0) return null;
+  return Math.round(100*certas/(certas+erradas));
+}
+/** Somente ordenação visual: mantém revisão e data original intactas. */
+function prioridadeRevisao(revisao: Revisao): number {
+  const dias = calcularDiasDiferenca(revisao.dataPrevista);
+  const desempenho = percentualRevisao(revisao);
+  if (dias < 0) return 0;
+  if (dias === 0 && desempenho !== null && desempenho < 60) return 1;
+  if (dias === 0) return 2;
+  if (dias === 1) return 3;
+  return 4;
+}
 function nomeDisciplina(nome: string) {
   const n = normalizar(nome);
   if (n === "portugues" || n === "lingua portuguesa") return "Língua Portuguesa";
@@ -53,7 +69,7 @@ export default function RevisoesVitrineV2(props: {
   const [aba, setAba] = useState<Aba>("revisoes");
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [busca, setBusca] = useState("");
-  const [ordem, setOrdem] = useState<"data"|"materia">("data");
+  const [ordem, setOrdem] = useState<"prioridade"|"data"|"materia">("prioridade");
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
   const [verAntigos, setVerAntigos] = useState(false);
   const [mostrarDetalhesMobile, setMostrarDetalhesMobile] = useState(false);
@@ -69,7 +85,7 @@ export default function RevisoesVitrineV2(props: {
     })
     .sort((a,b) => ordem === "materia"
       ? a.materia.localeCompare(b.materia) || a.assunto.localeCompare(b.assunto)
-      : new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()),
+      : ordem === "prioridade" ? prioridadeRevisao(a) - prioridadeRevisao(b) || new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime() : new Date(a.dataPrevista).getTime() - new Date(b.dataPrevista).getTime()),
     [listaBase, aba, filtro, busca, ordem]);
 
   const selecionada = lista.find((r) => r.id === selecionadaId) ?? lista[0] ?? null;
@@ -83,6 +99,8 @@ export default function RevisoesVitrineV2(props: {
   const totalHoje = pendentes.filter((r) => calcularDiasDiferenca(r.dataPrevista) <= 0).length;
   const totalAmanha = pendentes.filter((r) => calcularDiasDiferenca(r.dataPrevista) === 1).length;
   const totalProximas = pendentes.filter((r) => calcularDiasDiferenca(r.dataPrevista) > 1).length;
+  const revisoesUrgentes = pendentes.filter(r => calcularDiasDiferenca(r.dataPrevista) <= 0);
+  const urgentesRisco = revisoesUrgentes.filter(r => percentualRevisao(r) !== null && (percentualRevisao(r) as number) < 60);
   const acertos = selecionada?.certas;
   const erros = selecionada?.erradas;
   const percentual = typeof acertos === "number" && typeof erros === "number" && acertos+erros > 0
@@ -122,6 +140,10 @@ export default function RevisoesVitrineV2(props: {
         <div className="rv2-kpi"><span><CalendarDays size={15}/> Próximas</span><strong>{totalAmanha+totalProximas}</strong></div>
         <div className="rv2-kpi"><span><CheckCircle2 size={15}/> Concluídas</span><strong>{concluidas.length}</strong></div>
       </div>
+      {revisoesUrgentes.length>0 && <div className="rv2-priority-strip" role="region" aria-label="Prioridades de revisão">
+        <div><strong><Clock3 size={16} aria-hidden="true"/> Prioridades de hoje</strong><span>{revisoesUrgentes.length} revisão(ões) vencendo ou atrasada(s){urgentesRisco.length>0?` · ${urgentesRisco.length} com resultado abaixo de 60%`:""}.</span></div>
+        <button type="button" onClick={()=>{setAba("revisoes");setFiltro("hoje");setOrdem("prioridade");setBusca("");setSelecionadaId(null);setMostrarDetalhesMobile(false)}}>Ver prioridades <ChevronRight size={16}/></button>
+      </div>}
       <div className="rv2-tabs" role="tablist" aria-label="Áreas das revisões">
         <button type="button" role="tab" aria-selected={aba==="revisoes"} className={aba==="revisoes"?"active":""} onClick={()=>setAba("revisoes")}><BookOpen size={16}/> Minhas revisões</button>
         <button type="button" role="tab" aria-selected={aba==="catalogo"} className={aba==="catalogo"?"active":""} onClick={()=>setAba("catalogo")}><Layers3 size={16}/> Catálogo de assuntos</button>
@@ -144,7 +166,8 @@ export default function RevisoesVitrineV2(props: {
               <Search size={17} aria-hidden="true"/>
               <input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar matéria, assunto ou aula…" aria-label="Buscar revisões" />
             </label>
-            <select value={ordem} onChange={e=>setOrdem(e.target.value as "data"|"materia")} aria-label="Ordenar revisões">
+            <select value={ordem} onChange={e=>setOrdem(e.target.value as "prioridade"|"data"|"materia")} aria-label="Ordenar revisões">
+              <option value="prioridade">Ordenar: Prioridade</option>
               <option value="data">Ordenar: Data</option>
               <option value="materia">Ordenar: Matéria</option>
             </select>
@@ -160,7 +183,7 @@ export default function RevisoesVitrineV2(props: {
                   <span className="rv2-entry-main">
                     <strong>{r.assunto}</strong>
                     <small>{nomeDisciplina(r.materia)} · {r.modulo && r.modulo!=="Geral"?r.modulo:"Assunto do curso"}</small>
-                    <small className="rv2-entry-stage">{r.concluida?"Concluída":"Etapa legada "+r.etapa} · {formatarDataRevisao(r.concluida?r.dataConclusao||r.dataPrevista:r.dataPrevista)}</small>
+                    <small className="rv2-entry-stage">{r.concluida?"Concluída":"Etapa legada "+r.etapa} · {formatarDataRevisao(r.concluida?r.dataConclusao||r.dataPrevista:r.dataPrevista)}{!r.concluida && percentualRevisao(r)!==null && (percentualRevisao(r) as number)<60 ? " · Reforço recomendado" : ""}</small>
                   </span>
                   <span className={`rv2-entry-date ${corPorPrazo(dias)}`}>{r.concluida?"Feita":rotuloPrazo(dias)}</span>
                   <ChevronRight className="rv2-chevron" size={18} aria-hidden="true"/>
@@ -202,7 +225,7 @@ export default function RevisoesVitrineV2(props: {
                 <h3><Clock3 size={16}/> Próxima ação</h3>
                 <strong>{selecionada.concluida?"Revisão já concluída":rotuloPrazo(calcularDiasDiferenca(selecionada.dataPrevista))}</strong>
                 <p>{selecionada.concluida?"Consulte o histórico desta aula.":planejarRevisaoPendente(selecionada).titulo}</p>
-                <small>Data no sistema atual: {formatarDataRevisao(selecionada.dataPrevista)}</small>
+                <small>Data no sistema atual: {formatarDataRevisao(selecionada.dataPrevista)}. A prioridade de exibição não altera o agendamento.</small>
               </section>
               {!selecionada.concluida && <button className="rv2-primary" type="button" onClick={()=>abrirRevisao(selecionada)}><Play size={16} fill="currentColor"/> Executar revisão</button>}
               <div className="rv2-secondary-actions">
