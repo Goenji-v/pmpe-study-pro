@@ -153,3 +153,21 @@
 .rv2-priority-strip button{display:flex;align-items:center;gap:5px;flex-shrink:0;border:1px solid #9f5056;background:#662e34;color:#fff;border-radius:9px;padding:9px 12px;font-weight:750;font-size:12px;cursor:pointer}
 .rv2-priority-strip button:hover{background:#824047}
 @media(max-width:520px){.rv2-priority-strip{align-items:stretch;flex-direction:column}.rv2-priority-strip button{justify-content:center}}
+
+/* Status de revisão: vermelho = pendente/atrasada, amarelo = hoje, verde suave = amanhã */
+.rv2-entry-date.urgente,
+.rv2-entry-date.pendente{
+  background:#682b31;
+  color:#ffd9dc;
+  border:1px solid #a94a53;
+}
+.rv2-entry-date.hoje{
+  background:#66501f;
+  color:#ffedb0;
+  border:1px solid #a9873b;
+}
+.rv2-entry-date.amanha{
+  background:#244c37;
+  color:#c8f1d5;
+  border:1px solid #427c59;
+}
