@@ -24,6 +24,7 @@ import {
 } from "../../services/seguranca/backupManualService";
 import {
   listarBackupsAutomaticosLocais,
+  verificarIntegridadeBackupAutomaticoLocal,
   type BackupAutomaticoLocal,
 } from "../../services/seguranca/backupAutomaticoService";
 import {
@@ -39,6 +40,8 @@ import type {
 } from "../../types/index";
 
 const CHAVE_ULTIMO_BACKUP = "pmpe_ultimo_backup_schema18";
+const RESTAURACAO_SEGURA_STAGING =
+  import.meta.env.VITE_STUDY_PRO_STAGING_GUARD === "true";
 
 export default function Backup() {
   const {
@@ -52,6 +55,7 @@ export default function Backup() {
     configuracoes,
     missoesConcluidas,
     restaurarEstadoCompleto,
+    restaurarBackupHistoricoSeguroStaging,
     statusNuvem,
     alteracoesPendentes,
     ultimaSincronizacao,
@@ -216,7 +220,11 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(arquivoAnalisado.estado);
+      if (RESTAURACAO_SEGURA_STAGING) {
+        await restaurarBackupHistoricoSeguroStaging(null, arquivoAnalisado.estado);
+      } else {
+        await restaurarEstadoCompleto(arquivoAnalisado.estado);
+      }
       setArquivoAnalisado(null);
       showToast("Backup restaurado com segurança.", "success");
     } catch (erro) {
@@ -231,6 +239,10 @@ export default function Backup() {
   }
 
   async function restaurarBackupAutomatico(backup: BackupAutomaticoLocal) {
+    if (!verificarIntegridadeBackupAutomaticoLocal(backup)) {
+      showToast("O backup automático está corrompido (checksum inválido). Nenhum dado foi alterado.", "error");
+      return;
+    }
     const estado = validarEMigrarEstado(backup.dados);
 
     if (!estado) {
@@ -247,7 +259,11 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(estado);
+      if (RESTAURACAO_SEGURA_STAGING) {
+        await restaurarBackupHistoricoSeguroStaging(null, estado);
+      } else {
+        await restaurarEstadoCompleto(estado);
+      }
       showToast("Backup automático restaurado com segurança.", "success");
     } catch (erro) {
       console.error("Erro ao restaurar backup automático:", erro);
@@ -280,7 +296,20 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(backup.estado);
+      if (RESTAURACAO_SEGURA_STAGING) {
+        // The staging RPC checks the revision and creates a cloud safety
+        // copy atomically before replacing the historical state.
+        await restaurarBackupHistoricoSeguroStaging(
+          // A legacy snapshot must be migrated into a new user-owned
+          // checkpoint before the strict schema-18 staging RPC accepts it.
+          backup.precisaMigracao ? null : backup.id,
+          backup.estado
+        );
+      } else {
+        // Preserve the existing official flow. The experimental RPC
+        // does not exist in the production database.
+        await restaurarEstadoCompleto(backup.estado);
+      }
       showToast("Backup da linha do tempo restaurado com segurança.", "success");
 
       if (usuarioId) {
@@ -300,6 +329,16 @@ export default function Backup() {
   }
 
   async function limparDados() {
+    if (
+      RESTAURACAO_SEGURA_STAGING &&
+      (statusNuvem !== "sincronizado" || alteracoesPendentes > 0)
+    ) {
+      showToast(
+        "Antes de zerar a conta, confirme que todos os estudos foram sincronizados.",
+        "warning"
+      );
+      return;
+    }
     const primeiraConfirmacao = window.confirm(
       "Tem certeza que deseja zerar esta conta em todos os aparelhos?"
     );
@@ -309,6 +348,16 @@ export default function Backup() {
       "Serão removidos matérias, assuntos, edital, plano, cursos, progresso, questões, revisões e simulados. Um backup automático será criado antes. Deseja continuar?"
     );
     if (!segundaConfirmacao) return;
+
+    if (RESTAURACAO_SEGURA_STAGING) {
+      const palavra = window.prompt(
+        "Para confirmar a exclusão completa na conta de testes, escreva exatamente ZERAR MINHA CONTA:"
+      );
+      if (palavra !== "ZERAR MINHA CONTA") {
+        showToast("Limpeza cancelada. Nenhum dado foi alterado.", "info");
+        return;
+      }
+    }
 
     const agora = new Date().toISOString();
     const dadosVazios = criarDadosIniciaisDaConta(configuracoes.nomeUsuario);
@@ -320,10 +369,16 @@ export default function Backup() {
 
     try {
       setImportando(true);
-      await restaurarEstadoCompleto(montarEstadoNuvem({
+      const estadoZerado = montarEstadoNuvem({
         ...dadosVazios,
         configuracoes: configuracoesVazias,
-      }));
+      });
+      if (RESTAURACAO_SEGURA_STAGING) {
+        // Enforce the same atomic pre-reset safety copy as any restore.
+        await restaurarBackupHistoricoSeguroStaging(null, estadoZerado);
+      } else {
+        await restaurarEstadoCompleto(estadoZerado);
+      }
       showToast("Conta zerada em todos os aparelhos. O backup anterior foi preservado.", "success");
     } catch (erro) {
       console.error("Erro ao zerar a conta:", erro);
@@ -434,7 +489,12 @@ export default function Backup() {
               <button
                 className="backup-button backup-restaurar-confirmado"
                 onClick={() => void confirmarRestauracaoArquivo()}
-                disabled={importando}
+                disabled={
+                  importando ||
+                  (RESTAURACAO_SEGURA_STAGING &&
+                    (statusNuvem !== "sincronizado" ||
+                      alteracoesPendentes > 0))
+                }
               >
                 Restaurar este backup
               </button>
@@ -455,6 +515,13 @@ export default function Backup() {
           <strong>{backupsHistorico.length}</strong>
         </div>
 
+        {RESTAURACAO_SEGURA_STAGING && (
+          <p className="backup-aviso-restauracao-staging">
+            Prévia de testes: a restauração segura exige o estado da nuvem
+            sincronizado, sem alterações pendentes. Uma cópia de segurança
+            será criada antes de alterar os dados.
+          </p>
+        )}
         {carregandoHistorico ? (
           <div className="backup-empty">Carregando linha do tempo...</div>
         ) : backupsHistorico.length === 0 ? (
@@ -481,7 +548,12 @@ export default function Backup() {
                       <button
                         type="button"
                         onClick={() => void restaurarBackupHistorico(backup)}
-                        disabled={importando}
+                        disabled={
+                          importando ||
+                          (RESTAURACAO_SEGURA_STAGING &&
+                            (statusNuvem !== "sincronizado" ||
+                              alteracoesPendentes > 0))
+                        }
                       >
                         Comparar e restaurar
                       </button>
@@ -519,7 +591,12 @@ export default function Backup() {
                 <button
                   type="button"
                   onClick={() => void restaurarBackupAutomatico(backup)}
-                  disabled={importando}
+                  disabled={
+                    importando ||
+                    (RESTAURACAO_SEGURA_STAGING &&
+                      (statusNuvem !== "sincronizado" ||
+                        alteracoesPendentes > 0))
+                  }
                 >
                   Restaurar
                 </button>
@@ -547,7 +624,15 @@ export default function Backup() {
             Zera matérias, assuntos, edital, plano, cursos e histórico em todos os aparelhos.
             Um backup automático é criado antes.
           </p>
-          <button className="backup-button backup-limpar" disabled={importando} onClick={() => void limparDados()}>
+          <button
+            className="backup-button backup-limpar"
+            disabled={
+              importando ||
+              (RESTAURACAO_SEGURA_STAGING &&
+                (statusNuvem !== "sincronizado" || alteracoesPendentes > 0))
+            }
+            onClick={() => void limparDados()}
+          >
             🗑 Zerar conta completamente
           </button>
         </div>

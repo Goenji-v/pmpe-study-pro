@@ -38,7 +38,7 @@ test("CSP permite somente as conexões externas necessárias ao app", () => {
 
   assert.match(
     csp,
-    /connect-src 'self' https:\/\/kibnmdwabpiwyprkrhvq\.supabase\.co wss:\/\/kibnmdwabpiwyprkrhvq\.supabase\.co https:\/\/pmpe-study-pro-api\.onrender\.com/
+    /connect-src 'self' https:\/\/kibnmdwabpiwyprkrhvq\.supabase\.co wss:\/\/kibnmdwabpiwyprkrhvq\.supabase\.co https:\/\/isjzyyoqvftrltkctanw\.supabase\.co wss:\/\/isjzyyoqvftrltkctanw\.supabase\.co https:\/\/pmpe-study-pro-api\.onrender\.com/
   );
 });
 

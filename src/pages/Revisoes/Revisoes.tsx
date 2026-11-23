@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import "./Revisoes.css";
+import RevisoesVitrineV2 from "./RevisoesVitrineV2";
 
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
@@ -365,6 +366,20 @@ export default function Revisoes() {
     nomesSimulados,
     sessoes,
   };
+
+  // Visual-only preview: the legacy review cycle remains the single source of truth.
+  // Do not expose this new layout on production until the V2 migration is validated.
+  if (import.meta.env.VITE_STUDY_PRO_STAGING_GUARD === "true") {
+    return (
+      <RevisoesVitrineV2
+        pendentes={revisoesPendentes}
+        concluidas={revisoesConcluidas}
+        sessoes={sessoes}
+        abrirRevisao={abrirRevisao}
+        abrirQuestoesIA={abrirQuestoesIA}
+      />
+    );
+  }
 
   return (
     <section className="revisoes-container">

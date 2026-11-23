@@ -95,3 +95,18 @@ test("cronômetro é persistido no mesmo evento de iniciar, pausar e continuar",
     /localStorage\.setItem\([\s\S]*?JSON\.stringify\(retomada\)/
   );
 });
+
+test("redação só associa missão pendente e mostra a diferença para treino avulso", async () => {
+  const [bridge, cronometro] = await Promise.all([
+    readFile("src/components/CentralRedacaoBridge/CentralRedacaoBridge.tsx", "utf8"),
+    readFile("src/context/CronometroContext.tsx", "utf8"),
+  ]);
+  assert.match(bridge, /obterSituacaoRedacaoDoDia/);
+  assert.match(bridge, /missaoId: vinculoRedacaoHoje\?\.missaoId/);
+  assert.doesNotMatch(bridge, /vinculoRedacaoHoje\?\.missaoId\s*\?\?\s*rascunho\?\.missaoId/);
+  assert.match(bridge, /Este treino é avulso/);
+  assert.match(bridge, /Missão de redação pendente encontrada para hoje/);
+  assert.match(cronometro, /setMissoesConcluidas\(\(anteriores\) =>\s*Array\.from\(new Set\(\[\.\.\.anteriores, sessaoAtiva\.missaoId as string\]\)\)/);
+  assert.match(cronometro, /finalizacaoConsumida\.current = true/);
+  assert.match(cronometro, /anteriores\.some\(\(item\) => item\.id === novaSessao\.id\)/);
+});

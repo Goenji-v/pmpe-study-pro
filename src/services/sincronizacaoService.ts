@@ -180,9 +180,12 @@ export async function carregarEstadoDaNuvem(
     // Persistimos a migração somente depois de backup + migração + validação.
     // Se o save falhar, o registro antigo do Supabase permanece como estava.
     if (versaoOrigem < SCHEMA_VERSION_ATUAL) {
-      await salvarEstadoNaNuvem(
+      // A leitura e a migração podem concorrer com alterações em outro aparelho.
+      // Somente o CAS atômico pode persistir o snapshot migrado.
+      return await salvarEstadoComControleDeRevisao(
         userId,
-        estadoMigrado
+        estadoMigrado,
+        obterRevisaoSincronizacao(estadoMigrado)
       );
     }
 
@@ -203,42 +206,11 @@ export async function carregarEstadoDaNuvem(
   }
 }
 
-export async function salvarEstadoNaNuvem(
-  userId: string,
-  estado: EstadoAppNuvem
-): Promise<void> {
-  const estadoNormalizado = normalizarEstadoParaSalvar(
-    estado
-  );
-
-  validarIntegridadeEstado(estadoNormalizado);
-
-  const { error } = await supabase
-    .from("configuracoes")
-    .upsert(
-      {
-        user_id: userId,
-        dados: {
-          appState: estadoNormalizado,
-        },
-      },
-      {
-        onConflict: "user_id",
-      }
-    );
-
-  if (error) {
-    throw new Error(
-      `Erro ao salvar dados na nuvem: ${error.message}`
-    );
-  }
-}
-
 /**
  * Usado apenas para mudanças automáticas de estrutura, nunca para um autosave
  * comum de estudo. A sequência é: backup -> validação -> save. Em caso de erro
- * de gravação, tenta restaurar imediatamente o estado anterior e mantém o
- * backup local como última linha de defesa.
+ * de gravação, não regrava o estado anterior: a operação CAS pode ter
+ * confirmado a escrita antes de uma falha de rede. O backup local é preservado.
  */
 export async function salvarEstadoEstruturalComSeguranca(
   userId: string,
@@ -272,41 +244,15 @@ export async function salvarEstadoEstruturalComSeguranca(
       throw erroSalvar;
     }
 
-    let rollbackConcluido = false;
-
-    try {
-      criarBackupAutomaticoLocal(
-        userId,
-        estadoAnterior,
-        "antes_rollback"
-      );
-
-      await salvarEstadoNaNuvem(
-        userId,
-        normalizarEstadoParaSalvar(
-          estadoAnterior
-        )
-      );
-
-      rollbackConcluido = true;
-    } catch (erroRollback) {
-      console.error(
-        "Falha ao restaurar o estado anterior após erro de migração:",
-        erroRollback
-      );
-    }
-
+    // Falha de rede pode ocorrer depois do commit do CAS; um rollback direto
+    // poderia apagar os dados legítimos de outro aparelho. Mantemos o backup.
     const detalhe =
       erroSalvar instanceof Error
         ? erroSalvar.message
         : "falha desconhecida";
 
     throw new Error(
-      `Alteração estrutural cancelada. Backup ${backup.id} preservado. ${
-        rollbackConcluido
-          ? "O estado anterior foi restaurado na nuvem."
-          : "O rollback automático não pôde ser confirmado; o backup local continua disponível."
-      } Motivo: ${detalhe}`
+      `Não foi possível confirmar a alteração estrutural. Backup ${backup.id} preservado. A nuvem não foi revertida automaticamente; recarregue os dados antes de tentar novamente. Motivo: ${detalhe}`
     );
   }
 }
@@ -566,6 +512,33 @@ export function validarIntegridadeEstado(
     if (!Array.isArray(valor)) {
       erros.push(`${nome} não é uma lista`);
     }
+  });
+
+  // Prevent silent loss when a backup's collection has null entries,
+  // invalid IDs or duplicates. Each record identity must survive CAS.
+  const colecoesComId: Array<[string, unknown]> = [
+    ["sessoes", estado.sessoes],
+    ["questoes", estado.questoes],
+    ["revisoes", estado.revisoes],
+    ["simulados", estado.simulados],
+  ];
+  colecoesComId.forEach(([nome, registros]) => {
+    if (!Array.isArray(registros)) return;
+    const ids = new Set<string>();
+    registros.forEach((registro: unknown, indice) => {
+      const id =
+        registro !== null && typeof registro === "object" && !Array.isArray(registro)
+          ? (registro as { id?: unknown }).id
+          : undefined;
+      if (typeof id !== "string" || !id.trim()) {
+        erros.push(`registro inválido em ${nome} na posição ${indice}`);
+        return;
+      }
+      if (ids.has(id)) {
+        erros.push(`ID duplicado em ${nome}: ${id}`);
+      }
+      ids.add(id);
+    });
   });
 
   const idsMaterias = new Set<string>();

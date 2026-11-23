@@ -288,6 +288,14 @@ export default function Auth() {
             </p>
           </div>
 
+          {import.meta.env.VITE_STUDY_PRO_STAGING_GUARD === "true" && (
+            <div role="note" style={{background:"rgba(158,36,42,.13)",border:"1px solid rgba(220,65,71,.5)",borderRadius:12,padding:"12px 14px",marginBottom:16,fontSize:13,lineHeight:1.55,color:"inherit"}}>
+              <strong>Prévia de testes — acesso separado</strong>
+              <div>Esta versão não usa a conta nem a senha do Study Pro oficial. Para o teste já existente, utilize <strong>testeo1@gmail.com</strong> (letra <strong>o</strong> antes do número 1) e a senha própria dessa conta de testes.</div>
+              <div style={{marginTop:6}}>Se aparecer “credenciais inválidas”, não altere sua senha oficial. Confira o e-mail da conta de testes ou use a recuperação de senha <strong>somente desta prévia</strong>.</div>
+            </div>
+          )}
+
           {modo !== "recuperar" && (
             <div className="auth-social">
               <button

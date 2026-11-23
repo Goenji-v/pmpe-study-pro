@@ -55,6 +55,7 @@ import {
 import {
   useAuth,
 } from "./AuthContext";
+import { supabase } from "../lib/supabase";
 
 import {
   carregarEstadoDaNuvem,
@@ -62,7 +63,6 @@ import {
   obterRevisaoSincronizacao,
   salvarEstadoComControleDeRevisao,
   salvarEstadoEstruturalComSeguranca,
-  salvarEstadoNaNuvem,
   validarIntegridadeEstado,
   ConflitoSincronizacaoError,
   type EstadoAppNuvem,
@@ -71,6 +71,10 @@ import {
 import {
   criarBackupAutomaticoLocal,
 } from "../services/seguranca/backupAutomaticoService";
+import {
+  arquivarBackupParaRestauracaoStaging,
+  restaurarBackupHistoricoStaging,
+} from "../services/seguranca/restauracaoBackupStagingService";
 import {
   registrarBackupConflitoNaNuvem,
   sincronizarBackupsConflitoLocaisNaNuvem,
@@ -152,10 +156,15 @@ type AppContextType = {
   alteracoesPendentes: number;
   ultimaSincronizacao: string | null;
   sincronizarAgora: () => Promise<void>;
+  excluirSessaoHistoricoSeguro: (sessaoId: string) => Promise<void>;
   resolverConflitoSincronizacao: (
     preferencia: "nuvem" | "local"
   ) => Promise<void>;
   restaurarEstadoCompleto: (estado: EstadoAppNuvem) => Promise<void>;
+  restaurarBackupHistoricoSeguroStaging: (
+    backupId: string | null,
+    backupEstado: EstadoAppNuvem
+  ) => Promise<void>;
   aplicarEstadoEstruturalSeguro: (
     estado: EstadoAppNuvem,
     motivo?: "antes_migracao_edital" | "antes_reconciliacao_estrutural"
@@ -1563,17 +1572,18 @@ function EstadoDaConta({
             salvoEm: agora,
           };
 
-          await salvarEstadoNaNuvem(
+          // Conta criada em outra sessão após a consulta inicial:
+          // CAS com revisão zero impede sobrescrever aquele estado.
+          const inicialConfirmado = await salvarEstadoComControleDeRevisao(
             idDaConta,
-            estadoInicial
+            estadoInicial,
+            0
           );
 
           if (!ativo) return;
 
-          aplicarEstadoDaNuvem(
-            estadoInicial
-          );
-          confirmarSincronizacaoLocal(idDaConta, estadoInicial);
+          aplicarEstadoDaNuvem(inicialConfirmado);
+          confirmarSincronizacaoLocal(idDaConta, inicialConfirmado);
         }
 
         nuvemInicializadaRef.current = true;
@@ -1972,6 +1982,55 @@ function EstadoDaConta({
     );
   }
 
+  // In staging, intentional deletion must use an atomic, backup-protected RPC.
+  // An ordinary autosave shrinking sessoes is correctly rejected by anti-regression.
+  async function excluirSessaoHistoricoSeguro(sessaoId: string): Promise<void> {
+    if (import.meta.env.VITE_STUDY_PRO_STAGING_GUARD !== "true") {
+      setSessoes((atuais) => atuais.filter((sessao) => sessao.id !== sessaoId));
+      return;
+    }
+    if (!usuario || !navegadorEstaOnline()) {
+      throw new Error("É necessário entrar na conta e estar online para excluir uma sessão.");
+    }
+
+    return executarOperacaoNuvemSerializada(async () => {
+      if (conflitoRef.current || obterEstadoPendenteSincronizacao(usuario.id)) {
+        throw new Error("Resolva primeiro a sincronização pendente escolhendo a nuvem. Nenhuma sessão foi excluída.");
+      }
+      const atual = montarEstadoNuvem(dadosAtuaisRef.current);
+      if (assinaturaEstado(atual) !== ultimoEstadoSalvoRef.current) {
+        throw new Error("Aguarde a sincronização das alterações atuais antes de excluir. Nenhuma sessão foi excluída.");
+      }
+      setStatusNuvem("salvando");
+      try {
+        const { data, error } = await supabase.rpc("excluir_sessao_historico_cas", {
+          p_expected_revision: revisaoBaseRef.current,
+          p_sessao_id: sessaoId,
+        });
+        if (error) throw new Error(error.message);
+        const resultado = Array.isArray(data) ? data[0] : data;
+        if (!resultado?.ok || !resultado?.estado) {
+          marcarConflito(new ConflitoSincronizacaoError(
+            Number(resultado?.revisao_atual ?? 0),
+            revisaoBaseRef.current,
+            "Outro aparelho modificou o histórico. Carregue a nuvem antes de excluir. Nenhuma sessão foi apagada."
+          ));
+          throw new Error("A nuvem mudou. Nenhuma sessão foi excluída; atualize os dados.");
+        }
+        const estado = resultado.estado as EstadoAppNuvem;
+        validarIntegridadeEstado(estado);
+        aplicarEstadoDaNuvem(estado);
+        confirmarSincronizacaoLocal(usuario.id, estado);
+      } catch (erro) {
+        if (!conflitoRef.current) {
+          setErroNuvem(erro instanceof Error ? erro.message : "Falha ao excluir a sessão.");
+          setStatusNuvem("erro");
+        }
+        throw erro;
+      }
+    });
+  }
+
   async function resolverConflitoSincronizacao(
     preferencia: "nuvem" | "local"
   ) {
@@ -2151,6 +2210,96 @@ function EstadoDaConta({
     });
   }
 
+  // Experimental staging-only restore. Do not offer this method in the
+  // production UI until the privileged SQL RPC and full E2E are approved.
+  async function restaurarBackupHistoricoSeguroStaging(
+    backupId: string | null,
+    backupEstado: EstadoAppNuvem
+  ): Promise<void> {
+    if (!usuario) {
+      throw new Error("É necessário entrar na conta de testes antes de restaurar.");
+    }
+    if (!navegadorEstaOnline()) {
+      throw new Error("A restauração de backup da nuvem exige conexão ativa.");
+    }
+
+    validarIntegridadeEstado(backupEstado);
+
+    return executarOperacaoNuvemSerializada(async () => {
+      if (
+        statusNuvem !== "sincronizado" ||
+        alteracoesPendentes > 0 ||
+        conflitoRef.current ||
+        obterEstadoPendenteSincronizacao(usuario.id)
+      ) {
+        throw new Error(
+          "Existem alterações pendentes ou conflito de sincronização. Sincronize a conta antes de restaurar."
+        );
+      }
+
+      const estadoLocal = montarEstadoNuvem(dadosAtuaisRef.current);
+      if (assinaturaEstado(estadoLocal) !== ultimoEstadoSalvoRef.current) {
+        throw new Error(
+          "Há mudanças neste aparelho que ainda não foram confirmadas na nuvem. Sincronize antes de restaurar."
+        );
+      }
+
+      const remoto = await carregarEstadoDaNuvem(usuario.id);
+      if (!remoto) {
+        throw new Error("Não foi possível confirmar a revisão atual da nuvem.");
+      }
+      const revisaoRemota = obterRevisaoSincronizacao(remoto);
+      if (
+        revisaoRemota !== revisaoBaseRef.current ||
+        !estadosEquivalentesParaSincronizacao(estadoLocal, remoto)
+      ) {
+        throw new ConflitoSincronizacaoError(
+          revisaoRemota,
+          revisaoBaseRef.current,
+          "Outro aparelho alterou o estado na nuvem. Atualize ou resolva o conflito antes de restaurar."
+        );
+      }
+
+      // A RPC também faz um backup em nuvem na mesma transação.
+      // Guardamos a cópia local antes de enviar a restauração.
+      criarBackupAutomaticoLocal(
+        usuario.id,
+        estadoLocal,
+        "antes_restauracao_manual"
+      );
+      setStatusNuvem("salvando");
+
+      try {
+        // Local/imported checkpoints get stored under the same user's
+        // backup RLS policy first. On a failure the imported checkpoint
+        // remains available for manual inspection; never auto-retry.
+        const idRestaurar = backupId ??
+          await arquivarBackupParaRestauracaoStaging(
+            usuario.id,
+            backupEstado
+          );
+        const restaurado = await restaurarBackupHistoricoStaging(
+          idRestaurar,
+          revisaoRemota
+        );
+        aplicarEstadoDaNuvem(restaurado);
+        confirmarSincronizacaoLocal(usuario.id, restaurado);
+      } catch (erro) {
+        if (erro instanceof ConflitoSincronizacaoError) {
+          marcarConflito(erro);
+        } else {
+          // The RPC may have committed even if the network response was lost.
+          // Never retry automatically or write the previous state back.
+          setStatusNuvem("erro");
+          setErroNuvem(
+            erro instanceof Error ? erro.message : "Falha na restauração."
+          );
+        }
+        throw erro;
+      }
+    });
+  }
+
   async function restaurarEstadoCompleto(
     estado: EstadoAppNuvem
   ) {
@@ -2222,7 +2371,16 @@ function EstadoDaConta({
         "antes_restauracao_manual"
       );
     } else {
-      await salvarEstadoNaNuvem(usuario.id, restaurado);
+      // Mesmo sem estado remoto na leitura, outra aba pode criá-lo antes
+      // desta gravação. CAS de criação impede sobrescrita silenciosa.
+      const salvo = await salvarEstadoComControleDeRevisao(
+        usuario.id,
+        restaurado,
+        0
+      );
+      aplicarEstadoDaNuvem(salvo);
+      confirmarSincronizacaoLocal(usuario.id, salvo);
+      return;
     }
 
     aplicarEstadoDaNuvem(restaurado);
@@ -2716,8 +2874,10 @@ function EstadoDaConta({
         alteracoesPendentes,
         ultimaSincronizacao,
         sincronizarAgora,
+        excluirSessaoHistoricoSeguro,
         resolverConflitoSincronizacao,
         restaurarEstadoCompleto,
+        restaurarBackupHistoricoSeguroStaging,
         aplicarEstadoEstruturalSeguro,
         definirConclusaoAssunto,
         definirConclusaoAula,
