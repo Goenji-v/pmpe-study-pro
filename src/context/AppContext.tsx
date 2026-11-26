@@ -28,6 +28,10 @@ import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from 
 import { chaveAssuntoPrincipal } from "../utils/revisoesAssuntoPrincipal";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
 import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
+import {
+  completarConteudosSoldadoPMPE,
+  moduloDoCatalogoSoldadoPMPE,
+} from "../utils/completarConteudosSoldadoPMPE";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
 import { deveAplicarMigracaoEstruturalRemota } from "../utils/migracaoEstruturalConta";
@@ -234,7 +238,8 @@ function reconciliarMateriasComPlano(
     if (!materiaPlano) {
       // Etapa 13: matérias criadas apenas para representar revisão, redação
       // ou tarefa livre no plano antigo deixam de poluir Conteúdos.
-      if (ehMateriaOperacionalDoPlano(materiaSalva.nome)) {
+      if (ehMateriaOperacionalDoPlano(materiaSalva.nome) &&
+          !materiaSalva.modulos?.some(modulo => moduloDoCatalogoSoldadoPMPE(modulo.id))) {
         return;
       }
 
@@ -265,6 +270,10 @@ function reconciliarMateriasComPlano(
           );
         }),
       }));
+
+      modulos.push(...(materiaSalva.modulos ?? []).filter(modulo =>
+        moduloDoCatalogoSoldadoPMPE(modulo.id)
+      ));
 
       const reconciliada = migrarMateriasParaModulos([
         {
@@ -810,10 +819,13 @@ function reconciliarEstadoComConteudos(
 ): EstadoAppNuvem {
   const estadoCursos = reconciliarCursosImportados(estado);
   // Reapply imports after the canonical syllabus so same-label lessons survive.
-  const materiasBase = reconciliarCursosImportados({
-    ...estadoCursos,
-    materias: reconciliarMateriasComPlano(estadoCursos.materias, usaPlanoPadrao(estadoCursos.configuracoes)),
-  }).materias;
+  const materiasBase = completarConteudosSoldadoPMPE(
+    reconciliarCursosImportados({
+      ...estadoCursos,
+      materias: reconciliarMateriasComPlano(estadoCursos.materias, usaPlanoPadrao(estadoCursos.configuracoes)),
+    }).materias,
+    estadoCursos.configuracoes
+  );
   const materias = usaPlanoPadrao(estadoCursos.configuracoes) ? recuperarHistoricoPortugues(
     materiasBase,
     estado.missoesConcluidas,
@@ -876,8 +888,10 @@ function EstadoDaConta({
     );
 
   useEffect(() => {
-    const reconciliadas =
-      reconciliarMateriasComPlano(materias, configuracoes.planoPadraoAtivo !== false);
+    const reconciliadas = completarConteudosSoldadoPMPE(
+      reconciliarMateriasComPlano(materias, usaPlanoPadrao(configuracoes)),
+      configuracoes
+    );
 
     if (
       JSON.stringify(reconciliadas) !==
@@ -885,7 +899,7 @@ function EstadoDaConta({
     ) {
       setMaterias(reconciliadas);
     }
-  }, [materias, setMaterias, configuracoes.planoPadraoAtivo]);
+  }, [materias, setMaterias, configuracoes]);
 
   const [questoes, setQuestoes] =
     useLocalStorage<RegistroQuestao[]>(
