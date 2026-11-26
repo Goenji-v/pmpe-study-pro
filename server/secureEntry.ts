@@ -1,4 +1,7 @@
 import "dotenv/config";
+import { supabaseOrigin } from "./backendEnvironment.ts";
+import { corsOptions } from "./corsConfig.ts";
+import { isStaging } from "./backendEnvironment.ts";
 import cors from "cors";
 import { randomBytes } from "node:crypto";
 import express, {
@@ -31,8 +34,7 @@ const portaInterna = Number(
   process.env.INTERNAL_API_PORT || portaPublica + 1
 );
 const supabaseUrl =
-  process.env.SUPABASE_URL ||
-  "https://kibnmdwabpiwyprkrhvq.supabase.co";
+  supabaseOrigin(process.env);
 const anonKeyServidor =
   process.env.SUPABASE_ANON_KEY?.trim() || "";
 const segredoProxyInterno =
@@ -42,30 +44,6 @@ process.env.INTERNAL_PROXY_SECRET = segredoProxyInterno;
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "";
 const { modelo: modeloEdital, modeloFallback: modeloFallbackEdital } = resolverModelosGemini(process.env);
 const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
-
-const origensPermitidas = new Set(
-  [
-    "https://pmpe-study-pro-two.vercel.app",
-    ...(process.env.FRONTEND_URL || "")
-      .split(",")
-      .map((origem) => origem.trim())
-      .filter(Boolean),
-  ]
-);
-
-function origemPreviewVercelStudyPro(origem: string) {
-  try {
-    const { protocol, hostname } = new URL(origem);
-    if (protocol !== "https:") return false;
-
-    return (
-      /^pmpe-study-[a-z0-9-]+-pmpe-study-pro\.vercel\.app$/i.test(hostname) ||
-      /^pmpe-study-pro-git-[a-z0-9-]+-pmpe-study-pro\.vercel\.app$/i.test(hostname)
-    );
-  } catch {
-    return false;
-  }
-}
 
 const janelaGeralMs = 10 * 60 * 1000;
 const limiteGeral = 60;
@@ -90,37 +68,12 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.post(
+app.use(cors(corsOptions));
+
+if (!isStaging(process.env)) app.post(
   "/api/sentry-tunnel",
   express.raw({ type: "*/*", limit: "512kb" }),
   encaminharEnvelopeSentry
-);
-
-app.use(
-  cors({
-    credentials: false,
-    origin(origem, callback) {
-      if (!origem) {
-        callback(null, true);
-        return;
-      }
-
-      const local = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/i.test(
-        origem
-      );
-
-      if (
-        local ||
-        origensPermitidas.has(origem) ||
-        origemPreviewVercelStudyPro(origem)
-      ) {
-        callback(null, true);
-        return;
-      }
-
-      callback(new Error("Origem não autorizada pelo CORS."));
-    },
-  })
 );
 
 app.use("/api", validarTamanhoDaRequisicao);

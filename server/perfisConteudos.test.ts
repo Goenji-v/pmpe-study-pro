@@ -40,8 +40,8 @@ test('quantidade por dia redistribui sem perder ou duplicar missões de conteúd
 });
 test('perfil real do assunto reúne métricas e links sem contar outro assunto',async()=>{
  const result=await build({entryPoints:['src/components/PerfilAssunto/PerfilAssunto.tsx'],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',jsx:'automatic',loader:{'.css':'empty'},plugins:[{name:'fixture',setup(b){
- b.onLoad({filter:/\/context\/AppContext\.tsx$/},()=>({contents:'export const useApp=()=>globalThis.__perfilAssuntoTeste;',loader:'ts'}));
- b.onLoad({filter:/\/MateriaisDoAssunto\/MateriaisDoAssunto\.tsx$/},()=>({contents:'export default function Materiais(){return null}',loader:'tsx'}));
+ b.onLoad({filter:/[\\/]context[\\/]AppContext\.tsx$/},()=>({contents:'export const useApp=()=>globalThis.__perfilAssuntoTeste;',loader:'ts'}));
+ b.onLoad({filter:/[\\/]MateriaisDoAssunto[\\/]MateriaisDoAssunto\.tsx$/},()=>({contents:'export default function Materiais(){return null}',loader:'tsx'}));
  }}]});
  const g=globalThis as any;
  const data='2026-10-17T12:00:00Z';

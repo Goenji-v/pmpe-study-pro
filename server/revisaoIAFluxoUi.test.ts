@@ -19,14 +19,14 @@ test("revisão IA: início, recarga, conclusão e cancelamento preservam o vínc
     define: { "import.meta.env": "{}" }, loader: { ".css": "empty" },
     plugins: [{ name: "fronteiras", setup(b) {
       const substituir = (filter: RegExp, contents: string) => b.onLoad({ filter }, () => ({ contents, loader: "tsx" }));
-      substituir(/\/context\/AppContext\.tsx$/, 'export const useApp = () => globalThis.__revisaoTeste.app;');
-      substituir(/\/context\/AuthContext\.tsx$/, 'export const useAuth = () => ({usuario:{id:"teste"}});');
-      substituir(/\/context\/ToastContext\.tsx$/, 'export const useToast = () => ({showToast:()=>{}});');
-      substituir(/\/services\/armazenamentoConta\.ts$/, 'export const armazenamentoLocalDaConta = globalThis.__revisaoTeste.local; export const armazenamentoSessaoDaConta = globalThis.__revisaoTeste.sessao;');
-      substituir(/\/services\/catalogoQuestoesIAService\.ts$/, 'export const atualizarQuestoesAntesDoTreino = async q => q; export const registrarRespostasQuestoesIA = async () => {};');
-      substituir(/\/services\/resultadosQuestoesIAService\.ts$/, 'export const salvarResultadoQuestoesIA = async () => {};');
-      substituir(/\/services\/cadernosSimuladosIAService\.ts$/, `export const CHAVE_RASCUNHO_QUESTOES_IA = 'pmpe:questoes-ia:rascunho'; export const obterTipoSessaoQuestoesIAAtiva = () => 'questoes'; export const obterCadernoSimuladoIAAtivoId = () => null; export const definirTipoSessaoQuestoesIAAtiva = () => {}; export const limparCadernoSimuladoIAAtivo = () => {}; export const registrarResultadoCadernoSimuladoIA = async () => {};`);
-      substituir(/\/components\/(QuestaoComunidade|ExplicacaoQuestao|AnaliseSimuladoStudyPro)\/.*\.tsx$/, 'export default function Auxiliar() { return null; }');
+      substituir(/[\\/]context[\\/]AppContext\.tsx$/, 'export const useApp = () => globalThis.__revisaoTeste.app;');
+      substituir(/[\\/]context[\\/]AuthContext\.tsx$/, 'export const useAuth = () => ({usuario:{id:"teste"}});');
+      substituir(/[\\/]context[\\/]ToastContext\.tsx$/, 'export const useToast = () => ({showToast:()=>{}});');
+      substituir(/[\\/]services[\\/]armazenamentoConta\.ts$/, 'export const armazenamentoLocalDaConta = globalThis.__revisaoTeste.local; export const armazenamentoSessaoDaConta = globalThis.__revisaoTeste.sessao;');
+      substituir(/[\\/]services[\\/]catalogoQuestoesIAService\.ts$/, 'export const atualizarQuestoesAntesDoTreino = async q => q; export const registrarRespostasQuestoesIA = async () => {};');
+      substituir(/[\\/]services[\\/]resultadosQuestoesIAService\.ts$/, 'export const salvarResultadoQuestoesIA = async () => {};');
+      substituir(/[\\/]services[\\/]cadernosSimuladosIAService\.ts$/, `export const CHAVE_RASCUNHO_QUESTOES_IA = 'pmpe:questoes-ia:rascunho'; export const obterTipoSessaoQuestoesIAAtiva = () => 'questoes'; export const obterCadernoSimuladoIAAtivoId = () => null; export const definirTipoSessaoQuestoesIAAtiva = () => {}; export const limparCadernoSimuladoIAAtivo = () => {}; export const registrarResultadoCadernoSimuladoIA = async () => {};`);
+      substituir(/[\\/]components[\\/](QuestaoComunidade|ExplicacaoQuestao|AnaliseSimuladoStudyPro)[\\/].*\.tsx$/, 'export default function Auxiliar() { return null; }');
     } }],
   });
   const { window, document } = parseHTML('<html><body><main id="root"></main></body></html>');

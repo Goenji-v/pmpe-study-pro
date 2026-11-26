@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { supabaseOrigin } from "./backendEnvironment.ts";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import express, {
   type NextFunction,
@@ -50,8 +51,7 @@ const apiKey =
   process.env.GEMINI_API_KEY;
 
 const supabaseUrl =
-  process.env.SUPABASE_URL ||
-  "https://kibnmdwabpiwyprkrhvq.supabase.co";
+  supabaseOrigin(process.env);
 
 const internalProxySecret =
   process.env.INTERNAL_PROXY_SECRET?.trim() || "";

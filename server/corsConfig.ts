@@ -1,35 +1,20 @@
 import type { CorsOptions } from "cors";
+import { frontendStaging, isStaging } from "./backendEnvironment.ts";
 
-const origensPermitidas = new Set(
-  [
-    "https://pmpe-study-pro-two.vercel.app",
-    ...(process.env.FRONTEND_URL || "")
-      .split(",")
-      .map((origem) => origem.trim())
-      .filter(Boolean),
-  ]
-);
+export function origemPermitida(origem: string | undefined, env = process.env) {
+  if (!origem) return true;
+  if (isStaging(env)) return origem === frontendStaging;
+  if (origem === frontendStaging) return false;
+  const local = !env.RENDER && env.NODE_ENV !== "production";
+  if (local && /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/i.test(origem)) return true;
+  return origem === "https://pmpe-study-pro-two.vercel.app" ||
+    (env.FRONTEND_URL || "").split(",").some(item => item.trim() === origem);
+}
 
 export const corsOptions: CorsOptions = {
+  credentials: false,
   origin(origem, callback) {
-    if (!origem) {
-      callback(null, true);
-      return;
-    }
-
-    const origemLocal =
-      /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/i.test(origem);
-
-    if (
-      origemLocal ||
-      origensPermitidas.has(origem)
-    ) {
-      callback(null, true);
-      return;
-    }
-
-    callback(
-      new Error("Origem não autorizada pelo CORS.")
-    );
+    if (origemPermitida(origem)) callback(null, true);
+    else callback(new Error("Origem não autorizada pelo CORS."));
   },
 };

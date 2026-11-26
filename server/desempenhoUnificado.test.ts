@@ -51,7 +51,7 @@ test("tela real exibe horas de redação e uma opção por matéria, inclusive s
     entryPoints: ["src/pages/Estatisticas/Estatisticas.tsx"], bundle: true, write: false,
     platform: "node", format: "cjs", packages: "external", jsx: "automatic", loader: { ".css": "empty" },
     plugins: [{ name: "app-fixture", setup(b) {
-      b.onLoad({ filter: /\/context\/AppContext\.tsx$/ }, () => ({ contents: 'export const useApp = () => globalThis.__desempenhoFixture;', loader: "ts" }));
+      b.onLoad({ filter: /[\\/]context[\\/]AppContext\.tsx$/ }, () => ({ contents: 'export const useApp = () => globalThis.__desempenhoFixture;', loader: "ts" }));
     } }],
   });
   const g = globalThis as any;

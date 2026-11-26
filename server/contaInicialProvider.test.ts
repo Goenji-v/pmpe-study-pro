@@ -30,8 +30,8 @@ test("Provider real cria vazio, troca conta sem herdar estado e descarta fila an
     bundle: true, write: false, platform: "node", format: "cjs", packages: "external", jsx: "automatic",
     define: { "import.meta.env": "{}" },
     plugins: [{ name: "fronteira-teste", setup(builder) {
-      builder.onLoad({ filter: /\/src\/lib\/supabase\.ts$/ }, () => ({ contents: "export const supabase = globalThis.__contaInicialTeste.supabase; export const SUPABASE_PUBLIC_URL = ''; export const SUPABASE_PUBLIC_KEY = '';", loader: "ts" }));
-      builder.onLoad({ filter: /\/src\/context\/AuthContext\.tsx$/ }, () => ({ contents: "export function useAuth() { return globalThis.__contaInicialTeste.ambiente; }", loader: "tsx" }));
+      builder.onLoad({ filter: /[\\/]src[\\/]lib[\\/]supabase\.ts$/ }, () => ({ contents: "export const supabase = globalThis.__contaInicialTeste.supabase; export const SUPABASE_PUBLIC_URL = ''; export const SUPABASE_PUBLIC_KEY = '';", loader: "ts" }));
+      builder.onLoad({ filter: /[\\/]src[\\/]context[\\/]AuthContext\.tsx$/ }, () => ({ contents: "export function useAuth() { return globalThis.__contaInicialTeste.ambiente; }", loader: "tsx" }));
     } }],
   });
   const globals: any = globalThis;

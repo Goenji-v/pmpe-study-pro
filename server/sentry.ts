@@ -1,7 +1,8 @@
 import "dotenv/config";
+import { isStaging } from "./backendEnvironment.ts";
 import * as Sentry from "@sentry/node";
 
-const sentryDsn = process.env.SENTRY_DSN?.trim();
+const sentryDsn = isStaging(process.env) ? undefined : process.env.SENTRY_DSN?.trim();
 
 if (sentryDsn) {
   Sentry.init({
