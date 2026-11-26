@@ -1,7 +1,8 @@
 import "dotenv/config";
 import { supabaseOrigin } from "./backendEnvironment.ts";
 import { corsOptions } from "./corsConfig.ts";
-import { isStaging } from "./backendEnvironment.ts";
+import { geminiDesativadoNoStaging, isStaging } from "./backendEnvironment.ts";
+import { bloquearGeminiDesativado } from "./geminiDisponibilidade.ts";
 import cors from "cors";
 import { randomBytes } from "node:crypto";
 import express, {
@@ -43,7 +44,7 @@ const segredoProxyInterno =
 process.env.INTERNAL_PROXY_SECRET = segredoProxyInterno;
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "";
 const { modelo: modeloEdital, modeloFallback: modeloFallbackEdital } = resolverModelosGemini(process.env);
-const aiEdital = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
+const aiEdital = !geminiDesativadoNoStaging(process.env) && geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
 const janelaGeralMs = 10 * 60 * 1000;
 const limiteGeral = 60;
@@ -81,12 +82,14 @@ app.use("/api", autenticarEControlarUso);
 
 app.post(
   "/api/analisar-edital",
+  bloquearGeminiDesativado,
   express.json({ limit: "40mb" }),
   analisarEdital
 );
 
 app.post(
   "/api/analisar-curso-midia",
+  bloquearGeminiDesativado,
   express.json({ limit: "40mb" }),
   analisarCursoMidia
 );

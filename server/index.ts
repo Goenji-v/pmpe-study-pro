@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { supabaseOrigin } from "./backendEnvironment.ts";
+import { bloquearGeminiDesativado, responderGeminiDesativado } from "./geminiDisponibilidade.ts";
+import { geminiDesativadoNoStaging, supabaseOrigin } from "./backendEnvironment.ts";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import express, {
   type NextFunction,
@@ -59,7 +60,9 @@ const internalProxySecret =
 const supabaseServerKey =
   process.env.SUPABASE_ANON_KEY?.trim() || "";
 
-if (!apiKey) {
+const geminiDesativado = geminiDesativadoNoStaging(process.env);
+
+if (!apiKey && !geminiDesativado) {
   throw new Error(
     "GEMINI_API_KEY não foi configurada no arquivo .env."
   );
@@ -77,9 +80,12 @@ if (supabaseServerKey.length < 20) {
   );
 }
 
-const ai = new GoogleGenAI({
-  apiKey,
-});
+const ai = geminiDesativado ? null : new GoogleGenAI({ apiKey });
+
+function obterGemini() {
+  if (!ai) throw new Error("Gemini desativado no staging.");
+  return ai;
+}
 
 app.disable("x-powered-by");
 
@@ -124,10 +130,11 @@ app.get(
 app.get(
   "/api/modelos",
   exigirAdministrador,
+  bloquearGeminiDesativado,
   async (_req, res) => {
     try {
       const pagina =
-        await ai.models.list({
+        await obterGemini().models.list({
           config: {
             pageSize: 100,
           },
@@ -238,6 +245,10 @@ app.get(
         return;
       }
 
+      if (geminiDesativado && (job.status === "fila" || job.status === "processando")) {
+        responderGeminiDesativado(res);
+        return;
+      }
       agendarJobPersistente(job, contexto);
 
       res
@@ -261,6 +272,7 @@ app.get(
 
 app.post(
   "/api/geracoes",
+  bloquearGeminiDesativado,
   async (req, res) => {
     try {
       const contexto = obterContextoSupabaseJob(req);
@@ -353,6 +365,7 @@ app.post(
 
 app.post(
   "/api/simulados-pdf/jobs",
+  bloquearGeminiDesativado,
   async (req, res) => {
     try {
       const contexto = obterContextoSupabaseJob(req);
@@ -484,6 +497,10 @@ app.get(
         return;
       }
 
+      if (geminiDesativado && (job.status === "fila" || job.status === "processando")) {
+        responderGeminiDesativado(res);
+        return;
+      }
       agendarJobPersistente(job, contexto);
 
       res
@@ -546,6 +563,7 @@ app.delete(
 
 app.get(
   "/api/gerar/status/:id",
+  bloquearGeminiDesativado,
   (req, res) => {
     const userId = String(req.header("x-study-user-id") || "").trim();
     const requestId = String(req.params.id || "").trim();
@@ -609,6 +627,7 @@ app.delete(
 
 app.post(
   "/api/gerar",
+  bloquearGeminiDesativado,
   async (req, res) => {
     try {
       const {
@@ -637,7 +656,7 @@ app.post(
           });
 
       const executar = async () => {
-        const resposta = await ai.models.generateContent({
+        const resposta = await obterGemini().models.generateContent({
           model: modelo,
           contents: prompt,
         });
@@ -702,7 +721,7 @@ function agendarJobPersistente(
   job: JobGeracaoIA,
   contexto: ContextoSupabaseJob
 ) {
-  if (job.status !== "fila" && job.status !== "processando") {
+  if (!ai || (job.status !== "fila" && job.status !== "processando")) {
     return;
   }
 
@@ -854,6 +873,7 @@ function idGeracaoValido(valor: string) {
 
 app.post(
   "/api/coach",
+  bloquearGeminiDesativado,
   async (req, res) => {
     try {
       const dados =
@@ -862,7 +882,7 @@ app.post(
         );
 
       const resposta =
-        await ai.models.generateContent({
+        await obterGemini().models.generateContent({
           model: modelo,
 
           contents: montarPromptCoach(
@@ -930,6 +950,7 @@ COLE ESTA ROTA NO server/index.ts ANTES DO app.listen(...)
 
 app.post(
   "/api/cronograma",
+  bloquearGeminiDesativado,
   async (req, res) => {
     try {
       const dados =
@@ -986,7 +1007,7 @@ app.post(
           : 1;
 
       const resposta =
-        await ai.models.generateContent({
+        await obterGemini().models.generateContent({
           model: modelo,
 
           contents: `
@@ -1286,6 +1307,7 @@ Regras:
 app.post(
   "/api/analisar-prova",
   exigirAdministrador,
+  bloquearGeminiDesativado,
   async (req, res) => {
     const diagnosticoId = obterDiagnosticoId(req);
     const inicio = Date.now();
@@ -1830,7 +1852,7 @@ async function gerarJsonComPdf({
   rotulo: string;
 }): Promise<unknown> {
   const resposta = await executarComFallbackGemini(
-    (modeloAtual) => ai.models.generateContent({
+    (modeloAtual) => obterGemini().models.generateContent({
       model: modeloAtual,
       contents: [{
         role: "user",
