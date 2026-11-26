@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import { fsrsCompartilhamentoHabilitado } from "../services/inteligenciaRevisao/flagCompartilhamento";
 /* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
 /* oxlint-disable react/only-export-components */
 import {
@@ -111,6 +113,8 @@ import type {
   SimuladoGerado,
 } from "../types/index";
 
+const FsrsSyncProvider = lazy(() => import("../components/PlanejamentoAdaptativo/FsrsSyncProvider"));
+
 export type StatusNuvem =
   | "carregando"
   | "sincronizado"
@@ -151,6 +155,7 @@ type AppContextType = {
   erroNuvem: string;
   alteracoesPendentes: number;
   ultimaSincronizacao: string | null;
+  obterRevisaoConfirmadaFsrs: () => number | undefined;
   sincronizarAgora: () => Promise<void>;
   resolverConflitoSincronizacao: (
     preferencia: "nuvem" | "local"
@@ -2715,6 +2720,8 @@ function EstadoDaConta({
         erroNuvem,
         alteracoesPendentes,
         ultimaSincronizacao,
+        obterRevisaoConfirmadaFsrs: () => statusNuvem === "sincronizado" &&
+          assinaturaEstado(estadoAtual) === ultimoEstadoSalvoRef.current ? revisaoBaseRef.current : undefined,
         sincronizarAgora,
         resolverConflitoSincronizacao,
         restaurarEstadoCompleto,
@@ -2724,7 +2731,10 @@ function EstadoDaConta({
         importarProgressoMateria,
       }}
     >
-      {statusNuvem === "carregando" ? <div role="status">Carregando seus dados...</div> : <ArmazenamentoConta>{children}</ArmazenamentoConta>}
+      {statusNuvem === "carregando" ? <div role="status">Carregando seus dados...</div> : <ArmazenamentoConta>{fsrsCompartilhamentoHabilitado() ?
+        <Suspense fallback={<div role="status">Carregando sincronização de revisões...</div>}>
+          <FsrsSyncProvider>{children}</FsrsSyncProvider>
+        </Suspense> : children}</ArmazenamentoConta>}
     </AppContext.Provider>
   );
 }

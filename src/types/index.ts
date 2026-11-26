@@ -181,6 +181,7 @@ export type TipoSessao =
 
 export type SessaoEstudo = {
   id: string;
+  aulaId?: string;
   revisaoId?: string;
   data: string;
 

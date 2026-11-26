@@ -1,0 +1,149 @@
+import { comparar } from "./eventos";
+
+export type Compromisso = { id: string; dia: string; minutos: number; titulo: string;
+  tipo: "revisao" | "aula" | "questoes" | "simulado" | "descanso" | "compromisso" };
+export type Limites = { semana: readonly number[]; minutos: number; revisoes: number; inicio?: string; fim?: string };
+export type Candidato = { unidadeId: string; materia: string; assunto: string; ideal: string; limite: string;
+  minutos: number; primeira: boolean; retencao?: number; recorrente?: boolean; desempenho?: number;
+  peso?: number; incidencia?: number; prova?: string; compromisso?: string };
+export type Agendamento = Candidato & { agendada?: string; motivo: string; prioridade: number; horarioSugerido?: string };
+export const fusoEstudo = "America/Sao_Paulo";
+const formatador = new Intl.DateTimeFormat("sv-SE", { timeZone: fusoEstudo, year: "numeric", month: "2-digit", day: "2-digit" });
+
+export function diaEstudo(data: Date) { return formatador.format(data); }
+function diaValido(valor: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+  const dia = new Date(valor + "T00:00:00Z");
+  return Number.isFinite(+dia) && dia.toISOString().slice(0, 10) === valor;
+}
+export function somarDia(dia: string, n: number) {
+  const data = new Date(dia + "T00:00:00Z");
+  data.setUTCDate(data.getUTCDate() + n);
+  return data.toISOString().slice(0, 10);
+}
+function distancia(a: string, b: string) { return (Date.parse(b) - Date.parse(a)) / 86_400_000; }
+
+export function priorizar(c: Candidato, hoje: string) {
+  const atraso = Math.max(0, distancia(c.ideal, hoje));
+  const risco = c.retencao === undefined ? 0 : Math.round((1 - c.retencao) * 55);
+  const prova = c.prova ? distancia(hoje, c.prova) : Infinity;
+  const pontos = atraso * 3 + risco + (c.primeira ? 12 : 0) + (c.recorrente ? 18 : 0) +
+    (c.desempenho === undefined ? 0 : Math.max(0, 80 - c.desempenho) / 4) +
+    (c.peso ?? 0) + (c.incidencia ?? 0) + (prova >= 0 && prova <= 14 ? 15 - prova : 0);
+  const motivos = [atraso ? `${atraso} dia(s) de atraso` : "", risco >= 15 ? "risco de esquecimento" : "",
+    c.primeira ? "primeira revisão" : "", c.recorrente ? "dificuldade recorrente" : "",
+    c.peso || c.incidencia ? "relevância no edital" : "", prova >= 0 && prova <= 14 ? "prova próxima" : ""].filter(Boolean);
+  return { pontos, motivo: motivos.join(", ") || "ordem de vencimento" };
+}
+
+export function distribuir(candidatos: readonly Candidato[], compromissos: readonly Compromisso[], hoje: string, limites: Limites) {
+  if (!Number.isInteger(limites.revisoes) || limites.revisoes < 0 ||
+      !Number.isInteger(limites.minutos) || limites.minutos < 0)
+    throw new Error("Limites diários inválidos.");
+  if (!diaValido(hoje) || limites.semana.some(d => !Number.isInteger(d) || d < 0 || d > 6))
+    throw new Error("Data ou disponibilidade inválida.");
+  const horaEmMinutos = (hora: string | undefined) => {
+    if (!hora || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(hora)) return undefined;
+    const [h, m] = hora.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const inicio = horaEmMinutos(limites.inicio);
+  const fim = horaEmMinutos(limites.fim);
+  if ((limites.inicio || limites.fim) && (inicio === undefined || fim === undefined || fim <= inicio))
+    throw new Error("Janela de estudo inválida.");
+  const teto = inicio !== undefined && fim !== undefined ? Math.min(fim - inicio, limites.minutos) : limites.minutos;
+  const fixosPorDia = new Map<string, Map<string, Compromisso>>();
+  const compromissosPorId = new Map<string, Compromisso>();
+  for (const c of compromissos) {
+    if (!Number.isSafeInteger(c.minutos) || c.minutos < 0 || !diaValido(c.dia))
+      throw new Error("Data ou duração de compromisso inválida.");
+    const anterior = compromissosPorId.get(c.id);
+    if (anterior && (anterior.dia !== c.dia || anterior.minutos !== c.minutos || anterior.tipo !== c.tipo || anterior.titulo !== c.titulo))
+      throw new Error("Compromissos conflitantes.");
+    compromissosPorId.set(c.id, c);
+    const fixos = fixosPorDia.get(c.dia) ?? new Map();
+    fixos.set(c.id, c);
+    fixosPorDia.set(c.dia, fixos);
+  }
+  const ids = new Set<string>();
+  const agenda: Agendamento[] = [];
+  const dias = Array.from({ length: 30 }, (_, i) => {
+    const dia = somarDia(hoje, i);
+    const semana = new Date(dia + "T00:00:00Z").getUTCDay();
+    const fixos = [...(fixosPorDia.get(dia)?.values() ?? [])];
+    const cargaFixa = fixos.reduce((n, c) => n + c.minutos, 0);
+    const bruto = limites.semana.includes(semana) && !fixos.some(c => c.tipo === "descanso") ? teto : 0;
+    const revisoesFixas = fixos.filter(c => c.tipo === "revisao").length;
+    return { dia, fixos, cargaFixa, revisoesFixas, capacidade: Math.max(0, bruto - cargaFixa), excessoFixo: cargaFixa > bruto || revisoesFixas > (bruto > 0 ? limites.revisoes : 0),
+      minutos: 0, revisoes: 0, limiteRevisoes: bruto > 0 ? limites.revisoes : 0, estimadas: 0, vencimentos: 0, materias: new Map<string, number>() };
+  });
+  const ordem = candidatos.map(c => {
+    if (!diaValido(c.ideal) || !diaValido(c.limite) || c.limite < c.ideal || !Number.isSafeInteger(c.minutos) || c.minutos <= 0)
+      throw new Error("Data, prazo ou duração de revisão inválidos.");
+    return { c, ...priorizar(c, hoje) };
+  }).sort((a, b) =>
+    comparar(a.c.limite, b.c.limite) || b.pontos - a.pontos || comparar(a.c.unidadeId, b.c.unidadeId));
+  const fila = ordem.filter(({ c }) => {
+    if (ids.has(c.unidadeId)) return false;
+    ids.add(c.unidadeId);
+    const dia = dias.find(d => d.dia >= c.ideal);
+    if (dia) dia.vencimentos++;
+    return true;
+  });
+  function alocar(item: typeof fila[number], dia: typeof dias[number]) {
+    const { c, pontos, motivo } = item;
+    const hora = inicio === undefined ? undefined : inicio + dia.cargaFixa + dia.minutos;
+    const horarioSugerido = hora === undefined ? undefined :
+      `${String(Math.floor(hora / 60)).padStart(2, "0")}:${String(hora % 60).padStart(2, "0")}`;
+    dia.revisoes++;
+    dia.minutos += c.minutos;
+    dia.materias.set(c.materia, (dia.materias.get(c.materia) ?? 0) + 1);
+    agenda.push({ ...c, agendada: dia.dia, horarioSugerido, prioridade: pontos,
+      motivo: dia.dia === c.compromisso ? `${motivo}. Data existente preservada.` :
+        dia.dia > c.limite ? `${motivo}. Vaga de recuperação após o prazo.` : dia.dia === c.ideal ? motivo : `${motivo}. Vaga encontrada após a data ideal.` });
+  }
+  const feitos = new Set<string>();
+  for (const item of fila) {
+    const { c } = item;
+    const dia = dias.find(d => d.dia === c.compromisso && d.dia >= c.ideal && d.dia <= c.limite);
+    if (!dia || dia.revisoes + dia.revisoesFixas >= dia.limiteRevisoes || dia.minutos + c.minutos > dia.capacidade) continue;
+    alocar(item, dia);
+    feitos.add(c.unidadeId);
+  }
+  const recuperacao = somarDia(hoje, 2);
+  for (const dia of dias) {
+    const disponiveis = fila.filter(({ c }) => !feitos.has(c.unidadeId) && c.ideal <= dia.dia &&
+      (dia.dia <= c.limite || (c.limite < hoje && dia.dia <= recuperacao)));
+    while (disponiveis.length && dia.revisoes + dia.revisoesFixas < dia.limiteRevisoes) {
+      disponiveis.sort((a, b) => comparar(a.c.limite, b.c.limite) ||
+        (b.pontos - 4 * (dia.materias.get(b.c.materia) ?? 0)) - (a.pontos - 4 * (dia.materias.get(a.c.materia) ?? 0)) ||
+        comparar(a.c.unidadeId, b.c.unidadeId));
+      const indice = disponiveis.findIndex(({ c }) => c.minutos + dia.minutos <= dia.capacidade);
+      if (indice < 0) break;
+      const [item] = disponiveis.splice(indice, 1);
+      alocar(item, dia);
+      feitos.add(item.c.unidadeId);
+    }
+  }
+  for (const { c, pontos, motivo } of fila) if (!feitos.has(c.unidadeId)) {
+    agenda.push({ ...c, agendada: undefined, prioridade: pontos, motivo: c.ideal > dias[29].dia ? "Vencimento após o horizonte atual." :
+      `${motivo}. Sem vaga no prazo. Reveja a disponibilidade ou reduza novas aulas.` });
+  }
+  return { agenda, dias };
+}
+
+export function projetar(agenda: ReturnType<typeof distribuir>, horizonte: 7 | 15 | 30) {
+  const dias = agenda.dias.slice(0, horizonte);
+  const somar = (valor: (dia: typeof dias[number]) => number) => dias.reduce((n, d) => n + valor(d), 0);
+  const semVaga = agenda.agenda.filter(c => !c.agendada && c.ideal <= dias.at(-1)!.dia).length;
+  const capacidade = somar(d => d.capacidade);
+  const confirmadas = somar(d => d.revisoes + d.revisoesFixas);
+  const estimadas = somar(d => d.estimadas);
+  const excesso = dias.filter(d => d.excessoFixo || d.vencimentos > d.revisoes || d.revisoes + d.revisoesFixas + d.estimadas > d.limiteRevisoes || d.minutos + d.estimadas * 12 > d.capacidade).length;
+  const estado = semVaga || dias.some(d => d.excessoFixo) ? "Sobrecarga" : agenda.agenda.some(c => c.agendada && c.ideal < dias[0].dia) ?
+    "Recuperação" : excesso || (capacidade > 0 && somar(d => d.minutos) >= capacidade * 0.8) ? "Preventivo" : "Normal";
+  const recomendacao = { Sobrecarga: "Reduza aulas novas ou libere horários antes de adicionar conteúdo.",
+    Recuperação: "Priorize as pendências antigas e mantenha intervalos de descanso.",
+    Preventivo: "Reserve vagas para revisões estimadas e reavalie a carga semanal.", Normal: "Mantenha a disponibilidade atual." }[estado];
+  return { capacidade, confirmadas, estimadas, semVaga, excesso, estado, recomendacao };
+}

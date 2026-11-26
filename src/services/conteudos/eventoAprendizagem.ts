@@ -11,6 +11,10 @@ export interface EventoAprendizagem {
   conteudo: ReferenciaConteudo;
 }
 
+export function chaveEvento(evento: EventoAprendizagem) {
+  return JSON.stringify(["evento-v1", evento.usuarioId, evento.origem, evento.ocorrenciaId, evento.itemId ?? null]);
+}
+
 export function registrarEvento(
   eventos: ReadonlyMap<string, { unidadeId: string; evento: EventoAprendizagem }>,
   evento: EventoAprendizagem,
@@ -20,7 +24,7 @@ export function registrarEvento(
       (evento.itemId !== undefined && !evento.itemId.trim()) ||
       !/(Z|[+-]\d\d:\d\d)$/i.test(evento.ocorridoEm) || !Number.isFinite(Date.parse(evento.ocorridoEm)))
     throw new Error("Identidade ou instante inválido");
-  const chave = JSON.stringify(["evento-v1", evento.usuarioId, evento.origem, evento.ocorrenciaId, evento.itemId ?? null]);
+  const chave = chaveEvento(evento);
   const campos = ["materiaId", "moduloId", "assuntoId", "aulaId", "topicoId"] as const;
   if (vinculo.status !== "validado" || campos.some(c => vinculo.referencia[c] !== evento.conteudo[c]))
     return { status: "pendente", chave, evento } as const;

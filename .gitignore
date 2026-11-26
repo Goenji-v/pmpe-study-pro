@@ -31,3 +31,6 @@ test-results/
 .env.*
 !.env.example
 !.env.*.example
+.evidencias-fsrs/
+.ferramentas-fsrs/
+supabase/.temp/

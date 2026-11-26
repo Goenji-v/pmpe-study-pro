@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import { fsrsCompartilhamentoHabilitado } from "../../services/inteligenciaRevisao/flagCompartilhamento";
 import { agruparEventosCalendario } from "../../utils/agruparEventosCalendario";
 import { useNavigate } from "react-router-dom";
 import { usePlanoAtivo } from "../../hooks/usePlanoAtivo";
@@ -67,6 +69,8 @@ const DIAS_SEMANA = [
   "Sex",
   "Sáb",
 ];
+
+const PlanejamentoDaConta = lazy(() => import("../../components/PlanejamentoAdaptativo/PlanejamentoDaConta"));
 
 export default function Calendario() {
   const navigate = useNavigate();
@@ -242,6 +246,8 @@ export default function Calendario() {
 
   return (
     <section className="calendario-container">
+      {((import.meta.env.DEV && import.meta.env.VITE_PLANO_ADAPTATIVO === "true") || fsrsCompartilhamentoHabilitado()) &&
+        <Suspense fallback={<p role="status">Carregando planejamento…</p>}><PlanejamentoDaConta modo="calendario" /></Suspense>}
       <div className="calendario-horizonte">
         <div><span>SUA PROVA</span><strong>{diasProva === null || !Number.isFinite(diasProva) ? 'Defina a data da prova' : diasProva > 0 ? `Faltam ${diasProva} dias` : diasProva === 0 ? 'A prova é hoje' : 'A data da prova já passou'}</strong>{configuracoes.dataProva && <small>{dataBR(configuracoes.dataProva)}</small>}</div>
         <div><span>PERÍODO DO PLANO</span><strong>{datasPlano.length ? `${dataBR(datasPlano[0])} a ${dataBR(datasPlano[datasPlano.length - 1])}` : 'Aguardando início automático'}</strong><small>{planoAtivo.length} semanas · {pendenciasPlano} missões pendentes</small></div>

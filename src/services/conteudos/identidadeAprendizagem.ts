@@ -12,9 +12,9 @@ export interface ReferenciaConteudo {
 }
 
 export function referenciaDoEdital(materia: MateriaEdital, assunto: AssuntoEdital): ReferenciaConteudo | undefined {
-  if (!materia.assuntos.some(item => item.id === assunto.id) ||
-      !materia.conteudoCanonicoId || !assunto.conteudoCanonicoId) return;
-  return { materiaId: materia.conteudoCanonicoId, assuntoId: assunto.conteudoCanonicoId };
+  const oficiais = materia.assuntos.filter(item => item.id === assunto.id);
+  if (oficiais.length !== 1 || !materia.conteudoCanonicoId || !oficiais[0].conteudoCanonicoId) return;
+  return { materiaId: materia.conteudoCanonicoId, assuntoId: oficiais[0].conteudoCanonicoId };
 }
 
 export function resolverUnidade(materias: readonly Materia[], referencia: ReferenciaConteudo) {

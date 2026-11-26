@@ -627,6 +627,7 @@ export function CronometroProvider({
       moduloId: sessaoAtiva.moduloId,
       assunto: sessaoAtiva.assunto,
       assuntoId: sessaoAtiva.assuntoId,
+      ...(sessaoAtiva.aulaId ? { aulaId: sessaoAtiva.aulaId } : {}),
       objetivo:
         sessaoAtiva.objetivo ||
         undefined,

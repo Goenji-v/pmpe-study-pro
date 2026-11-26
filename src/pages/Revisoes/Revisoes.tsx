@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import { fsrsCompartilhamentoHabilitado } from "../../services/inteligenciaRevisao/flagCompartilhamento";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -31,6 +33,8 @@ import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../
 type DesempenhoRevisao = "facil" | "media" | "dificil";
 
 const CHAVE_ORIGEM_REVISAO_QUESTOES = "pmpe:questoes-ia:origem-revisao";
+
+const PlanejamentoDaConta = lazy(() => import("../../components/PlanejamentoAdaptativo/PlanejamentoDaConta"));
 
 export default function Revisoes() {
   const { materias, revisoes, setRevisoes, configuracoes, sessoes } = useApp();
@@ -369,6 +373,8 @@ export default function Revisoes() {
   return (
     <section className="revisoes-container">
       <h1 className="revisoes-title">🔁 Revisões</h1>
+      {((import.meta.env.DEV && import.meta.env.VITE_PLANO_ADAPTATIVO === "true") || fsrsCompartilhamentoHabilitado()) &&
+        <Suspense fallback={<p role="status">Carregando planejamento…</p>}><PlanejamentoDaConta modo="revisoes" /></Suspense>}
       <p className="revisoes-subtitle">
         Uma única revisão por assunto principal, mesmo quando as aulas têm nomes diferentes. Os registros anteriores são preservados e o próximo retorno segue um ciclo único.
       </p>

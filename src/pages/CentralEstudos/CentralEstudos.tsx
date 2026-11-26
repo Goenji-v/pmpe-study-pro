@@ -335,6 +335,7 @@ const [
         prefill.tipo === "estudo"
           ? "aula"
           : prefill.tipo,
+      aulaId: assunto?.aulas?.find(aula => aula.id === prefill.aulaId)?.id,
       revisaoId: prefill.revisaoId,
       formatoRevisao: prefill.formatoRevisao,
       objetivo: prefill.objetivo ?? "",

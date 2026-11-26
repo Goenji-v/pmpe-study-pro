@@ -1,0 +1,36 @@
+.plano-adaptativo {
+  --plano-texto: var(--text-primary, #e7effb);
+  color: var(--plano-texto);
+  background: var(--card-bg, #142135);
+  border: 1px solid #426287;
+  border-radius: 14px;
+  display: grid;
+  gap: 1rem;
+  padding: clamp(.8rem, 3vw, 1.5rem);
+  margin-block: 1rem;
+}
+.plano-adaptativo header, .plano-acoes { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: space-between; align-items: start; }
+.plano-adaptativo p, .plano-adaptativo small { line-height: 1.5; }
+.plano-adaptativo h2 { color: inherit; font-size: clamp(1.35rem, 4vw, 1.8rem); }
+.plano-estado { padding: .3rem .7rem; border-radius: .5rem; color: #10242c; background: #91e4ca; font-weight: 700; }
+.plano-adaptativo button, .plano-adaptativo input, .plano-adaptativo select { border: 1px solid #6280a1; border-radius: .4rem; padding: .45rem; max-width: 100%; }
+.plano-adaptativo button { background: #b9dcfb; color: #102234; font-weight: 650; }
+.plano-adaptativo button[aria-pressed="true"] { background: #91e4ca; }
+.plano-adaptativo :focus-visible { outline: 3px solid #42b3cd; outline-offset: 3px; }
+.plano-adaptativo summary { cursor: pointer; padding-block: .35rem; font-weight: 650; }
+.plano-adaptativo label { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.plano-previsoes, .plano-dias, .plano-opcoes { display: grid; gap: .65rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+.plano-previsoes article { padding: .65rem .8rem; border-inline-start: 3px solid #5aa9c5; }
+.plano-opcoes { padding: .65rem 0; }
+.plano-opcoes fieldset { padding: .45rem; }
+.plano-opcoes input[type="number"] { width: 5.5rem; }
+.plano-opcoes fieldset label { margin-inline-end: .35rem; }
+.plano-dias { grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); }
+.plano-dias small { display: block; }
+.plano-lista { list-style: none; }
+.plano-lista li { border-top: 1px solid #426287; display: grid; gap: .42rem; padding: .75rem 0; overflow-wrap: anywhere; }
+.plano-laboratorio { width: min(100% - 2rem, 76rem); margin: 1.5rem auto; }
+.plano-laboratorio nav { display: flex; gap: .6rem; flex-wrap: wrap; margin-block: .8rem; }
+.plano-laboratorio nav button { padding: .55rem; }
+.plano-laboratorio dialog { width: min(90%, 28rem); margin: auto; padding: 1rem; }
+.plano-laboratorio dialog form { display: grid; gap: .65rem; }
