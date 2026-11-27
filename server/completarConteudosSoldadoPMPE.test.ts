@@ -23,7 +23,10 @@ test("a aba segue os assuntos e as aulas disponíveis no RDC", () => {
   assert.equal(porNome("Formação de Olinda e Recife"), undefined);
   assert.equal(porNome("Permutação"), undefined);
   assert.equal(porNome("Arranjo"), undefined);
-  assert.match(porNome("Análise combinatória: combinação")?.aulas?.[0]?.url ?? "", /modulo\/4\?aula=580$/);
+  const combinatoria = porNome("Análise combinatória");
+  assert.match(combinatoria?.aulas?.[0]?.url ?? "", /modulo\/4\?aula=580$/);
+  assert.match(combinatoria?.aulas?.[1]?.url ?? "", /modulo\/4\?aula=581$/);
+  assert.match(combinatoria?.aulas?.[1]?.nome ?? "", /arranjo, permutação e combinação/);
   assert.deepEqual(porNome("Probabilidade")?.aulas?.map(aula => new URL(aula.url!).searchParams.get("aula")),
     ["426", "651", "652", "653"]);
   assert.match(porNome("Convenção Americana sobre Direitos Humanos")?.aulas?.[0]?.url ?? "", /modulo\/8\?aula=423$/);
@@ -84,4 +87,35 @@ test("projeção mantém dados legados e personalizados guardados e respeita a e
   const probabilidadeSalva = listarTodosAssuntos(recarregada).find(item => item.assunto.id === probabilidade.assunto.id)?.assunto;
   assert.equal(probabilidadeSalva?.aulas?.length, 4);
   assert.equal(probabilidadeSalva?.aulas?.filter(aula => aula.concluida).length, 1);
+});
+
+test("atualiza os títulos da prévia anterior mantendo a aula e seu progresso", () => {
+  const assuntoId = "soldado-pmpe-2026:rlm:assunto:combinacao";
+  const aulaId = assuntoId + ":aula:581";
+  const anteriores: Materia[] = [{
+    id: "rlm",
+    nome: "RLM",
+    assuntos: [{
+      id: assuntoId,
+      nome: "Análise combinatória: combinação",
+      prioridade: "media",
+      concluido: false,
+      aulas: [{
+        id: aulaId,
+        nome: "Exercícios de análise combinatória",
+        ordem: 1,
+        concluida: true,
+        url: "https://app.resumodoconcurseiro.com.br/m/g4uvgyi/modulo/4?aula=581",
+      }],
+    }],
+  }];
+  const grade = completarConteudosSoldadoPMPE(anteriores, config);
+  const combinatoria = listarTodosAssuntos(exibirTrilhaRdcEmConteudos(grade, config))
+    .find(({ assunto }) => assunto.id === assuntoId)?.assunto;
+  assert.equal(combinatoria?.nome, "Análise combinatória");
+  assert.equal(combinatoria?.aulas?.length, 2);
+  const exercicios = combinatoria?.aulas?.find(aula => aula.id === aulaId);
+  assert.match(exercicios?.nome ?? "", /arranjo, permutação e combinação/);
+  assert.equal(exercicios?.concluida, true);
+  assert.equal(completarConteudosSoldadoPMPE(grade, config), grade);
 });

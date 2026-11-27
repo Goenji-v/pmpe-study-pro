@@ -1,4 +1,4 @@
-type AulaRdc = [id: number, nome: string, modulo?: number];
+type AulaRdc = [id: number, nome: string, modulo?: number, titulosAnteriores?: string[]];
 type AssuntoRdc = [chave: string, nome: string, aulas: AulaRdc[], aliases?: string[]];
 
 export type DisciplinaRdc = {
@@ -71,7 +71,10 @@ export const CONTEUDOS_SOLDADO_PMPE: DisciplinaRdc[] = [
       ["conjuntos", "Conjuntos", [[576, "Exercício aplicado de conjuntos"]]],
       ["contagem", "Princípios da contagem", [[577, "Princípios da contagem - Problemas aritméticos"]], ["Princípios de contagem"]],
       ["sequencias", "Sequências lógicas", [[578, "Sequências lógicas"]]],
-      ["combinacao", "Análise combinatória: combinação", [[580, "Análise combinatória (combinação)"], [581, "Exercícios de análise combinatória"]], ["Combinação", "Combinação simples", "Análise combinatória"]],
+      ["combinacao", "Análise combinatória", [
+        [580, "Análise combinatória (combinação)"],
+        [581, "Exercícios de análise combinatória: arranjo, permutação e combinação", undefined, ["Exercícios de análise combinatória"]],
+      ], ["Combinação", "Combinação simples", "Análise combinatória: combinação"]],
     ],
   },
   {

@@ -90,7 +90,7 @@ function atualizarAulas(
   topico: DisciplinaRdc["assuntos"][number],
   aulasImportadas: Map<string, AulaAssunto>
 ): Assunto {
-  const [chave, , aulasRdc] = topico;
+  const [chave, tituloAtual, aulasRdc, titulosAnteriores = []] = topico;
   const idDoAssunto = idDoTopico(disciplina, chave);
   const aulasAtuais = assunto.aulas ?? [];
   // A trilha já cadastrada de Verbos tem quatro aulas reais. Mantém as quatro
@@ -98,15 +98,24 @@ function atualizarAulas(
   const verbosComQuatroAulas = disciplina.id === "portugues" && chave === "verbos" &&
     aulasAtuais.filter(aula => aula.url && !rdcPMPE(aula.url)).length === 4;
   const aulas = verbosComQuatroAulas ? aulasAtuais : [...aulasAtuais];
+  let aulasAlteradas = false;
   if (!verbosComQuatroAulas) {
-    for (const [id, titulo, modulo] of aulasRdc) {
+    for (const [id, titulo, modulo, titulosAntigosDaAula = []] of aulasRdc) {
       const url = urlDaAula(disciplina, id, modulo);
-      const existente = aulas.find(aula => aula.url === url);
-      if (existente) continue;
+      const aulaId = idDoAssunto + ":aula:" + id;
+      const indiceExistente = aulas.findIndex(aula => aula.url === url);
+      if (indiceExistente >= 0) {
+        const existente = aulas[indiceExistente];
+        if (existente.id === aulaId && titulosAntigosDaAula.includes(existente.nome)) {
+          aulas[indiceExistente] = { ...existente, nome: titulo };
+          aulasAlteradas = true;
+        }
+        continue;
+      }
       const progresso = aulasImportadas.get(url);
       aulas.push({
         ...progresso,
-        id: idDoAssunto + ":aula:" + id,
+        id: aulaId,
         nome: titulo,
         url,
         origemCurso: undefined,
@@ -114,10 +123,12 @@ function atualizarAulas(
         concluida: progresso?.concluida ?? assunto.concluido,
         concluidaEm: progresso?.concluidaEm ?? assunto.concluidoEm,
       });
+      aulasAlteradas = true;
     }
   }
-  if (aulas.length === aulasAtuais.length) return assunto;
-  return { ...assunto, aulas, aula: assunto.aula ?? aulas[0]?.url };
+  const nome = assunto.id === idDoAssunto && titulosAnteriores.includes(assunto.nome) ? tituloAtual : assunto.nome;
+  if (!aulasAlteradas && nome === assunto.nome) return assunto;
+  return { ...assunto, nome, aulas, aula: assunto.aula ?? aulas[0]?.url };
 }
 
 function candidatosDaDisciplina(materias: Materia[], disciplina: DisciplinaRdc) {
