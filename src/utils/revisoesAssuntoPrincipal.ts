@@ -17,6 +17,11 @@ export function chaveAssuntoPrincipal(revisao: Referencia): string | null {
   const grupo = identificarGrupoIntegrado(revisao);
   if (grupo) return chaveDaMateria(revisao.materia) + ":" + grupo.id;
 
+  if (chaveDaMateria(revisao.materia) === "rlm" &&
+      /^(?:exercicios?(?: de)? )?logica argumentativa$/.test(normalizarTopicoIntegrado(revisao.assunto))) {
+    return "rlm:logica-argumentativa";
+  }
+
   // Windows é uma família consolidável: as partes I, II e III continuam
   // como aulas, mas formam um único ciclo de revisão de Windows.
   if (chaveDaMateria(revisao.materia) === "informatica" &&
@@ -29,8 +34,9 @@ export function chaveAssuntoPrincipal(revisao: Referencia): string | null {
 export function tituloAssuntoPrincipal(revisao: Referencia): string {
   const grupo = identificarGrupoIntegrado(revisao);
   if (grupo) return grupo.titulo;
-  return chaveAssuntoPrincipal(revisao) === "informatica:windows"
-    ? "Windows" : revisao.assunto;
+  const chave = chaveAssuntoPrincipal(revisao);
+  if (chave === "rlm:logica-argumentativa") return "Lógica argumentativa";
+  return chave === "informatica:windows" ? "Windows" : revisao.assunto;
 }
 
 export function revisaoAtiva(revisao: Revisao): boolean {
@@ -103,4 +109,29 @@ export function integrarPendenciasNaConclusao(params: {
     etapaMaisConservadora,
     quantidadeIntegradas: idsIntegradas.size,
   };
+}
+
+/** Repara a duplicidade legada somente com conclusão e retorno comprovados.
+ * Preserva IDs, etapas, resultados, datas e status originais. */
+export function reconciliarArgumentativaLegada(revisoes: Revisao[]): Revisao[] {
+  const familia = revisoes.filter(r => chaveAssuntoPrincipal(r) === "rlm:logica-argumentativa");
+  const ultima = familia.filter(r => r.concluida && r.dataConclusao &&
+    Number.isFinite(Date.parse(r.dataConclusao)))
+    .sort((a,b) => Date.parse(b.dataConclusao!) - Date.parse(a.dataConclusao!))[0];
+  if (!ultima?.dataConclusao) return revisoes;
+  const data = Date.parse(ultima.dataConclusao);
+  const ativas = familia.filter(revisaoAtiva);
+  const retornos = ativas.filter(r => r.assuntoId === ultima.assuntoId &&
+    normalizarTopicoIntegrado(r.assunto) === normalizarTopicoIntegrado(ultima.assunto) &&
+    r.etapa === ultima.etapa + 1 && Date.parse(r.dataCriacao) === data &&
+    Date.parse(r.dataPrevista) > data);
+  if (retornos.length !== 1) return revisoes;
+  const absorvidas = new Set(ativas.filter(r => r.id !== retornos[0].id &&
+    normalizarTopicoIntegrado(r.assunto) !== normalizarTopicoIntegrado(ultima.assunto) &&
+    r.etapa <= ultima.etapa && Date.parse(r.dataCriacao) <= data &&
+    Date.parse(r.dataPrevista) <= data).map(r => r.id));
+  if (absorvidas.size === 0) return revisoes;
+  return revisoes.map(r => absorvidas.has(r.id)
+    ? { ...r, integradaEmId: ultima.id, integradaEm: ultima.dataConclusao }
+    : r);
 }
