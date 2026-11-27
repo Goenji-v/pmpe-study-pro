@@ -19,6 +19,7 @@ function chaveHistoricoIntegrado(revisao: Revisao): string | null {
     materia: revisao.materia,
     assunto: revisao.assunto,
     escopoGrupo: revisao.escopoGrupo,
+    revisaoIndividualDoAssunto: revisao.revisaoIndividualDoAssunto,
     origemSimulado: revisao.origemSimulado,
   });
 }

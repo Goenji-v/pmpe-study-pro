@@ -9,6 +9,12 @@ export type DisciplinaRdc = {
   assuntos: AssuntoRdc[];
 };
 
+export const EXERCICIO_PROPOSICOES_CONECTIVOS: AulaRdc = [73, "Exercícios de proposições e conectivos lógicos"];
+
+export const MATERIAIS_RDC = {
+  slidesRedacao: [662, "Slides das aulas de Redação", 16],
+} satisfies Record<string, AulaRdc>;
+
 // Títulos e links do índice de aulas do RDC. As partes de uma mesma aula
 // ficam no assunto principal, na ordem do curso.
 export const CONTEUDOS_SOLDADO_PMPE: DisciplinaRdc[] = [
@@ -57,8 +63,8 @@ export const CONTEUDOS_SOLDADO_PMPE: DisciplinaRdc[] = [
     assuntos: [
       ["interpretacao", "Interpretação de problemas em concursos", [[418, "Interpretação de problemas em concursos"]]],
       ["operacoes", "Operações básicas da matemática", [[419, "Operações básicas da matemática"]]],
-      ["proposicoes", "Proposições lógicas", [[71, "Proposições lógicas"], [73, "Exercícios de proposições e conectivos lógicos"]]],
-      ["conectivos", "Conectivos lógicos", [[72, "Conectivos lógicos"]]],
+      ["proposicoes", "Proposições lógicas", [[71, "Proposições lógicas"], EXERCICIO_PROPOSICOES_CONECTIVOS]],
+      ["conectivos", "Conectivos lógicos", [[72, "Conectivos lógicos"], EXERCICIO_PROPOSICOES_CONECTIVOS]],
       ["negacao", "Negação de proposições", [[74, "Negação de proposições"], [75, "Exercícios de negação"]]],
       ["tabela-verdade", "Tabela-verdade", [[76, "Tabela-verdade"]]],
       ["equivalencia", "Equivalências lógicas", [[77, "Equivalências lógicas"], [78, "Exercícios de equivalências lógicas"]], ["Equivalências"]],
@@ -75,6 +81,7 @@ export const CONTEUDOS_SOLDADO_PMPE: DisciplinaRdc[] = [
         [580, "Análise combinatória (combinação)"],
         [581, "Exercícios de análise combinatória: arranjo, permutação e combinação", undefined, ["Exercícios de análise combinatória"]],
       ], ["Combinação", "Combinação simples", "Análise combinatória: combinação"]],
+      ["exercicios-gerais", "Resolução de questões de RLM (Pós-edital)", [[424, "Resolução de questões de RLM", 17]]],
     ],
   },
   {
@@ -88,7 +95,7 @@ export const CONTEUDOS_SOLDADO_PMPE: DisciplinaRdc[] = [
       ["perifericos", "Gerenciamento de arquivos e instalação de periféricos", [[52, "Organização de arquivos, pastas e programas e instalação de periféricos"]]],
       ["windows", "Windows", [[53, "Windows - Parte I"], [54, "Windows - Parte II"], [55, "Windows - Parte III"]]],
       ["word", "Word", [[56, "Word - Parte I"], [57, "Word - Parte II"], [58, "Word - Parte III"], [59, "Word - Parte IV"]], ["Word 2019", "Word - aulas 1 e 2"]],
-      ["excel", "Excel e PowerPoint", [[60, "Excel - Parte I"], [61, "Excel - Parte II"], [62, "Excel - Parte III"], [63, "Excel - Parte IV e PowerPoint"]], ["Excel 2019", "Microsoft Excel"]],
+      ["excel", "Excel", [[60, "Excel - Parte I"], [61, "Excel - Parte II"], [62, "Excel - Parte III"], [63, "Excel - Parte IV e PowerPoint"]], ["Excel e PowerPoint", "Excel 2019", "Microsoft Excel"]],
       ["redes", "Redes de computadores", [[64, "Navegadores e sincronização"], [65, "Contas, navegação anônima e gerenciador de tarefas"], [66, "Complementos, cache, cookies, histórico e atalhos"], [67, "Conteúdo da internet e buscadores"], [68, "Buscas avançadas - Parte I"], [69, "Buscas avançadas - Parte II"], [70, "Grupos de discussão, redes sociais e questões"]]],
     ],
   },

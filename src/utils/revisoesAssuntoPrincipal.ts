@@ -3,7 +3,7 @@ import { identificarGrupoIntegrado, normalizarTopicoIntegrado } from "./catalogo
 import { chaveDaMateria } from "./desempenhoMaterias";
 
 type Referencia = Pick<Revisao, "materia" | "assunto"> &
-  Partial<Pick<Revisao, "escopoGrupo" | "origemSimulado" | "id" | "integradaEmId">>;
+  Partial<Pick<Revisao, "escopoGrupo" | "revisaoIndividualDoAssunto" | "origemSimulado" | "id" | "integradaEmId">>;
 
 /**
  * Chave estável do ASSUNTO principal, e não da aula ou do ID do conteúdo.
@@ -12,7 +12,7 @@ type Referencia = Pick<Revisao, "materia" | "assunto"> &
  * independentes quando não fizerem parte destas famílias.
  */
 export function chaveAssuntoPrincipal(revisao: Referencia): string | null {
-  if (revisao.escopoGrupo || revisao.origemSimulado ||
+  if (revisao.escopoGrupo || revisao.revisaoIndividualDoAssunto || revisao.origemSimulado ||
       revisao.integradaEmId || revisao.id?.startsWith("ia-")) return null;
   const grupo = identificarGrupoIntegrado(revisao);
   if (grupo) return chaveDaMateria(revisao.materia) + ":" + grupo.id;

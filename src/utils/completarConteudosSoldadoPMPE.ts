@@ -1,4 +1,4 @@
-import { CONTEUDOS_SOLDADO_PMPE, type DisciplinaRdc } from "../data/conteudosSoldadoPMPE";
+import { CONTEUDOS_SOLDADO_PMPE, EXERCICIO_PROPOSICOES_CONECTIVOS, MATERIAIS_RDC, type DisciplinaRdc } from "../data/conteudosSoldadoPMPE";
 import { criarIdModuloGeral } from "../services/conteudos/navegarConteudos";
 import type { Assunto, AulaAssunto, Materia, Modulo } from "../types";
 import type { ConfiguracoesCursosExtras } from "../types/cursos";
@@ -84,6 +84,19 @@ function urlDaAula(disciplina: DisciplinaRdc, id: number, modulo?: number) {
   return CURSO_RDC + "/modulo/" + (modulo ?? disciplina.moduloRdc) + "?aula=" + id;
 }
 
+/** O exercício é a mesma aula do RDC em dois assuntos, com conclusões vinculadas. */
+export function vinculosDeExercicioRdc(materia: Materia, assuntoId: string, aula: AulaAssunto) {
+  const rlm = CONTEUDOS_SOLDADO_PMPE.find(disciplina => disciplina.id === "rlm");
+  const [id] = EXERCICIO_PROPOSICOES_CONECTIVOS;
+  if (!rlm || !disciplinaDaMateria(rlm, materia) || aula.url !== urlDaAula(rlm, id)) return [];
+
+  return modulosDaGrade(materia).flatMap(modulo => modulo.assuntos.flatMap(assunto => {
+    if (assunto.id === assuntoId || !topicoDaDisciplina(rlm, assunto)) return [];
+    const vinculo = assunto.aulas?.find(item => item.url === aula.url);
+    return vinculo ? [{ assuntoId: assunto.id, moduloId: modulo.id, aula: vinculo }] : [];
+  }));
+}
+
 function atualizarAulas(
   assunto: Assunto,
   disciplina: DisciplinaRdc,
@@ -126,9 +139,22 @@ function atualizarAulas(
       aulasAlteradas = true;
     }
   }
+  const recursos = verbosComQuatroAulas ? aulasRdc
+    : disciplina.id === "redacao" && chave === "estrutura" ? [MATERIAIS_RDC.slidesRedacao] : [];
+  const materiaisNovos = recursos.flatMap(([id, nome, modulo]) => {
+    const url = urlDaAula(disciplina, id, modulo);
+    if (assunto.materiais?.some(material => material.url === url)) return [];
+    return [{ id: idDoAssunto + ":material:" + id, tipo: "link" as const, nome, url, criadoEm: "2026-11-27T00:00:00.000Z" }];
+  });
   const nome = assunto.id === idDoAssunto && titulosAnteriores.includes(assunto.nome) ? tituloAtual : assunto.nome;
-  if (!aulasAlteradas && nome === assunto.nome) return assunto;
-  return { ...assunto, nome, aulas, aula: assunto.aula ?? aulas[0]?.url };
+  if (!aulasAlteradas && nome === assunto.nome && !materiaisNovos.length) return assunto;
+  return {
+    ...assunto,
+    nome,
+    aulas,
+    aula: assunto.aula ?? aulas[0]?.url,
+    ...(materiaisNovos.length ? { materiais: [...(assunto.materiais ?? []), ...materiaisNovos] } : {}),
+  };
 }
 
 function candidatosDaDisciplina(materias: Materia[], disciplina: DisciplinaRdc) {

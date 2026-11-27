@@ -134,6 +134,7 @@ export function criarProximaRevisao(
     materia: revisaoAtual.materia,
     modulo: revisaoAtual.modulo,
     assunto: revisaoAtual.assunto,
+    ...(revisaoAtual.revisaoIndividualDoAssunto ? { revisaoIndividualDoAssunto: true } : {}),
     ...(revisaoAtual.escopoGrupo ? {
       escopoGrupo: true,
       grupoAssuntosIds: revisaoAtual.grupoAssuntosIds,

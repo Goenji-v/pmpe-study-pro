@@ -33,6 +33,7 @@ import {
   completarConteudosSoldadoPMPE,
   ehGradeSoldadoPMPE,
   moduloDoCatalogoSoldadoPMPE,
+  vinculosDeExercicioRdc,
 } from "../utils/completarConteudosSoldadoPMPE";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
@@ -109,6 +110,7 @@ import type {
   Assunto,
   ConfiguracoesApp,
   Materia,
+  Modulo,
   QuestaoBanco,
   RegistroQuestao,
   Revisao,
@@ -2448,9 +2450,10 @@ function EstadoDaConta({
     }
 
 
+    const revisaoIndividualDoAssunto = ehGradeSoldadoPMPE(configuracoes) && assuntoDaTrilhaRdc(materia, assunto);
     const escopoRevisao = planejarEscopoRevisao({
       materia, modulo: localizacao.modulo, assunto, concluido,
-      revisarAssuntoIndividual: ehGradeSoldadoPMPE(configuracoes) && assuntoDaTrilhaRdc(materia, assunto),
+      revisarAssuntoIndividual: revisaoIndividualDoAssunto,
     });
     // Partes do mesmo bloco não agendam ciclos independentes.
     if (concluido && modo === "agora" && escopoRevisao.completo) {
@@ -2459,6 +2462,7 @@ function EstadoDaConta({
           materia: materia.nome,
           assunto: escopoRevisao.assunto,
           escopoGrupo: escopoRevisao.escopoGrupo,
+          revisaoIndividualDoAssunto,
         });
         const jaExiste = anteriores.some((revisao) =>
           !revisao.concluida && !revisao.integradaEmId &&
@@ -2484,7 +2488,7 @@ function EstadoDaConta({
         return [
           escopoRevisao.escopoGrupo
             ? { ...nova, escopoGrupo: true, grupoAssuntosIds: escopoRevisao.grupoAssuntosIds }
-            : nova,
+            : revisaoIndividualDoAssunto ? { ...nova, revisaoIndividualDoAssunto: true } : nova,
           ...anteriores,
         ];
       });
@@ -2521,8 +2525,29 @@ function EstadoDaConta({
     const assunto = localizacao?.assunto;
     if (!materia || !assunto || !assunto.aulas?.some((aula) => aula.id === aulaId)) return;
 
+    const aula = assunto.aulas.find(item => item.id === aulaId);
+    aplicarConclusaoAulaNoAssunto(materia, localizacao.modulo, assunto, aulaId, concluida);
+    if (aula && ehGradeSoldadoPMPE(configuracoes)) {
+      for (const vinculo of vinculosDeExercicioRdc(materia, assunto.id, aula)) {
+        if (vinculo.aula.concluida === concluida) continue;
+        const destino = encontrarAssunto(materia, vinculo.assuntoId, vinculo.moduloId);
+        if (destino) aplicarConclusaoAulaNoAssunto(materia, destino.modulo, destino.assunto, vinculo.aula.id, concluida);
+      }
+    }
+    window.dispatchEvent(new Event("pmpe-materias-atualizadas"));
+  }
+
+  function aplicarConclusaoAulaNoAssunto(
+    materia: Materia,
+    modulo: Modulo,
+    assunto: Assunto,
+    aulaId: string,
+    concluida: boolean
+  ) {
+    const materiaId = materia.id;
+    const assuntoId = assunto.id;
     const agora = new Date().toISOString();
-    const aulasAtualizadas = assunto.aulas.map((aula) =>
+    const aulasAtualizadas = (assunto.aulas ?? []).map((aula) =>
       aula.id === aulaId
         ? { ...aula, concluida, concluidaEm: concluida ? agora : undefined }
         : aula
@@ -2545,7 +2570,7 @@ function EstadoDaConta({
                 ),
                 atualizadoEm: agora,
               }),
-              localizacao.modulo.id
+              modulo.id
             )
       )
     );
@@ -2604,14 +2629,13 @@ function EstadoDaConta({
         materiaId,
         assuntoId,
         assuntoCompleto,
-        localizacao.modulo.id,
+        modulo.id,
         "agora",
         true,
         false
       );
     }
 
-    window.dispatchEvent(new Event("pmpe-materias-atualizadas"));
   }
 
   function importarProgressoMateria(

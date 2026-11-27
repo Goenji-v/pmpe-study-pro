@@ -5,8 +5,9 @@ import { EDITAIS_PREDEFINIDOS_SISTEMA } from "../src/data/editaisPredefinidos";
 import { atualizarAssuntoNaArvore, migrarMateriasParaModulos } from "../src/services/conteudos/migrarEstruturaConteudos";
 import { listarTodosAssuntos } from "../src/services/conteudos/navegarConteudos";
 import type { Materia } from "../src/types";
-import { assuntoDaTrilhaRdc, completarConteudosSoldadoPMPE, exibirTrilhaRdcEmConteudos } from "../src/utils/completarConteudosSoldadoPMPE";
+import { assuntoDaTrilhaRdc, completarConteudosSoldadoPMPE, exibirTrilhaRdcEmConteudos, vinculosDeExercicioRdc } from "../src/utils/completarConteudosSoldadoPMPE";
 import { gerarMateriasDoPlano } from "../src/utils/materiasDoPlano";
+import { chaveAssuntoPrincipal } from "../src/utils/revisoesAssuntoPrincipal";
 import { planejarEscopoRevisao } from "../src/utils/revisaoPorBloco";
 
 const config = { planoPadraoAtivo: true };
@@ -118,4 +119,43 @@ test("atualiza os títulos da prévia anterior mantendo a aula e seu progresso",
   assert.match(exercicios?.nome ?? "", /arranjo, permutação e combinação/);
   assert.equal(exercicios?.concluida, true);
   assert.equal(completarConteudosSoldadoPMPE(grade, config), grade);
+});
+
+test("preserva a contagem do RDC e reúne as aulas de Informática em seus assuntos", () => {
+  const rlm = CONTEUDOS_SOLDADO_PMPE.find(disciplina => disciplina.id === "rlm")!;
+  const aulasDoModulo = rlm.assuntos.flatMap(([, , aulas]) => aulas
+    .filter(([, , modulo]) => (modulo ?? rlm.moduloRdc) === rlm.moduloRdc));
+  assert.equal(new Set(aulasDoModulo.map(([id]) => id)).size, 28);
+
+  const grade = completarConteudosSoldadoPMPE(gerarMateriasDoPlano(), config);
+  const itens = listarTodosAssuntos(exibirTrilhaRdcEmConteudos(grade, config));
+  const info = itens.filter(({ materia }) => materia.id === "informatica");
+  assert.equal(new Set(info.flatMap(({ assunto }) => (assunto.aulas ?? []).map(aula => aula.url))).size, 34);
+  for (const [nome, esperado] of [
+    ["Fundamentos da computação", 2], ["Segurança da informação", 9],
+    ["Windows", 3], ["Word", 4], ["Excel", 4], ["Redes de computadores", 7],
+  ] as const) {
+    assert.equal(info.find(({ assunto }) => assunto.nome === nome)?.assunto.aulas?.length, esperado, nome);
+  }
+  const slides = itens.find(({ assunto }) => assunto.nome === "Texto dissertativo-argumentativo")?.assunto;
+  assert.match(slides?.materiais?.[0]?.url ?? "", /modulo\/16\?aula=662$/);
+  assert.equal(slides?.aulas?.length, 1);
+});
+
+test("exercício compartilhado tem um vínculo em Proposições e outro em Conectivos", () => {
+  const grade = completarConteudosSoldadoPMPE(gerarMateriasDoPlano(), config);
+  const itens = listarTodosAssuntos(exibirTrilhaRdcEmConteudos(grade, config));
+  const proposicoes = itens.find(item => item.assunto.nome === "Proposições lógicas")!;
+  const conectivos = itens.find(item => item.assunto.nome === "Conectivos lógicos")!;
+  assert.equal(proposicoes.assunto.aulas?.length, 2);
+  assert.equal(conectivos.assunto.aulas?.length, 2);
+  const exercicio = proposicoes.assunto.aulas![1];
+  const vinculos = vinculosDeExercicioRdc(proposicoes.materia, proposicoes.assunto.id, exercicio);
+  assert.equal(vinculos.length, 1);
+  assert.equal(vinculos[0].assuntoId, conectivos.assunto.id);
+  assert.equal(vinculos[0].aula.url, exercicio.url);
+  assert.notEqual(vinculos[0].aula.id, exercicio.id);
+  for (const assunto of [proposicoes.assunto.nome, conectivos.assunto.nome]) {
+    assert.equal(chaveAssuntoPrincipal({ materia: "RLM", assunto, revisaoIndividualDoAssunto: true }), null);
+  }
 });
