@@ -1,10 +1,11 @@
-import { CONTEUDOS_SOLDADO_PMPE } from "../data/conteudosSoldadoPMPE";
+import { CONTEUDOS_SOLDADO_PMPE, type DisciplinaRdc } from "../data/conteudosSoldadoPMPE";
 import { criarIdModuloGeral } from "../services/conteudos/navegarConteudos";
-import type { Assunto, Materia } from "../types";
+import type { Assunto, AulaAssunto, Materia, Modulo } from "../types";
 import type { ConfiguracoesCursosExtras } from "../types/cursos";
 import type { ConfiguracoesEditalExtras } from "../types/editalInteligente";
 import { textoIdentidadeCurso } from "./classificacaoCurso";
 import { usaPlanoPadrao } from "./contaInicial";
+import { gerarMateriasDoPlano } from "./materiasDoPlano";
 
 const PREFIXO_MODULO = "soldado-pmpe-2026:";
 const CURSO_RDC = "https://app.resumodoconcurseiro.com.br/m/g4uvgyi";
@@ -16,7 +17,7 @@ export function moduloDoCatalogoSoldadoPMPE(id: string): boolean {
   return id.startsWith(PREFIXO_MODULO);
 }
 
-function ehGradeSoldadoPMPE(config: ConfiguracaoGrade): boolean {
+export function ehGradeSoldadoPMPE(config: ConfiguracaoGrade): boolean {
   const edital = config.editalAtivo;
   if (edital) {
     if (edital.catalogoId === "sistema-pmpe-2026-soldado") return true;
@@ -52,106 +53,130 @@ function modulosDaGrade(materia: Materia) {
   }];
 }
 
-function referenciasDoTopico(disciplina: typeof CONTEUDOS_SOLDADO_PMPE[number], topico: typeof disciplina.modulos[number]["topicos"][number]) {
-  const id = PREFIXO_MODULO + disciplina.id + ":assunto:" + topico.chave;
-  const aulas = topico.aulas?.map(([aulaId, nome, moduloRdc], ordem) => ({
-    id: id + ":aula:" + aulaId,
-    nome,
-    ordem,
-    concluida: false,
-    url: CURSO_RDC + "/modulo/" + (moduloRdc ?? disciplina.moduloRdc) + "?aula=" + aulaId,
-  }));
-  return {
-    id,
-    aulas,
-    aula: aulas?.[0]?.url,
-    resumo: topico.resumo,
-    material: topico.fonte ? {
-      id: id + ":fonte",
-      nome: topico.fonte[0],
-      url: topico.fonte[1],
-      tipo: "link" as const,
-      criadoEm: "2026-11-26T00:00:00.000Z",
-    } : undefined,
-  };
+const materiasLegadas = gerarMateriasDoPlano();
+const idsLegados = new Set(materiasLegadas.flatMap(materia => materia.assuntos.map(assunto => assunto.id)));
+const idsModulosLegados = new Set(materiasLegadas.flatMap(materia => (materia.modulos ?? []).map(modulo => modulo.id)));
+
+function disciplinaDaMateria(disciplina: DisciplinaRdc, materia: Materia) {
+  const nome = textoIdentidadeCurso(materia.nome);
+  return materia.id === disciplina.id ||
+    [disciplina.nome, ...disciplina.aliases].some(alias => textoIdentidadeCurso(alias) === nome);
 }
 
-function preencherRecursos(assunto: Assunto, referencia: ReturnType<typeof referenciasDoTopico>): Assunto {
-  const { aula, aulas, material, resumo } = referencia;
-  const podeVincularAulas = Boolean(aula && !assunto.aula && !assunto.aulas?.length);
-  const podeAnexarMaterial = material && !assunto.materiais?.some(item => item.url === material.url);
-  const podePreencherResumo = resumo && !assunto.resumo;
-  if (!podeVincularAulas && !podeAnexarMaterial && !podePreencherResumo) return assunto;
-
-  return {
-    ...assunto,
-    ...(podeVincularAulas ? { aula, aulas } : {}),
-    ...(podePreencherResumo ? { resumo } : {}),
-    ...(podeAnexarMaterial ? { materiais: [...(assunto.materiais ?? []), material] } : {}),
-  };
+function topicoDaDisciplina(disciplina: DisciplinaRdc, assunto: Assunto) {
+  return disciplina.assuntos.find(([chave, nome, , aliases = []]) =>
+    assunto.id === idDoTopico(disciplina, chave) ||
+    [nome, ...aliases].some(alias => textoIdentidadeCurso(alias) === textoIdentidadeCurso(assunto.nome))
+  );
 }
 
-/** Preenche lacunas no catálogo PMPE sem recriar as entradas existentes. */
-export function completarConteudosSoldadoPMPE(
-  materias: Materia[],
-  config: ConfiguracaoGrade
-): Materia[] {
+function idDoTopico(disciplina: DisciplinaRdc, chave: string) {
+  return PREFIXO_MODULO + disciplina.id + ":assunto:" + chave;
+}
+
+export function assuntoDaTrilhaRdc(materia: Materia, assunto: Assunto) {
+  return CONTEUDOS_SOLDADO_PMPE.some(disciplina =>
+    disciplinaDaMateria(disciplina, materia) && topicoDaDisciplina(disciplina, assunto)
+  );
+}
+
+function urlDaAula(disciplina: DisciplinaRdc, id: number, modulo?: number) {
+  return CURSO_RDC + "/modulo/" + (modulo ?? disciplina.moduloRdc) + "?aula=" + id;
+}
+
+function atualizarAulas(
+  assunto: Assunto,
+  disciplina: DisciplinaRdc,
+  topico: DisciplinaRdc["assuntos"][number],
+  aulasImportadas: Map<string, AulaAssunto>
+): Assunto {
+  const [chave, , aulasRdc] = topico;
+  const idDoAssunto = idDoTopico(disciplina, chave);
+  const aulasAtuais = assunto.aulas ?? [];
+  // A trilha já cadastrada de Verbos tem quatro aulas reais. Mantém as quatro
+  // como unidade de estudo e preserva IDs e tempo de cada aula.
+  const verbosComQuatroAulas = disciplina.id === "portugues" && chave === "verbos" &&
+    aulasAtuais.filter(aula => aula.url && !rdcPMPE(aula.url)).length === 4;
+  const aulas = verbosComQuatroAulas ? aulasAtuais : [...aulasAtuais];
+  if (!verbosComQuatroAulas) {
+    for (const [id, titulo, modulo] of aulasRdc) {
+      const url = urlDaAula(disciplina, id, modulo);
+      const existente = aulas.find(aula => aula.url === url);
+      if (existente) continue;
+      const progresso = aulasImportadas.get(url);
+      aulas.push({
+        ...progresso,
+        id: idDoAssunto + ":aula:" + id,
+        nome: titulo,
+        url,
+        origemCurso: undefined,
+        ordem: aulas.length,
+        concluida: progresso?.concluida ?? assunto.concluido,
+        concluidaEm: progresso?.concluidaEm ?? assunto.concluidoEm,
+      });
+    }
+  }
+  if (aulas.length === aulasAtuais.length) return assunto;
+  return { ...assunto, aulas, aula: assunto.aula ?? aulas[0]?.url };
+}
+
+function candidatosDaDisciplina(materias: Materia[], disciplina: DisciplinaRdc) {
+  return materias.filter(materia => disciplinaDaMateria(disciplina, materia));
+}
+
+function selecionarAssunto(materia: Materia, disciplina: DisciplinaRdc, topico: DisciplinaRdc["assuntos"][number]) {
+  return modulosDaGrade(materia).flatMap(modulo => modulo.assuntos.map(assunto => ({ modulo, assunto })))
+    .find(({ assunto }) => topicoDaDisciplina(disciplina, assunto) === topico);
+}
+
+export function completarConteudosSoldadoPMPE(materias: Materia[], config: ConfiguracaoGrade): Materia[] {
   if (!materias.length || !ehGradeSoldadoPMPE(config)) return materias;
 
   const resultado = [...materias];
-  let mudou = false;
-
-  for (const disciplina of CONTEUDOS_SOLDADO_PMPE) {
-    const nomesDisciplina = [disciplina.nome, ...disciplina.aliases].map(textoIdentidadeCurso);
-    const equivalentes = resultado.filter(materia =>
-      materia.id === disciplina.id || nomesDisciplina.includes(textoIdentidadeCurso(materia.nome))
-    );
-    const atual = equivalentes.find(materia => materia.id === disciplina.id) ?? equivalentes[0];
-    const modulos = atual ? [...modulosDaGrade(atual)] : [];
-    const existentes = equivalentes.flatMap(materia => modulosDaGrade(materia).flatMap(modulo => modulo.assuntos));
-    // O edital agrupa DH e Legislação. Busque nessa disciplina também para
-    // preservar os tópicos já preenchidos, mesmo com a trilha do RDC separada.
-    const combinado = ["direitos-humanos", "leis-extravagantes"].includes(disciplina.id)
-      ? resultado.filter(materia => textoIdentidadeCurso(materia.nome) === "direitos humanos e legislacao extravagante")
-      : [];
-    const nomes = new Set([...existentes, ...combinado.flatMap(materia =>
-      modulosDaGrade(materia).flatMap(modulo => modulo.assuntos)
-    )].map(assunto => textoIdentidadeCurso(assunto.nome)));
-    const ids = new Set(existentes.map(assunto => assunto.id));
-
-    for (const grupo of disciplina.modulos) {
-      const moduloId = PREFIXO_MODULO + disciplina.id + ":" + grupo.id;
-      const insercoes: Assunto[] = [];
-      for (const topico of grupo.topicos) {
-        const { id, aulas, aula, resumo, material } = referenciasDoTopico(disciplina, topico);
-        const aliases = [topico.nome, ...(topico.aliases ?? [])].map(textoIdentidadeCurso);
-        if (ids.has(id) || aliases.some(nome => nomes.has(nome))) continue;
-
-        insercoes.push({
-          id,
-          nome: topico.nome,
-          prioridade: "media",
-          concluido: false,
-          resumo,
-          aulas,
-          aula,
-          materiais: material ? [material] : undefined,
-        });
-        nomes.add(textoIdentidadeCurso(topico.nome));
+  const aulasImportadas = new Map<string, AulaAssunto>();
+  for (const materia of materias) {
+    for (const modulo of modulosDaGrade(materia)) {
+      for (const assunto of modulo.assuntos) {
+        for (const aula of assunto.aulas ?? []) {
+          if (aula.url && (!aulasImportadas.has(aula.url) || aula.concluida)) {
+            aulasImportadas.set(aula.url, aula);
+          }
+        }
       }
+    }
+  }
 
-      if (insercoes.length === 0) continue;
-      const indice = modulos.findIndex(modulo => modulo.id === moduloId);
-      if (indice >= 0) {
+  let mudou = false;
+  for (const disciplina of CONTEUDOS_SOLDADO_PMPE) {
+    const candidatas = candidatosDaDisciplina(resultado, disciplina);
+    const atual = candidatas.find(materia => materia.id === disciplina.id) ?? candidatas[0];
+    const originais = atual ? modulosDaGrade(atual) : [];
+    const modulos: Modulo[] = [...originais];
+    const moduloId = PREFIXO_MODULO + disciplina.id + ":rdc";
+    const novoModulo: Modulo = { id: moduloId, nome: "Aulas do RDC", ordem: 0, assuntos: [] };
+
+    for (const topico of disciplina.assuntos) {
+      const [chave, nome] = topico;
+      const existente = atual && selecionarAssunto(atual, disciplina, topico);
+      const base: Assunto = existente?.assunto ?? {
+        id: idDoTopico(disciplina, chave), nome, prioridade: "media", concluido: false,
+      };
+      const assunto = atualizarAulas(base, disciplina, topico, aulasImportadas);
+      const destino = existente?.modulo.id ?? moduloId;
+      const indice = modulos.findIndex(modulo => modulo.id === destino);
+      if (indice < 0) {
+        novoModulo.assuntos.push(assunto);
+      } else if (assunto !== existente?.assunto) {
         const modulo = modulos[indice];
-        modulos[indice] = { ...modulo, assuntos: [...modulo.assuntos, ...insercoes] };
-      } else {
-        const ordem = Math.max(-1, ...modulos.map(modulo => modulo.ordem)) + 1;
-        modulos.push({ id: moduloId, nome: grupo.nome, ordem, assuntos: insercoes });
+        const assuntos = existente
+          ? modulo.assuntos.map(item => item.id === base.id ? assunto : item)
+          : [...modulo.assuntos, assunto];
+        modulos[indice] = { ...modulo, assuntos };
       }
     }
 
-    if (modulos.length === 0 || (atual && modulos.every((modulo, indice) => modulo === atual.modulos?.[indice]))) continue;
+    if (novoModulo.assuntos.length) modulos.unshift(novoModulo);
+    if (atual && modulos.every((modulo, indice) => modulo === originais[indice])) continue;
 
     const materia = {
       ...atual,
@@ -165,43 +190,54 @@ export function completarConteudosSoldadoPMPE(
     mudou = true;
   }
 
-  // Algumas grades já têm o nome do edital, ainda sem aula ou material.
-  // Atualize esses registros pelo nome exato ou alias curado, mantendo os IDs.
-  for (const [indice, materia] of resultado.entries()) {
-    const nomeMateria = textoIdentidadeCurso(materia.nome);
-    const disciplinas = CONTEUDOS_SOLDADO_PMPE.filter(disciplina =>
-      materia.id === disciplina.id ||
-      [disciplina.nome, ...disciplina.aliases].some(nome => textoIdentidadeCurso(nome) === nomeMateria) ||
-      (nomeMateria === "direitos humanos e legislacao extravagante" &&
-        ["direitos-humanos", "leis-extravagantes"].includes(disciplina.id))
-    );
-    if (!disciplinas.length) continue;
+  return mudou ? resultado : materias;
+}
 
-    const referencias = new Map<string, ReturnType<typeof referenciasDoTopico>>();
-    for (const disciplina of disciplinas) {
-      for (const topico of disciplina.modulos.flatMap(modulo => modulo.topicos)) {
-        const referencia = referenciasDoTopico(disciplina, topico);
-        for (const nome of [topico.nome, ...(topico.aliases ?? [])]) {
-          referencias.set(textoIdentidadeCurso(nome), referencia);
+// A aba exibe a trilha do curso. Os registros antigos continuam disponíveis
+// para sessões, histórico, plano e migrações e nunca são apagados pela projeção.
+export function exibirTrilhaRdcEmConteudos(materias: Materia[], config: ConfiguracaoGrade): Materia[] {
+  if (!ehGradeSoldadoPMPE(config)) return materias;
+
+  const disciplinas = CONTEUDOS_SOLDADO_PMPE.map(disciplina => ({
+    disciplina,
+    candidatas: candidatosDaDisciplina(materias, disciplina),
+  }));
+  const aulasDoCatalogo = new Set(CONTEUDOS_SOLDADO_PMPE.flatMap(disciplina =>
+    disciplina.assuntos.flatMap(([, , aulas]) =>
+      aulas.map(([id, , modulo]) => urlDaAula(disciplina, id, modulo))
+    )
+  ));
+
+  return materias.flatMap(materia => {
+    const entrada = disciplinas.find(({ candidatas }) => candidatas.includes(materia));
+    const modulos = modulosDaGrade(materia);
+    const titulosSelecionados = new Map<string, string>();
+    if (entrada) {
+      const { disciplina, candidatas } = entrada;
+      const principal = candidatas.find(item => item.id === disciplina.id) ?? candidatas[0];
+      if (principal === materia) {
+        for (const topico of disciplina.assuntos) {
+          const selecionado = selecionarAssunto(materia, disciplina, topico);
+          if (selecionado) titulosSelecionados.set(selecionado.assunto.id, topico[1]);
         }
       }
     }
 
-    const originais = modulosDaGrade(materia);
-    const modulos = originais.map(modulo => {
-      const assuntos = modulo.assuntos.map(assunto => {
-        const referencia = referencias.get(textoIdentidadeCurso(assunto.nome));
-        return referencia ? preencherRecursos(assunto, referencia) : assunto;
+    const visiveis = modulos.flatMap(modulo => {
+      const assuntos = modulo.assuntos.filter(assunto => {
+        if (titulosSelecionados.has(assunto.id)) return true;
+        if (assuntoDaTrilhaRdc(materia, assunto)) return false;
+        if (idsLegados.has(assunto.id) || moduloDoCatalogoSoldadoPMPE(assunto.id) || assunto.origemEditalId) return false;
+        const urls = [assunto.aula, ...(assunto.aulas ?? []).map(aula => aula.url)];
+        return !urls.some(url => url && aulasDoCatalogo.has(url));
       });
-      return assuntos.some((assunto, posicao) => assunto !== modulo.assuntos[posicao])
-        ? { ...modulo, assuntos }
-        : modulo;
+      if (assuntos.length === 0 && (modulo.assuntos.length > 0 || idsModulosLegados.has(modulo.id) ||
+          moduloDoCatalogoSoldadoPMPE(modulo.id))) return [];
+      return [{ ...modulo, assuntos: assuntos.map(assunto => {
+        const nome = titulosSelecionados.get(assunto.id);
+        return nome && idsLegados.has(assunto.id) ? { ...assunto, nome } : assunto;
+      }) }];
     });
-    if (modulos.every((modulo, posicao) => modulo === originais[posicao])) continue;
-
-    resultado[indice] = { ...materia, modulos, assuntos: modulos.flatMap(modulo => modulo.assuntos) };
-    mudou = true;
-  }
-
-  return mudou ? resultado : materias;
+    return visiveis.length ? [{ ...materia, modulos: visiveis, assuntos: visiveis.flatMap(modulo => modulo.assuntos) }] : [];
+  });
 }

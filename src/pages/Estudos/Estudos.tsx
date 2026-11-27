@@ -10,6 +10,7 @@ import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
 import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";
+import { ehGradeSoldadoPMPE, exibirTrilhaRdcEmConteudos } from "../../utils/completarConteudosSoldadoPMPE";
 import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
 import {
   materiaTemCursoImportado,
@@ -124,11 +125,13 @@ export default function Estudos() {
     [materias]
   );
 
+  const trilhaRdcAtiva = ehGradeSoldadoPMPE(configuracoes);
   const materiasFiltradas = useMemo(() => {
+    const visiveis = exibirTrilhaRdcEmConteudos(materiasComModulos, configuracoes);
     const termo = normalizarTexto(busca);
-    if (!termo) return materiasComModulos;
+    if (!termo) return visiveis;
 
-    return materiasComModulos
+    return visiveis
       .map((materia) => ({
         ...materia,
         modulos: (materia.modulos ?? [])
@@ -151,7 +154,7 @@ export default function Estudos() {
           ),
       }))
       .filter((materia) => (materia.modulos ?? []).length > 0);
-  }, [materiasComModulos, busca]);
+  }, [materiasComModulos, configuracoes, busca]);
 
   const assuntoEmEdicao = useMemo(() => {
     if (!editor) return null;
@@ -186,6 +189,7 @@ export default function Estudos() {
     sessionStorage.setItem("pmpe:central-estudos:prefill", JSON.stringify({
       materia: materia.nome, materiaId: materia.id, modulo: modulo.nome, moduloId: modulo.id,
       assunto: assunto.nome, assuntoId: assunto.id, tipo: "aula",
+      aulaId: proximaAula?.id,
       objetivo: proximaAula ? `Estudar ${assunto.nome} · ${proximaAula.nome}` : `Estudar ${assunto.nome}`,
       urlAula: proximaAula?.url ?? assunto.aula,
       urlQuestoes: assunto.questoes,
@@ -335,7 +339,8 @@ export default function Estudos() {
   }
 
   function excluirModulo(materia: Materia, modulo: Modulo) {
-    if (modulo.assuntos.length > 0) {
+    const original = materiasComModulos.find(item => item.id === materia.id)?.modulos?.find(item => item.id === modulo.id);
+    if ((original ?? modulo).assuntos.length > 0) {
       showToast("Mova ou exclua os assuntos deste módulo antes de removê-lo.", "warning");
       return;
     }
@@ -661,7 +666,12 @@ export default function Estudos() {
                       <>
                         <div className="conteudos-progresso conteudos-progresso-modulo"><div style={{ width: `${pct}%` }} /></div>
                         <div className="conteudos-assuntos">
-                          {agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos).map((grupo) => (
+                          {(trilhaRdcAtiva
+                            ? modulo.assuntos.map(assunto => ({
+                                chave: assunto.id, titulo: assunto.nome, tipo: "unico" as const, assuntos: [assunto],
+                              }))
+                            : agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos)
+                          ).map((grupo) => (
                             <div key={grupo.chave} className={grupo.tipo === "unico" ? "conteudos-grupo-simples" : "conteudos-grupo-agregado"}>
                               {grupo.tipo !== "unico" && (
                                 <button

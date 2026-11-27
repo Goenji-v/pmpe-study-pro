@@ -1,3 +1,4 @@
+import { assuntoDaTrilhaRdc, ehGradeSoldadoPMPE } from "../../utils/completarConteudosSoldadoPMPE";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
@@ -74,6 +75,7 @@ export default function CentralEstudos() {
     materias,
     sessoes,
     revisoes,
+    configuracoes,
   } = useApp();
   const nomesSimulados = useNomesSimuladosDeRevisoes(revisoes);
   // A lista resumida é derivada das revisões reais; nunca altera o progresso.
@@ -331,6 +333,7 @@ const [
       assuntoId: prefill.revisaoId && prefill.tipo === "revisao"
         ? prefill.assuntoId
         : assunto?.id ?? prefill.assuntoId,
+      aulaId: prefill.aulaId,
       tipo:
         prefill.tipo === "estudo"
           ? "aula"
@@ -422,6 +425,12 @@ const [
     [aulasDisponiveis, assuntoSelecionado, estado.aulaId]
   );
 
+  const assuntoRdc = Boolean(
+    materiaSelecionada && assuntoSelecionado && ehGradeSoldadoPMPE(configuracoes) &&
+      assuntoDaTrilhaRdc(materiaSelecionada, assuntoSelecionado)
+  );
+  const concluirAulaRdc = estado.tipo === "aula" && assuntoRdc && Boolean(aulaSelecionada);
+
   const materiaObrigatoria =
     estado.tipo === "aula" ||
     estado.tipo === "questoes" ||
@@ -431,6 +440,10 @@ const [
     estado.tipo === "simulado";
 
   const formatoRevisao = estado.formatoRevisao ?? "teoria";
+  const aulasParaRevisar = estado.tipo === "revisao" && formatoRevisao === "teoria" && assuntoRdc
+    ? aulasDisponiveis.filter(aula => aula.url && /^https?:\/\//i.test(aula.url))
+    : [];
+
   const revisaoPorQuestoes = estado.tipo === "revisao" && formatoRevisao === "questoes";
   const solicitarBanca = solicitarBancaNaFinalizacao(
     estado.tipo,
@@ -651,7 +664,7 @@ const [
           estado.assuntoId,
 
         aulaId:
-          estado.aulaId,
+          estado.aulaId ?? (concluirAulaRdc ? aulaSelecionada?.id : undefined),
 
         tipo:
           estado.tipo,
@@ -1515,8 +1528,21 @@ const [
             onAtalhosCarregados={setAtalhosMateriais}
           />
 
+          {aulasParaRevisar.length > 1 && (
+            <details className="central-estudos-campo">
+              <summary>Aulas deste assunto ({aulasParaRevisar.length})</summary>
+              <ul>
+                {aulasParaRevisar.map(aula => (
+                  <li key={aula.id}>
+                    <a href={aula.url} target="_blank" rel="noopener noreferrer">{aula.nome}</a>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+
           <div className="central-estudos-acoes">
-            {urlAulaPrincipal && (
+            {urlAulaPrincipal && aulasParaRevisar.length <= 1 && (
               <button
                 type="button"
                 className="central-botao-aula"
@@ -1942,10 +1968,11 @@ const [
                   />
 
                   <span>
-                    <strong>Concluir este assunto</strong>
+                    <strong>{concluirAulaRdc ? "Concluir esta aula" : "Concluir este assunto"}</strong>
                     <small>
-                      Marque apenas quando terminar o conteúdo. A revisão 1–5–7–14–30
-                      será criada uma única vez.
+                      {concluirAulaRdc
+                        ? "A revisão do assunto será agendada quando todas as aulas estiverem concluídas."
+                        : "Marque quando terminar o conteúdo. A revisão 1–5–7–14–30 será agendada uma única vez."}
                     </small>
                   </span>
                 </label>

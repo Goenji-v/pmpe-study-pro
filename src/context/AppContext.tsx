@@ -29,7 +29,9 @@ import { chaveAssuntoPrincipal } from "../utils/revisoesAssuntoPrincipal";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
 import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
 import {
+  assuntoDaTrilhaRdc,
   completarConteudosSoldadoPMPE,
+  ehGradeSoldadoPMPE,
   moduloDoCatalogoSoldadoPMPE,
 } from "../utils/completarConteudosSoldadoPMPE";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
@@ -439,6 +441,10 @@ function reconciliarAssuntoCanonico(
       : aulaPlano;
   });
 
+  aulas.push(...(assuntoSalvo.aulas ?? []).filter(aula =>
+    moduloDoCatalogoSoldadoPMPE(aula.id) && !aulas.some(item => item.id === aula.id)
+  ));
+
   return {
     ...assuntoPlano,
     ...assuntoSalvo,
@@ -510,8 +516,12 @@ function reconciliarAssuntoPortugues(
     };
   });
 
+  const aulasDoCurso = (assuntoSalvo?.aulas ?? []).filter(aula =>
+    moduloDoCatalogoSoldadoPMPE(aula.id) && !aulas.some(item => item.id === aula.id)
+  );
+  const aulasReconciliadas = [...aulas, ...aulasDoCurso];
   const todasAsAulasConcluidas =
-    aulas.length > 0 && aulas.every((aula) => aula.concluida);
+    aulasReconciliadas.length > 0 && aulasReconciliadas.every((aula) => aula.concluida);
 
   return {
     ...assuntoPlano,
@@ -519,14 +529,14 @@ function reconciliarAssuntoPortugues(
     id: assuntoPlano.id,
     nome: assuntoPlano.nome,
     prioridade: assuntoSalvo?.prioridade ?? assuntoPlano.prioridade,
-    aulas,
+    aulas: aulasReconciliadas,
     tarefas: assuntoSalvo?.tarefas ?? assuntoPlano.tarefas,
     aula: aulas[0]?.url ?? assuntoPlano.aula,
     concluido: assuntoSalvo?.concluido === true || todasAsAulasConcluidas,
     concluidoEm:
       assuntoSalvo?.concluidoEm ??
       (todasAsAulasConcluidas
-        ? aulas.map((aula) => aula.concluidaEm).filter(Boolean).sort().at(-1)
+        ? aulasReconciliadas.map((aula) => aula.concluidaEm).filter(Boolean).sort().at(-1)
         : undefined),
   };
 }
@@ -2440,6 +2450,7 @@ function EstadoDaConta({
 
     const escopoRevisao = planejarEscopoRevisao({
       materia, modulo: localizacao.modulo, assunto, concluido,
+      revisarAssuntoIndividual: ehGradeSoldadoPMPE(configuracoes) && assuntoDaTrilhaRdc(materia, assunto),
     });
     // Partes do mesmo bloco não agendam ciclos independentes.
     if (concluido && modo === "agora" && escopoRevisao.completo) {
