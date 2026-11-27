@@ -32,7 +32,7 @@ export default function CheckpointCompartilhado({ entrada, plano }: { entrada?: 
     }
   }
 
-  return <div>
+  return <div className="plano-sync-conteudo">
     <p role="status">Diário compartilhado · {sync.status} · {sync.fila.pendentes.length} pendente(s)
       {atual && ` · revisão ${atual.revisao}`}</p>
     <button type="button" disabled={!entrada || !plano || !atual || sync.status !== "online" || !!sync.fila.pendentes.length || gravando}
