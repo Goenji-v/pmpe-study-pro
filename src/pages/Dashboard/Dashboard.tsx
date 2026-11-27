@@ -1,3 +1,4 @@
+import { ehTrilhaOficialPortugues } from "../../data/cursoPortugues";
 import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/armazenamentoConta";
 import {
   useEffect,
@@ -268,9 +269,7 @@ export default function Dashboard() {
   }, [materias]);
 
   const trilhaPortugues = useMemo(() => {
-    const materia = materias.find(
-      (item) => normalizarTextoDashboard(item.nome) === "portugues"
-    );
+    const materia = materias.find(ehTrilhaOficialPortugues);
 
     if (!materia) return null;
 
@@ -1002,14 +1001,7 @@ function formatarData(
   );
 }
 
-function normalizarTextoDashboard(texto: string) {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-}
+
 
 function obterDataLocal(
   data = new Date()

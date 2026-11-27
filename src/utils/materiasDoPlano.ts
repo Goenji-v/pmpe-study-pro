@@ -10,6 +10,7 @@ import type {
 } from "../types/index";
 
 import {
+  CURSO_PORTUGUES_ID,
   CURSO_PORTUGUES_NOME,
   cursoPortuguesModulos,
 } from "../data/cursoPortugues";
@@ -213,7 +214,6 @@ export function gerarMateriasDoPlano(): Materia[] {
     });
   });
 
-  const portuguesId = criarId(CURSO_PORTUGUES_NOME);
   const assuntosPortugues = cursoPortuguesModulos.flatMap((modulo) => modulo.assuntos);
 
   const materias = Array.from(
@@ -251,7 +251,7 @@ export function gerarMateriasDoPlano(): Materia[] {
     );
 
   materias.push({
-    id: portuguesId,
+    id: CURSO_PORTUGUES_ID,
     nome: CURSO_PORTUGUES_NOME,
     modulos: cursoPortuguesModulos.map((modulo) => ({
       ...modulo,

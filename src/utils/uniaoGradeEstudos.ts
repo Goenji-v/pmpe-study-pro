@@ -1,3 +1,4 @@
+import { ehTrilhaOficialPortugues } from "../data/cursoPortugues";
 import type {
   Assunto,
   AulaAssunto,
@@ -353,7 +354,10 @@ function consolidarMateriasEquivalentes(materias: Materia[]) {
 
   for (const materia of materias) {
     const indice = resultado.findIndex((existente) =>
-      materiasEquivalentes(existente.nome, materia.nome)
+      existente.id === materia.id ||
+      (existente.origemConteudo !== "manual" && materia.origemConteudo !== "manual" &&
+        ehTrilhaOficialPortugues(existente) === ehTrilhaOficialPortugues(materia) &&
+        materiasEquivalentes(existente.nome, materia.nome))
     );
     if (indice < 0) {
       resultado.push(clonar(materia));

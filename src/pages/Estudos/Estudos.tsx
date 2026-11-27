@@ -1,3 +1,4 @@
+import { ehTrilhaOficialPortugues } from "../../data/cursoPortugues";
 import PerfilAssunto from "../../components/PerfilAssunto/PerfilAssunto";
 import { calcularMetricasDoAssunto } from "../../utils/metricasAssunto";
 import { abrirPdfInterno, ehLinkPdf } from "../../services/leitorMaterial";
@@ -10,8 +11,12 @@ import { useToast } from "../../context/ToastContext";
 import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";
 import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
 import {
+  criarMateriaManual,
+  materiaPermiteRenomear,
   materiaTemCursoImportado,
+  assuntoTemAulaImportada,
   moduloGerenciadoPorCurso,
+  moduloProtegido,
   prepararMateriaParaConteudos,
 } from "./estudosHierarquia";
 
@@ -184,18 +189,18 @@ export default function Estudos() {
   function adicionarMateria() {
     const nome = nomeMateria.trim();
     if (!nome) return showToast("Informe o nome da matéria.", "warning");
-    if (materias.some((m) => normalizarTexto(m.nome) === normalizarTexto(nome))) {
+    if (materiasComModulos.some((m) => !ehTrilhaOficialPortugues(m) &&
+      normalizarTexto(m.nome) === normalizarTexto(nome))) {
       return showToast("Essa matéria já existe.", "warning");
     }
 
     const id = criarIdUnico(nome);
-    const moduloGeral: Modulo = { id: `modulo-geral-${id}`, nome: "Geral", ordem: 0, assuntos: [] };
-    const novaMateria: Materia = { id, nome, modulos: [moduloGeral], assuntos: [] };
+    const novaMateria = criarMateriaManual(id, nome);
     setMaterias((anteriores) => [...anteriores, novaMateria]);
     setNomeMateria("");
     setMateriaNovoModulo(id);
     setMateriaNovoAssunto(id);
-    setModuloNovoAssunto(moduloGeral.id);
+    setModuloNovoAssunto(novaMateria.modulos?.[0]?.id ?? "");
     showToast("Matéria adicionada.", "success");
   }
 
@@ -203,9 +208,6 @@ export default function Estudos() {
     const materia = materiasComModulos.find((m) => m.id === materiaNovoModulo);
     const nome = nomeModulo.trim();
     if (!materia) return showToast("Selecione uma matéria.", "warning");
-    if (normalizarTexto(materia.nome) === "portugues") {
-      return showToast("Português usa a trilha oficial do curso e não aceita módulos extras.", "warning");
-    }
     if (!nome) return showToast("Informe o nome do módulo.", "warning");
     if ((materia.modulos ?? []).some((m) => normalizarTexto(m.nome) === normalizarTexto(nome))) {
       return showToast("Esse módulo já existe nessa matéria.", "warning");
@@ -228,11 +230,8 @@ export default function Estudos() {
     const modulo = materia?.modulos?.find((m) => m.id === moduloNovoAssunto);
     const nome = nomeAssunto.trim();
     if (!materia) return showToast("Selecione uma matéria.", "warning");
-    if (normalizarTexto(materia.nome) === "portugues") {
-      return showToast("Português usa a trilha oficial do curso e não aceita aulas extras.", "warning");
-    }
     if (!modulo) return showToast("Selecione um módulo.", "warning");
-    if (moduloGerenciadoPorCurso(modulo)) {
+    if (moduloProtegido(materia, modulo)) {
       return showToast("Esse módulo é gerenciado pelo curso importado. Use Meus Cursos para alterar a estrutura.", "warning");
     }
     if (!nome) return showToast("Informe o nome do assunto.", "warning");
@@ -244,6 +243,7 @@ export default function Estudos() {
       nome,
       concluido: false,
       prioridade: prioridadeAssunto,
+      origemConteudo: "manual",
       resumo: "",
       anotacoes: "",
       materiais: [],
@@ -260,7 +260,21 @@ export default function Estudos() {
     showToast("Assunto adicionado.", "success");
   }
 
+  function renomearMateria(materia: Materia) {
+    if (!materiaPermiteRenomear(materia)) return;
+    const nome = window.prompt("Novo nome da matéria:", materia.nome)?.trim();
+    if (!nome || nome === materia.nome) return;
+    if (materiasComModulos.some(m => m.id !== materia.id && !ehTrilhaOficialPortugues(m) &&
+      normalizarTexto(m.nome) === normalizarTexto(nome))) {
+      showToast("Essa matéria já existe.", "warning");
+      return;
+    }
+    atualizarMateria(materia.id, m => ({ ...m, nome, origemConteudo: "manual" }));
+    showToast("Matéria atualizada.", "success");
+  }
+
   function renomearModulo(materia: Materia, modulo: Modulo) {
+    if (moduloProtegido(materia, modulo)) return;
     const nome = window.prompt("Novo nome do módulo:", modulo.nome)?.trim();
     if (!nome || nome === modulo.nome) return;
     atualizarMateria(materia.id, (m) => ({
@@ -271,6 +285,7 @@ export default function Estudos() {
   }
 
   function excluirModulo(materia: Materia, modulo: Modulo) {
+    if (moduloProtegido(materia, modulo)) return;
     if (modulo.assuntos.length > 0) {
       showToast("Mova ou exclua os assuntos deste módulo antes de removê-lo.", "warning");
       return;
@@ -284,7 +299,10 @@ export default function Estudos() {
   }
 
   function moverAssunto(materia: Materia, origemId: string, assunto: Assunto, destinoId: string) {
-    if (!destinoId || destinoId === origemId) return;
+    if (!destinoId || destinoId === origemId || assuntoTemAulaImportada(assunto)) return;
+    const origem = materia.modulos?.find(modulo => modulo.id === origemId);
+    const destino = materia.modulos?.find(modulo => modulo.id === destinoId);
+    if (!origem || !destino || moduloProtegido(materia, origem) || moduloProtegido(materia, destino)) return;
     atualizarMateria(materia.id, (m) => ({
       ...m,
       modulos: (m.modulos ?? []).map((mod) => {
@@ -303,6 +321,7 @@ export default function Estudos() {
   }
 
   function excluirAssunto(materia: Materia, modulo: Modulo, assunto: Assunto) {
+    if (moduloProtegido(materia, modulo) || assuntoTemAulaImportada(assunto)) return;
     if (!window.confirm(`Excluir o assunto "${assunto.nome}"?`)) return;
     definirConclusaoAssunto(materia.id, assunto.id, false);
     atualizarMateria(materia.id, (m) => ({
@@ -333,7 +352,7 @@ export default function Estudos() {
   }
 
   function abrirImportacao(materia: Materia) {
-    const primeiroModulo = (materia.modulos ?? []).slice().sort((a, b) => a.ordem - b.ordem)[0];
+    const primeiroModulo = (materia.modulos ?? []).filter(modulo => moduloProtegido(materia, modulo) && !moduloGerenciadoPorCurso(modulo)).sort((a, b) => a.ordem - b.ordem)[0];
     setModuloImportacao(primeiroModulo?.id ?? "");
     setAssuntoImportacao(primeiroModulo?.assuntos[0]?.id ?? "");
     setImportarAberto(true);
@@ -532,7 +551,7 @@ export default function Estudos() {
       {materiasFiltradas.length === 0 && <div className="conteudos-vazio">Nenhum conteúdo encontrado.</div>}
 
       {materiasFiltradas.map((materia) => {
-        const trilhaFixa = normalizarTexto(materia.nome) === "portugues";
+        const trilhaFixa = ehTrilhaOficialPortugues(materia);
         const historiaPernambuco = ["historia", "historia de pernambuco"].includes(
           normalizarTexto(materia.nome)
         );
@@ -550,6 +569,9 @@ export default function Estudos() {
                 {trilhaFixa && (
                   <button type="button" className="conteudos-importar" onClick={() => abrirImportacao(materia)}>Importar progresso</button>
                 )}
+                {materiaPermiteRenomear(materia) && (
+                  <button type="button" onClick={() => renomearMateria(materia)}>Editar matéria</button>
+                )}
                 {!trilhaFixa && !cursoImportado && (
                   <button type="button" className="conteudos-excluir" onClick={() => excluirMateria(materia)}>Excluir matéria</button>
                 )}
@@ -560,6 +582,7 @@ export default function Estudos() {
             <div className="conteudos-modulos">
               {(materia.modulos ?? []).map((modulo) => {
                 const moduloCurso = moduloGerenciadoPorCurso(modulo);
+                const estruturaProtegida = moduloProtegido(materia, modulo);
                 const feitos = modulo.assuntos.filter((a) => a.concluido).length;
                 const pct = calcularProgressoAssuntos(modulo.assuntos).percentual;
                 const chaveModulo = `${materia.id}:${modulo.id}`;
@@ -581,8 +604,8 @@ export default function Estudos() {
                         </span>
                       </button>
                       <div className="conteudos-modulo-acoes">
-                        {trilhaFixa || moduloCurso ? (
-                          <span className="conteudos-trilha-fixa">{trilhaFixa ? "Trilha oficial" : "Curso importado"}</span>
+                        {estruturaProtegida ? (
+                          <span className="conteudos-trilha-fixa">{moduloCurso ? "Curso importado" : "Trilha oficial"}</span>
                         ) : (
                           <>
                             <button type="button" onClick={() => renomearModulo(materia, modulo)}>Editar</button>
@@ -712,20 +735,20 @@ export default function Estudos() {
 
                             <button type="button" onClick={() => abrirIA(materia, modulo, assunto)}>🤖 IA</button>
 
-                            {!trilhaFixa && !moduloCurso && (materia.modulos ?? []).length > 1 && (
+                            {!estruturaProtegida && !assuntoTemAulaImportada(assunto) && (materia.modulos ?? []).filter(destino => !moduloProtegido(materia, destino)).length > 1 && (
                               <select
                                 className="conteudos-mover conteudos-mover-compacto"
                                 value={modulo.id}
                                 aria-label={`Mover ${assunto.nome} para outro módulo`}
                                 onChange={(e) => moverAssunto(materia, modulo.id, assunto, e.target.value)}
                               >
-                                {(materia.modulos ?? []).map((destino) => (
+                                {(materia.modulos ?? []).filter(destino => !moduloProtegido(materia, destino)).map((destino) => (
                                   <option key={destino.id} value={destino.id}>Mover → {destino.nome}</option>
                                 ))}
                               </select>
                             )}
 
-                            {!trilhaFixa && !moduloCurso && (
+                            {!estruturaProtegida && !assuntoTemAulaImportada(assunto) && (
                               <button
                                 type="button"
                                 className="conteudos-excluir-compacto"
@@ -796,7 +819,7 @@ export default function Estudos() {
       })}
 
       {importarAberto && (() => {
-        const portugues = materiasComModulos.find((materia) => normalizarTexto(materia.nome) === "portugues");
+        const portugues = materiasComModulos.find(ehTrilhaOficialPortugues);
         if (!portugues) return null;
         const moduloSelecionado = portugues.modulos?.find((modulo) => modulo.id === moduloImportacao);
         return (
@@ -825,7 +848,7 @@ export default function Estudos() {
                     setAssuntoImportacao(modulo?.assuntos[0]?.id ?? "");
                   }}
                 >
-                  {(portugues.modulos ?? []).slice().sort((a, b) => a.ordem - b.ordem).map((modulo) => (
+                  {(portugues.modulos ?? []).filter(modulo => moduloProtegido(portugues, modulo) && !moduloGerenciadoPorCurso(modulo)).sort((a, b) => a.ordem - b.ordem).map((modulo) => (
                     <option key={modulo.id} value={modulo.id}>{modulo.nome}</option>
                   ))}
                 </select>
@@ -854,6 +877,7 @@ export default function Estudos() {
         <EditorAssuntoModal
           materia={assuntoEmEdicao.materia}
           assunto={assuntoEmEdicao.assunto}
+          estruturaProtegida={moduloProtegido(assuntoEmEdicao.materia, assuntoEmEdicao.modulo)}
           onClose={() => setEditor(null)}
           onSave={(alteracoes) => {
             salvarAssunto(assuntoEmEdicao.materia.id, assuntoEmEdicao.modulo.id, assuntoEmEdicao.assunto.id, alteracoes);
@@ -905,15 +929,16 @@ function sincronizarEspelhoLegado(materia: Materia): Materia {
 function EditorAssuntoModal({
   materia,
   assunto,
+  estruturaProtegida,
   onClose,
   onSave,
 }: {
   materia: Materia;
   assunto: Assunto;
+  estruturaProtegida: boolean;
   onClose: () => void;
   onSave: (alteracoes: Partial<Assunto>) => void;
 }) {
-  const trilhaFixa = normalizarTexto(materia.nome) === "portugues";
   const [nome, setNome] = useState(assunto.nome);
   const [prioridade, setPrioridade] = useState<Prioridade>(assunto.prioridade);
   const [resumo, setResumo] = useState(assunto.resumo ?? "");
@@ -961,6 +986,10 @@ function EditorAssuntoModal({
     setNovaAulaUrl("");
   }
 
+  function atualizarAula(id: string, alteracoes: Partial<Pick<AulaAssunto, "nome" | "url">>) {
+    setAulas(atuais => atuais.map(aula => aula.id === id ? { ...aula, ...alteracoes } : aula));
+  }
+
   function adicionarTarefa() {
     const nomeTarefa = novaTarefaNome.trim();
     if (!nomeTarefa) return;
@@ -989,7 +1018,7 @@ function EditorAssuntoModal({
           Nome do assunto
           <input
             value={nome}
-            disabled={normalizarTexto(materia.nome) === "portugues"}
+            disabled={estruturaProtegida || assunto.origemConteudo === "curso"}
             onChange={(e) => setNome(e.target.value)}
           />
         </label>
@@ -1029,11 +1058,16 @@ function EditorAssuntoModal({
           <p>As aulas são etapas internas e não aparecem como assuntos separados no edital.</p>
           {aulas.map((aula, indice) => (
             <div key={aula.id} className="conteudos-editor-item">
-              <span>{indice + 1}. {aula.nome}</span>
-              {!trilhaFixa && <button type="button" onClick={() => setAulas((atuais) => atuais.filter((item) => item.id !== aula.id))}>Remover</button>}
+              {estruturaProtegida || aula.origemCurso ? <span>{indice + 1}. {aula.nome}</span> : <>
+                <input aria-label={`Nome da aula ${indice + 1}`} value={aula.nome}
+                  onChange={e => atualizarAula(aula.id, { nome: e.target.value })} />
+                <input aria-label={`Link da aula ${indice + 1}`} value={aula.url ?? ""}
+                  onChange={e => atualizarAula(aula.id, { url: e.target.value })} />
+                <button type="button" onClick={() => setAulas(atuais => atuais.filter(item => item.id !== aula.id))}>Remover</button>
+              </>}
             </div>
           ))}
-          {!trilhaFixa && (
+          {!estruturaProtegida && (
             <div className="conteudos-editor-adicionar">
               <input value={novaAulaNome} onChange={(e) => setNovaAulaNome(e.target.value)} placeholder="Nome da aula ou parte" />
               <input value={novaAulaUrl} onChange={(e) => setNovaAulaUrl(e.target.value)} placeholder="Link da videoaula (opcional)" />
@@ -1105,6 +1139,7 @@ function EditorAssuntoModal({
           </button>
           <button
             type="button"
+            disabled={aulas.some(aula => !aula.nome.trim())}
             onClick={() =>
               onSave({
                 nome: nome.trim() || assunto.nome,
@@ -1112,9 +1147,9 @@ function EditorAssuntoModal({
                 resumo,
                 anotacoes,
                 materiais,
-                aulas: aulas.map((aula, ordem) => ({ ...aula, ordem })),
+                aulas: aulas.map((aula, ordem) => ({ ...aula, nome: aula.nome.trim(), url: aula.url?.trim() || undefined, ordem })),
                 tarefas: tarefas.map((tarefa, ordem) => ({ ...tarefa, ordem })),
-                aula: aulas[0]?.url,
+                aula: aulas.length ? aulas[0].url?.trim() || undefined : assunto.aulas?.length ? undefined : assunto.aula,
               })
             }
           >

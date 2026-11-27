@@ -6,6 +6,7 @@ import { build } from "esbuild";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { parseHTML } from "linkedom";
+import { gerarMateriasDoPlano } from "../src/utils/materiasDoPlano";
 import { criarDadosIniciaisDaConta } from "../src/utils/contaInicial";
 
 test("Provider real cria vazio, troca conta sem herdar estado e descarta fila anterior ao reinício", async () => {
@@ -14,13 +15,28 @@ test("Provider real cria vazio, troca conta sem herdar estado e descarta fila an
   const nuvem = new Map<string, any>();
   const ambiente: any = { usuario: { id: "conta-a", user_metadata: { nome: "Ana" } } };
   const supabase = {
+    rpc(nome: string, dados: { p_expected_revision: number; p_estado: object }) {
+      assert.equal(nome, "salvar_estado_app_cas");
+      const usuario = ambiente.usuario.id;
+      const revisaoAtual = nuvem.get(usuario)?.syncRevision ?? 0;
+      const ok = revisaoAtual === dados.p_expected_revision;
+      const revisao = revisaoAtual + Number(ok);
+      if (ok) nuvem.set(usuario, { ...structuredClone(dados.p_estado), syncRevision: revisao });
+      return Promise.resolve({ data: [{ ok, revisao_atual: revisao }], error: null });
+    },
     from(tabela: string) {
       let uid = "";
       const query: any = {
         select() { return query; }, eq(_campo: string, valor: string) { uid = valor; return query; },
         order() { return query; }, limit() { return Promise.resolve({ data: [], error: null }); },
         maybeSingle() { return Promise.resolve({ data: nuvem.has(uid) ? { user_id: uid, dados: { appState: structuredClone(nuvem.get(uid)) } } : null, error: null }); },
-        upsert(linha: any) { assert.equal(tabela, "configuracoes"); nuvem.set(linha.user_id, structuredClone(linha.dados.appState)); return Promise.resolve({ error: null }); },
+        upsert(linha: any) {
+          if (tabela !== "backups") {
+            assert.equal(tabela, "configuracoes");
+            nuvem.set(linha.user_id, structuredClone(linha.dados.appState));
+          }
+          return Promise.resolve({ error: null });
+        },
       };
       return query;
     },
@@ -64,6 +80,28 @@ test("Provider real cria vazio, troca conta sem herdar estado e descarta fila an
     nuvem.set("conta-a", anterior);
     await render("reabrir");
     assert.equal(atual.materias.length, 1);
+    const aula = { id: "minha-aula", nome: "Crase", ordem: 0, concluida: true, concluidaEm: anterior.salvoEm };
+    const assunto = { id: "meu-assunto", nome: "Crase", prioridade: "media", concluido: true, aulas: [aula] };
+    const manual = { id: "portugues-manual", nome: "Português", origemConteudo: "manual",
+      assuntos: [assunto], modulos: [{ id: "meu-modulo", nome: "Oficina", ordem: 0, assuntos: [assunto] }] };
+    const oficial = gerarMateriasDoPlano().find(m => m.id === "portugues");
+    assert.ok(oficial);
+    const referencia = { materiaId: manual.id, moduloId: "meu-modulo", assuntoId: assunto.id,
+      materia: manual.nome, modulo: "Oficina", assunto: assunto.nome };
+    const sessaoEstudo = { ...referencia, id: "sessao-manual", aulaId: aula.id, data: anterior.salvoEm,
+      tipo: "aula", minutos: 15 };
+    const revisao = { ...referencia, id: "revisao-manual", etapa: 1, dataCriacao: anterior.salvoEm,
+      dataPrevista: anterior.salvoEm, concluida: false };
+    nuvem.set("conta-a", { ...anterior, materias: [oficial, manual], sessoes: [sessaoEstudo], revisoes: [revisao],
+      configuracoes: { ...anterior.configuracoes, planoPadraoAtivo: true }, syncRevision: anterior.syncRevision + 1 });
+    await render("recarregar-portugues");
+    const preservada = atual.materias.find((materia: { id: string }) => materia.id === manual.id);
+    assert.equal(preservada.origemConteudo, "manual");
+    assert.deepEqual(preservada.modulos.map((modulo: { id: string }) => modulo.id), ["meu-modulo"]);
+    assert.equal(preservada.assuntos[0].aulas[0].id, aula.id);
+    assert.equal(preservada.assuntos[0].aulas[0].concluidaEm, aula.concluidaEm);
+    assert.deepEqual(atual.sessoes.find((item: { id: string }) => item.id === sessaoEstudo.id), sessaoEstudo);
+    assert.deepEqual(atual.revisoes.find((item: { id: string }) => item.id === revisao.id), revisao);
     ambiente.usuario = { id: "conta-b", user_metadata: { nome: "Bruno" } };
     await render("reabrir");
     assert.equal(document.querySelector("output")?.textContent, "Bruno:0");

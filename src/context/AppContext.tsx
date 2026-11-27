@@ -1,3 +1,4 @@
+import { CURSO_PORTUGUES_ID, ehConteudoOficialPortugues, ehTrilhaOficialPortugues } from "../data/cursoPortugues";
 import { lazy, Suspense } from "react";
 import { fsrsCompartilhamentoHabilitado } from "../services/inteligenciaRevisao/flagCompartilhamento";
 /* Contexto exporta Provider e hook intencionalmente no mesmo módulo. */
@@ -229,11 +230,15 @@ function reconciliarMateriasComPlano(
   const resultado: Materia[] = [];
 
   materiasNormalizadas.forEach((materiaSalva) => {
+    if (materiaSalva.origemConteudo === "manual") {
+      resultado.push(materiaSalva);
+      return;
+    }
     const materiaPlano = materiasDoPlano.find(
-      (materia) =>
-        materia.id === materiaSalva.id ||
-        normalizarTexto(materia.nome) ===
-          normalizarTexto(materiaSalva.nome)
+      (materia) => materia.id === CURSO_PORTUGUES_ID
+        ? ehTrilhaOficialPortugues(materiaSalva)
+        : materia.id === materiaSalva.id ||
+          normalizarTexto(materia.nome) === normalizarTexto(materiaSalva.nome)
     );
 
     if (!materiaPlano) {
@@ -251,16 +256,17 @@ function reconciliarMateriasComPlano(
     // Português é uma trilha canônica: os módulos/aulas vêm do curso comprado.
     // Preservamos progresso, notas e materiais apenas quando a aula atual
     // corresponde a uma aula da nova trilha.
-    if (normalizarTexto(materiaPlano.nome) === "portugues") {
-      const assuntosSalvos = listarAssuntosDaMateria(materiaSalva);
+    if (materiaPlano.id === CURSO_PORTUGUES_ID) {
+      const modulosSalvos = listarModulosDaMateria(materiaSalva);
+      const assuntosSalvos = modulosSalvos.flatMap(modulo => modulo.assuntos).filter(ehConteudoOficialPortugues);
+      const idsOficiais = new Set(materiaPlano.assuntos.map(assunto => assunto.id));
 
       const modulos = listarModulosDaMateria(materiaPlano).map((moduloPlano) => ({
         ...moduloPlano,
-        assuntos: moduloPlano.assuntos.map((assuntoPlano) => {
+        assuntos: [...moduloPlano.assuntos.map((assuntoPlano) => {
           const assuntoSalvo = assuntosSalvos.find(
             (assunto) =>
-              assunto.id === assuntoPlano.id ||
-              normalizarTexto(assunto.nome) === normalizarTexto(assuntoPlano.nome)
+              assunto.id === assuntoPlano.id
           );
 
           return reconciliarAssuntoPortugues(
@@ -268,14 +274,19 @@ function reconciliarMateriasComPlano(
             assuntoSalvo,
             assuntosSalvos
           );
-        }),
+        }), ...(modulosSalvos.find(modulo => modulo.id === moduloPlano.id)?.assuntos ?? [])
+          .filter(assunto => !idsOficiais.has(assunto.id))],
       }));
+      const idsModulos = new Set(modulos.map(modulo => modulo.id));
+      for (const modulo of modulosSalvos) {
+        if (idsModulos.has(modulo.id)) continue;
+        const assuntos = modulo.assuntos.filter(assunto => !idsOficiais.has(assunto.id));
+        if (assuntos.length || !modulo.assuntos.length) modulos.push({ ...modulo, assuntos });
+      }
 
       const reconciliada = migrarMateriasParaModulos([
         {
-          ...materiaPlano,
-          id: materiaPlano.id,
-          nome: materiaPlano.nome,
+          ...materiaSalva,
           modulos,
           assuntos: modulos.flatMap((modulo) => modulo.assuntos),
         },
@@ -399,7 +410,8 @@ function reconciliarMateriasComPlano(
     const existe = resultado.some(
       (materia) =>
         materia.id === materiaPlano.id ||
-        normalizarTexto(materia.nome) === normalizarTexto(materiaPlano.nome)
+        (materiaPlano.id !== CURSO_PORTUGUES_ID &&
+          normalizarTexto(materia.nome) === normalizarTexto(materiaPlano.nome))
     );
 
     if (!existe) {
@@ -453,7 +465,7 @@ function reconciliarAssuntoPortugues(
   assuntoSalvo: Assunto | undefined,
   assuntosSalvos: Assunto[]
 ): Assunto {
-  const aulas = (assuntoPlano.aulas ?? []).map((aulaPlano) => {
+  const aulasOficiais = (assuntoPlano.aulas ?? []).map((aulaPlano) => {
     const aulaSalva = assuntoSalvo?.aulas?.find(
       (aula) =>
         aula.id === aulaPlano.id ||
@@ -505,6 +517,9 @@ function reconciliarAssuntoPortugues(
       progresso: aulaSalva?.progresso,
     };
   });
+
+  const idsAulas = new Set(aulasOficiais.map(aula => aula.id));
+  const aulas = [...aulasOficiais, ...(assuntoSalvo?.aulas ?? []).filter(aula => !idsAulas.has(aula.id))];
 
   const todasAsAulasConcluidas =
     aulas.length > 0 && aulas.every((aula) => aula.concluida);
@@ -635,9 +650,7 @@ function recuperarHistoricoPortugues(
   sessoes: SessaoEstudo[],
   revisoes: Revisao[]
 ): Materia[] {
-  const portugues = materias.find(
-    (materia) => normalizarTexto(materia.nome) === "portugues"
-  );
+  const portugues = materias.find(ehTrilhaOficialPortugues);
 
   if (!portugues) return materias;
 
@@ -685,7 +698,8 @@ function recuperarHistoricoPortugues(
   idsConcluidos.forEach((id) => registrarMissao(id));
 
   sessoes.forEach((sessao) => {
-    if (normalizarTexto(sessao.materia) !== "portugues") return;
+    if (sessao.materiaId && sessao.materiaId !== portugues.id &&
+        !portugues.idsLegados?.includes(sessao.materiaId)) return;
 
     if (sessao.missaoId) {
       registrarMissao(
@@ -695,6 +709,8 @@ function recuperarHistoricoPortugues(
       return;
     }
 
+    if (!sessao.materiaId && (normalizarTexto(sessao.materia) !== "portugues" ||
+        materias.some(materia => materia.id !== portugues.id && normalizarTexto(materia.nome) === "portugues"))) return;
     // Compatibilidade com sessões antigas que não possuíam missaoId.
     const nomeAssunto = normalizarTexto(sessao.assunto);
     const missao = missoesPortugues.find(
@@ -706,14 +722,15 @@ function recuperarHistoricoPortugues(
   });
 
   revisoes.forEach((revisao) => {
-    if (normalizarTexto(revisao.materia) !== "portugues") return;
+    if (revisao.materiaId !== portugues.id && !portugues.idsLegados?.includes(revisao.materiaId)) return;
 
     const data = revisao.dataCriacao || revisao.dataConclusao;
-    const assuntoCanonico = listarAssuntosDaMateria(portugues).find(
-      (assunto) =>
-        assunto.id === revisao.assuntoId ||
-        normalizarTexto(assunto.nome) === normalizarTexto(revisao.assunto)
-    );
+    const daTrilha = listarAssuntosDaMateria(portugues);
+    const porId = daTrilha.find(assunto => assunto.id === revisao.assuntoId);
+    if (porId && !ehConteudoOficialPortugues(porId)) return;
+    const homonimos = daTrilha.filter(assunto => normalizarTexto(assunto.nome) === normalizarTexto(revisao.assunto));
+    const assuntoCanonico = porId ?? (homonimos.length === 1 && ehConteudoOficialPortugues(homonimos[0]) ? homonimos[0] : undefined);
+    if (!assuntoCanonico && homonimos.some(assunto => !ehConteudoOficialPortugues(assunto))) return;
 
     if (assuntoCanonico) {
       assuntosConcluidos.add(assuntoCanonico.id);

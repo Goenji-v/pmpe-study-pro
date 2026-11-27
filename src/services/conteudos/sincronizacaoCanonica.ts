@@ -1,3 +1,4 @@
+import { CURSO_PORTUGUES_ID, CURSO_PORTUGUES_NOME, ehTrilhaOficialPortugues } from "../../data/cursoPortugues";
 import { obterReferenciasDaMissao, planoPMPE, type MissaoPlano } from "../../data/planoPMPE";
 import type {
   Assunto,
@@ -51,35 +52,25 @@ export function localizarReferenciaCanonica(
   const porIds = localizarPorIds(materias, entrada);
   if (porIds) return porIds;
 
+  const materiaIdentificada = entrada.materiaId ? materias.find(item => item.id === entrada.materiaId) ??
+    materias.find(item => item.idsLegados?.includes(entrada.materiaId!)) : undefined;
+
   if (entrada.missaoId) {
     const missao = missoesPorId.get(entrada.missaoId);
-    const porMissao = missao
-      ? localizarReferenciaDaMissao(materias, missao)
-      : null;
-    if (porMissao) return porMissao;
+    const porMissao = missao ? localizarReferenciaDaMissao(materias, missao) : null;
+    if (porMissao && (!materiaIdentificada || porMissao.materia.id === materiaIdentificada.id)) return porMissao;
   }
 
-  const materia = materias.find(
-    (item) =>
-      Boolean(
-        entrada.materiaId &&
-          (item.id === entrada.materiaId ||
-            item.idsLegados?.includes(entrada.materiaId))
-      ) ||
-      Boolean(
-        entrada.materia &&
-          (
-            normalizar(item.nome) === normalizar(entrada.materia) ||
-            materiasEquivalentes(item.nome, entrada.materia)
-          )
-      )
-  );
-
-  if (materia) {
+  const candidatas = entrada.materia ? materias.filter(item => materiasEquivalentes(item.nome, entrada.materia!)) : [];
+  const portuguesa = Boolean(entrada.materia && materiasEquivalentes(entrada.materia, CURSO_PORTUGUES_NOME));
+  const materia = materiaIdentificada ?? (portuguesa && candidatas.length > 1 ? undefined : candidatas[0]);
+  if (materia && !(entrada.assuntoId && materiaIdentificada &&
+      (materia.origemConteudo === "manual" || (portuguesa && !ehTrilhaOficialPortugues(materia))))) {
     const porNomes = localizarDentroDaMateria(materia, entrada);
     if (porNomes) return porNomes;
   }
 
+  if (portuguesa && (!materia || !ehTrilhaOficialPortugues(materia))) return null;
   // Compatibilidade com versões em que Português guardava a videoaula como
   // assunto independente (ex.: "Sílaba - Parte 1"). O Plano já conhece o
   // assunto/aula canônicos e funciona como alias seguro.
@@ -112,7 +103,7 @@ export function criarDadosSessaoDaMissao(
   const materiaPorNome = materias.find(
     (item) => normalizar(item.nome) === normalizar(missao.materia)
   );
-  const materia = materiaPorId ?? materiaPorNome;
+  const materia = materiaPorId ?? (referencias[0]?.materiaId === CURSO_PORTUGUES_ID ? undefined : materiaPorNome);
   const localizacao = materia ? localizarConteudoDaMissao(materia, missao) : null;
 
   return {
@@ -229,11 +220,8 @@ function localizarPorIds(
 ): ReferenciaCanonica | null {
   if (!entrada.materiaId || !entrada.assuntoId) return null;
 
-  const materia = materias.find(
-    (item) =>
-      item.id === entrada.materiaId ||
-      item.idsLegados?.includes(entrada.materiaId as string)
-  );
+  const materia = materias.find(item => item.id === entrada.materiaId) ??
+    materias.find(item => item.idsLegados?.includes(entrada.materiaId as string));
   if (!materia) return null;
 
   const modulos = listarModulosDaMateria(materia);

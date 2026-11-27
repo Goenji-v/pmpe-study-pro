@@ -136,6 +136,7 @@ export type Modulo = {
 export type Materia = {
   id: string;
   nome: string;
+  origemConteudo?: "manual";
   /** IDs de matérias antigas aceitos para remapear histórico sem apagar dados. */
   idsLegados?: string[];
   /** Estrutura canônica a partir da versão 2. */

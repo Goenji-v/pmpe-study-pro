@@ -83,6 +83,7 @@ export function migrarMateriaParaModulos(
   return {
     id: materia.id,
     nome: materia.nome,
+    ...(materia.origemConteudo === "manual" ? { origemConteudo: "manual" as const } : {}),
     idsLegados: Array.isArray(materia.idsLegados)
       ? materia.idsLegados.filter((id): id is string => typeof id === "string")
       : undefined,

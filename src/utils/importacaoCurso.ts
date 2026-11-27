@@ -569,7 +569,14 @@ export function aplicarCursosAtivosNasMaterias(
     for (const materiaCurso of curso.materias) {
       if (materiaCurso.categoria && materiaCurso.categoria !== "disciplina") continue;
       const chave = slugCurso(materiaCurso.nome);
-      let indice = base.findIndex((m) => slugCurso(m.nome) === chave);
+      const modulosDoCurso = new Set(materiaCurso.modulos.map(modulo => `curso:${curso.id}:modulo:${modulo.id}`));
+      const vinculada = materiasAtuais.find(materia => (materia.modulos ?? []).some(modulo =>
+        modulosDoCurso.has(modulo.id) || modulo.assuntos.some(assunto => assunto.aulas?.some(({ origemCurso }) =>
+          origemCurso?.cursoId === curso.id && origemCurso.materiaCursoId === materiaCurso.id
+        ))
+      ));
+      let indice = vinculada ? base.findIndex(materia => materia.id === vinculada.id) : -1;
+      if (indice < 0) indice = base.findIndex((m) => slugCurso(m.nome) === chave);
       if (indice < 0) indice = base.findIndex(m => identificarMateriaCurso(m.nome) === materiaCurso.nome);
       if (indice < 0) { base.push({ id: `curso-materia-${chave}`, nome: materiaCurso.nome, modulos: [], assuntos: [] }); indice = base.length - 1; }
       const atual = base[indice];

@@ -1,6 +1,7 @@
-import type { Assunto, AulaAssunto, Modulo, Prioridade } from "../types";
+import type { Assunto, AulaAssunto, Materia, Modulo, Prioridade } from "../types";
 
 export const CURSO_PORTUGUES_NOME = "Português";
+export const CURSO_PORTUGUES_ID = "portugues";
 
 type AulaBase = [id: string, nome: string, classId: number];
 
@@ -178,3 +179,26 @@ export const cursoPortuguesModulos: Modulo[] = [
 ];
 
 export const cursoPortuguesAssuntos = cursoPortuguesModulos.flatMap((modulo) => modulo.assuntos);
+
+const idsModulosPortugues = new Set(cursoPortuguesModulos.map(modulo => modulo.id));
+const aulasPortugues = cursoPortuguesAssuntos.flatMap(assunto => assunto.aulas ?? []);
+const idsConteudoPortugues = new Set([...cursoPortuguesAssuntos, ...aulasPortugues].map(item => item.id));
+const urlsPortugues = new Set(aulasPortugues.map(aula => aula.url).filter(Boolean));
+
+export function ehModuloOficialPortugues(id: string) {
+  return idsModulosPortugues.has(id);
+}
+
+export function ehConteudoOficialPortugues(assunto: Assunto) {
+  return assunto.origemConteudo !== "manual" && (idsConteudoPortugues.has(assunto.id) ||
+    (!!assunto.aula && urlsPortugues.has(assunto.aula)) ||
+    (assunto.aulas ?? []).some(aula => idsConteudoPortugues.has(aula.id) || (!!aula.url && urlsPortugues.has(aula.url))));
+}
+
+export function ehTrilhaOficialPortugues(materia: Materia) {
+  return materia.origemConteudo !== "manual" && materia.id === CURSO_PORTUGUES_ID && (
+    (materia.modulos ?? []).some(modulo =>
+      ehModuloOficialPortugues(modulo.id) || modulo.assuntos.some(ehConteudoOficialPortugues)
+    ) || materia.assuntos.some(ehConteudoOficialPortugues)
+  );
+}
