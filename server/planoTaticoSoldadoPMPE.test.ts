@@ -26,7 +26,7 @@ test("planeja três dias de Português e usa somente aulas e revisões pendentes
   const materias = [
     materia("port", "Português", [true, false, false]),
     materia("info", "Informática", [false, false]),
-    materia("red", "Redação", [false]),
+    materia("red", "Produção textual", [false]),
   ];
   const revisoes = [
     revisao("pendente", "Informática", "2026-11-25"),
@@ -42,7 +42,7 @@ test("planeja três dias de Português e usa somente aulas e revisões pendentes
   assert.deepEqual([...new Set(plano.tarefas.filter((item) => item.materia === "Português").map((item) => item.dia))], [1, 4, 7]);
   assert.deepEqual(plano.tarefas.filter((item) => item.revisaoId).map((item) => item.revisaoId), ["pendente"]);
   assert.ok(plano.tarefas.some((item) => item.aulaId === "info-aula-0"));
-  assert.ok(plano.tarefas.every((item) => item.materia !== "Redação" && item.aulaId !== "port-aula-0"));
+  assert.ok(plano.tarefas.every((item) => item.materia !== "Redação" && item.materia !== "Produção textual" && item.aulaId !== "port-aula-0"));
   assert.ok(plano.tarefas.some((item) => item.tipo === "questoes"));
   assert.equal(JSON.stringify({ materias, revisoes }), snapshot);
   for (const dia of [1, 4, 7]) {

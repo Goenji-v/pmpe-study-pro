@@ -6,7 +6,7 @@ function normalizar(valor: string) {
 }
 
 export function ehRedacaoNoTatico(materia: string) {
-  return /^(?:tecnica de )?redacao\b/.test(normalizar(materia));
+  return /^(?:(?:tecnica de )?redacao|producao textual)\b/.test(normalizar(materia));
 }
 
 type Vinculo = Required<Pick<TarefaCronogramaIA, "materiaId" | "assuntoId">> &
@@ -53,7 +53,7 @@ export function montarTaticoSoldadoPMPE({
   materias, revisoes, periodo, diasPorSemana, minutos, questoesPorSessao, agora = new Date(),
 }: Entrada): CronogramaGeradoIA {
   const assuntos = listarAssuntos(materias);
-  const portugues = assuntos.filter((item) => normalizar(item.materia) === "portugues");
+  const portugues = assuntos.filter((item) => /^(?:lingua )?portugues(?:a)?$/.test(normalizar(item.materia)));
   const quantidadeDias = periodo === "hoje" ? 1 : Math.min(7, Math.max(portugues.length ? 3 : 1, diasPorSemana));
   const dias = Array.from({ length: quantidadeDias }, (_, indice) =>
     quantidadeDias === 1 ? 1 : 1 + Math.round(indice * 6 / (quantidadeDias - 1)));
