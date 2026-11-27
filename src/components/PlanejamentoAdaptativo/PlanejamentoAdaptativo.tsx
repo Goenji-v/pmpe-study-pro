@@ -11,7 +11,7 @@ const nomeDia = (dia: string) => dia.split("-").reverse().slice(0, 2).join("/");
 type Opcoes = Limites & { retencao: number };
 export type PreferenciasAdaptativas = { opcoes?: Opcoes; datas?: Record<string, string> };
 type Props = EntradaPlano & {
-  modo: "revisoes" | "calendario";
+  modo: "revisoes" | "calendario" | "desempenho";
   estudar?: (item: Agendamento, plano: PlanoAdaptativo) => void;
   demonstracao?: boolean;
   preferencias?: PreferenciasAdaptativas;
@@ -31,7 +31,8 @@ export default function PlanejamentoAdaptativo(props: Props) {
   const [filtro, setFiltro] = useState("hoje");
   const [periodo, setPeriodo] = useState(7);
   const hoje = diaEstudo(props.agora);
-  const [dia, setDia] = useState(hoje);
+  const [diaSelecionado, setDia] = useState(hoje);
+  const dia = diaSelecionado < hoje ? hoje : diaSelecionado;
   const { materias, revisoes, diario, compromissos, agora, prova, edital } = props;
 
   const entrada = useMemo(() => ({ materias, revisoes, diario: { ...diario, retencao: opcoes.retencao },
@@ -46,22 +47,31 @@ export default function PlanejamentoAdaptativo(props: Props) {
 
   const plano = resultado.plano;
   const itens = plano?.agenda.filter(r => filtro === "hoje" ? r.agendada === hoje :
-    filtro === "atrasadas" ? r.ideal < hoje : filtro === "sem-vaga" ? !r.agendada && r.ideal <= somarDia(hoje, 29) :
+    filtro === "atrasadas" ? (r.dueAt ? Date.parse(r.dueAt) < +agora : r.ideal < hoje) :
+    filtro === "sem-vaga" ? !r.agendada && r.ideal <= somarDia(hoje, 29) :
     filtro === "criticas" ? r.primeira || r.recorrente || (r.retencao ?? 1) < .65 :
     filtro === "proximas" ? r.agendada && r.agendada > hoje : true) ?? [];
   const estados = plano ? [...plano.dados.values()] : [];
   const revisoesFeitas = estados.flatMap(item => item.estado.historico.filter(x => x.log).map(x => ({ ...x, ...item.candidato })))
     .sort((a, b) => Date.parse(b.ocorridoEm) - Date.parse(a.ocorridoEm));
   const diaAtivo = plano?.dias.find(d => d.dia === dia);
+  const pronto = (item: Agendamento) => !!item.agendadaEm && item.agendada === hoje &&
+    (!item.dueAt || Date.parse(item.dueAt) <= +agora);
+  const horarioAtual = (item: Agendamento) => item.agendadaEm && Date.parse(item.agendadaEm) >= +agora
+    ? item.horarioSugerido : undefined;
+  const desempenho = props.modo === "desempenho";
+  const historico = <ul className="plano-lista">{revisoesFeitas.slice(0, 30).map(h =>
+    <li key={h.chave}>{nomeDia(diaEstudo(new Date(h.ocorridoEm)))} · {h.materia} · {h.assunto} · {h.avaliacao.motivo}</li>)}</ul>;
 
   return (
-    <section className="plano-adaptativo" aria-label="Planejamento adaptativo">
+    <section className="plano-adaptativo" aria-label={desempenho ? "Desempenho nas revisões adaptativas" : "Planejamento adaptativo"}>
       <header>
-        <div><h2>{props.modo === "calendario" ? "Agenda adaptativa" : "Inteligência de revisões"}</h2>
-          <p>{props.demonstracao ? "Demonstração local com dados sintéticos." : "Projeção experimental. A agenda oficial continua disponível abaixo."}</p></div>
-        {plano && <span className="plano-estado">{plano.previsoes[0].estado}</span>}
+        <div><h2>{desempenho ? "Desempenho nas revisões adaptativas" : props.modo === "calendario" ? "Agenda adaptativa" : "Inteligência de revisões"}</h2>
+          {!desempenho && <p>{props.demonstracao ? "Demonstração local com dados sintéticos." :
+            "Projeção experimental no horário de Brasília. A agenda oficial continua disponível abaixo."}</p>}</div>
+        {plano && !desempenho && <span className="plano-estado">{plano.previsoes[0].estado}</span>}
       </header>
-      <details>
+      {!desempenho && <details>
         <summary>Configurar disponibilidade e retenção</summary>
         <form className="plano-opcoes" onSubmit={e => {
           e.preventDefault();
@@ -84,14 +94,14 @@ export default function PlanejamentoAdaptativo(props: Props) {
             <input type="checkbox" name="dia" value={i} defaultChecked={opcoes.semana.includes(i)} />{nome}</label>)}</fieldset>
           <button type="submit">Recalcular agenda</button>
         </form>
-      </details>
+      </details>}
 
       {resultado.erro && <p role="alert">Não foi possível calcular a agenda. Confira os dados e recalcule.</p>}
       {!plano && !resultado.erro && <p role="status">Calculando agenda…</p>}
-      {props.checkpoint && <CheckpointAdaptativo escopo={props.checkpoint}
+      {!desempenho && props.checkpoint && <CheckpointAdaptativo escopo={props.checkpoint}
         entrada={resultado.entrada === entrada ? entrada : undefined} plano={plano} />}
-      {props.compartilhar && <CheckpointCompartilhado entrada={resultado.entrada === entrada ? entrada : undefined} plano={plano} />}
-      {plano && <>
+      {!desempenho && props.compartilhar && <CheckpointCompartilhado entrada={resultado.entrada === entrada ? entrada : undefined} plano={plano} />}
+      {plano && (desempenho ? (revisoesFeitas.length ? historico : <p>Sem revisões medidas.</p>) : <>
         <div className="plano-previsoes" aria-label="Previsão de carga">
           {plano.previsoes.map(p => <article key={p.horizonte}>
             <strong>{p.horizonte} dias · {p.estado}</strong>
@@ -121,8 +131,11 @@ export default function PlanejamentoAdaptativo(props: Props) {
           {!!diaAtivo?.estimadas && <p>{diaAtivo.estimadas} revisões futuras estimadas</p>}
           {[...new Set(plano.agenda.filter(r => r.agendada === dia).map(r => r.materia))].map(materia =>
             <details key={materia} open><summary>{materia}</summary>
-              {plano.agenda.filter(r => r.agendada === dia && r.materia === materia).map(r => <p key={r.unidadeId}>
-                <strong>{r.assunto}</strong> · {r.horarioSugerido && `${r.horarioSugerido} sugerido · `}{r.motivo}</p>)}
+              {plano.agenda.filter(r => r.agendada === dia && r.materia === materia)
+                .sort((a, b) => (a.agendadaEm ?? "").localeCompare(b.agendadaEm ?? "")).map(r => <div key={r.unidadeId}>
+                  <p><strong>{r.assunto}</strong> · {horarioAtual(r) && `${horarioAtual(r)} sugerido · `}{r.motivo}</p>
+                  {props.estudar && pronto(r) && <button type="button" onClick={() => props.estudar?.(r, plano)}>Revisar {r.assunto}</button>}
+                </div>)}
             </details>)}
 
           {!diaAtivo?.fixos.length && !diaAtivo?.revisoes && !diaAtivo?.estimadas && <p>Dia sem atividades planejadas.</p>}
@@ -133,12 +146,11 @@ export default function PlanejamentoAdaptativo(props: Props) {
             <option value="criticas">Críticas</option><option value="sem-vaga">Sem vaga</option>
             <option value="concluidas">Concluídas</option><option value="todas">Todas</option>
           </select></label>
-          {filtro === "concluidas" ? (revisoesFeitas.length ? <ul className="plano-lista">{revisoesFeitas.slice(0, 30).map(h =>
-            <li key={h.chave}>{h.materia} · {h.assunto} · {h.avaliacao.motivo}</li>)}</ul> : <p>Sem revisões medidas.</p>) :
+          {filtro === "concluidas" ? (revisoesFeitas.length ? historico : <p>Sem revisões medidas.</p>) :
             itens.length ? <ul className="plano-lista">{itens.map(r => {
               const info = plano.dados.get(r.unidadeId)!;
               return <li key={r.unidadeId}>
-                <div><strong>{r.assunto}</strong><p>{r.materia} · {r.minutos} min · {r.agendada ? nomeDia(r.agendada) : "Sem vaga"}{r.horarioSugerido && ` · ${r.horarioSugerido} sugerido`}</p></div>
+                <div><strong>{r.assunto}</strong><p>{r.materia} · {r.minutos} min · {r.agendada ? nomeDia(r.agendada) : "Sem vaga"}{horarioAtual(r) && ` · ${horarioAtual(r)} sugerido`}</p></div>
                 <p>{r.motivo} {info.orientacao.modo}. {info.orientacao.acao}</p>
                 <small>Ideal {nomeDia(r.ideal)} · prazo {nomeDia(r.limite)} · {r.retencao === undefined ? "Sem estimativa de retenção" :
                   `Retenção estimada ${Math.round(r.retencao * 100)}%`} {info.estado.cartao && `· Dificuldade ${info.estado.cartao.difficulty.toFixed(1)}`}</small>
@@ -149,7 +161,7 @@ export default function PlanejamentoAdaptativo(props: Props) {
                       setAjustes(datas);
                       props.salvarPreferencias?.({ opcoes, datas });
                     }} /></label>}
-                  {props.estudar && <button type="button" onClick={() => props.estudar?.(r, plano)}>Revisar {r.assunto}</button>}
+                  {props.estudar && pronto(r) && <button type="button" onClick={() => props.estudar?.(r, plano)}>Revisar {r.assunto}</button>}
                 </div>
               </li>;
             })}</ul> : <p>Nenhuma revisão neste filtro.</p>}
@@ -163,7 +175,7 @@ export default function PlanejamentoAdaptativo(props: Props) {
           </details>}
         </>}
         {!!plano.reconciliacao.pendentes.length && <p>{plano.reconciliacao.pendentes.length} registro(s) aguardam reconciliação.</p>}
-      </>}
+      </>)}
     </section>
   );
 }

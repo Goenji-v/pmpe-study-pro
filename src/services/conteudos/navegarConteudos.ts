@@ -207,13 +207,16 @@ export function ehAssuntoVisaoCurso(assuntoId?: string) {
 export function obterModuloOriginalDoAssuntoVisaoCurso(
   assuntoId: string
 ) {
+  return obterOrigemDoAssuntoVisaoCurso(assuntoId)?.moduloId;
+}
+
+export function obterOrigemDoAssuntoVisaoCurso(assuntoId: string) {
   if (!ehAssuntoVisaoCurso(assuntoId)) return undefined;
-  const [moduloCodificado] = assuntoId
+  const [moduloCodificado, assuntoCodificado] = assuntoId
     .slice(PREFIXO_ASSUNTO_CURSO_VISAO.length)
     .split("::");
-  return moduloCodificado
-    ? decodificar(moduloCodificado)
-    : undefined;
+  if (!moduloCodificado) return undefined;
+  return { moduloId: decodificar(moduloCodificado), assuntoId: assuntoCodificado ? decodificar(assuntoCodificado) : undefined };
 }
 
 export function obterOrigemDaAulaVisaoCurso(

@@ -8,31 +8,44 @@ import { useFsrsCompartilhado } from "./contextoFsrsCompartilhado";
 import { combinarObservacoes } from "../../services/inteligenciaRevisao/sincronizacao";
 import { observarQuestoesIA, observarSessoes } from "../../services/inteligenciaRevisao/eventos";
 import { versaoMemoria, type DiarioMemoria } from "../../services/inteligenciaRevisao/memoria";
-import { armazenamentoSessaoDaConta } from "../../services/armazenamentoConta";
 import { indexarPlanoPorData } from "../../utils/planoAtivo";
 import type { ConfiguracoesComEdital, DiaSemanaId } from "../../types/editalInteligente";
 import type { Compromisso } from "../../services/inteligenciaRevisao/agenda";
 import PlanejamentoAdaptativo, { type PreferenciasAdaptativas } from "./PlanejamentoAdaptativo";
 
 const dias: DiaSemanaId[] = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+const tiposDeCompromisso = { revisao: "revisao", questoes: "questoes", simulado: "simulado", redacao: "compromisso",
+  livre: "compromisso", conteudo: "aula" } as const satisfies Record<string, Compromisso["tipo"]>;
 
-export default function PlanejamentoDaConta({ modo }: { modo: "revisoes" | "calendario" }) {
+export default function PlanejamentoDaConta({ modo }: { modo: "revisoes" | "calendario" | "desempenho" }) {
   const { usuario } = useAuth();
   const sync = useFsrsCompartilhado();
   const { materias, sessoes, questoes, revisoes, configuracoes, missoesConcluidas } = useApp();
   const planoAtivo = usePlanoAtivo();
   const navigate = useNavigate();
   const edital = configuracoes as ConfiguracoesComEdital;
-  const [relogio, marcarHora] = useState(() => new Date());
+  const [relogio, marcarHora] = useState(Date.now);
   useEffect(() => {
-    const timer = window.setInterval(() => marcarHora(new Date()), 60_000);
-    return () => window.clearInterval(timer);
+    const atualizar = () => marcarHora(Date.now());
+    const timer = window.setInterval(atualizar, 30_000);
+    window.addEventListener("focus", atualizar);
+    document.addEventListener("visibilitychange", atualizar);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", atualizar);
+      document.removeEventListener("visibilitychange", atualizar);
+    };
   }, []);
-  const fim = sessoes.at(-1)?.finalizadaEm ?? "";
-  const agora = useMemo(() => new Date(Math.max(+relogio, Math.min(Date.now(), Date.parse(fim) || 0))), [relogio, fim]);
   const diario = useMemo<DiarioMemoria>(() => ({ versao: versaoMemoria, retencao: sync?.fila.confirmado?.checkpoint?.diario.retencao ?? 0.9,
     observacoes: usuario ? combinarObservacoes(observarSessoes(usuario.id, sessoes), observarQuestoesIA(usuario.id, questoes),
       sync?.fila.confirmado?.eventos ?? [], sync?.fila.pendentes ?? []) : [] }), [usuario, sessoes, questoes, sync?.fila]);
+  const agora = useMemo(() => {
+    const limite = Date.now();
+    return new Date(diario.observacoes.reduce((hora, { evento }) => {
+      const instante = Date.parse(evento.ocorridoEm);
+      return instante <= limite ? Math.max(hora, instante) : hora;
+    }, Math.min(relogio, limite)));
+  }, [diario, relogio]);
   const compromissos = useMemo(() => {
     const feitas = new Set(missoesConcluidas);
     const eventos: Compromisso[] = [];
@@ -40,7 +53,7 @@ export default function PlanejamentoDaConta({ modo }: { modo: "revisoes" | "cale
       for (const missao of item.missoes) {
         if (feitas.has(missao.id)) continue;
         eventos.push({ id: missao.id, dia, titulo: missao.assunto || missao.materia,
-          tipo: missao.tipo === "simulado" ? "simulado" : missao.tipo === "redacao" ? "compromisso" : "aula",
+          tipo: tiposDeCompromisso[missao.tipo],
           minutos: missao.tipo === "simulado" ? 60 : 30 });
       }
     }
@@ -63,17 +76,13 @@ export default function PlanejamentoDaConta({ modo }: { modo: "revisoes" | "cale
   return <PainelComPreferencias key={cache} cache={cache} modo={modo} checkpoint={checkpoint} compartilhar={!!sync} materias={materias} revisoes={revisoes}
     agora={agora} diario={diario} compromissos={compromissos} edital={edital.editalAtivo?.analise}
     prova={configuracoes.dataProva} limites={limites} estudar={(item, plano) => {
-      const id = plano.dados.get(item.unidadeId)?.revisaoLegadaId;
-      if (id) {
-        navigate("/revisoes", { state: { revisaoId: id } });
-        return;
-      }
-      const [, materiaId, moduloId, assuntoId, , aulaId] = JSON.parse(item.unidadeId) as string[];
-      armazenamentoSessaoDaConta.setItem("pmpe:central-estudos:prefill", JSON.stringify({
-        materia: item.materia, assunto: item.assunto, materiaId, moduloId, assuntoId, aulaId,
-        tipo: "questoes", objetivo: `Revisar ${item.assunto}`,
-      }));
-      navigate("/central-estudos");
+      const dados = plano.dados.get(item.unidadeId);
+      if (!dados) return;
+      const revisaoId = dados.revisaoLegadaId;
+      navigate("/central-estudos", { state: { unidadeAdaptativa: item.unidadeId, prefillSessao: {
+        ...dados.conteudo, revisaoId, tipo: revisaoId ? "revisao" : "questoes",
+        formatoRevisao: revisaoId ? "questoes" : undefined, objetivo: `Revisar ${item.assunto}`,
+      } } });
     }} />;
 }
 

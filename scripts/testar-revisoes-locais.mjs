@@ -9,7 +9,7 @@ const testarSync = process.env.FSRS_TESTAR_SYNC === "1";
 const evidence = new URL("../.evidencias-fsrs/", import.meta.url);
 await mkdir(evidence, { recursive: true });
 const browser = await chromium.launch({
-  channel: process.env.FSRS_BROWSER ?? "msedge",
+  channel: process.env.FSRS_BROWSER === "chromium" ? undefined : process.env.FSRS_BROWSER ?? "msedge",
   headless: true,
 });
 try {
@@ -48,7 +48,7 @@ try {
     await panel.getByRole("combobox", { name: "Mostrar" }).selectOption("hoje");
     await panel.getByLabel("Preferência de data para Administração pública").fill("2027-01-05");
     await panel.getByRole("combobox", { name: "Mostrar" }).selectOption("proximas");
-    await panel.getByText("Data existente preservada.", { exact: false }).first().waitFor();
+    await panel.getByText("Preferência de data atendida.", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: "Calendário", exact: true }).click();
     await panel.getByRole("combobox", { name: "Visualização" }).selectOption("30");
     await panel.getByRole("button", { name: /05\/01/ }).click();
@@ -75,7 +75,8 @@ try {
   const context = await browser.newContext({ serviceWorkers: "block" });
   const conta = { id: "00000000-0000-4000-8000-000000000101", aud: "authenticated", role: "authenticated",
     email: "sintetico@example.invalid", app_metadata: {}, user_metadata: { nome: "Conta sintética" } };
-  const ontem = new Date(Date.now() - 86_400_000).toISOString();
+  const hoje = new Date("2027-01-04T15:00:00Z");
+  const ontem = new Date(+hoje - 86_400_000).toISOString();
   const config = { nomeUsuario: "Conta sintética", concurso: "Demonstração", bancaPadrao: "",
     metaQuestoesDiaria: 10, metaMinutosDiaria: 90, metaRevisoesDiaria: 5, planoPadraoAtivo: false, tema: "escuro" };
   const materias = [{ id: "mat", nome: "Direito de teste", assuntos: [
@@ -121,16 +122,20 @@ try {
     }
     return route.continue();
   });
-  await context.addInitScript(({ conta, config, materias, sessoes }) => {
+  await context.addInitScript(({ conta, config, materias, sessoes, expiraEm }) => {
     localStorage.setItem("sb-127-auth-token", JSON.stringify({ user: conta, access_token: "synthetic",
-      refresh_token: "synthetic", expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: "bearer" }));
+      refresh_token: "synthetic", expires_at: expiraEm, token_type: "bearer" }));
     for (const [chave, dados] of Object.entries({ configuracoes: config, materias, sessoes }))
       localStorage.setItem(`pmpe:${conta.id}:${chave}`, JSON.stringify(dados));
-  }, { conta, config, materias, sessoes });
+  }, { conta, config, materias, sessoes, expiraEm: Math.floor(+hoje / 1000) + 3600 });
   const page = await context.newPage();
+  page.on("pageerror", erro => console.error(erro.message));
+  await page.clock.setFixedTime(testarCheckpoint ? new Date(ontem) : hoje);
   if (testarCheckpoint) {
     await page.goto(origin + "/central-estudos", { waitUntil: "networkidle" });
     const porOpcao = nome => page.locator("select").filter({ has: page.getByRole("option", { name: nome, exact: true }) });
+    assert.ok(await porOpcao("Direito de teste").waitFor({ timeout: 7_000 }).then(() => true, () => false),
+      `Conta sintética indisponível em ${new URL(page.url()).pathname}. ${await page.getByRole("heading").allTextContents()}`);
     await porOpcao("Direito de teste").selectOption("mat");
     await porOpcao("Tema sintético vinculado").selectOption({ label: "Tema sintético vinculado" });
     await page.getByRole("button", { name: /Iniciar sessão/ }).click();
@@ -142,7 +147,15 @@ try {
     for (let tentativa = 0; !dados.appState.sessoes.length && tentativa < 50; tentativa++)
       await new Promise(resolve => setTimeout(resolve, 100));
     assert.ok(dados.appState.sessoes.some(item => item.tipo === "aula" && item.conteudoConcluido));
+    await page.clock.setFixedTime(hoje);
   }
+  if (testarSync) dados.appState.revisoes.push({
+    id: "oficial-sintetica", materia: materias[0].nome, materiaId: materias[0].id, assunto: materias[0].assuntos[0].nome,
+    assuntoId: materias[0].assuntos[0].id, etapa: 1, concluida: false, dataCriacao: ontem, dataPrevista: hoje.toISOString(),
+  });
+  await page.goto(origin + "/calendario", { waitUntil: "networkidle" });
+  const agenda = page.getByRole("region", { name: "Planejamento adaptativo" });
+  await agenda.getByRole("button", { name: "Revisar Tema sintético vinculado" }).waitFor();
   await page.goto(origin + "/revisoes", { waitUntil: "networkidle" });
   const panel = page.getByRole("region", { name: "Planejamento adaptativo" });
   await panel.getByRole("combobox", { name: "Mostrar" }).selectOption("todas");
@@ -172,6 +185,8 @@ try {
     await panel.getByText("Checkpoint compartilhado confirmado.", { exact: true }).waitFor();
     assert.equal(syncFsrs.eventos.length, 2);
     assert.equal(syncFsrs.checkpoint.avaliados.length, 1);
+    assert.ok(dados.appState.sessoes.some(s => s.revisaoId === "oficial-sintetica" && s.formatoRevisao === "questoes"));
+    assert.ok(dados.appState.revisoes.some(r => r.id === "oficial-sintetica" && r.concluida));
     await panel.getByText(/Agenda compartilhada de/).waitFor();
     console.log("Conta sintética: ponte AppContext, sincronização de eventos e checkpoint compartilhado aprovados.");
   }
@@ -213,7 +228,7 @@ try {
     const fim = await preferencia.getAttribute("max");
     assert.ok(fim);
     await preferencia.fill(fim);
-    await panel.getByText("Data existente preservada.", { exact: false }).waitFor();
+    await panel.getByText("Preferência de data atendida.", { exact: false }).waitFor();
     await salvar.click();
     await panel.getByText("Checkpoint local · revisão 3", { exact: true }).waitFor();
     await page.reload({ waitUntil: "networkidle" });
@@ -246,12 +261,16 @@ try {
   await panel.getByRole("spinbutton", { name: "Retenção desejada (%)" }).fill("91");
   await panel.getByRole("button", { name: "Recalcular agenda" }).click();
   await panel.getByText("7 dias", { exact: false }).first().waitFor();
+  await page.goto(origin + "/desempenho", { waitUntil: "networkidle" });
+  const desempenho = page.getByRole("region", { name: "Desempenho nas revisões adaptativas" });
+  await desempenho.getByText("80.0% em 10 respostas válidas.", { exact: false }).waitFor();
+  assert.equal(await desempenho.getByRole("button", { name: "Confirmar checkpoint compartilhado" }).count(), 0);
   await page.goto(origin + "/calendario", { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Agenda adaptativa" }).waitFor();
   await panel.getByText("Configurar disponibilidade e retenção", { exact: true }).click();
   assert.equal(await panel.getByRole("spinbutton", { name: "Retenção desejada (%)" }).inputValue(), "91");
   await context.close();
-  console.log("conta sintética: Revisões → Central de Estudos → conclusão → histórico e Calendário aprovados");
+  console.log("Conta sintética: Calendário → Revisões → Central de Estudos → conclusão → Desempenho aprovados.");
 } finally {
   await browser.close();
 }

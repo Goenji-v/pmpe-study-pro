@@ -44,10 +44,10 @@ export async function simular(perfil: Perfil, horizonte: 30 | 60 | 90, motor: "l
   if (!Number.isSafeInteger(minutosPorAula) || minutosPorAula < 0) throw new Error("Duração de aula inválida.");
   let atrasadas = 0;
   let semVaga = 0;
-  const registrar = (u: typeof unidades[number], dia: string, ativas: boolean, certas = 0) => {
+  const registrar = (u: typeof unidades[number], dia: string, ativas: boolean, certas = 0, ocorridoEm = noDia(dia).toISOString()) => {
     const observacao: Observacao = { evento: { usuarioId: "simulacao", origem: "sessao",
       ocorrenciaId: JSON.stringify([u.materia.id, u.assunto.id, dia, ativas]),
-      tipo: ativas ? "recuperacao" : "estudo", ocorridoEm: noDia(dia).toISOString(),
+      tipo: ativas ? "recuperacao" : "estudo", ocorridoEm,
       conteudo: { materiaId: u.materia.id, assuntoId: u.assunto.id } },
     evidencia: ativas ? { modo: "recuperacao", certas, erradas: 10 - certas } : { modo: "passivo" } };
     observacoes.push(observacao);
@@ -81,20 +81,21 @@ export async function simular(perfil: Perfil, horizonte: 30 | 60 | 90, motor: "l
     if (plano) semVaga = plano.previsoes[0].semVaga;
     const fila = ausente ? [] : plano ? plano.agenda.filter(r => r.agendada === dia).map(r => {
       const [, m, , a] = JSON.parse(r.unidadeId) as string[];
-      return { id: JSON.stringify([m, a]), atraso: r.ideal < dia, minutos: r.minutos };
+      return { id: JSON.stringify([m, a]), atraso: r.ideal < dia, minutos: r.minutos, agendadaEm: r.agendadaEm };
     }) : [...revisoes].filter(([, r]) => diaEstudo(new Date(r.dataPrevista)) <= dia)
       .sort(([, a], [, b]) => a.dataPrevista.localeCompare(b.dataPrevista)).slice(0, Math.min(perfil.vagas, Math.floor((disponiveis - aulasHoje) / 12)))
-      .map(([id, r]) => ({ id, atraso: diaEstudo(new Date(r.dataPrevista)) < dia, minutos: 12 }));
+      .map(([id, r]) => ({ id, atraso: diaEstudo(new Date(r.dataPrevista)) < dia, minutos: 12, agendadaEm: undefined }));
     carga.push(fila.length);
     const minutos = fila.reduce((total, item) => total + item.minutos, 0);
     cargaMinutos.push(minutos);
     cargaAulas.push(aulasHoje);
     margem.push(disponiveis - minutos - aulasHoje);
-    for (const { id, atraso } of fila) {
+    for (const { id, atraso, minutos, agendadaEm } of fila) {
       const [m, a] = JSON.parse(id) as string[];
       const u = unidades.find(x => x.materia.id === m && x.assunto.id === a)!;
       const certas = Math.max(0, perfil.acertos - (i % 5 === 0 ? 1 : 0));
-      registrar(u, dia, true, certas);
+      const concluidaEm = agendadaEm && new Date(Date.parse(agendadaEm) + minutos * 60_000).toISOString();
+      registrar(u, dia, true, certas, concluidaEm);
       if (atraso) atrasadas++;
       const atual = revisoes.get(id);
       if (motor === "legado" && atual) {

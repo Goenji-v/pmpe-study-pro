@@ -1,16 +1,25 @@
-import { comparar } from "./eventos";
+import { comparar, instanteValido } from "./eventos";
 
 export type Compromisso = { id: string; dia: string; minutos: number; titulo: string;
   tipo: "revisao" | "aula" | "questoes" | "simulado" | "descanso" | "compromisso" };
 export type Limites = { semana: readonly number[]; minutos: number; revisoes: number; inicio?: string; fim?: string };
 export type Candidato = { unidadeId: string; materia: string; assunto: string; ideal: string; limite: string;
   minutos: number; primeira: boolean; retencao?: number; recorrente?: boolean; desempenho?: number;
-  peso?: number; incidencia?: number; prova?: string; compromisso?: string };
-export type Agendamento = Candidato & { agendada?: string; motivo: string; prioridade: number; horarioSugerido?: string };
+  peso?: number; incidencia?: number; prova?: string; compromisso?: string; dueAt?: string };
+export type Agendamento = Candidato & { agendada?: string; agendadaEm?: string; motivo: string; prioridade: number; horarioSugerido?: string };
 export const fusoEstudo = "America/Sao_Paulo";
 const formatador = new Intl.DateTimeFormat("sv-SE", { timeZone: fusoEstudo, year: "numeric", month: "2-digit", day: "2-digit" });
+const formatadorHora = new Intl.DateTimeFormat("pt-BR", { timeZone: fusoEstudo, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const formatadorOffset = new Intl.DateTimeFormat("en", { timeZone: fusoEstudo, timeZoneName: "longOffset" });
+const minuto = 60_000;
 
 export function diaEstudo(data: Date) { return formatador.format(data); }
+export function instanteEstudo(dia: string, hora: string) {
+  const civil = `${dia}T${hora}:00`;
+  const offset = (data: Date) => formatadorOffset.formatToParts(data).find(p => p.type === "timeZoneName")!.value.slice(3) || "+00:00";
+  const aproximado = new Date(civil + offset(new Date(civil + "Z")));
+  return new Date(civil + offset(aproximado));
+}
 function diaValido(valor: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
   const dia = new Date(valor + "T00:00:00Z");
@@ -36,12 +45,15 @@ export function priorizar(c: Candidato, hoje: string) {
   return { pontos, motivo: motivos.join(", ") || "ordem de vencimento" };
 }
 
-export function distribuir(candidatos: readonly Candidato[], compromissos: readonly Compromisso[], hoje: string, limites: Limites) {
+export function distribuir(candidatos: readonly Candidato[], compromissos: readonly Compromisso[], data: string | Date, limites: Limites) {
+  if (data instanceof Date && !Number.isFinite(+data)) throw new Error("Relógio inválido.");
+  const hoje = typeof data === "string" ? data : diaEstudo(data);
   if (!Number.isInteger(limites.revisoes) || limites.revisoes < 0 ||
       !Number.isInteger(limites.minutos) || limites.minutos < 0)
     throw new Error("Limites diários inválidos.");
   if (!diaValido(hoje) || limites.semana.some(d => !Number.isInteger(d) || d < 0 || d > 6))
     throw new Error("Data ou disponibilidade inválida.");
+  const agora = typeof data === "string" ? +instanteEstudo(hoje, "00:00") : +data;
   const horaEmMinutos = (hora: string | undefined) => {
     if (!hora || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(hora)) return undefined;
     const [h, m] = hora.split(":").map(Number);
@@ -72,17 +84,25 @@ export function distribuir(candidatos: readonly Candidato[], compromissos: reado
     const semana = new Date(dia + "T00:00:00Z").getUTCDay();
     const fixos = [...(fixosPorDia.get(dia)?.values() ?? [])];
     const cargaFixa = fixos.reduce((n, c) => n + c.minutos, 0);
-    const bruto = limites.semana.includes(semana) && !fixos.some(c => c.tipo === "descanso") ? teto : 0;
+    const disponivel = limites.semana.includes(semana) && !fixos.some(c => c.tipo === "descanso");
+    const abre = +instanteEstudo(dia, limites.inicio || "00:00");
+    const fecha = limites.fim ? +instanteEstudo(dia, limites.fim) : +instanteEstudo(somarDia(dia, 1), "00:00");
+    const bruto = disponivel ? teto : 0;
     const revisoesFixas = fixos.filter(c => c.tipo === "revisao").length;
-    return { dia, fixos, cargaFixa, revisoesFixas, capacidade: Math.max(0, bruto - cargaFixa), excessoFixo: cargaFixa > bruto || revisoesFixas > (bruto > 0 ? limites.revisoes : 0),
+    return { dia, fixos, cargaFixa, revisoesFixas, disponivel, abre, fecha, intervalos: [] as { inicio: number; fim: number }[],
+      capacidade: Math.max(0, Math.min(bruto - cargaFixa, Math.floor((fecha - Math.max(agora, abre + cargaFixa * minuto)) / minuto))),
+      excessoFixo: cargaFixa > bruto || revisoesFixas > (bruto > 0 ? limites.revisoes : 0),
       minutos: 0, revisoes: 0, limiteRevisoes: bruto > 0 ? limites.revisoes : 0, estimadas: 0, vencimentos: 0, materias: new Map<string, number>() };
   });
   const ordem = candidatos.map(c => {
-    if (!diaValido(c.ideal) || !diaValido(c.limite) || c.limite < c.ideal || !Number.isSafeInteger(c.minutos) || c.minutos <= 0)
+    const vence = c.dueAt === undefined ? -Infinity : Date.parse(c.dueAt);
+    if (!diaValido(c.ideal) || !diaValido(c.limite) || c.limite < c.ideal || !Number.isSafeInteger(c.minutos) || c.minutos <= 0 ||
+        (c.dueAt !== undefined && (!instanteValido(c.dueAt) || diaEstudo(new Date(vence)) !== c.ideal)))
       throw new Error("Data, prazo ou duração de revisão inválidos.");
-    return { c, ...priorizar(c, hoje) };
+    return { c, vence, ...priorizar(c, hoje) };
   }).sort((a, b) =>
-    comparar(a.c.limite, b.c.limite) || b.pontos - a.pontos || comparar(a.c.unidadeId, b.c.unidadeId));
+    comparar(a.c.limite, b.c.limite) || b.pontos - a.pontos || comparar(a.c.unidadeId, b.c.unidadeId) ||
+    comparar(b.c.dueAt ?? "", a.c.dueAt ?? "") || comparar(JSON.stringify(a.c), JSON.stringify(b.c)));
   const fila = ordem.filter(({ c }) => {
     if (ids.has(c.unidadeId)) return false;
     ids.add(c.unidadeId);
@@ -90,25 +110,50 @@ export function distribuir(candidatos: readonly Candidato[], compromissos: reado
     if (dia) dia.vencimentos++;
     return true;
   });
-  function alocar(item: typeof fila[number], dia: typeof dias[number]) {
+  const preferenciasRecusadas = new Map<string, string>();
+  function encontrarHorario(item: typeof fila[number], dia: typeof dias[number]) {
+    let inicio = Math.ceil(Math.max(agora, item.vence, dia.abre + dia.cargaFixa * minuto) / minuto) * minuto;
+    const duracao = item.c.minutos * minuto;
+    for (const ocupado of dia.intervalos) {
+      if (inicio + duracao <= ocupado.inicio) break;
+      inicio = Math.max(inicio, ocupado.fim);
+    }
+    return inicio + duracao <= dia.fecha ? inicio : undefined;
+  }
+  function explicarPreferencia(unidadeId: string) {
+    const motivo = preferenciasRecusadas.get(unidadeId);
+    return motivo ? ` Preferência de data não atendida: ${motivo}.` : "";
+  }
+  function alocar(item: typeof fila[number], dia: typeof dias[number], hora: number) {
     const { c, pontos, motivo } = item;
-    const hora = inicio === undefined ? undefined : inicio + dia.cargaFixa + dia.minutos;
-    const horarioSugerido = hora === undefined ? undefined :
-      `${String(Math.floor(hora / 60)).padStart(2, "0")}:${String(hora % 60).padStart(2, "0")}`;
+    const agendadaEm = new Date(hora).toISOString();
+    const horarioSugerido = inicio === undefined ? undefined : formatadorHora.format(hora);
+    dia.intervalos.push({ inicio: hora, fim: hora + c.minutos * minuto });
+    dia.intervalos.sort((a, b) => a.inicio - b.inicio);
     dia.revisoes++;
     dia.minutos += c.minutos;
     dia.materias.set(c.materia, (dia.materias.get(c.materia) ?? 0) + 1);
-    agenda.push({ ...c, agendada: dia.dia, horarioSugerido, prioridade: pontos,
-      motivo: dia.dia === c.compromisso ? `${motivo}. Data existente preservada.` :
-        dia.dia > c.limite ? `${motivo}. Vaga de recuperação após o prazo.` : dia.dia === c.ideal ? motivo : `${motivo}. Vaga encontrada após a data ideal.` });
+    const justificativa = dia.dia === c.compromisso ? " Preferência de data atendida." :
+      dia.dia > c.limite ? " Vaga de recuperação após o prazo." : dia.dia === c.ideal ? "" : " Vaga encontrada após a data ideal.";
+    agenda.push({ ...c, agendada: dia.dia, agendadaEm, horarioSugerido, prioridade: pontos,
+      motivo: motivo + "." + justificativa + explicarPreferencia(c.unidadeId) });
   }
   const feitos = new Set<string>();
   for (const item of fila) {
     const { c } = item;
-    const dia = dias.find(d => d.dia === c.compromisso && d.dia >= c.ideal && d.dia <= c.limite);
-    if (!dia || dia.revisoes + dia.revisoesFixas >= dia.limiteRevisoes || dia.minutos + c.minutos > dia.capacidade) continue;
-    alocar(item, dia);
-    feitos.add(c.unidadeId);
+    if (!c.compromisso) continue;
+    const dia = dias.find(d => d.dia === c.compromisso);
+    const hora = dia && encontrarHorario(item, dia);
+    const recusa = c.compromisso < hoje ? "data já passou" : !dia ? "data fora do horizonte" : dia.dia < c.ideal ? "data anterior ao vencimento" :
+      dia.dia > c.limite ? "data posterior ao prazo" : !dia.disponivel ? "dia de descanso ou indisponível" :
+      dia.revisoes + dia.revisoesFixas >= dia.limiteRevisoes ? "limite diário de revisões atingido" :
+      hora === undefined ? "sem janela livre a partir do horário atual e do vencimento" :
+      dia.minutos + c.minutos > dia.capacidade ? "minutos disponíveis insuficientes" : undefined;
+    if (recusa) preferenciasRecusadas.set(c.unidadeId, recusa);
+    else if (dia && hora !== undefined) {
+      alocar(item, dia, hora);
+      feitos.add(c.unidadeId);
+    }
   }
   const recuperacao = somarDia(hoje, 2);
   for (const dia of dias) {
@@ -118,16 +163,19 @@ export function distribuir(candidatos: readonly Candidato[], compromissos: reado
       disponiveis.sort((a, b) => comparar(a.c.limite, b.c.limite) ||
         (b.pontos - 4 * (dia.materias.get(b.c.materia) ?? 0)) - (a.pontos - 4 * (dia.materias.get(a.c.materia) ?? 0)) ||
         comparar(a.c.unidadeId, b.c.unidadeId));
-      const indice = disponiveis.findIndex(({ c }) => c.minutos + dia.minutos <= dia.capacidade);
+      let hora: number | undefined;
+      const indice = disponiveis.findIndex(item => item.c.minutos + dia.minutos <= dia.capacidade &&
+        (hora = encontrarHorario(item, dia)) !== undefined);
       if (indice < 0) break;
       const [item] = disponiveis.splice(indice, 1);
-      alocar(item, dia);
+      alocar(item, dia, hora!);
       feitos.add(item.c.unidadeId);
     }
   }
   for (const { c, pontos, motivo } of fila) if (!feitos.has(c.unidadeId)) {
-    agenda.push({ ...c, agendada: undefined, prioridade: pontos, motivo: c.ideal > dias[29].dia ? "Vencimento após o horizonte atual." :
-      `${motivo}. Sem vaga no prazo. Reveja a disponibilidade ou reduza novas aulas.` });
+    const justificativa = c.ideal > dias[29].dia ? "Vencimento após o horizonte atual." :
+      `${motivo}. Sem vaga no prazo. Reveja a disponibilidade ou reduza novas aulas.`;
+    agenda.push({ ...c, agendada: undefined, prioridade: pontos, motivo: justificativa + explicarPreferencia(c.unidadeId) });
   }
   return { agenda, dias };
 }

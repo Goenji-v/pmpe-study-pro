@@ -3,7 +3,9 @@ import { useEstadoNavegacao } from "../../hooks/useEstadoNavegacao";
 import "./CentralDesempenho.css";
 
 import { lazy, Suspense } from "react";
+import { fsrsCompartilhamentoHabilitado } from "../../services/inteligenciaRevisao/flagCompartilhamento";
 
+const PlanejamentoDaConta = lazy(() => import("../../components/PlanejamentoAdaptativo/PlanejamentoDaConta"));
 const Estatisticas = lazy(() => import("../Estatisticas/Estatisticas"));
 const HistoricoSessoes = lazy(() => import("../HistoricoSessoes/HistoricoSessoes"));
 const EstatisticasSessoes = lazy(() => import("../EstatisticasSessoes/EstatisticasSessoes"));
@@ -82,6 +84,8 @@ export default function CentralDesempenho() {
           <>
             <Estatisticas />
             <SimuladosOficiaisDesempenho />
+            {((import.meta.env.DEV && import.meta.env.VITE_PLANO_ADAPTATIVO === "true") || fsrsCompartilhamentoHabilitado()) &&
+              <PlanejamentoDaConta modo="desempenho" />}
           </>
         )}
 

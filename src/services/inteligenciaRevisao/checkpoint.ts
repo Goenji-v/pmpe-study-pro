@@ -28,8 +28,8 @@ export function prepararCheckpoint(escopo: EscopoFsrs, entrada: EntradaPlano, pl
   const diario = { ...entrada.diario, observacoes: [...observacoes].sort(([a], [b]) => comparar(a, b)).map(([, o]) => o) };
   const estados = [...plano.estadosMemoria.values()].sort((a, b) => comparar(a.unidadeId, b.unidadeId));
   if (estados.some(estado => estado.usuarioId !== escopo.usuarioId)) throw new Error("Estado de outra conta.");
-  const agendamentos = plano.agenda.map(({ unidadeId, ideal, agendada, limite, minutos, horarioSugerido }) =>
-    ({ unidadeId, ideal, agendada, limite, minutos, horarioSugerido })).sort((a, b) => comparar(a.unidadeId, b.unidadeId));
+  const agendamentos = plano.agenda.map(({ unidadeId, ideal, dueAt, agendada, agendadaEm, limite, minutos, horarioSugerido }) =>
+    ({ unidadeId, ideal, dueAt, agendada, agendadaEm, limite, minutos, horarioSugerido })).sort((a, b) => comparar(a.unidadeId, b.unidadeId));
   return {
     esquema: 1 as const, escopo, revisaoLegado, diario,
     calculadoPara: plano.dias[0].dia,

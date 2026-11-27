@@ -98,6 +98,9 @@ try {
   assert.equal(retry.resultado, "ok");
   assert.equal(retry.revisao, x.revisao);
   assert.equal(retry.checkpoint.avaliados.length, 2);
+  assert.equal(retry.checkpoint.agendamentos.length, 1);
+  const [agendamento] = retry.checkpoint.agendamentos;
+  assert.ok(Date.parse(agendamento.agendadaEm) >= Math.max(+relogio, Date.parse(agendamento.dueAt)));
   assert.equal((await trocar(terceiro, { usuarioId: terceiro, epoca: "inicial" }, [])).eventos.length, 0);
   // Concede SELECT só nesta transação de teste para verificar a política de defesa em profundidade.
   await db.transaction(async tx => {
@@ -108,7 +111,8 @@ try {
     assert.deepEqual(rows, [{ usuario: terceiro }]);
     await tx.exec("reset role; revoke select on study_pro_internal.fsrs_diarios from authenticated;");
   });
-  await assert.rejects(trocar(dono, escopo, [{ ...a, evento: { ...a.evento, usuarioId: terceiro } }]), { code: "22023" });
+  await assert.rejects(trocar(dono, escopo, [evento("lote-rejeitado", "03"),
+    { ...a, evento: { ...a.evento, usuarioId: terceiro } }]), { code: "22023" });
   assert.equal((await trocar(dono, escopo, [])).revisao, retry.revisao);
   const entraram = await trocar(dono, escopo, [evento("celular-offline", "01", 5)], proposta);
   assert.equal(entraram.resultado, "conflito");
@@ -122,11 +126,27 @@ try {
     [JSON.stringify({ appState: { syncRevision: 13, configuracoes: { dadosReiniciadosEm: "reiniciado" } } }), dono]);
   await assert.rejects(trocar(dono, escopo, [b]), { code: "40001" });
   assert.equal((await trocar(dono, { ...escopo, epoca: "reiniciado" }, [])).eventos.length, 0);
+  const escopoSimultaneo = { usuarioId: terceiro, epoca: "inicial" };
+  const simultaneos = ["computador", "celular"].map(id => {
+    const item = evento(id, "03");
+    return { ...item, evento: { ...item.evento, usuarioId: terceiro } };
+  });
+  await Promise.all(simultaneos.map(item => trocar(terceiro, escopoSimultaneo, [item])));
+  const concorrentes = await trocar(terceiro, escopoSimultaneo, simultaneos);
+  assert.equal(concorrentes.revisaoEventos, 2);
+  assert.equal(concorrentes.eventos.length, 2);
+  const mesmaHora = await carregarMemoria(materias, { ...entrada.diario, observacoes: concorrentes.eventos }, relogio);
+  const [estado] = mesmaHora.estados.values();
+  assert.equal(estado.historico.length, 2);
+  assert.equal(estado.historico.filter(item => item.log).length, 1);
   console.log("Postgres local: migração, autenticação, isolamento, duas filas offline, retry, epoch e CAS aprovados.");
   if (process.env.FSRS_BROWSER_SQL_PORT) {
     const { chromium, devices } = await import("@playwright/test");
     const origin = "http://127.0.0.1:" + Number(process.env.FSRS_BROWSER_SQL_PORT);
-    const navegador = await chromium.launch({ channel: "msedge", headless: true });
+    const navegador = await chromium.launch({
+      channel: process.env.FSRS_BROWSER === "chromium" ? undefined : process.env.FSRS_BROWSER ?? "msedge",
+      headless: true,
+    });
     try {
       const dispositivos = await Promise.all(["Desktop Edge", "Pixel 5"].map(device =>
         navegador.newContext({ ...devices[device], serviceWorkers: "block" })));

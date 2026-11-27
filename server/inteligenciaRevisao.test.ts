@@ -128,11 +128,11 @@ test("amostra insuficiente isolada não agenda conteúdo novo nem inventa memór
   assert.equal(plano.agenda.length, 0);
 });
 
-test("iniciante compara tempo de aulas reservado com a simulação de 159 revisões", async () => {
+test("iniciante respeita horários FSRS e reserva tempo para as 18 novas aulas", async () => {
   const { perfisSimulacao, simular } = await import("../src/services/inteligenciaRevisao/simulacao");
   const perfil = perfisSimulacao[0];
   const original = await simular(perfil, 90, "adaptativo");
-  assert.equal(original.concluidas, 159);
+  assert.equal(original.concluidas, 155);
   assert.equal(original.cargaAulas.every(n => n === 0), true);
   for (const motor of ["legado", "adaptativo"] as const) {
     const r = await simular(perfil, 90, motor, 30);
@@ -142,6 +142,95 @@ test("iniciante compara tempo de aulas reservado com a simulação de 159 revis�
     assert.ok(r.cargaMinutos.every((n, i) => n + r.cargaAulas[i] <= 72));
     assert.ok(r.margem.every(n => n >= 0));
   }
+});
+
+test("usa o vencimento inteiro, arredonda segundos para cima e não invade a janela", () => {
+  const dia = "2027-01-04";
+  const candidato = { unidadeId: "a", materia: "m", assunto: "A", ideal: dia, limite: "2027-01-07",
+    minutos: 12, primeira: false, compromisso: dia, dueAt: "2027-01-04T21:20:01.999Z" };
+  const janela = { ...limites, inicio: "18:00", fim: "19:00" };
+  assert.equal(distribuir([candidato], [], new Date("2027-01-04T21:10:04Z"), janela).agenda[0].agendadaEm,
+    "2027-01-04T21:21:00.000Z");
+  assert.equal(distribuir([candidato], [], new Date("2027-01-04T21:39:01Z"), janela).agenda[0].agendadaEm,
+    "2027-01-04T21:40:00.000Z");
+  const adiada = distribuir([candidato], [], new Date("2027-01-04T21:48:01Z"), janela).agenda[0];
+  assert.equal(adiada.agendadaEm, "2027-01-05T21:00:00.000Z");
+  assert.match(adiada.motivo, /Preferência de data não atendida: sem janela livre/);
+  const meiaNoite = { ...candidato, dueAt: "2027-01-05T02:59:59Z" };
+  assert.equal(distribuir([meiaNoite], [], new Date("2027-01-04T21:00:00Z"), limites).agenda[0].agendada,
+    "2027-01-05");
+});
+
+test("preferências respeitam descanso, minutos, quantidade e deixam espaço antes de reservas tardias", () => {
+  const ideal = "2027-01-04";
+  const descanso = { id: "descanso", dia: "2027-01-05", titulo: "Descanso", minutos: 0, tipo: "descanso" } as const;
+  const base = { materia: "m", assunto: "A", ideal, limite: "2027-01-07", minutos: 15, primeira: false };
+  const agendar = (candidatos: Parameters<typeof distribuir>[0], ajustes = {}) => distribuir(candidatos, [descanso],
+    new Date("2027-01-04T21:00:00Z"), { ...limites, revisoes: 2, inicio: "18:00", fim: "19:00", ...ajustes }).agenda;
+  const tarde = { ...base, unidadeId: "tarde", compromisso: ideal, dueAt: "2027-01-04T21:45:00Z" };
+  const cedo = { ...base, unidadeId: "cedo" };
+  const diaDescanso = { ...base, unidadeId: "descanso", compromisso: descanso.dia };
+  const datas = agendar([tarde, cedo, diaDescanso]);
+  assert.equal(datas.find(r => r.unidadeId === "tarde")?.horarioSugerido, "18:45");
+  assert.equal(datas.find(r => r.unidadeId === "cedo")?.horarioSugerido, "18:00");
+  assert.equal(datas.find(r => r.unidadeId === "descanso")?.agendada, "2027-01-06");
+  assert.match(datas.find(r => r.unidadeId === "descanso")!.motivo, /dia de descanso ou indisponível/);
+  assert.match(agendar([tarde], { minutos: 14 })[0].motivo, /minutos disponíveis insuficientes/);
+  assert.match(agendar([tarde], { revisoes: 0 })[0].motivo, /limite diário de revisões atingido/);
+  assert.match(agendar([{ ...tarde, compromisso: "2027-01-03" }])[0].motivo, /data já passou/);
+  assert.match(agendar([{ ...tarde, compromisso: "2027-01-08" }])[0].motivo, /data posterior ao prazo/);
+});
+
+test("FSRS amplia intervalos com bons resultados e encurta após lapso com histórico íntegro", async () => {
+  const diario = { versao: versaoMemoria, retencao: .9, observacoes: [] as Observacao[] };
+  const nota = async (ocorridoEm: Date, certas = 8) => {
+    diario.observacoes.push({
+      evento: { ...observacao.evento, ocorridoEm: ocorridoEm.toISOString(), ocorrenciaId: String(diario.observacoes.length) },
+      evidencia: { modo: "recuperacao", certas, erradas: 10 - certas },
+    });
+    const motor = await carregarMemoria([materia], diario, ocorridoEm);
+    return [...motor.estados.values()][0].cartao!;
+  };
+  const inicial = await nota(new Date("2027-01-01T15:30:00Z"));
+  const sucesso = await nota(inicial.dueAt);
+  assert.ok(+sucesso.dueAt - +inicial.dueAt > +inicial.dueAt - +inicial.lastReviewAt!);
+  const cedo = await carregarMemoria([materia], diario, sucesso.lastReviewAt!);
+  const tarde = await carregarMemoria([materia], diario, sucesso.dueAt);
+  assert.ok(cedo.recuperar([...cedo.estados.values()][0])! > tarde.recuperar([...tarde.estados.values()][0])!);
+  const lapso = await nota(sucesso.dueAt, 2);
+  assert.ok(+lapso.dueAt - +sucesso.dueAt < +sucesso.dueAt - +inicial.dueAt);
+  assert.ok(lapso.difficulty > sucesso.difficulty);
+  const recuperacao = await nota(lapso.dueAt);
+  assert.ok(+recuperacao.dueAt > +lapso.dueAt);
+  const plano = await planejarRevisoes({ materias: [materia], revisoes: [], diario,
+    agora: lapso.dueAt, compromissos: [], limites });
+  assert.equal(plano.agenda.length, 1);
+  assert.equal(plano.agenda[0].dueAt, recuperacao.dueAt.toISOString());
+  assert.ok(Date.parse(plano.agenda[0].agendadaEm!) >= +recuperacao.dueAt);
+  assert.deepEqual([...plano.estadosMemoria.values()][0].historico.map(h => h.avaliacao.nota), ["Good", "Good", "Again", "Good"]);
+});
+
+test("projeção mantém uma revisão ativa e conserva todos os registros legados", async () => {
+  const base = { materiaId: "disc", assuntoId: "antigo", materia: "Disciplina", assunto: "Assunto",
+    etapa: 2, dataCriacao: observacao.evento.ocorridoEm, concluida: false } as const;
+  const revisoes = [
+    { ...base, id: "z", dataPrevista: "2027-01-03T15:00:00Z" },
+    { ...base, id: "a", dataPrevista: "2027-01-03T12:00:00-03:00" },
+    { ...base, id: "historico", dataPrevista: "2026-12-31T15:00:00Z", concluida: true },
+  ];
+  const antes = structuredClone(revisoes);
+  const plano = await planejarRevisoes({ materias: [materia], revisoes, diario: { versao: versaoMemoria,
+    retencao: .9, observacoes: [observacao, observacao] }, agora, compromissos: [], limites });
+  assert.equal(plano.agenda.length, 1);
+  assert.equal([...plano.dados.values()][0].revisaoLegadaId, "a");
+  assert.deepEqual(plano.legado.map(l => l.revisao), antes);
+  assert.deepEqual(revisoes, antes);
+  assert.equal([...plano.estadosMemoria.values()][0].historico.length, 1);
+  const semEvidencia = await planejarRevisoes({ materias: [materia], revisoes, diario: { versao: versaoMemoria,
+    retencao: .9, observacoes: [] }, agora, compromissos: [], limites });
+  assert.equal(semEvidencia.agenda.length, 0);
+  assert.deepEqual(semEvidencia.dias.flatMap(d => d.fixos.map(fixo => fixo.id)), [JSON.stringify(["revisao", "a"])]);
+  assert.deepEqual(semEvidencia.legado.map(l => l.revisao), antes);
 });
 
 test("agenda rejeita datas impossíveis, duração inválida e compromissos divergentes", () => {

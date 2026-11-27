@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { Materia } from "../src/types";
 import { resolverUnidade, referenciaDoEdital } from "../src/services/conteudos/identidadeAprendizagem";
 import { registrarEvento, type EventoAprendizagem } from "../src/services/conteudos/eventoAprendizagem";
+import { listarModulosDaMateria } from "../src/services/conteudos/navegarConteudos";
 
 const assunto = { id: "x", nome: "Tema", concluido: false, prioridade: "media" as const, idsLegados: ["antigo"] };
 const materia: Materia = { id: "m", nome: "Disciplina", assuntos: [assunto] };
@@ -34,6 +35,22 @@ test("aulas individualizadas e edital preservam identidades explícitas", () => 
   const edital = { id: "disciplina", nome: "Curso", assuntos: [oficial], incidenciaEstimada: 1, conteudoCanonicoId: "m" };
   assert.deepEqual(referenciaDoEdital(edital, oficial), ref);
   assert.equal(referenciaDoEdital({ ...edital, assuntos: [] }, oficial), undefined);
+});
+
+test("visão de curso remete à aula canônica e não funde assuntos de um módulo agregado", () => {
+  const aulas = ["a", "b"].map(id => ({ id, nome: "Homônima", ordem: 1, concluida: false }));
+  const modulo = { id: "curso:sintetico:modulo:1", nome: "Curso · Módulo", ordem: 1,
+    assuntos: [{ ...assunto, aulas }, { ...assunto, id: "y", idsLegados: [] }] };
+  const grade = [{ ...materia, modulos: [modulo] }];
+  const [visao] = listarModulosDaMateria(grade[0]);
+  const [assuntoVisao] = visao.assuntos;
+  const referencia = { materiaId: materia.id, moduloId: visao.id, assuntoId: assuntoVisao.id };
+  assert.equal(resolverUnidade(grade, referencia).status, "ambiguo");
+  const daVisao = resolverUnidade(grade, { ...referencia, aulaId: assuntoVisao.aulas![0].id });
+  const original = resolverUnidade(grade, { ...ref, moduloId: modulo.id, aulaId: "a" });
+  assert.equal(daVisao.status, "validado");
+  assert.equal(daVisao.unidadeId, original.unidadeId);
+  assert.equal(resolverUnidade(grade, { ...referencia, aulaId: "a" }).status, "sem_vinculo");
 });
 
 test("replay, conflito, usuário, item e vínculo pendente", () => {

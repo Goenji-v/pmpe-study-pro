@@ -25,6 +25,7 @@ import MateriaisDoAssunto from "../../components/MateriaisDoAssunto/MateriaisDoA
 import { formatarDataRevisao } from "../../utils/revisoes";
 import { resumoRevisoesDaCentral } from "../../utils/revisoesCentral";
 import { localizarReferenciaCanonica } from "../../services/conteudos/sincronizacaoCanonica";
+import { resolverUnidade } from "../../services/conteudos/identidadeAprendizagem";
 import { rotuloOrigemRevisaoSimulado, useNomesSimuladosDeRevisoes } from "../../utils/origemRevisaoSimulado";
 import type { Revisao } from "../../types";
 
@@ -56,6 +57,7 @@ import { obterReferenciasDaMissao, planoPMPE } from "../../data/planoPMPE";
 
 type EstadoNavegacaoCentral = {
   origem?: "dashboard" | "plano";
+  unidadeAdaptativa?: string;
   prefillSessao?: DadosIniciarSessao;
 };
 
@@ -261,6 +263,27 @@ const [
       return;
     }
 
+    if (estadoNavegacao?.unidadeAdaptativa) {
+      const vinculo = resolverUnidade(materias, {
+        materiaId: prefill.materiaId ?? "", moduloId: prefill.moduloId,
+        assuntoId: prefill.assuntoId ?? "", aulaId: prefill.aulaId,
+      });
+      prefillAplicadoRef.current = true;
+      if (vinculo.status === "validado" && vinculo.unidadeId === estadoNavegacao.unidadeAdaptativa) {
+        const { revisaoId: revisaoPretendida } = prefill;
+        const oficial = revisoes.find(r => r.id === revisaoPretendida && !r.concluida && !r.integradaEmId && !r.origemSimulado && !r.escopoGrupo);
+        const referenciaOficial = oficial && resolverUnidade(materias, oficial);
+        const revisaoId = referenciaOficial?.status === "validado" && referenciaOficial.unidadeId === vinculo.unidadeId
+          ? oficial?.id : undefined;
+        prepararSessao({ ...prefill, revisaoId, tipo: revisaoId ? "revisao" : "questoes",
+          formatoRevisao: revisaoId ? "questoes" : undefined });
+      } else {
+        setMensagem("O vínculo desta revisão mudou. Atualize a agenda antes de iniciar a sessão.");
+      }
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
+
     // Conteúdo canônico pode ser reconstruído com segurança. Missões livres
     // podem ter sido adaptadas pelo diagnóstico; nesses casos preservamos a
     // matéria/assunto recebidos do Plano em vez de voltar ao texto estático.
@@ -361,6 +384,7 @@ const [
     location.pathname,
     location.state,
     materias,
+    revisoes,
     navigate,
     prepararSessao,
   ]);
@@ -368,11 +392,8 @@ const [
   const materiaSelecionada =
     useMemo(
       () =>
-        materias.find(
-          (materia) =>
-            materia.id === estado.materiaId ||
-            materia.nome === estado.materia
-        ),
+        materias.find(materia => materia.id === estado.materiaId) ??
+        materias.find(materia => materia.nome === estado.materia),
       [materias, estado.materia, estado.materiaId]
     );
 
@@ -389,19 +410,14 @@ const [
     [assuntosComModulo]
   );
 
-  const selecaoAssunto = useMemo(
-    () =>
-      assuntosComModulo.find(
-        ({ assunto }) =>
-          assunto.id === estado.assuntoId ||
-          Boolean(
-            estado.assuntoId &&
-            assunto.idsLegados?.includes(estado.assuntoId)
-          ) ||
-          assunto.nome === estado.assunto
-      ),
-    [assuntosComModulo, estado.assunto, estado.assuntoId]
-  );
+  const selecaoAssunto = useMemo(() => {
+    const modulo = materiaSelecionada?.modulos?.find(m => m.id === estado.moduloId);
+    const exato = modulo?.assuntos.find(a => a.id === estado.assuntoId);
+    if (modulo && exato) return { modulo, assunto: exato };
+    return assuntosComModulo.find(({ assunto }) => assunto.id === estado.assuntoId) ??
+      assuntosComModulo.find(({ assunto }) => estado.assuntoId && assunto.idsLegados?.includes(estado.assuntoId)) ??
+      assuntosComModulo.find(({ assunto }) => assunto.nome === estado.assunto);
+  }, [assuntosComModulo, materiaSelecionada, estado.moduloId, estado.assunto, estado.assuntoId]);
 
   const assuntoSelecionado = selecaoAssunto?.assunto;
 
@@ -1196,6 +1212,9 @@ const [
                         ? "Selecione o assunto"
                         : "Selecione primeiro a matéria"}
                     </option>
+                    {assuntoSelecionado && assuntoSelecionado.id === estado.assuntoId &&
+                      !assuntosDisponiveis.some(assunto => assunto.id === estado.assuntoId) &&
+                      <option value={assuntoSelecionado.id}>{assuntoSelecionado.nome}</option>}
 
                     {assuntosDisponiveis.map(
                       (assunto) => (

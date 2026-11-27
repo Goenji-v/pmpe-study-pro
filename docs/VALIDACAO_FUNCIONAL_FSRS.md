@@ -1,0 +1,20 @@
+# Validação funcional do FSRS em staging
+
+O painel adaptativo continua em modo sombra. A agenda oficial e as conclusões legadas permanecem operacionais. A prévia só apresenta o painel às contas piloto habilitadas para o Supabase staging. As preferências de horário e data são locais a cada dispositivo. O checkpoint registra a projeção que o usuário confirmou, além dos estados e do diário compartilhado.
+
+## Agenda e histórico
+
+- A projeção usa o vencimento exato do cartão e o relógio atual. Arredonda o início para o próximo minuto permitido e exige que a atividade inteira caiba na janela em horário de Brasília. Sem janela informada, a projeção mostra apenas a data. Atividades existentes com duração e sem hora reservam minutos a partir do início da disponibilidade.
+- Descanso, dias indisponíveis, limites de minutos e quantidade restringem preferências de data. A agenda explica o motivo quando a data escolhida fica inviável, inclusive quando encontra outra vaga.
+- Cada unidade canônica recebe uma proposta ativa. A projeção usa a primeira pendência oficial vinculada, quando houver, e mantém os registros legados. A Central abre a unidade pelos IDs do conteúdo e registra evidência medida em Revisões e Desempenho. Uma referência gerada pela visualização de curso só é reconciliada quando identifica conteúdo canônico sem ambiguidade. Dois eventos no mesmo instante ficam no histórico, com apenas uma aplicação ao cartão.
+- Em 90 dias sintéticos, o iniciante fez 155 revisões sem reservar minutos para aulas, com retenção estimada de 92,0%. A referência anterior de 159 usava uma hora fixa para registrar as revisões. Com a execução no fim de cada horário alocado e 30 min reservados por aula, o perfil fez 144 revisões e 18 aulas, com pico de 4 revisões e 72 min totais no dia e retenção estimada de 93,2%. Esses percentuais vêm do modelo de memória.
+
+## Validação e transição controlada
+
+1. Rode a suíte unitária com Node 24. O teste de agenda cobre vencimento com segundos, mudança de dia, descanso, preferência inviável, capacidade, deduplicação e recuperação após lapso.
+2. Com Vite local e credenciais sintéticas, rode `scripts/testar-revisoes-locais.mjs` com `FSRS_TESTAR_CHECKPOINT=1` e `FSRS_TESTAR_SYNC=1`. O fluxo usa respostas de Auth e PostgREST simuladas. Rode `node --import tsx scripts/testar-fsrs-postgres-local.mjs` para aplicar a migração existente apenas em PGlite. Com `FSRS_BROWSER_SQL_PORT` apontando para o Vite local, o segundo script acrescenta dois contextos independentes de navegador com IndexedDB, modo offline, recarga e perda de resposta. Use `FSRS_BROWSER=chromium` para o Chromium gerenciado pelo Playwright.
+3. Em staging, mantenha `VITE_PLANO_ADAPTATIVO=true` e `VITE_FSRS_SYNC_CONTAS` restrito aos pilotos aprovados. Em computador e celular físicos, use uma conta de teste autorizada e conteúdo sintético. Complete uma aula, avance até uma revisão elegível, faça avaliações nos dois aparelhos offline, reabra os apps e reconecte em ordem invertida. Confira contagem de eventos, histórico, cartão, intervalo seguinte e checkpoint nas duas telas. Repita com uma conta fora do piloto e confirme que o painel e os dados da primeira conta permanecem inacessíveis.
+4. Mantenha a agenda oficial nesta publicação. Antes de propor qualquer troca da agenda padrão, confirme convergência e ausência de perda no ensaio físico, revise a carga real dos pilotos e solicite aprovação específica para a mudança de padrão.
+5. Para rollback em staging, remova a conta da lista de pilotos ou defina `VITE_PLANO_ADAPTATIVO=false` e reconstrua a prévia após aprovação. Para revogar acesso à RPC de uma conta, desabilite também sua autorização de piloto no Supabase staging com aprovação específica. Preserve diário, estado, checkpoints e agenda oficial. Confirme em nova sessão que o painel ocultou e a agenda oficial continua disponível.
+
+O piloto real de persistência, eventos e avaliações foi confirmado pelo responsável pelo ambiente antes desta alteração. O ensaio desta versão em dois aparelhos físicos continua como critério para avançar além do modo sombra.

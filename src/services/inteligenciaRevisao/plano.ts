@@ -28,7 +28,7 @@ export async function planejarRevisoes(e: EntradaPlano) {
         revisao.origemSimulado || !instanteValido(revisao.dataPrevista)) continue;
     const anterior = pendentes.get(vinculo.unidadeId);
     if (!anterior || Date.parse(revisao.dataPrevista) < Date.parse(anterior.dataPrevista) ||
-        (revisao.dataPrevista === anterior.dataPrevista && revisao.id < anterior.id))
+        (Date.parse(revisao.dataPrevista) === Date.parse(anterior.dataPrevista) && revisao.id < anterior.id))
       pendentes.set(vinculo.unidadeId, revisao);
   }
   const relevancia = new Map<string, { peso: number; incidencia: number }>();
@@ -47,9 +47,8 @@ export async function planejarRevisoes(e: EntradaPlano) {
     if (!estado.primeiraAprendizagem) return [];
     const [, materiaId, moduloId, assuntoId, , aulaId] = JSON.parse(estado.unidadeId) as string[];
     const materia = e.materias.find(m => m.id === materiaId);
-    const assunto = materia?.modulos?.length
-      ? materia.modulos.find(m => m.id === moduloId)?.assuntos.find(a => a.id === assuntoId)
-      : materia?.assuntos.find(a => a.id === assuntoId);
+    const modulo = materia?.modulos?.find(m => m.id === moduloId);
+    const assunto = (modulo?.assuntos ?? materia?.assuntos)?.find(a => a.id === assuntoId);
     const dataLegada = pendentes.get(estado.unidadeId);
     const primeira = !estado.cartao;
     const ideal = primeira ? somarDia(diaEstudo(new Date(estado.primeiraAprendizagem)), 1) : diaEstudo(estado.cartao!.dueAt);
@@ -57,26 +56,30 @@ export async function planejarRevisoes(e: EntradaPlano) {
     const importancia = relevancia.get(estado.unidadeId) ?? relevancia.get(JSON.stringify(["memoria-v1", materiaId, moduloId, assuntoId]));
     const candidato: Candidato = { unidadeId: estado.unidadeId, materia: materia?.nome ?? materiaId,
       assunto: assunto?.aulas?.find(a => a.id === aulaId)?.nome ?? assunto?.nome ?? assuntoId,
-      ideal, limite: somarDia(ideal, primeira || avaliacao?.recorrente ? 2 : 5),
+      ideal, dueAt: estado.cartao?.dueAt.toISOString(), limite: somarDia(ideal, primeira || avaliacao?.recorrente ? 2 : 5),
       minutos: avaliacao?.recorrente || avaliacao?.nota === "Again" ? 18 : 12,
       primeira, retencao: memoria.recuperar(estado), desempenho: avaliacao?.percentual,
       recorrente: avaliacao?.recorrente, ...importancia, prova: e.prova,
       compromisso: e.preferenciaDatas?.[estado.unidadeId] || (dataLegada && diaEstudo(new Date(dataLegada.dataPrevista))) };
-    return [[estado.unidadeId, { candidato, estado, orientacao: orientar(avaliacao), revisaoLegadaId: dataLegada?.id }] as const];
+    const conteudo = { materiaId, moduloId, assuntoId, aulaId, materia: candidato.materia,
+      modulo: modulo?.nome ?? "Geral", assunto: assunto?.nome ?? assuntoId };
+    return [[estado.unidadeId, { candidato, estado, conteudo, orientacao: orientar(avaliacao), revisaoLegadaId: dataLegada?.id }] as const];
   }));
   const fixos = [...e.compromissos];
   for (const { revisao, vinculo } of legado) {
     if (revisao.concluida || revisao.integradaEmId || revisao.origemSimulado ||
-        !instanteValido(revisao.dataPrevista) || (vinculo?.status === "validado" && dados.has(vinculo.unidadeId))) continue;
+        !instanteValido(revisao.dataPrevista)) continue;
+    if (vinculo?.status === "validado" &&
+        (dados.has(vinculo.unidadeId) || pendentes.get(vinculo.unidadeId)?.id !== revisao.id)) continue;
     const dia = diaEstudo(new Date(revisao.dataPrevista));
     fixos.push({ id: JSON.stringify(["revisao", revisao.id]), dia: dia < hoje ? hoje : dia,
       titulo: revisao.assunto + " (agenda oficial)", tipo: "revisao", minutos: 12 });
   }
-  const agenda = distribuir([...dados.values()].map(d => d.candidato), fixos, hoje, e.limites);
+  const agenda = distribuir([...dados.values()].map(d => d.candidato), fixos, e.agora, e.limites);
   const dias = new Map(agenda.dias.map(d => [d.dia, d]));
   for (const item of agenda.agenda) {
-    if (!item.agendada) continue;
-    const estimada = memoria.estimarSeguinte(dados.get(item.unidadeId)!.estado, new Date(Math.max(+e.agora, Date.parse(item.agendada + "T15:00:00Z"))));
+    if (!item.agendada || !item.agendadaEm) continue;
+    const estimada = memoria.estimarSeguinte(dados.get(item.unidadeId)!.estado, new Date(item.agendadaEm));
     const dia = dias.get(diaEstudo(estimada));
     if (dia && dia.dia > item.agendada) dia.estimadas++;
   }
