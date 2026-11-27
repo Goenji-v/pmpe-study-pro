@@ -25,7 +25,7 @@ import {
 
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
-import { chaveAssuntoPrincipal } from "../utils/revisoesAssuntoPrincipal";
+import { chaveAssuntoPrincipal, reconciliarArgumentativaLegada } from "../utils/revisoesAssuntoPrincipal";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
 import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
@@ -956,7 +956,7 @@ function EstadoDaConta({
   useEffect(() => {
     const sessoesCanonicas = reconciliarSessoesComConteudos(materias, sessoes);
     const questoesCanonicas = reconciliarQuestoesComConteudos(materias, questoes);
-    const revisoesCanonicas = reconciliarRevisoesComConteudos(materias, revisoes);
+    const revisoesCanonicas = reconciliarArgumentativaLegada(reconciliarRevisoesComConteudos(materias, revisoes));
 
     if (!referenciasIguais(sessoes, sessoesCanonicas)) {
       setSessoes(sessoesCanonicas);
