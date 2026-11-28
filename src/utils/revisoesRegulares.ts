@@ -1,4 +1,5 @@
 import type { Revisao } from "../types";
+import { chaveDaMateria } from "./desempenhoMaterias";
 
 /**
  * Desativa apenas revisões com origem identificável de simulado.
@@ -9,9 +10,18 @@ export function revisaoOriginadaDeSimulado(revisao: Revisao): boolean {
   return Boolean(revisao.origemSimulado) || revisao.id.startsWith("ia-");
 }
 
+/** Redação é praticada separadamente, sem compromissos de revisão automática. */
+export function materiaComRevisaoManual(materia: string): boolean {
+  return ["redacao", "producao textual", "redacao dissertativa"].includes(chaveDaMateria(materia));
+}
+
+function revisaoDesativada(revisao: Revisao): boolean {
+  return revisaoOriginadaDeSimulado(revisao) || materiaComRevisaoManual(revisao.materia);
+}
+
 export function filtrarRevisoesRegulares(revisoes: Revisao[]): Revisao[] {
-  return revisoes.some(revisaoOriginadaDeSimulado)
-    ? revisoes.filter((item) => !revisaoOriginadaDeSimulado(item))
+  return revisoes.some(revisaoDesativada)
+    ? revisoes.filter((item) => !revisaoDesativada(item))
     : revisoes;
 }
 
@@ -26,12 +36,12 @@ export function mesclarRevisoesRegulares(
   const atualizadasPorId = new Map(atualizadas.map((item) => [item.id, item]));
   const idsAnteriores = new Set(regulares.map((item) => item.id));
   const existentes = anteriores.flatMap((item) => {
-    if (revisaoOriginadaDeSimulado(item)) return [item];
+    if (revisaoDesativada(item)) return [item];
     const alterada = atualizadasPorId.get(item.id);
     return alterada ? [alterada] : [];
   });
   const novas = atualizadas.filter(
-    (item) => !idsAnteriores.has(item.id) && !revisaoOriginadaDeSimulado(item)
+    (item) => !idsAnteriores.has(item.id) && !revisaoDesativada(item)
   );
   return [...novas, ...existentes];
 }
