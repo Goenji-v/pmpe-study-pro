@@ -399,6 +399,8 @@ export type Revisao = {
   integradaEm?: string;
   /** Revisão de um bloco didático inteiro (ex.: Classes de palavras). */
   escopoGrupo?: boolean;
+  /** As aulas já estão agrupadas no assunto e a revisão usa o ID dele. */
+  revisaoIndividualDoAssunto?: boolean;
   /** IDs dos assuntos que formam o bloco; mantém a rastreabilidade histórica. */
   grupoAssuntosIds?: string[];
   sessaoId?: string;

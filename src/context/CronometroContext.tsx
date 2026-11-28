@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { avaliarRevisaoPorQuestoes, concluirRevisaoNaLista, revisaoCorrespondeASessao } from "../utils/revisoes";
+import { assuntoDaTrilhaRdc, ehGradeSoldadoPMPE } from "../utils/completarConteudosSoldadoPMPE";
 import { aplicarRevisaoPorDuvida } from "../utils/revisaoAdaptativa";
 import { useApp } from "./AppContext";
 import { useAuth } from "./AuthContext";
@@ -1022,8 +1023,16 @@ export function CronometroProvider({
         : undefined;
 
       if (materia && assunto) {
-        definirConclusaoAssunto(materia.id, assunto.assunto.id, true, assunto.modulo.id);
-        revisaoCriada = true;
+        const aulaId = sessaoAtiva.tipo === "aula" && ehGradeSoldadoPMPE(configuracoes) &&
+          assuntoDaTrilhaRdc(materia, assunto.assunto) ? sessaoAtiva.aulaId : undefined;
+        if (aulaId && assunto.assunto.aulas?.some(aula => aula.id === aulaId)) {
+          revisaoCriada = !assunto.assunto.concluido &&
+            assunto.assunto.aulas.every(aula => aula.id === aulaId || aula.concluida);
+          definirConclusaoAula(materia.id, assunto.assunto.id, aulaId, true, assunto.modulo.id);
+        } else {
+          definirConclusaoAssunto(materia.id, assunto.assunto.id, true, assunto.modulo.id);
+          revisaoCriada = true;
+        }
       }
     }
 

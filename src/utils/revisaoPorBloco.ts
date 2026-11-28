@@ -10,9 +10,12 @@ export function planejarEscopoRevisao(params: {
   modulo: Modulo;
   assunto: Assunto;
   concluido: boolean;
+  revisarAssuntoIndividual?: boolean;
 }) {
   const { materia, modulo, assunto, concluido } = params;
-  const grupos = agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos);
+  const grupos = params.revisarAssuntoIndividual
+    ? []
+    : agruparAssuntosParaExibicao(materia.nome, modulo.id, modulo.assuntos);
   const grupo = grupos.find((item) =>
     item.tipo === "tema" &&
     normalizar(item.titulo) === "classes de palavras" &&

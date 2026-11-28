@@ -15,6 +15,8 @@ import {
   useApp,
 } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
+import { ehGradeSoldadoPMPE } from "../../utils/completarConteudosSoldadoPMPE";
+import { atividadeTaticaConcluida, ehRedacaoNoTatico, montarTaticoSoldadoPMPE } from "../../utils/planoTaticoSoldadoPMPE";
 import {
   chaveSemana,
   criarAjusteControlado,
@@ -35,6 +37,7 @@ import {
   excluirCronogramaIA,
   gerarCronogramaIA,
   listarCronogramasIA,
+  salvarCronograma,
   type CronogramaGeradoIA,
   type PeriodoCronogramaIA,
   type TarefaCronogramaIA,
@@ -126,7 +129,8 @@ export default function CronogramaIA() {
   );
   const [mensagemAutomacao, setMensagemAutomacao] = useState("");
 
-  const [periodo, setPeriodo] = useState<PeriodoCronogramaIA>("hoje");
+  const usarTrilhaRdc = ehGradeSoldadoPMPE(configuracoes);
+  const [periodo, setPeriodo] = useState<PeriodoCronogramaIA>(() => usarTrilhaRdc ? "7-dias" : "hoje");
   const [tempoDisponivel, setTempoDisponivel] = useState(
     configuracoes.metaMinutosDiaria || 120
   );
@@ -230,20 +234,16 @@ export default function CronogramaIA() {
   const tarefasOrdenadas = useMemo(
     () =>
       cronogramaAtual
-        ? [...cronogramaAtual.tarefas].sort(
-            (a, b) => a.dia - b.dia || a.ordem - b.ordem
-          )
+        ? cronogramaAtual.tarefas
+            .filter((tarefa) => !usarTrilhaRdc || (tarefa.tipo !== "redacao" && !ehRedacaoNoTatico(tarefa.materia)))
+            .sort((a, b) => a.dia - b.dia || a.ordem - b.ordem)
         : [],
-    [cronogramaAtual]
+    [cronogramaAtual, usarTrilhaRdc]
   );
-  const tarefasPendentes = useMemo(
-    () =>
-      tarefasOrdenadas.filter(
-        (tarefa) =>
-          !tarefa.missaoId || !missoesConcluidas.includes(tarefa.missaoId)
-      ),
-    [tarefasOrdenadas, missoesConcluidas]
-  );
+  const tarefasConcluidas = useMemo(() => new Set(tarefasOrdenadas.filter((tarefa) =>
+    atividadeTaticaConcluida(tarefa, materias, revisoes, sessoes, missoesConcluidas, cronogramaAtual?.geradoEm)
+  ).map((tarefa) => tarefa.id)), [tarefasOrdenadas, materias, revisoes, sessoes, missoesConcluidas, cronogramaAtual?.geradoEm]);
+  const tarefasPendentes = tarefasOrdenadas.filter((tarefa) => !tarefasConcluidas.has(tarefa.id));
 
   const tarefaAtual = tarefasPendentes[0];
   const planoAtualAprovado = cronogramaAtual
@@ -420,62 +420,71 @@ export default function CronogramaIA() {
       setGerando(true);
       setErro("");
 
-      const novo = await gerarCronogramaIA({
-        nomeUsuario: configuracoes.nomeUsuario,
-        concurso: configuracoes.concurso,
-        banca: configuracoes.bancaPadrao,
-        periodo,
-        tempoDisponivelMinutos: tempoDisponivel,
-        perfilEstudo: {
-          diasPorSemana: perfil.diasPorSemana,
-          materiaMaiorDificuldade: perfil.materiaMaiorDificuldade,
-          nivelAtual: perfil.nivelAtual,
-          formatoPreferido: perfil.formatoPreferido,
-          domingoEstrategico: true,
-          observacao: perfil.observacao,
-          modo: "assistido",
-          prioridadeAutomatica: prioridadeAtiva,
-          distribuicaoAdaptativa,
-        },
-        metas: {
-          minutosDia: configuracoes.metaMinutosDiaria,
-          questoesDia: configuracoes.metaQuestoesDiaria,
-          revisoesDia: configuracoes.metaRevisoesDiaria,
-        },
-        questoes: questoes.map((item) => ({
-          materia: item.materia,
-          assunto: item.assunto,
-          certas: item.certas,
-          erradas: item.erradas,
-          minutos: item.minutos,
-          data: item.data,
-        })),
-        sessoes: sessoes.map((item) => ({
-          materia: item.materia,
-          assunto: item.assunto,
-          tipo: item.tipo,
-          minutos: item.minutos,
-          data: item.data,
-        })),
-        revisoes: revisoes.map((item) => ({
-          id: item.id,
-          materia: item.materia,
-          assunto: item.assunto,
-          etapa: item.etapa,
-          dataPrevista: item.dataPrevista,
-          concluida: item.concluida,
-        })),
-        simulados: simulados.map((item) => ({
-          nome: item.nome,
-          banca: item.banca,
-          certas: item.certas,
-          erradas: item.erradas,
-          anuladas: item.anuladas,
-          minutos: item.minutos,
-          data: item.data,
-        })),
-        missoesPendentes: missoesPendentes.slice(0, 80),
-      });
+      const novo = usarTrilhaRdc
+        ? await salvarCronograma(montarTaticoSoldadoPMPE({
+            materias,
+            revisoes,
+            periodo,
+            diasPorSemana: perfil.diasPorSemana,
+            minutos: tempoDisponivel,
+            questoesPorSessao: configuracoes.metaQuestoesDiaria,
+          }), tempoDisponivel)
+        : await gerarCronogramaIA({
+            nomeUsuario: configuracoes.nomeUsuario,
+            concurso: configuracoes.concurso,
+            banca: configuracoes.bancaPadrao,
+            periodo,
+            tempoDisponivelMinutos: tempoDisponivel,
+            perfilEstudo: {
+              diasPorSemana: perfil.diasPorSemana,
+              materiaMaiorDificuldade: perfil.materiaMaiorDificuldade,
+              nivelAtual: perfil.nivelAtual,
+              formatoPreferido: perfil.formatoPreferido,
+              domingoEstrategico: true,
+              observacao: perfil.observacao,
+              modo: "assistido",
+              prioridadeAutomatica: prioridadeAtiva,
+              distribuicaoAdaptativa,
+            },
+            metas: {
+              minutosDia: configuracoes.metaMinutosDiaria,
+              questoesDia: configuracoes.metaQuestoesDiaria,
+              revisoesDia: configuracoes.metaRevisoesDiaria,
+            },
+            questoes: questoes.map((item) => ({
+              materia: item.materia,
+              assunto: item.assunto,
+              certas: item.certas,
+              erradas: item.erradas,
+              minutos: item.minutos,
+              data: item.data,
+            })),
+            sessoes: sessoes.map((item) => ({
+              materia: item.materia,
+              assunto: item.assunto,
+              tipo: item.tipo,
+              minutos: item.minutos,
+              data: item.data,
+            })),
+            revisoes: revisoes.map((item) => ({
+              id: item.id,
+              materia: item.materia,
+              assunto: item.assunto,
+              etapa: item.etapa,
+              dataPrevista: item.dataPrevista,
+              concluida: item.concluida,
+            })),
+            simulados: simulados.map((item) => ({
+              nome: item.nome,
+              banca: item.banca,
+              certas: item.certas,
+              erradas: item.erradas,
+              anuladas: item.anuladas,
+              minutos: item.minutos,
+              data: item.data,
+            })),
+            missoesPendentes: missoesPendentes.slice(0, 80),
+          });
 
       setCronogramaAtual(novo);
       setCronogramas((anteriores) => [novo, ...anteriores]);
@@ -526,7 +535,7 @@ export default function CronogramaIA() {
       : undefined;
     const revisaoRelacionada =
       tarefa.tipo === "revisao"
-        ? revisoes.find(
+        ? revisoes.find((item) => item.id === tarefa.revisaoId) ?? revisoes.find(
             (item) =>
               !item.concluida &&
               normalizarTextoCronograma(item.materia) ===
@@ -537,7 +546,11 @@ export default function CronogramaIA() {
         : undefined;
     const prefill = {
       materia: tarefa.materia,
+      materiaId: tarefa.materiaId ?? revisaoRelacionada?.materiaId,
+      moduloId: tarefa.moduloId ?? revisaoRelacionada?.moduloId,
       assunto: tarefa.assunto,
+      assuntoId: tarefa.assuntoId ?? revisaoRelacionada?.assuntoId,
+      aulaId: tarefa.aulaId,
       tipo:
         tarefa.tipo === "revisao"
           ? "revisao"
@@ -888,7 +901,7 @@ export default function CronogramaIA() {
           </div>
           {cronogramaAtual && (
             <strong className="tatico-total-plano">
-              {formatarMinutos(cronogramaAtual.tempoTotalMinutos)}
+              {formatarMinutos(tarefasOrdenadas.reduce((total, tarefa) => total + tarefa.duracaoMinutos, 0))}
             </strong>
           )}
         </div>
@@ -911,7 +924,8 @@ export default function CronogramaIA() {
             </div>
 
             <div className="tatico-dias-lista">
-              {agruparPorDia(cronogramaAtual.tarefas).map((grupo) => {
+              {tarefasOrdenadas.length === 0 && <p className="tatico-vazio">Nenhuma aula ou revisão programada neste período.</p>}
+              {agruparPorDia(tarefasOrdenadas).map((grupo) => {
                 const primeira = grupo.tarefas[0];
                 const minutosDia = grupo.tarefas.reduce(
                   (total, tarefa) => total + tarefa.duracaoMinutos,
@@ -959,10 +973,7 @@ export default function CronogramaIA() {
                     {aberto && (
                       <div className="tatico-dia-detalhes">
                         {grupo.tarefas.map((tarefa) => {
-                          const concluida = Boolean(
-                            tarefa.missaoId &&
-                            missoesConcluidas.includes(tarefa.missaoId)
-                          );
+                          const concluida = tarefasConcluidas.has(tarefa.id);
                           return (
                           <div key={tarefa.id} className="tatico-tarefa-linha">
                             <div className="tatico-tarefa-ordem">{tarefa.ordem}</div>

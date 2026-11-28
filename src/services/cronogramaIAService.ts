@@ -25,6 +25,11 @@ export type TarefaCronogramaIA = {
   quantidadeQuestoes: number;
   justificativa: string;
   missaoId?: string;
+  materiaId?: string;
+  moduloId?: string;
+  assuntoId?: string;
+  aulaId?: string;
+  revisaoId?: string;
 };
 
 export type CronogramaGeradoIA = {
@@ -357,7 +362,7 @@ function validarCronogramaGerado(
   };
 }
 
-async function salvarCronograma(
+export async function salvarCronograma(
   cronograma: CronogramaGeradoIA,
   tempoDisponivelMinutos: number
 ): Promise<CronogramaGeradoIA> {

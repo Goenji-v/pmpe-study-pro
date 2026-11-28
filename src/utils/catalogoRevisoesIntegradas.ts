@@ -69,7 +69,10 @@ export function normalizarTopicoIntegrado(valor: string): string {
 }
 
 /** Requer a disciplina correta e padrões específicos, nunca apenas palavras vagas. */
-export function identificarGrupoIntegrado(revisao: Pick<Revisao, "materia" | "assunto">): GrupoIntegrado | null {
+export function identificarGrupoIntegrado(
+  revisao: Pick<Revisao, "materia" | "assunto" | "revisaoIndividualDoAssunto">
+): GrupoIntegrado | null {
+  if (revisao.revisaoIndividualDoAssunto) return null;
   const materia = chaveDaMateria(revisao.materia);
   const assunto = normalizarTopicoIntegrado(revisao.assunto);
   let grupo: GrupoIntegradoId | null = null;
