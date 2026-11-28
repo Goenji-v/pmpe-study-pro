@@ -5,10 +5,8 @@ import { armazenamentoSessaoDaConta as sessionStorage } from "../../services/arm
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import FlashcardsQuizPanel from "../../components/Flashcards/FlashcardsQuizPanel";
 import { useApp } from "../../context/AppContext";
 import { useToast } from "../../context/ToastContext";
-import { buscarPacoteQuestoesFlashcards } from "../../data/questoes";
 import { calcularProgressoAssuntos } from "../../services/conteudos/navegarConteudos";
 import { agruparAssuntosParaExibicao } from "../../utils/auditoriaAgrupamentoAssuntos";
 import {
@@ -29,7 +27,6 @@ import type {
 } from "../../types";
 
 import type { ConfiguracoesComCursos } from "../../types/cursos";
-import type { ModoEstudoFlashcard } from "../../types/flashcards";
 import type { ConfiguracoesComEdital } from "../../types/editalInteligente";
 import { aplicarCursosAtivosNasMaterias } from "../../utils/importacaoCurso";
 
@@ -66,31 +63,11 @@ export default function Estudos() {
     const estado = location.state as {
       focoBusca?: boolean;
       termoBusca?: string;
-      flashcards?: {
-        materia: string;
-        topico: string;
-        modo?: ModoEstudoFlashcard;
-      };
     } | null;
     const rotaDeBusca = ["/buscar", "/pesquisa", "/search"].includes(location.pathname);
 
     if (estado?.termoBusca) {
       setBusca(estado.termoBusca);
-    }
-
-    if (estado?.flashcards) {
-      setFocoFlashcards({
-        ...estado.flashcards,
-        token: Date.now(),
-      });
-      window.setTimeout(() => {
-        document
-          .getElementById("flashcards-quiz")
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-      }, 0);
     }
 
     if (estado?.focoBusca || rotaDeBusca) {
@@ -112,13 +89,6 @@ export default function Estudos() {
   const [assuntoImportacao, setAssuntoImportacao] = useState("");
   const [modulosFechados, setModulosFechados] = useState<Record<string, boolean>>({});
   const [assuntosExpandidos, setAssuntosExpandidos] = useState<Record<string, boolean>>({});
-  const [focoFlashcards, setFocoFlashcards] = useState<{
-    materia: string;
-    topico: string;
-    token: number;
-    modo?: ModoEstudoFlashcard;
-  }>();
-
   const materiasComModulos = useMemo(
     () => materias.map(prepararMateriaParaConteudos),
     [materias]
@@ -198,41 +168,6 @@ export default function Estudos() {
       materia: materia.nome, modulo: modulo.nome, assunto: assunto.nome,
     }));
     navigate("/gerar-simulado-ia");
-  }
-
-  function abrirFlashcards(
-    materia: Materia,
-    assunto: Assunto,
-    modo: ModoEstudoFlashcard
-  ) {
-    const pacote = buscarPacoteQuestoesFlashcards(
-      materia.nome,
-      assunto.nome
-    );
-
-    if (!pacote) {
-      showToast(
-        "Ainda não há flashcards cadastrados para este assunto.",
-        "info"
-      );
-      return;
-    }
-
-    setFocoFlashcards({
-      materia: materia.nome,
-      topico: assunto.nome,
-      modo,
-      token: Date.now(),
-    });
-
-    window.setTimeout(() => {
-      document
-        .getElementById("flashcards-quiz")
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-    }, 0);
   }
 
   function atualizarMateria(materiaId: string, transformador: (materia: Materia) => Materia) {
@@ -545,8 +480,6 @@ export default function Estudos() {
           placeholder="Pesquisar matéria, módulo ou assunto" />
       </header>
 
-      <FlashcardsQuizPanel foco={focoFlashcards} />
-
       <div className="conteudos-cadastros conteudos-cadastros-3">
         <article className="conteudos-painel-form">
           <h2>Nova matéria</h2>
@@ -777,23 +710,6 @@ export default function Estudos() {
                             )}
 
                             <button type="button" onClick={() => abrirIA(materia, modulo, assunto)}>🤖 IA</button>
-
-                            {buscarPacoteQuestoesFlashcards(materia.nome, assunto.nome) && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => abrirFlashcards(materia, assunto, "flashcards")}
-                                >
-                                  🃏 Flashcards
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => abrirFlashcards(materia, assunto, "quiz")}
-                                >
-                                  ✅ Quiz
-                                </button>
-                              </>
-                            )}
 
                             {!trilhaFixa && !moduloCurso && (materia.modulos ?? []).length > 1 && (
                               <select
