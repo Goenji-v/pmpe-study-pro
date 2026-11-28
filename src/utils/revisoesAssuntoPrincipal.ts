@@ -1,6 +1,7 @@
 import type { Revisao } from "../types";
 import { identificarGrupoIntegrado, normalizarTopicoIntegrado } from "./catalogoRevisoesIntegradas";
 import { chaveDaMateria } from "./desempenhoMaterias";
+import { materiaComRevisaoManual } from "./revisoesRegulares";
 
 type Referencia = Pick<Revisao, "materia" | "assunto"> &
   Partial<Pick<Revisao, "escopoGrupo" | "origemSimulado" | "id" | "integradaEmId">>;
@@ -40,7 +41,7 @@ export function tituloAssuntoPrincipal(revisao: Referencia): string {
 }
 
 export function revisaoAtiva(revisao: Revisao): boolean {
-  return !revisao.concluida && !revisao.integradaEmId &&
+  return !materiaComRevisaoManual(revisao.materia) && !revisao.concluida && !revisao.integradaEmId &&
     !revisao.origemSimulado && !revisao.id.startsWith("ia-");
 }
 
