@@ -162,19 +162,19 @@ test("bom desempenho não antecipa o ciclo, mas fica registrado na revisão pend
 
 test("toda revisão pendente recebe um plano explícito", () => {
   assert.equal(
-    planejarRevisaoPendente({ certas: undefined, erradas: undefined }).titulo,
-    "Teoria + 10 questões"
+    planejarRevisaoPendente({ etapa: 1 }).titulo,
+    "Revisão de teoria"
   );
   assert.equal(
-    planejarRevisaoPendente({ certas: 3, erradas: 7 }).modo,
+    planejarRevisaoPendente({ etapa: 3, certas: 3, erradas: 7 }).modo,
     "teoria_questoes"
   );
   assert.equal(
-    planejarRevisaoPendente({ certas: 6, erradas: 4 }).modo,
+    planejarRevisaoPendente({ etapa: 3, certas: 6, erradas: 4 }).modo,
     "questoes"
   );
   assert.equal(
-    planejarRevisaoPendente({ certas: 8, erradas: 2 }).modo,
+    planejarRevisaoPendente({ etapa: 3, certas: 8, erradas: 2 }).modo,
     "ciclo_normal"
   );
 });
@@ -325,4 +325,19 @@ test("dúvida só agenda reforço após as revisões atrasadas e previstas",()=>
   assert.equal(resultado.revisoes[0].motivoAdaptativo,"duvida");
   assert.ok(new Date(resultado.revisoes[0].dataPrevista)>AGORA);
   assert.deepEqual(resultado.revisoes.slice(1),pendentes);
+});
+
+test("formato inicial considera etapa, resultado e necessidade de reforço", () => {
+  for (const etapa of [1, 2] as const) {
+    assert.equal(planejarRevisaoPendente({ etapa }).formatoInicial, "teoria");
+    assert.equal(planejarRevisaoPendente({ etapa, certas: 9, erradas: 1 }).formatoInicial, "teoria");
+  }
+  for (const etapa of [3, 4, 5] as const) {
+    assert.equal(planejarRevisaoPendente({ etapa }).formatoInicial, "questoes");
+    assert.equal(planejarRevisaoPendente({ etapa, certas: 2, erradas: 1 }).formatoInicial, "questoes");
+    assert.equal(planejarRevisaoPendente({ etapa, certas: 9, erradas: 1 }).formatoInicial, "questoes");
+    assert.equal(planejarRevisaoPendente({ etapa, certas: 6, erradas: 4 }).formatoInicial, "questoes");
+    assert.equal(planejarRevisaoPendente({ etapa, certas: 3, erradas: 7 }).formatoInicial, "teoria");
+    assert.equal(planejarRevisaoPendente({ etapa, certas: 5, erradas: 5, reforcoTeoriaRecomendado: true }).formatoInicial, "teoria");
+  }
 });
