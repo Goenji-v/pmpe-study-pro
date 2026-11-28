@@ -13,6 +13,7 @@ import {
   resolverAvaliacaoRevisao,
   sessaoExigeResultadoQuestoes,
 } from "../src/utils/revisoes.ts";
+import { planejarRevisaoPendente } from "../src/utils/revisaoAdaptativa";
 import { aplicarAlteracoesComVinculoSeguro } from "../src/utils/vinculoPlano.ts";
 
 const agora = new Date(2026, 8, 2, 12);
@@ -456,4 +457,19 @@ test("prévia explica data ideal diferente da data real quando a agenda está lo
   assert.equal(dificil.proxima.etapa, 3);
   assert.equal(media.proxima.etapa, 3);
   assert.equal(facil.proxima.etapa, 3);
+});
+
+test("dois resultados medidos seguidos abaixo de 60% recomendam teoria no próximo retorno, sem reiniciar etapa", () => {
+  const anterior: Revisao = {...revisao, id: "anterior", etapa: 2, concluida: true, certas: 11, erradas: 9, dataConclusao: "2026-08-25T15:00:00.000Z"};
+  const atual: Revisao = {...revisao, etapa: 3};
+  const baixa = {...sessao, quantidadeQuestoes: 20, quantidadeAcertos: 11, quantidadeErros: 9};
+  const uma = concluirRevisaoNaLista({...parametros, revisoes: [atual], desempenho: "dificil", sessao: baixa});
+  assert.equal(planejarRevisaoPendente(uma[0]).formatoInicial, "questoes");
+  const duas = concluirRevisaoNaLista({...parametros, revisoes: [atual, anterior], desempenho: "dificil", sessao: baixa});
+  assert.equal(duas[0].etapa, 4);
+  assert.equal(duas[0].reforcoTeoriaRecomendado, true);
+  assert.equal(planejarRevisaoPendente(duas[0]).formatoInicial, "teoria");
+  assert.deepEqual(duas.find(r => r.id === anterior.id), anterior);
+  const recuperou = concluirRevisaoNaLista({...parametros, revisoes: [atual, anterior], sessao});
+  assert.equal(planejarRevisaoPendente(recuperou[0]).formatoInicial, "questoes");
 });
