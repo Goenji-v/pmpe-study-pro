@@ -491,7 +491,7 @@ const [
       assunto: referencia?.assunto.nome ?? revisao.assunto,
       assuntoId: revisao.assuntoId,
       tipo: "revisao", revisaoId: revisao.id,
-      formatoRevisao: plano.modo === "teoria_questoes" ? "teoria" : "questoes",
+      formatoRevisao: plano.formatoInicial,
       objetivo: "Revisar " + revisao.assunto,
       observacao: "Revisão etapa " + revisao.etapa + " · " + plano.titulo,
     });
