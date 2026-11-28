@@ -92,7 +92,7 @@ test("revisão mostra a decisão adaptativa e as três datas de retorno", () => 
   assert.match(fonteRevisoes, /Fácil/);
   assert.match(fonteRevisoes, /encerra o ciclo/);
   assert.match(fonteRevisoes, /Resolver revisão/);
-  assert.match(fonteRevisoes, /formatoRevisao: "teoria"/);
+  assert.match(fonteRevisoes, /formatoRevisao: plano\.formatoInicial/);
 });
 
 test("trocar para Questões dentro de revisão vinculada preserva o vínculo", () => {
