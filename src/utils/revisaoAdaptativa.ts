@@ -1,4 +1,5 @@
 import type { Revisao } from "../types";
+import { materiaComRevisaoManual } from "./revisoesRegulares";
 import { chaveAssuntoPrincipal } from "./revisoesAssuntoPrincipal";
 import { encontrarDataDisponivelParaReforco } from "./agendadorReforcos";
 
@@ -241,6 +242,7 @@ export function diagnosticarRevisaoAdaptativa(
 export function aplicarRevisaoAdaptativa(
   params: AplicarRevisaoAdaptativaParams
 ): ResultadoRevisaoAdaptativa {
+  if (materiaComRevisaoManual(params.materia)) return { revisoes: params.revisoes, acao: "ignorada", diagnostico: null };
   const diagnostico = diagnosticarRevisaoAdaptativa(
     params.certas, params.erradas
   );
@@ -388,6 +390,7 @@ type AplicarRevisaoPorDuvidaParams = {
 export function aplicarRevisaoPorDuvida(
   params: AplicarRevisaoPorDuvidaParams
 ): Pick<ResultadoRevisaoAdaptativa, "revisoes" | "acao"> {
+  if (materiaComRevisaoManual(params.materia)) return { revisoes: params.revisoes, acao: "ignorada" };
   const chave = chaveAssuntoPrincipal(params);
   const existente = params.revisoes.find((revisao) =>
     !revisao.concluida && !revisao.integradaEmId &&
