@@ -67,7 +67,7 @@ test("conclusão de uma revisão principal mantém outros registros auditáveis 
   assert.equal(entrada.some(x=>Boolean(x.integradaEmId) || x.concluida), false);
 });
 
-test("nenhuma revisão de História, legislação ou lógica argumentativa é incluída por palavras genéricas", () => {
+test("História e legislação permanecem independentes; teoria e exercícios de argumentativa formam um ciclo", () => {
   const lista = [
     nova("hist1","História de Pernambuco","Economia Açucareira"),
     nova("hist2","História de Pernambuco","Presença Holandesa"),
@@ -76,7 +76,9 @@ test("nenhuma revisão de História, legislação ou lógica argumentativa é in
     nova("rlm1","RLM","Lógica argumentativa"),
     nova("rlm2","RLM","Exercícios - Lógica argumentativa"),
   ];
-  assert.equal(pendentesUnicasPorAssunto(lista).length, lista.length);
+  assert.deepEqual(pendentesUnicasPorAssunto(lista).map(r => r.id).sort(), ["hist1","hist2","lei1","lei2","rlm1"]);
+  assert.equal(chaveAssuntoPrincipal(lista[4]), chaveAssuntoPrincipal(lista[5]));
+  assert.notEqual(chaveAssuntoPrincipal(lista[4]), chaveAssuntoPrincipal(nova("p", "RLM", "Lógica Proposicional")));
 });
 
 test("Fonologia, Segurança e Windows possuem somente uma pendência; assuntos independentes permanecem separados", () => {

@@ -4,7 +4,7 @@ import type {
   SessaoEstudo,
   TipoSessao,
 } from "../types";
-import { revisaoOriginadaDeSimulado } from "./revisoesRegulares";
+import { revisaoOriginadaDeSimulado, materiaComRevisaoManual } from "./revisoesRegulares";
 import { encontrarDataDisponivelParaReforco } from "./agendadorReforcos";
 import {
   chaveAssuntoPrincipal,
@@ -98,7 +98,7 @@ export function criarProximaRevisao(
   // Finalizar uma etapa sempre a encerra, independentemente da nota.
   // O desempenho controla apenas a data do próximo ciclo: uma nota baixa
   // não reabre a mesma etapa como se ela não tivesse sido concluída.
-  if (revisaoAtual.etapa >= 5) return null;
+  if (materiaComRevisaoManual(revisaoAtual.materia) || revisaoAtual.etapa >= 5) return null;
   const proximaEtapa = (revisaoAtual.etapa + 1) as EtapaRevisao;
 
   const chavePrincipal = chaveAssuntoPrincipal(revisaoAtual);
@@ -282,7 +282,7 @@ export function concluirRevisaoNaLista(params: {
     sessaoIdRecuperacao,
   } = params;
   const atual = revisoes.find((item) => item.id === revisaoId);
-  if (!atual || atual.concluida || atual.integradaEmId ||
+  if (!atual || materiaComRevisaoManual(atual.materia) || atual.concluida || atual.integradaEmId ||
       (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
   const concluida: Revisao = {
     ...atual,
