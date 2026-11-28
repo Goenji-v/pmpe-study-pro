@@ -4,7 +4,7 @@ import type {
   SessaoEstudo,
   TipoSessao,
 } from "../types";
-import { revisaoOriginadaDeSimulado } from "./revisoesRegulares";
+import { revisaoOriginadaDeSimulado, materiaComRevisaoManual } from "./revisoesRegulares";
 import { encontrarDataDisponivelParaReforco } from "./agendadorReforcos";
 import {
   chaveAssuntoPrincipal,
@@ -98,7 +98,7 @@ export function criarProximaRevisao(
   // Finalizar uma etapa sempre a encerra, independentemente da nota.
   // O desempenho controla apenas a data do próximo ciclo: uma nota baixa
   // não reabre a mesma etapa como se ela não tivesse sido concluída.
-  if (revisaoAtual.etapa >= 5) return null;
+  if (materiaComRevisaoManual(revisaoAtual.materia) || revisaoAtual.etapa >= 5) return null;
   const proximaEtapa = (revisaoAtual.etapa + 1) as EtapaRevisao;
 
   const chavePrincipal = chaveAssuntoPrincipal(revisaoAtual);
@@ -254,6 +254,16 @@ export function revisaoCorrespondeASessao(revisao: Revisao, sessao: Pick<SessaoE
     (!sessao.moduloId || !revisao.moduloId || sessao.moduloId === revisao.moduloId);
 }
 
+/** Avaliações teóricas sem placar não contam como resultado baixo medido. */
+function resultadoBaixoMedido(revisao: Revisao): boolean {
+  const certas = revisao.certas;
+  const erradas = revisao.erradas;
+  return typeof certas === "number" && typeof erradas === "number" &&
+    Number.isInteger(certas) && Number.isInteger(erradas) &&
+    certas >= 0 && erradas >= 0 && certas + erradas >= 5 &&
+    certas / (certas + erradas) < 0.6;
+}
+
 /** Conclusão e próxima revisão entram juntas na mesma atualização do estado. */
 export function concluirRevisaoNaLista(params: {
   revisoes: Revisao[];
@@ -283,7 +293,7 @@ export function concluirRevisaoNaLista(params: {
     sessaoIdRecuperacao,
   } = params;
   const atual = revisoes.find((item) => item.id === revisaoId);
-  if (!atual || atual.concluida || atual.integradaEmId ||
+  if (!atual || materiaComRevisaoManual(atual.materia) || atual.concluida || atual.integradaEmId ||
       (sessao && !revisaoCorrespondeASessao(atual, sessao))) return revisoes;
   const concluida: Revisao = {
     ...atual,
@@ -328,7 +338,24 @@ export function concluirRevisaoNaLista(params: {
     agora,
     proximaId
   );
-  return proxima ? [proxima, ...integradas.revisoes] : integradas.revisoes;
+  if (!proxima) return integradas.revisoes;
+  if (!resultadoBaixoMedido(concluida)) return [proxima, ...integradas.revisoes];
+
+  const chave = chaveAssuntoPrincipal(concluida);
+  const anterior = revisoes.filter(r =>
+    r.id !== concluida.id && r.concluida && !r.integradaEmId &&
+    !revisaoOriginadaDeSimulado(r) && r.dataConclusao &&
+    Date.parse(r.dataConclusao) < agora.getTime() &&
+    (chave ? chaveAssuntoPrincipal(r) === chave :
+      r.materiaId === concluida.materiaId && r.assuntoId === concluida.assuntoId &&
+      (!r.moduloId || !concluida.moduloId || r.moduloId === concluida.moduloId))
+  ).sort((a, b) => Date.parse(b.dataConclusao!) - Date.parse(a.dataConclusao!))[0];
+  const sequencia = anterior && resultadoBaixoMedido(anterior) ? 2 : 1;
+  return [{
+    ...proxima,
+    sequenciaResultadosBaixos: sequencia,
+    reforcoTeoriaRecomendado: sequencia >= 2,
+  }, ...integradas.revisoes];
 }
 
 const JANELA_RECUPERACAO_REVISAO_MS = 72 * 60 * 60 * 1000;

@@ -15,7 +15,8 @@ test("todos os cards abrem uma sessão de revisão no Centro de Estudos", () => 
   assert.match(body, /"pmpe:central-estudos:prefill"/);
   assert.match(body, /revisaoId: revisao\.id/);
   assert.match(body, /tipo: "revisao"/);
-  assert.match(body, /formatoRevisao: "teoria"/);
+  assert.match(body, /formatoRevisao: plano\.formatoInicial/);
+  assert.match(central, /formatoRevisao: plano\.formatoInicial/);
   assert.match(body, /navigate\("\/central-estudos"\)/);
   assert.doesNotMatch(body, /abrirQuestoesIA\(revisao\)/);
   assert.doesNotMatch(body, /navigate\("\/gerar-simulado-ia"\)/);

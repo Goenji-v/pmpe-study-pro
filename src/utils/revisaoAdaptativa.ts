@@ -1,4 +1,5 @@
 import type { Revisao } from "../types";
+import { materiaComRevisaoManual } from "./revisoesRegulares";
 import { chaveAssuntoPrincipal } from "./revisoesAssuntoPrincipal";
 import { encontrarDataDisponivelParaReforco } from "./agendadorReforcos";
 
@@ -31,7 +32,8 @@ export type OrientacaoRevisao = {
 };
 
 export type PlanoRevisaoPendente = {
-  modo: ModoRevisaoRecomendado;
+  modo: ModoRevisaoRecomendado | "teoria";
+  formatoInicial: "teoria" | "questoes";
   quantidadeQuestoes: number;
   titulo: string;
   descricao: string;
@@ -40,11 +42,12 @@ export type PlanoRevisaoPendente = {
 };
 
 export function planejarRevisaoPendente(
-  revisao: Pick<Revisao, "certas" | "erradas" | "reforcoTeoriaRecomendado">
+  revisao: Pick<Revisao, "etapa" | "certas" | "erradas" | "reforcoTeoriaRecomendado">
 ): PlanoRevisaoPendente {
   if (revisao.reforcoTeoriaRecomendado) {
     return {
       modo: "teoria_questoes",
+      formatoInicial: "teoria",
       quantidadeQuestoes: 5,
       titulo: "Rever teoria e erros antes de novo treino",
       descricao: "Dois resultados seguidos abaixo de 60%: revise a explicação dos erros e resolva 5 questões direcionadas. A revisão atual permanece na data marcada, sem criar um ciclo paralelo.",
@@ -60,16 +63,32 @@ export function planejarRevisaoPendente(
     revisao.erradas
   );
 
+  if (revisao.etapa <= 2) {
+    return {
+      modo: "teoria",
+      formatoInicial: "teoria",
+      quantidadeQuestoes: orientacao?.quantidadeQuestoes ?? 10,
+      titulo: "Revisão de teoria",
+      descricao: "Nas duas primeiras etapas, consolide a teoria. Se desejar, resolva questões para medir o domínio do assunto.",
+      percentual: orientacao?.percentual,
+      total: orientacao?.total,
+    };
+  }
+
   if (orientacao) {
-    return orientacao;
+    return {
+      ...orientacao,
+      formatoInicial: orientacao.modo === "teoria_questoes" ? "teoria" : "questoes",
+    };
   }
 
   return {
-    modo: "teoria_questoes",
+    modo: "questoes",
+    formatoInicial: "questoes",
     quantidadeQuestoes: 10,
-    titulo: "Teoria + 10 questões",
+    titulo: "Questões — medir domínio",
     descricao:
-      "Ainda não há resultado suficiente para medir este assunto. Revise o conteúdo e finalize com 10 questões para o próximo ciclo ser calculado pela sua nota.",
+      "A partir da terceira etapa, priorize questões mesmo sem nota anterior. Resolva 10 questões para medir o domínio e orientar o próximo retorno.",
   };
 }
 
@@ -241,6 +260,7 @@ export function diagnosticarRevisaoAdaptativa(
 export function aplicarRevisaoAdaptativa(
   params: AplicarRevisaoAdaptativaParams
 ): ResultadoRevisaoAdaptativa {
+  if (materiaComRevisaoManual(params.materia)) return { revisoes: params.revisoes, acao: "ignorada", diagnostico: null };
   const diagnostico = diagnosticarRevisaoAdaptativa(
     params.certas, params.erradas
   );
@@ -388,6 +408,7 @@ type AplicarRevisaoPorDuvidaParams = {
 export function aplicarRevisaoPorDuvida(
   params: AplicarRevisaoPorDuvidaParams
 ): Pick<ResultadoRevisaoAdaptativa, "revisoes" | "acao"> {
+  if (materiaComRevisaoManual(params.materia)) return { revisoes: params.revisoes, acao: "ignorada" };
   const chave = chaveAssuntoPrincipal(params);
   const existente = params.revisoes.find((revisao) =>
     !revisao.concluida && !revisao.integradaEmId &&

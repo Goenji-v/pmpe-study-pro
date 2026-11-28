@@ -6,9 +6,10 @@ import type { Revisao } from "../src/types";
 import {
   filtrarRevisoesRegulares,
   mesclarRevisoesRegulares,
+  materiaComRevisaoManual,
   revisaoOriginadaDeSimulado,
 } from "../src/utils/revisoesRegulares";
-import { encontrarDataDisponivelParaRevisao } from "../src/utils/revisoes";
+import { criarProximaRevisao, encontrarDataDisponivelParaRevisao } from "../src/utils/revisoes";
 
 function criarRevisao(id: string, origemSimulado = false): Revisao {
   return {
@@ -98,4 +99,19 @@ test("nenhum diagnóstico cria automaticamente revisões a partir de simulados",
   assert.match(diagnostico, /Treinar erros/);
   assert.doesNotMatch(revisoes, /importarRevisoesIA\(|carregarRevisoesIA\(/);
   assert.match(resolver, /revisaoAutomaticaPermitida = novoResultado\.tipo !== "simulado"/);
+});
+
+test("Redação fica fora da agenda, conserva registros e não ocupa vagas", () => {
+  const base = new Date(2026, 10, 27, 12);
+  const redacao: Revisao = {...criarRevisao("redacao"), materia: "Redação", assunto: "A tese", dataPrevista: base.toISOString()};
+  const concluida: Revisao = {...redacao, id: "historico-redacao", concluida: true};
+  const portugues = {...criarRevisao("portugues"), assunto: "Redação oficial"};
+  const dados = [redacao, concluida, portugues];
+  assert.equal(materiaComRevisaoManual("REDAÇÃO"), true);
+  assert.equal(materiaComRevisaoManual("Língua Portuguesa"), false);
+  assert.deepEqual(filtrarRevisoesRegulares(dados), [portugues]);
+  assert.deepEqual(mesclarRevisoesRegulares(dados, []), [redacao, concluida]);
+  assert.deepEqual(mesclarRevisoesRegulares(dados, [portugues, {...redacao, id: "nova"}]), dados);
+  assert.equal(criarProximaRevisao(concluida, dados, 1, base, "retorno"), null);
+  assert.equal(encontrarDataDisponivelParaRevisao({dataBase: base, agora: base, revisoes: [redacao], limiteDiario: 1}).getDate(), base.getDate());
 });

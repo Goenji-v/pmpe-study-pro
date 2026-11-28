@@ -25,9 +25,9 @@ import {
 
 import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/planoPMPE";
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
-import { chaveAssuntoPrincipal } from "../utils/revisoesAssuntoPrincipal";
+import { chaveAssuntoPrincipal, reconciliarArgumentativaLegada } from "../utils/revisoesAssuntoPrincipal";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
-import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
+import { filtrarRevisoesRegulares, mesclarRevisoesRegulares, materiaComRevisaoManual } from "../utils/revisoesRegulares";
 import {
   assuntoDaTrilhaRdc,
   completarConteudosSoldadoPMPE,
@@ -982,7 +982,7 @@ function EstadoDaConta({
   useEffect(() => {
     const sessoesCanonicas = reconciliarSessoesComConteudos(materias, sessoes);
     const questoesCanonicas = reconciliarQuestoesComConteudos(materias, questoes);
-    const revisoesCanonicas = reconciliarRevisoesComConteudos(materias, revisoes);
+    const revisoesCanonicas = reconciliarArgumentativaLegada(reconciliarRevisoesComConteudos(materias, revisoes));
 
     if (!referenciasIguais(sessoes, sessoesCanonicas)) {
       setSessoes(sessoesCanonicas);
@@ -2456,7 +2456,7 @@ function EstadoDaConta({
       revisarAssuntoIndividual: revisaoIndividualDoAssunto,
     });
     // Partes do mesmo bloco não agendam ciclos independentes.
-    if (concluido && modo === "agora" && escopoRevisao.completo) {
+    if (!materiaComRevisaoManual(materia.nome) && concluido && modo === "agora" && escopoRevisao.completo) {
       setRevisoes((anteriores) => {
         const chavePrincipal = chaveAssuntoPrincipal({
           materia: materia.nome,
@@ -2492,7 +2492,7 @@ function EstadoDaConta({
           ...anteriores,
         ];
       });
-    } else if (!concluido || modo === "ja-estudado") {
+    } else if (!materiaComRevisaoManual(materia.nome) && (!concluido || modo === "ja-estudado")) {
       // Reabrir parte do bloco cancela somente a revisão pendente do próprio bloco;
       // tentativas e revisões concluídas nunca são removidas.
       setRevisoes((anteriores) =>
