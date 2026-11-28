@@ -185,7 +185,7 @@ export default function Revisoes() {
         ...dados,
         revisaoId: revisao.id,
         tipo: "revisao",
-        formatoRevisao: "teoria",
+        formatoRevisao: plano.formatoInicial,
         objetivo: `Revisar ${dados.assunto}`,
         observacao: `Revisão etapa ${revisao.etapa} · ${plano.titulo}`,
       })
