@@ -27,7 +27,7 @@ import { obterReferenciasDaMissao, planoPMPE, planoPMPELegado } from "../data/pl
 import { criarPrimeiraRevisao, recuperarConclusoesRevisaoPorSessoesOrfas } from "../utils/revisoes";
 import { chaveAssuntoPrincipal, reconciliarArgumentativaLegada } from "../utils/revisoesAssuntoPrincipal";
 import { planejarEscopoRevisao } from "../utils/revisaoPorBloco";
-import { filtrarRevisoesRegulares, mesclarRevisoesRegulares } from "../utils/revisoesRegulares";
+import { filtrarRevisoesRegulares, mesclarRevisoesRegulares, materiaComRevisaoManual } from "../utils/revisoesRegulares";
 import { reconciliarCursosImportados } from "../utils/importacaoCurso";
 import { criarConfiguracoesIniciais, criarDadosIniciaisDaConta, houveReinicioDaConta, preservarGeracaoDoReinicio, usaPlanoPadrao } from "../utils/contaInicial";
 import { deveAplicarMigracaoEstruturalRemota } from "../utils/migracaoEstruturalConta";
@@ -2428,7 +2428,7 @@ function EstadoDaConta({
       materia, modulo: localizacao.modulo, assunto, concluido,
     });
     // Partes do mesmo bloco não agendam ciclos independentes.
-    if (concluido && modo === "agora" && escopoRevisao.completo) {
+    if (!materiaComRevisaoManual(materia.nome) && concluido && modo === "agora" && escopoRevisao.completo) {
       setRevisoes((anteriores) => {
         const chavePrincipal = chaveAssuntoPrincipal({
           materia: materia.nome,
@@ -2463,7 +2463,7 @@ function EstadoDaConta({
           ...anteriores,
         ];
       });
-    } else if (!concluido || modo === "ja-estudado") {
+    } else if (!materiaComRevisaoManual(materia.nome) && (!concluido || modo === "ja-estudado")) {
       // Reabrir parte do bloco cancela somente a revisão pendente do próprio bloco;
       // tentativas e revisões concluídas nunca são removidas.
       setRevisoes((anteriores) =>
